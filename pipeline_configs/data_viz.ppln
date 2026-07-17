@@ -1,0 +1,26 @@
+name: data_visualization_template
+version: 0.1.0
+
+# Placeholder example only.
+# Replace every class name and file path with project-specific implementations
+# before attempting to run this pipeline.
+
+objects:
+  process: ExampleVisualizationProcessObject
+  action: ExampleVisualizationActionObject
+
+retrieve:
+  hydrator: RetrieveToProcessHydrator
+  retrievers:
+    - retriever: ExampleRetriever
+      file_path: ../../data/example/example.csv
+
+process:
+  hydrator: VisualizationProcessToActionHydrator
+  processors:
+    - processor: ExampleVisualizationProcessor
+
+action:
+  hydrator: FinalizeActionHydrator
+  actions:
+    - action: NoOpAction

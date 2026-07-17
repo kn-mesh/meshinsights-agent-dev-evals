@@ -1,0 +1,7 @@
+interface:
+  display_name: "AI-Processor-Builder"
+  short_description: "Build mi.ai workflow and agent processors for this repo"
+  default_prompt: "Use $ai-processor-builder to build or update an AI workflow or agent processor in this repo with structured output, correct mi.ai message helpers, and stable artifact attachment for downstream hydrators and evals."
+
+policy:
+  allow_implicit_invocation: true

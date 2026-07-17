@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          # Strip the "v" prefix from the tag (e.g., "v0.5.0" -> "0.5.0")
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Extract changelog entry
+        id: changelog
+        run: |
+          # Write changelog body to a file to preserve formatting
+          uv run scripts/changelog.py extract ${{ steps.version.outputs.version }} > release_body.md
+
+      - name: Create GitHub Release
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes-file release_body.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

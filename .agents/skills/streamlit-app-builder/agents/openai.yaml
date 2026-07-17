@@ -1,0 +1,7 @@
+interface:
+  display_name: "Streamlit-App-Builder"
+  short_description: "Build repo Streamlit apps with current layout and API patterns"
+  default_prompt: "Use $streamlit-app-builder to create, fix, or review a Streamlit app in this repo with modern patterns for tables, selection, fragments, state, and responsive layout."
+
+policy:
+  allow_implicit_invocation: true

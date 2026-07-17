@@ -1,0 +1,7 @@
+interface:
+  display_name: "External-Runtime-Setup"
+  short_description: "Set up auth, env bootstrap, providers, and tracing"
+  default_prompt: "Use $external-runtime-setup to configure or troubleshoot `.env`, `mi auth`, provider credentials, Logfire, and runtime AI override behavior for this repo."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "watchdog>=2.1.0", # Faster Streamlit reloads
+    "ipython>=8.0.0", # Better debugging
+    "pytest>=7.0.0",
+    "ruff>=0.1.0",
+    "scipy-stubs>=1.16.0.2",
+    "types-jsonschema>=4.24.0.20250708",
+    "types-openpyxl>=3.1.5.20250602",
+    "types-python-dateutil>=2.9.0.20250708",
+    "basedpyright>=1.32.1",
+    "pydantic>=2.11.3",
+    "cachetools>=5.3.3",
+    "pandas==2.3.3",
+    "pandas-stubs>=2.3.3.251201",
+    "polars>=1.36.1",
+    "matplotlib>=3.8.0",
+    "logfire>=4.22.0",
+    "pydantic-ai>=1.77.0",
+]
+
+[tool.uv.workspace]
+members = ["core", "cli"]
+
+[tool.uv.sources]
+mi-core = { workspace = true }
+meshinsights-cli = { workspace = true }
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    # Ignore pytz internal use of deprecated utcfromtimestamp on Python 3.12+
+    "ignore:datetime\\.datetime\\.utcfromtimestamp\\(\\) is deprecated:DeprecationWarning:pytz(\\..*)?$",
+]
+
+[tool.basedpyright]
+include = ["core/src", "cli/src", "tests"]
+typeCheckingMode = "standard"
+pythonVersion = "3.13"
+venvPath = "."
+venv = ".venv"

@@ -1,0 +1,125 @@
+/* MeshInsights pipeline monitor — Textual CSS stylesheet.
+ *
+ * Loaded by theme.py via ``MONITOR_CSS = importlib.resources``.
+ * Uses Textual CSS variables ($primary, $accent, etc.) set by
+ * PIPELINE_THEME in theme.py.
+ */
+
+Screen {
+    background: $surface;
+}
+
+* {
+    scrollbar-size: 0 0;
+}
+
+/* ── Header banner: figlet left, info right ─────────────────────────── */
+
+#header-bar {
+    height: auto;
+    width: 100%;
+    margin: 0 0 1 0;
+    padding: 0 2;
+}
+
+#figlet-art {
+    width: auto;
+    height: auto;
+    color: $primary;
+    min-width: 30;
+}
+
+#info-panel {
+    width: 1fr;
+    height: auto;
+    padding: 1 2 0 2;
+    content-align: right middle;
+}
+
+.info-line {
+    width: 100%;
+    text-align: right;
+    height: 1;
+}
+
+/* ── Metric boxes ────────────────────────────────────────────────────── */
+
+#metrics-bar {
+    height: 3;
+    width: 100%;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+.metric-box {
+    width: 1fr;
+    height: 3;
+    content-align: center middle;
+    text-align: center;
+    background: $boost;
+    margin: 0 1;
+    border: tall $accent;
+}
+
+/* ── Progress ────────────────────────────────────────────────────────── */
+
+#progress-section {
+    height: auto;
+    padding: 0 2;
+    width: 100%;
+    margin-bottom: 1;
+}
+
+#progress-label {
+    text-style: bold;
+    color: $primary;
+    margin-bottom: 0;
+}
+
+ProgressBar Bar {
+    color: $accent;
+    background: $boost;
+}
+
+ProgressBar PercentageStatus {
+    color: $primary;
+}
+
+/* ── Main area ───────────────────────────────────────────────────────── */
+
+#main-area {
+    height: 1fr;
+}
+
+#log-panel {
+    width: 2fr;
+    height: 100%;
+    margin: 0 1;
+    background: $boost;
+    border: tall $accent;
+    padding: 0 1;
+}
+
+#side-panel {
+    width: 1fr;
+    height: 100%;
+}
+
+#process-table {
+    height: 1fr;
+    margin: 0 1 1 0;
+    background: $boost;
+}
+
+DataTable > .datatable--header {
+    text-style: bold;
+    color: $primary;
+}
+
+#sparkline-box {
+    height: 8;
+    margin: 0 1 1 0;
+    background: $boost;
+    padding: 0 1;
+    border: tall $accent;
+}

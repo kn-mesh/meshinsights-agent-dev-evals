@@ -1,0 +1,30 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.mypy_cache/
+
+.vscode/
+.insights/
+
+# Virtual environments
+.venv
+
+# Environment variables
+.env
+
+# macOS files
+.DS_Store
+
+# logfire
+.logfire/
+
+# claude
+.claude/
+
+# caches
+.ruff_cache/
+.pytest_cache/

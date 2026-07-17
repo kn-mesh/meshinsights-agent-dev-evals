@@ -1,0 +1,47 @@
+[project]
+name = "mi-core"
+version = "0.5.2"
+description = "MeshInsights Data Pipeline core runtime"
+readme = "METADATA.md"
+authors = [
+    { name = "Ethan Zeronik", email = "ethan.zeronik@meshsystems.com" },
+    { name = "Kurt Neuens", email = "kurt.neuens@meshsystems.com" }
+]
+requires-python = "==3.13.5"
+dependencies = [
+    "pydantic>=2.12.3",
+    "pyyaml>=6.0.0",
+    "cachetools>=5.3.3",
+    "opentelemetry-api>=1.39.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+ai = [
+    "pydantic-ai>=1.77.0",
+    "logfire>=4.22.0",
+    "tabulate>=0.9.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "ruff>=0.1.0",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["mi*"]
+exclude = ["*.egg-info*", "__pycache__*", "*.pyc"]
+
+[tool.setuptools.package-data]
+"mi.docs" = ["*.md", "**/*.md"]
+
+[tool.uv]
+package = true
