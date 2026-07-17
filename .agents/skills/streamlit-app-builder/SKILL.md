@@ -25,6 +25,13 @@ Read [references/current-streamlit-api.md](references/current-streamlit-api.md) 
 - `@st.fragment` and fragment-scoped reruns
 - `st.session_state` and callbacks
 
+## Repository-local mi-core
+
+- Treat `mi-core/` as editable source in this repository, not as a static imported package.
+- Its current checkout path is `/Users/kurt.neuens/Desktop/Code - Product/meshinsights-agent-dev-evals-mvp/mi-core`; use the repo-relative `mi-core/` path in code and documentation.
+- Runtime source lives under `mi-core/core/src/mi/`, and the root `uv` environment installs it as an editable local source.
+- If UI work exposes a framework limitation, inspect that source and modify it when the requested behavior belongs in core rather than assuming the package is immutable.
+
 ## Goals
 
 - Optimize for fast inspection and decision-making.

@@ -24,6 +24,13 @@ Read these docs only when you need their exact details:
 - [external-runtime-setup](../external-runtime-setup/SKILL.md) for provider, auth, and tracing setup.
 - [src/experimental_core/ai_feedback_automation/AutomatedFeedback.md](../../../src/experimental_core/ai_feedback_automation/AutomatedFeedback.md) only when the user asks about automated feedback follow-up.
 
+## Repository-local mi-core
+
+- Treat `mi-core/` as editable source in this repository, not as a static imported package.
+- Its current checkout path is `/Users/kurt.neuens/Desktop/Code - Product/meshinsights-agent-dev-evals-mvp/mi-core`; use the repo-relative `mi-core/` path in code and documentation.
+- Framework source lives under `mi-core/core/src/mi/`, and CLI source lives under `mi-core/cli/src/cli/`.
+- The root `uv` environment installs both as editable local sources. Inspect or modify that source when the task requires framework changes, then run the relevant `mi-core` tests.
+
 ## When To Use It
 
 Use this skill when the user asks you to:
@@ -116,7 +123,7 @@ Helper selection guidance:
 
 ## Verified Runtime Contract
 
-In this repo's installed `mi-core==0.5.2`, `PipelineOrchestrator` supports:
+In the repository-local `mi-core` source, whose project metadata currently declares version `0.5.2`, `PipelineOrchestrator` supports:
 
 - `serial`
 - `threaded`
@@ -459,6 +466,6 @@ When building the app, also use the repo's `streamlit-app-builder` skill.
 When using this skill:
 - implement the eval module instead of only restating the plan unless the user asked for design only,
 - preserve stable receipt and JSON contracts,
-- check installed `mi-core` behavior before introducing new shared runtime assumptions,
+- check the repository-local `mi-core` source and behavior before introducing new shared runtime assumptions,
 - mention any missing upstream handoff contract before adding workaround code,
 - call out any obvious follow-up improvements separately instead of expanding the scope silently.

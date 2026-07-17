@@ -21,6 +21,13 @@ Rules:
 
 Use `$external-runtime-setup` when the task also depends on provider auth, tracing, or runtime AI overrides. Use `$agent-eval-builder` when the processor output must remain compatible with eval orchestration.
 
+## Repository-local mi-core
+
+- Treat `mi-core/` as editable source in this repository, not as a static imported package.
+- Its current checkout path is `/Users/kurt.neuens/Desktop/Code - Product/meshinsights-agent-dev-evals-mvp/mi-core`; use the repo-relative `mi-core/` path in code and documentation.
+- `mi.ai` and `mi.core` live under `mi-core/core/src/mi/`; CLI source lives under `mi-core/cli/src/cli/`.
+- The root `uv` environment installs both as editable local sources. Inspect or modify that source when the task requires framework changes, then run the relevant `mi-core` tests.
+
 ## When To Use It
 
 Use this skill when the user asks you to:
@@ -73,7 +80,7 @@ Agent processors also require `max_turns` in `AIProcessorConfig`.
 
 Use `AIProcessorConfig` or a small subclass of it for processor config.
 
-Important fields from the installed `mi.ai` package:
+Important fields from the repository-local `mi.ai` source:
 - `model`: required provider/model identifier such as `azure:gpt-5.4`
 - `backend`: defaults to `"auto"`
 - `reasoning_effort`: defaults to `medium`
@@ -143,7 +150,7 @@ Use `add_text(...)` for instructions, context, and derived observations.
 
 Use `add_dataframe(...)` or `convert_dataframe_to_string(...)` instead of ad hoc table formatting.
 
-Supported DataFrame string formats from the installed `mi.ai` package:
+Supported DataFrame string formats from the repository-local `mi.ai` source:
 - `"csv"`
 - `"json"`
 - `"markdown"`
@@ -284,7 +291,7 @@ Before finishing an AI processor:
 
 ## When Exact API Details Matter
 
-This skill is based on the installed package in the local environment. If you need exact behavior beyond the guidance above, inspect:
+This skill is based on the editable source in `mi-core/core/src/mi/`. If you need exact behavior beyond the guidance above, inspect:
 - `mi.ai.message`
 - `mi.ai.mixins.base`
 - `mi.ai.mixins.workflow`

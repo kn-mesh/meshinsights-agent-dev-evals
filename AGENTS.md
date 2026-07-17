@@ -20,7 +20,7 @@
 - This repo is `uv`-managed and the project environment lives in `.venv`.
 - Do not spend time probing system `python`, `pip`, or site-packages on `PATH` before using the repo environment.
 - Always use `uv run ...` for repo commands, imports, version checks, and installed-package inspection.
-- When you need installed library behavior for `mi-core`, `mi.ai`, or other dependencies, inspect the package through `uv run python ...`, not through assumptions about globally installed Python.
+- `mi-core` and `mi.ai` are editable repository-local source under `mi-core/core/src/mi/`; inspect them directly or through `uv run python ...`, not through assumptions about a static installed package or globally installed Python.
 - Assume `.venv` is the correct environment unless the user explicitly tells you to use something else.
 - Useful examples:
   - `uv run python -c "import importlib.metadata; print(importlib.metadata.version('mi-core'))"`
@@ -30,5 +30,4 @@
 ## src/experimental_core folder
 - This contains code that is not yet part of the mi_core library, but contains useful common code that can be used to build a pipeline.
 - Do not modify the experimental_core folder without asking the user for permissionb (unless they explicitly ask you to).
-- The mi_core library is not modifiable during the development of this project, you may surface issues to the user for consideration. (e.g. there's a bug from mi_core that's blocking this project from progressing)
-
+- Modify `mi-core/` directly when requested behavior belongs in the framework. Keep unrelated framework refactors out of scope and run the relevant `mi-core` tests after changes.

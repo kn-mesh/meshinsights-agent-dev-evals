@@ -26,13 +26,20 @@ Use these narrower skills when the task enters a specialized area:
 
 Use `$external-runtime-setup` when the task also depends on provider auth, tracing, or runtime AI overrides.
 
+## Repository-local mi-core
+
+- Treat `mi-core/` as editable source in this repository, not as a static imported package.
+- Its current checkout path is `/Users/kurt.neuens/Desktop/Code - Product/meshinsights-agent-dev-evals-mvp/mi-core`; use the repo-relative `mi-core/` path in code and documentation.
+- Framework source lives under `mi-core/core/src/mi/`, and CLI source lives under `mi-core/cli/src/cli/`.
+- The root `uv` environment installs both as editable local sources. Modify that source when the requested work belongs in the framework, then run the relevant `mi-core` tests.
+
 ## Read This First
 
 Before writing pipeline code:
 1. Read docs in [docs/use_case/...].
 2. Treat these files as durable context, not an implementation log.
 3. Reuse `mi.core`, `mi.ai`, and existing repo helpers before writing custom plumbing.
-4. Do not modify `mi.core` in this repo.
+4. Make framework-level changes directly under `mi-core/` when the requested behavior belongs there; do not add a use-case workaround merely because core was formerly an external dependency.
 5. Do not modify `src/experimental_core/` unless the user explicitly asks.
 
 ## Core Design Rules

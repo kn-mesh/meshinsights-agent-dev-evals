@@ -21,6 +21,13 @@ Rules:
 - Keep concrete paths and file-layout references accurate.
 - When this skill describes a typical results layout, interpret that as the default pattern rather than a universal requirement.
 
+## Repository-local mi-core
+
+- Treat `mi-core/` as editable source in this repository, not as a static imported package.
+- Its current checkout path is `/Users/kurt.neuens/Desktop/Code - Product/meshinsights-agent-dev-evals-mvp/mi-core`; use the repo-relative `mi-core/` path in code and documentation.
+- Runtime source lives under `mi-core/core/src/mi/`, and the root `uv` environment installs it as an editable local source.
+- When analysis depends on framework behavior, verify the implementation directly in that source rather than assuming behavior from a published package.
+
 ## Workflow
 
 1. Confirm scope from the user.
