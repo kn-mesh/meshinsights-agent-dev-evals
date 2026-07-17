@@ -6,6 +6,7 @@ import asyncio
 from types import SimpleNamespace
 
 import httpx
+import mi.ai as ai
 import pytest
 from pydantic import BaseModel
 from pydantic_ai.exceptions import UsageLimitExceeded
@@ -301,6 +302,60 @@ def test_workflow_retries_output_validation_separately_from_transport(
 
     assert result.output == ExampleOutput(value=42)
     assert request_count == 2
+    assert result.usage == AIUsage(
+        requests=2,
+        input_tokens=20,
+        output_tokens=6,
+    )
+
+
+def test_workflow_enforces_token_limits_across_output_retries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Count invalid responses before deciding whether another retry is allowed."""
+    backend = PydanticAIBackend()
+    responses = iter(
+        [
+            ModelResponse(
+                parts=[TextPart("not-json")],
+                usage=RequestUsage(input_tokens=3, output_tokens=4),
+            ),
+            ModelResponse(
+                parts=[TextPart('{"value": 42}')],
+                usage=RequestUsage(input_tokens=3, output_tokens=4),
+            ),
+        ]
+    )
+    request_count = 0
+
+    def fake_model_request_sync(**_kwargs: object) -> ModelResponse:
+        nonlocal request_count
+        request_count += 1
+        return next(responses)
+
+    monkeypatch.setattr(
+        backend,
+        "_resolve_model",
+        lambda *_args, **_kwargs: ("test", "test:test"),
+    )
+    monkeypatch.setattr(backend_module, "model_request_sync", fake_model_request_sync)
+
+    with pytest.raises(UsageLimitExceeded, match="output_tokens_limit"):
+        backend.run_workflow(
+            WorkflowRequest(
+                model=ModelRef(provider="test", model="test"),
+                system_prompt="Return the requested value.",
+                user_message=UserMessage().add_text("Return a value."),
+                output_schema=ExampleOutput,
+                reasoning_spec=ReasoningSpec(),
+                reasoning_effort=ReasoningEffort.MEDIUM,
+                transport_retries=1,
+                output_retries=1,
+                usage_limits=AIUsageLimits(output_tokens_limit=5),
+            )
+        )
+
+    assert request_count == 2
 
 
 def test_workflow_does_not_treat_transport_failure_as_output_retry(
@@ -427,7 +482,7 @@ def test_agent_skill_uses_progressive_disclosure_before_running_its_tool(
     observed_defer_states: list[bool] = []
     request_number = 0
 
-    def specialist_tool(ctx: ToolContext[ProcessDataObject]) -> str:
+    def specialist_tool(ctx: ai.ToolContext[ProcessDataObject]) -> str:
         nonlocal tool_called
         assert ctx is expected_context
         tool_called = True

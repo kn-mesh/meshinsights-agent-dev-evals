@@ -4,7 +4,17 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, TypeAlias, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Sequence,
+    TypeAlias,
+    TypeVar,
+    get_origin,
+    get_type_hints,
+)
 
 from mi.ai.message import ContentBlock, ToolContentResult, normalize_content_blocks
 
@@ -58,13 +68,26 @@ class Tool:
         if annotation is inspect.Signature.empty:
             return first.name == "ctx"
 
+        try:
+            annotation = get_type_hints(
+                self.function,
+                include_extras=True,
+            ).get(first.name, annotation)
+        except (NameError, TypeError):
+            pass
+
         if isinstance(annotation, str):
-            return annotation == "ToolContext" or annotation.startswith("ToolContext[")
+            annotation_name = (
+                annotation.split("[", maxsplit=1)[0]
+                .strip(" '\"")
+                .rsplit(".", maxsplit=1)[-1]
+            )
+            return annotation_name == "ToolContext" or first.name == "ctx"
 
         if annotation is ToolContext:
             return True
 
-        return getattr(annotation, "__origin__", None) is ToolContext
+        return get_origin(annotation) is ToolContext or first.name == "ctx"
 
 
 ToolLike = Tool | Callable[..., ToolContentResult]
@@ -78,10 +101,6 @@ class ToolSet:
     instructions: str | None = None
     id: str | None = None
     defer_loading: bool = False
-
-    def __post_init__(self) -> None:
-        if self.defer_loading and not self.id:
-            raise ValueError("Deferred toolsets require a stable id")
 
     @classmethod
     def builder(cls) -> "ToolSetBuilder":

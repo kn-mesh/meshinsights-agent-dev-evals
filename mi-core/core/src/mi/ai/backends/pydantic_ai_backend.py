@@ -83,6 +83,7 @@ class PydanticAIBackend(AIBackend):
         )
 
         last_exc: ValueError | None = None
+        usage = AIUsage()
         for attempt in range(request.output_retries + 1):
             try:
                 response = model_request_sync(
@@ -102,12 +103,15 @@ class PydanticAIBackend(AIBackend):
                     model_settings=model_settings,
                     model_request_parameters=params,
                 )
+                usage = self._combine_usage(
+                    usage,
+                    self._extract_direct_usage(response),
+                )
+                self._check_direct_usage_limits(request.usage_limits, usage)
                 raw_text = self._extract_text(response)
                 if raw_text is None:
                     raise ValueError("Missing text output in model response.")
                 output = request.output_schema.model_validate_json(raw_text)
-                usage = self._extract_direct_usage(response)
-                self._check_direct_usage_limits(request.usage_limits, usage)
                 return WorkflowResult(output=output, usage=usage)
             except ValueError as exc:
                 last_exc = exc
@@ -271,7 +275,13 @@ class PydanticAIBackend(AIBackend):
         from pydantic_ai.models.anthropic import AnthropicModel
         from pydantic_ai.providers.anthropic import AnthropicProvider
 
-        foundry_client = AsyncAnthropicFoundry(http_client=http_client)
+        if http_client is None:
+            foundry_client = AsyncAnthropicFoundry()
+        else:
+            foundry_client = AsyncAnthropicFoundry(
+                http_client=http_client,
+                max_retries=0,
+            )
         anthropic_provider = AnthropicProvider(anthropic_client=foundry_client)
         return AnthropicModel(model, provider=anthropic_provider)
 
@@ -285,16 +295,25 @@ class PydanticAIBackend(AIBackend):
         """Build a direct Google Gemini model using the Generative Language API."""
         from pydantic_ai.models.google import GoogleModel
         from pydantic_ai.providers.google import GoogleProvider
+        from google.genai.types import HttpRetryOptions
 
         api_key = provider_options.get("api_key")
+        retry_options = (
+            HttpRetryOptions(attempts=1) if http_client is not None else None
+        )
 
         if isinstance(api_key, str) and api_key:
-            google_provider = GoogleProvider(api_key=api_key, http_client=http_client)
+            google_provider = GoogleProvider(
+                api_key=api_key,
+                http_client=http_client,
+                retry_options=retry_options,
+            )
         else:
             # The runtime signature supports environment-based credential lookup,
             # but the public overloads only describe explicit key/client usage.
             google_provider = GoogleProvider(  # pyright: ignore[reportCallIssue]
-                http_client=http_client
+                http_client=http_client,
+                retry_options=retry_options,
             )
         return GoogleModel(model, provider=google_provider)
 
@@ -307,6 +326,7 @@ class PydanticAIBackend(AIBackend):
         provider = AzureProvider(  # pyright: ignore[reportCallIssue]
             http_client=http_client
         )
+        provider.client.max_retries = 0
         return OpenAIChatModel(model, provider=provider)
 
     def _build_anthropic_model(
@@ -318,6 +338,7 @@ class PydanticAIBackend(AIBackend):
         provider = AnthropicProvider(  # pyright: ignore[reportCallIssue]
             http_client=http_client
         )
+        provider.client.max_retries = 0
         return AnthropicModel(model, provider=provider)
 
     def _build_openrouter_model(
@@ -329,6 +350,7 @@ class PydanticAIBackend(AIBackend):
         provider = OpenRouterProvider(  # pyright: ignore[reportCallIssue]
             http_client=http_client
         )
+        provider.client.max_retries = 0
         return OpenRouterModel(model, provider=provider)
 
     def _get_retrying_http_client(self, attempts: int) -> httpx.AsyncClient:
@@ -621,4 +643,12 @@ class PydanticAIBackend(AIBackend):
             requests=1,
             input_tokens=getattr(req_usage, "input_tokens", 0) or 0,
             output_tokens=getattr(req_usage, "output_tokens", 0) or 0,
+        )
+
+    def _combine_usage(self, current: AIUsage, additional: AIUsage) -> AIUsage:
+        """Return cumulative usage across repeated direct model requests."""
+        return AIUsage(
+            requests=current.requests + additional.requests,
+            input_tokens=current.input_tokens + additional.input_tokens,
+            output_tokens=current.output_tokens + additional.output_tokens,
         )

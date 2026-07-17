@@ -511,9 +511,10 @@ class DataAnalysisAgent(AIAgentMixin[MyDataObject, AnalysisResult], BaseProcesso
 ```
 
 Calling `.deferred()` hides a toolset's tools behind pydantic-ai tool discovery.
-A deferred toolset requires a stable ID. Toolsets are useful for reusable tool
-collections; use a capability when instructions and several toolsets form one
-cohesive workflow.
+The toolset ID is optional for discovery; assign one when the toolset needs a
+stable identity in a durable execution environment. Toolsets are useful for
+reusable tool collections; use a capability when instructions and several
+toolsets form one cohesive workflow.
 
 ### Capabilities
 

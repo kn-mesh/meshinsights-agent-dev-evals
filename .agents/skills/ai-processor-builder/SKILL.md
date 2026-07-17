@@ -18,6 +18,7 @@ Rules:
 - If the repo already uses a different but coherent processor contract, preserve that local contract unless the user asks to migrate it.
 - Keep concrete API details and referenced package behavior accurate to the local environment.
 - When this skill describes a stable artifact or downstream handoff pattern, read that as the preferred agent-facing default unless the repo has a deliberate local alternative.
+- Do not add an AI processor when compute-only logic already solves the use case reliably enough.
 
 Use `$external-runtime-setup` when the task also depends on provider auth, tracing, or runtime AI overrides. Use `$agent-eval-builder` when the processor output must remain compatible with eval orchestration.
 
@@ -27,19 +28,6 @@ Use `$external-runtime-setup` when the task also depends on provider auth, traci
 - Its current checkout path is `/Users/kurt.neuens/Desktop/Code - Product/meshinsights-agent-dev-evals-mvp/mi-core`; use the repo-relative `mi-core/` path in code and documentation.
 - `mi.ai` and `mi.core` live under `mi-core/core/src/mi/`; CLI source lives under `mi-core/cli/src/cli/`.
 - The root `uv` environment installs both as editable local sources. Inspect or modify that source when the task requires framework changes, then run the relevant `mi-core` tests.
-
-## When To Use It
-
-Use this skill when the user asks you to:
-- build a new AI workflow processor,
-- build a tool-enabled AI agent processor,
-- compose an agent from reusable toolsets or capabilities,
-- load an Agent Skills-compatible `SKILL.md` for progressive disclosure,
-- add structured model output with a Pydantic schema,
-- attach DataFrames or images to AI inputs,
-- fix unstable AI artifact or usage attachment behavior.
-
-Do not add an AI processor when compute-only logic already solves the use case reliably enough.
 
 ## Processor Shapes
 
@@ -78,7 +66,9 @@ Required members:
   `_build_capabilities(...)`, or `_build_skills(...)` when tool-driven behavior
   is needed
 
-Agent processors also require `max_turns` in `AIProcessorConfig`.
+Agent runs always use `max_turns`; `AIProcessorConfig` supplies a validated
+default of `10`, so callers only need to set it explicitly when that budget is
+not appropriate.
 
 Agent extension methods default to empty collections, so capability-only and
 skill-only agents do not need a dummy `_build_tools(...)` implementation.
@@ -88,7 +78,8 @@ skill-only agents do not need a dummy `_build_tools(...)` implementation.
 Use `AIProcessorConfig` or a small subclass of it for processor config.
 
 Important fields from the repository-local `mi.ai` source:
-- `model`: required provider/model identifier such as `azure:gpt-5.4`
+- `model`: required at execution time; use a provider/model identifier such as
+  `azure:gpt-5.4`
 - `backend`: defaults to `"auto"`
 - `reasoning_effort`: defaults to `medium`
 - `max_turns`: defaults to `10`
@@ -109,6 +100,20 @@ Important fields from the repository-local `mi.ai` source:
 
 The legacy `retries` field is a compatibility override for both transport and
 tool retries. Prefer the split fields in new processors.
+
+Retry and usage semantics:
+- `transport_retries` is the total HTTP-attempt ceiling, including the initial
+  attempt, for the built-in Azure, Anthropic, Google, and OpenRouter mappings.
+- `tool_retries` and `output_retries` count retries after the initial attempt.
+- Workflow usage is cumulative across output-validation retries; failed outputs
+  still count against token limits and attached usage.
+- Agent token and tool-call limits are enforced by pydantic-ai across the run.
+- `count_tokens_before_request=True` enables pre-request counting for agent runs
+  when the model supports it. Direct workflows cannot pre-count through the
+  current adapter; they validate provider-reported cumulative usage after each
+  response.
+- Registered custom providers use the generic pydantic-ai model-string path and
+  do not automatically receive the built-in retry transport.
 
 Keep config focused. Do not bury prompt content or business logic in config objects.
 
@@ -237,7 +242,7 @@ class ClassificationProcessor(
     ) -> None:
         """Store a stable artifact for downstream hydrators."""
 
-        data_object.set_artifact("ai_classification", response)
+        data_object.set_artifact("ai_classification", response.model_dump())
 ```
 
 ## Agent Tool Patterns
@@ -258,6 +263,9 @@ def fetch_recent_events(ctx: ToolContext[YourProcessObject], limit: int = 5) -> 
 ```
 
 Tool context is inferred if the first parameter is annotated as `ToolContext[...]` or named `ctx`.
+
+The current `mi.ai` backend adapter expects synchronous tool functions. Do not
+attach `async def` tools until the adapter gains an async-aware execution path.
 
 Supported tool return shapes from `mi.ai`:
 - `str`
@@ -285,6 +293,10 @@ Return instruction-bearing toolsets from `_build_toolsets(...)`. A `ToolSet`
 returned from `_build_tools(...)` is flattened for backward compatibility, so
 its instructions and deferred-loading behavior are not preserved there.
 
+Prefer `ToolSet.builder()` when adding raw callables because the builder
+normalizes them into `Tool` instances. If constructing `ToolSet(...)` directly,
+its `tools` list must already contain `Tool` instances.
+
 ```python
 from mi.ai import ToolSet
 
@@ -303,7 +315,8 @@ def _build_toolsets(self, data_object):
 ```
 
 Use `.deferred()` only for large tool catalogs that benefit from per-tool
-discovery. A deferred toolset requires a stable ID.
+discovery. The ID is optional for discovery; assign one when the toolset needs a
+stable identity in a durable execution environment.
 
 ### Capabilities
 
@@ -313,10 +326,14 @@ sees the capability ID and description, then pydantic-ai activates the bundled
 instructions and tools after `load_capability`.
 
 ```python
-from mi.ai import AICapability
+from mi.ai import AICapability, ai_tool
 
 
 def _build_capabilities(self, data_object):
+    @ai_tool(name="fetch_historical_events")
+    def fetch_historical_events(start: str, end: str) -> str:
+        return data_object.compare_window_with_history(start, end)
+
     return [
         AICapability(
             id="historical-review",
@@ -332,6 +349,17 @@ Deferred capability IDs must be stable and unique within the agent. Capability
 tools support `ToolContext` exactly like standalone tools. Loading and invoking
 them consumes the existing model-request and tool-call budgets, so leave enough
 `max_turns` for discovery, tool execution, and structured output.
+
+`AICapability.tools` must contain `Tool` instances, normally created with
+`@ai_tool`; unlike `_build_tools(...)`, `ToolSet.builder()`, and
+`AISkill.from_path(..., tools=...)`, the direct capability constructor does not
+normalize raw callables. `AICapability.toolsets` likewise expects concrete
+`ToolSet` instances rather than builders.
+
+This backend-neutral capability is intentionally a static composition bundle:
+string instructions, a description, tools, toolsets, and optional deferred
+loading. It does not expose arbitrary pydantic-ai capability hooks, dynamic
+instruction functions, native tools, or capability-level model settings.
 
 Keep always-used domain rules and the output contract in the base system prompt.
 Moving universally required instructions into a deferred capability adds cost
@@ -367,9 +395,18 @@ loader reads only `SKILL.md`; it does not grant filesystem access, load referenc
 files, or execute scripts. Expose any safe resource access explicitly through
 bounded tools.
 
-Use `load_skills("skills")` for a static catalog of child skill directories.
-Construct skills inside `_build_skills(...)` when their attached tools close over
+Use `load_skills("skills")` for a static catalog of immediate child skill
+directories; pass `recursive=True` only for intentionally nested catalogs. The
+catalog loader attaches no tools. Construct skills individually inside
+`_build_skills(...)` when they need tools, especially when those tools close over
 the current data object.
+
+The loader validates and preserves optional `license`, `compatibility`,
+`metadata`, and `allowed-tools` frontmatter. Those fields are metadata only in
+the current adapter: `allowed-tools` is not an authorization policy, and none of
+these optional fields are sent to the model by `AISkill.as_capability()`. Runtime
+authority comes exclusively from the concrete tools and toolsets attached by
+application code.
 
 ### When capabilities are not useful
 
@@ -391,6 +428,10 @@ Override `_attach_response(...)` when:
 - downstream hydrators expect a stable artifact name,
 - multiple models may run against the same pipeline contract,
 - eval orchestration reads a specific payload from receipt metadata.
+
+Store a serializable payload such as `response.model_dump()` when the artifact
+will flow into action decisions or receipt metadata; do not assume downstream
+serialization will preserve an arbitrary Pydantic model instance.
 
 If the processor output drives evals, keep this chain stable:
 1. AI processor writes a stable artifact on the process object.

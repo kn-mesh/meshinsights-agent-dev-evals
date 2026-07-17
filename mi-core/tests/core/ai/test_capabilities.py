@@ -50,10 +50,12 @@ def test_toolset_builder_preserves_shared_behavior() -> None:
     assert toolset.defer_loading is True
 
 
-def test_deferred_extensions_require_stable_ids() -> None:
-    """Reject deferred behavior that cannot be resumed by stable identifier."""
-    with pytest.raises(ValueError, match="Deferred toolsets require"):
-        ToolSet(defer_loading=True)
+def test_only_deferred_capabilities_require_stable_ids() -> None:
+    """Require IDs for capabilities but not per-tool deferred discovery."""
+    toolset = ToolSet(defer_loading=True)
+
+    assert toolset.id is None
+    assert toolset.defer_loading is True
 
     with pytest.raises(ValueError, match="Deferred capabilities require"):
         AICapability(defer_loading=True)

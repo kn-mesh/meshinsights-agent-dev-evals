@@ -188,6 +188,45 @@ class TestResolveModel:
 
         assert type(model).__name__ == expected_class_name
 
+    @pytest.mark.parametrize(
+        ("provider", "model_name"),
+        [
+            ("azure", "gpt-5"),
+            ("anthropic", "claude-sonnet-4-5"),
+            ("openrouter", "google/gemini-3-flash-preview"),
+            ("azure", "claude-sonnet-4-5"),
+        ],
+    )
+    def test_transport_retries_disable_provider_sdk_retry_layers(
+        self,
+        backend: PydanticAIBackend,
+        provider: str,
+        model_name: str,
+    ) -> None:
+        model, _ = backend._resolve_model(
+            provider,
+            model_name,
+            {},
+            transport_retries=3,
+        )
+
+        assert model.client.max_retries == 0
+
+    def test_transport_retries_disable_google_sdk_retry_layer(
+        self,
+        backend: PydanticAIBackend,
+    ) -> None:
+        model, _ = backend._resolve_model(
+            "google",
+            "gemini-3.1-flash-lite-preview",
+            {},
+            transport_retries=3,
+        )
+
+        retry_options = model.client._api_client._http_options.retry_options
+        assert retry_options is not None
+        assert retry_options.attempts == 1
+
 
 class TestReasoningSpecMatching:
     """Validate model-pattern matching to unified thinking policy."""
