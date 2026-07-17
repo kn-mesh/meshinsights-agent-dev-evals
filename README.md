@@ -122,6 +122,17 @@ uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1_3.ppln
 
 # Eval orchestration CLI
 uv run python -m src.evals.eval_orchestration --help
+
+# Interactive: choose the pipeline, retrieve all published versions from the
+# deployed Azure PostgreSQL source of truth, then choose the immutable benchmark
+# version to evaluate.
+uv run python -m src.evals.eval_orchestration
+
+# Azure CLI must be signed in so the CLI can run read-only benchmark queries in
+# the deployed Container App and read its source-snapshots storage secret.
+
+# Non-interactive/automation: select the benchmark explicitly. Omitting the
+# version intentionally resolves the latest published version for that key.
 uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --benchmark-key <published-benchmark-key> \
   --benchmark-version <version-number> \

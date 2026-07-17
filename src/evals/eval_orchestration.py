@@ -5,17 +5,23 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
+import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import partial
 from pathlib import Path
 from typing import Any
 
+from mi.core.utils.environment import bootstrap_environment
+
 from src.benchmarks import (
     AzurePostgresBenchmarkRepository,
+    AzureContainerAppBenchmarkRepository,
     BenchmarkExample,
     BenchmarkRepository,
     BenchmarkVersion,
+    PublishedBenchmarkVersionSummary,
 )
 from src.experimental_core.evals import (
     ErrorActionType,
@@ -32,11 +38,15 @@ from src.experimental_core.evals import (
     normalize_ai_reasoning_effort,
     normalize_filename_token,
 )
+from src.experimental_core.evals.cli.prompts import prompt_select_option
 from src.pipelines.pipeline_run_from_yaml import run_pipeline
+from src.storage.hosted_azure_config import load_hosted_blob_configuration
 
 logger = logging.getLogger(__name__)
 
 BASE_RESULTS_DIR = Path("src/evals/eval_results")
+DEFAULT_AZURE_RESOURCE_GROUP = "rg-misprx-dv"
+DEFAULT_AZURE_CONTAINER_APP = "label-benchmark"
 _NO_EVAL = EvalResult(None, None, None)
 _RECEIPT_FIELD_SPECS: tuple[ReceiptFieldSpec, ...] = (
     ReceiptFieldSpec(
@@ -460,9 +470,32 @@ def _argument_parser() -> argparse.ArgumentParser:
             "using benchmark-frozen Azure Blob evidence."
         )
     )
-    parser.add_argument("yaml_path", type=Path)
+    parser.add_argument(
+        "yaml_path",
+        nargs="?",
+        type=Path,
+        help="Pipeline config. Omit in a terminal to choose from pipeline_configs/.",
+    )
     parser.add_argument("--project-key")
-    parser.add_argument("--benchmark-key", required=True)
+    parser.add_argument(
+        "--azure-resource-group",
+        default=os.getenv(
+            "LABEL_BENCHMARK_AZURE_RESOURCE_GROUP", DEFAULT_AZURE_RESOURCE_GROUP
+        ),
+    )
+    parser.add_argument(
+        "--azure-container-app",
+        default=os.getenv(
+            "LABEL_BENCHMARK_AZURE_CONTAINER_APP", DEFAULT_AZURE_CONTAINER_APP
+        ),
+    )
+    parser.add_argument(
+        "--benchmark-key",
+        help=(
+            "Published benchmark key. Omit in an interactive terminal to retrieve "
+            "and choose from the Azure benchmark catalog."
+        ),
+    )
     parser.add_argument("--benchmark-version", type=int)
     parser.add_argument("--example-ids", nargs="*")
     parser.add_argument("--unit-ids", nargs="*")
@@ -480,14 +513,126 @@ def _argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _choose_published_benchmark_version(
+    versions: tuple[PublishedBenchmarkVersionSummary, ...],
+) -> PublishedBenchmarkVersionSummary:
+    """Prompt for one benchmark and one immutable published version."""
+    if not versions:
+        raise ValueError("No published benchmark versions were found in Azure.")
+
+    versions_by_key: dict[str, list[PublishedBenchmarkVersionSummary]] = {}
+    for version in versions:
+        versions_by_key.setdefault(version.benchmark_key, []).append(version)
+
+    benchmark_labels: dict[str, str] = {}
+    for benchmark_key, benchmark_versions in versions_by_key.items():
+        name = benchmark_versions[0].benchmark_name
+        count = len(benchmark_versions)
+        suffix = "version" if count == 1 else "versions"
+        benchmark_labels[f"{name} ({benchmark_key}) — {count} published {suffix}"] = (
+            benchmark_key
+        )
+    selected_benchmark_label = prompt_select_option(
+        "Choose a published benchmark from Azure:",
+        list(benchmark_labels),
+    )
+    selected_key = benchmark_labels[selected_benchmark_label]
+
+    version_labels: dict[str, PublishedBenchmarkVersionSummary] = {}
+    for version in sorted(
+        versions_by_key[selected_key], key=lambda item: item.version_number, reverse=True
+    ):
+        published = version.published_at.isoformat(timespec="seconds")
+        label = (
+            f"v{version.version_number} — {version.example_count} examples — "
+            f"published {published}"
+        )
+        version_labels[label] = version
+    selected_version_label = prompt_select_option(
+        f"Choose a version of {versions_by_key[selected_key][0].benchmark_name}:",
+        list(version_labels),
+    )
+    return version_labels[selected_version_label]
+
+
+def _resolve_cli_benchmark(
+    args: argparse.Namespace,
+    *,
+    repository: BenchmarkRepository,
+    project_key: str,
+    parser: argparse.ArgumentParser,
+) -> tuple[str, int | None]:
+    """Resolve flags or launch the Azure-backed terminal chooser."""
+    if args.benchmark_key:
+        return args.benchmark_key, args.benchmark_version
+    if args.benchmark_version is not None:
+        parser.error("--benchmark-version requires --benchmark-key.")
+    if not sys.stdin.isatty():
+        parser.error(
+            "--benchmark-key is required when stdin is not interactive; run in a "
+            "terminal without it to choose from Azure."
+        )
+
+    print(f"Retrieving published benchmarks for {project_key} from Azure...")
+    selected = _choose_published_benchmark_version(
+        repository.list_published_versions()
+    )
+    print(
+        f"Selected {selected.benchmark_name} "
+        f"({selected.benchmark_key}) v{selected.version_number}."
+    )
+    return selected.benchmark_key, selected.version_number
+
+
+def _resolve_pipeline_path(
+    yaml_path: Path | None,
+    *,
+    parser: argparse.ArgumentParser,
+) -> Path:
+    """Use an explicit pipeline path or prompt from repository configs."""
+    if yaml_path is not None:
+        return yaml_path
+    if not sys.stdin.isatty():
+        parser.error("yaml_path is required when stdin is not interactive.")
+    paths = sorted(Path("pipeline_configs").glob("*.ppln"))
+    if not paths:
+        parser.error("No pipeline configs were found under pipeline_configs/.")
+    labels = {str(path): path for path in paths}
+    selected = prompt_select_option("Choose a pipeline config:", list(labels))
+    return labels[selected]
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    args = _argument_parser().parse_args()
+    bootstrap_environment()
+    parser = _argument_parser()
+    args = parser.parse_args()
+    yaml_path = _resolve_pipeline_path(args.yaml_path, parser=parser)
+    project_key = (args.project_key or os.getenv("APP_PROJECT_KEY", "")).strip()
+    if not project_key:
+        parser.error("APP_PROJECT_KEY or --project-key is required.")
+    repository = AzureContainerAppBenchmarkRepository(
+        project_key=project_key,
+        resource_group=args.azure_resource_group,
+        container_app=args.azure_container_app,
+    )
+    benchmark_key, benchmark_version = _resolve_cli_benchmark(
+        args,
+        repository=repository,
+        project_key=project_key,
+        parser=parser,
+    )
+    blob_connection, blob_container = load_hosted_blob_configuration(
+        resource_group=args.azure_resource_group,
+        container_app=args.azure_container_app,
+    )
+    os.environ["AZURE_STORAGE_CONNECTION_STRING"] = blob_connection
+    os.environ["AZURE_STORAGE_CONTAINER"] = blob_container
     path = run_eval(
-        args.yaml_path,
-        project_key=args.project_key,
-        benchmark_key=args.benchmark_key,
-        benchmark_version=args.benchmark_version,
+        yaml_path,
+        project_key=project_key,
+        benchmark_key=benchmark_key,
+        benchmark_version=benchmark_version,
         ai_model=args.ai_model,
         ai_reasoning_effort=args.ai_reasoning_effort,
         example_ids=args.example_ids,
@@ -497,6 +642,7 @@ def main() -> None:
         runtime=args.runtime,
         max_workers=args.max_workers,
         error_action=args.error_action,
+        repository=repository,
     )
     print(f"Results written to: {path}")
 

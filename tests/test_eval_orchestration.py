@@ -9,7 +9,12 @@ from typing import Any
 
 from mi.core.pipeline_receipt import PipelineReceipt, StageReceipt
 
-from src.benchmarks.models import BenchmarkExample, BenchmarkVersion, SourceArtifact
+from src.benchmarks.models import (
+    BenchmarkExample,
+    BenchmarkVersion,
+    PublishedBenchmarkVersionSummary,
+    SourceArtifact,
+)
 from src.evals import eval_orchestration
 
 
@@ -161,3 +166,63 @@ def test_eval_rejects_example_ids_outside_published_version(tmp_path: Path) -> N
         assert "absent from the benchmark" in str(error)
     else:
         raise AssertionError("Expected missing benchmark example to fail.")
+
+
+def test_terminal_chooser_selects_benchmark_then_specific_version(
+    monkeypatch: Any,
+) -> None:
+    """Select from catalog metadata without loading all frozen examples first."""
+    published_at = datetime(2026, 7, 1, tzinfo=timezone.utc)
+    versions = (
+        PublishedBenchmarkVersionSummary(
+            project_key="spirax-pulse",
+            benchmark_key="steam-trap-regression",
+            benchmark_name="Steam Trap Regression",
+            benchmark_version_id="steam-v2",
+            version_number=2,
+            published_at=published_at,
+            example_count=12,
+        ),
+        PublishedBenchmarkVersionSummary(
+            project_key="spirax-pulse",
+            benchmark_key="steam-trap-regression",
+            benchmark_name="Steam Trap Regression",
+            benchmark_version_id="steam-v1",
+            version_number=1,
+            published_at=published_at,
+            example_count=8,
+        ),
+        PublishedBenchmarkVersionSummary(
+            project_key="spirax-pulse",
+            benchmark_key="other-benchmark",
+            benchmark_name="Other Benchmark",
+            benchmark_version_id="other-v1",
+            version_number=1,
+            published_at=published_at,
+            example_count=3,
+        ),
+    )
+    prompts: list[tuple[str, list[str]]] = []
+
+    def choose(prompt: str, options: list[str]) -> str:
+        prompts.append((prompt, options))
+        if len(prompts) == 1:
+            return next(option for option in options if "steam-trap-regression" in option)
+        return next(option for option in options if option.startswith("v1 "))
+
+    monkeypatch.setattr(eval_orchestration, "prompt_select_option", choose)
+
+    selected = eval_orchestration._choose_published_benchmark_version(versions)
+
+    assert selected.benchmark_version_id == "steam-v1"
+    assert len(prompts) == 2
+    assert prompts[1][1][0].startswith("v2 ")
+
+
+def test_terminal_chooser_rejects_empty_azure_catalog() -> None:
+    try:
+        eval_orchestration._choose_published_benchmark_version(())
+    except ValueError as error:
+        assert "No published benchmark versions" in str(error)
+    else:
+        raise AssertionError("Expected an empty Azure catalog to fail.")

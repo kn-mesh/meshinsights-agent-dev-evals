@@ -9,10 +9,43 @@ from typing import Any, Protocol, cast
 import psycopg
 from psycopg.rows import dict_row
 
-from src.benchmarks.models import BenchmarkExample, BenchmarkVersion
+from src.benchmarks.models import (
+    BenchmarkExample,
+    BenchmarkVersion,
+    PublishedBenchmarkVersionSummary,
+)
 
 _SEARCH_PATH_OPTIONS = "-c search_path=app,public"
 _CONNECT_TIMEOUT_SECONDS = 10
+
+_PUBLISHED_BENCHMARK_CATALOG_SQL = """
+select
+  p.project_key,
+  b.benchmark_key,
+  b.name as benchmark_name,
+  bv.id as benchmark_version_id,
+  bv.version_number,
+  bv.published_at,
+  bv.source_state_sha256,
+  count(bve.example_id)::integer as example_count
+from projects p
+join benchmarks b on b.project_id = p.id
+join benchmark_versions bv on bv.benchmark_id = b.id
+join benchmark_version_examples bve
+  on bve.project_id = p.id
+ and bve.benchmark_version_id = bv.id
+where p.project_key = %(project_key)s
+  and bv.published_at is not null
+group by
+  p.project_key,
+  b.benchmark_key,
+  b.name,
+  bv.id,
+  bv.version_number,
+  bv.published_at,
+  bv.source_state_sha256
+order by lower(b.name), b.benchmark_key, bv.version_number desc
+"""
 
 _PUBLISHED_BENCHMARK_SQL = """
 with selected_version as (
@@ -32,6 +65,7 @@ with selected_version as (
   join use_case_configs ucc on ucc.project_id = p.id
   where p.project_key = %(project_key)s
     and b.benchmark_key = %(benchmark_key)s
+    and bv.published_at is not null
     and (
       %(version_number)s::integer is null
       or bv.version_number = %(version_number)s
@@ -78,6 +112,10 @@ class BenchmarkRepository(Protocol):
         benchmark_key: str,
         version_number: int | None = None,
     ) -> BenchmarkVersion: ...
+
+    def list_published_versions(self) -> tuple[PublishedBenchmarkVersionSummary, ...]:
+        """List published versions available to the configured project."""
+        ...
 
 
 class AzurePostgresBenchmarkRepository:
@@ -136,6 +174,26 @@ class AzurePostgresBenchmarkRepository:
                 "was not found."
             )
         return _build_benchmark_version([dict(row) for row in rows])
+
+    def list_published_versions(
+        self,
+    ) -> tuple[PublishedBenchmarkVersionSummary, ...]:
+        """Return the Azure-hosted benchmark catalog for terminal selection."""
+        with self._connection_factory() as connection:
+            connection.execute("set transaction read only")
+            rows = connection.execute(
+                _PUBLISHED_BENCHMARK_CATALOG_SQL,
+                {"project_key": self.project_key},
+            ).fetchall()
+        return tuple(
+            PublishedBenchmarkVersionSummary.model_validate(
+                {
+                    **dict(row),
+                    "benchmark_version_id": str(row["benchmark_version_id"]),
+                }
+            )
+            for row in rows
+        )
 
 
 def _build_benchmark_version(rows: list[dict[str, Any]]) -> BenchmarkVersion:

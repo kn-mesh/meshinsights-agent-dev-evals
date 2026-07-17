@@ -113,3 +113,18 @@ class BenchmarkVersion(BaseModel):
             f"Example '{example_id}' was not found in benchmark "
             f"{self.benchmark_key} v{self.version_number}."
         )
+
+
+class PublishedBenchmarkVersionSummary(BaseModel):
+    """Lightweight catalog entry used to choose an Azure benchmark version."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    project_key: str = Field(min_length=1)
+    benchmark_key: str = Field(min_length=1)
+    benchmark_name: str = Field(min_length=1)
+    benchmark_version_id: str = Field(min_length=1)
+    version_number: int = Field(ge=1)
+    published_at: datetime
+    source_state_sha256: str | None = None
+    example_count: int = Field(ge=1)

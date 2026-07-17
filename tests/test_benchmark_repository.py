@@ -126,3 +126,31 @@ def test_repository_requests_latest_published_version_when_version_is_omitted() 
         "version_number": None,
     }
     assert benchmark.version_number == 2
+
+
+def test_repository_lists_published_versions_for_configured_project() -> None:
+    """Retrieve lightweight Azure catalog rows before loading example payloads."""
+    catalog_row = {
+        "project_key": "spirax-pulse",
+        "benchmark_key": "steam-trap-regression",
+        "benchmark_name": "Steam Trap Regression",
+        "benchmark_version_id": "version-id",
+        "version_number": 2,
+        "published_at": datetime(2026, 7, 1, tzinfo=timezone.utc),
+        "source_state_sha256": "d" * 64,
+        "example_count": 12,
+    }
+    connection = _Connection([catalog_row])
+    repository = AzurePostgresBenchmarkRepository(
+        database_url="postgresql://unused",
+        project_key="spirax-pulse",
+        connection_factory=lambda: connection,
+    )
+
+    versions = repository.list_published_versions()
+
+    assert connection.parameters == {"project_key": "spirax-pulse"}
+    assert len(versions) == 1
+    assert versions[0].benchmark_key == "steam-trap-regression"
+    assert versions[0].version_number == 2
+    assert versions[0].example_count == 12
