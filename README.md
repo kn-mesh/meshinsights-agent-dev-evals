@@ -110,9 +110,6 @@ Use `uv sync` after pulling branch changes that touch `pyproject.toml` or `uv.lo
 ## Common Entry Points
 
 ```bash
-# Visualization pipeline CLI
-uv run python -m src.pipelines.data_visualization_pipeline --help
-
 # YAML pipeline runner CLI
 uv run python -m src.pipelines.pipeline_run_from_yaml --help
 uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1_3.ppln \

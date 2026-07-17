@@ -307,8 +307,7 @@ def run_eval(
         / filename
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    return output_path
+    return _write_results_file(output_path, payload)
 
 
 def _select_examples(
@@ -476,7 +475,7 @@ def _evaluate_label(expected: str, actual: str | None) -> EvalResult:
     return EvalResult(
         expected=expected,
         actual=actual,
-        is_correct=None if actual is None else expected == actual,
+        is_correct=actual is not None and expected == actual,
     )
 
 
@@ -496,7 +495,10 @@ def _build_failure_attempt(
         )
     return EvalAttempt(
         actual_values={},
-        evals={},
+        evals={
+            name: EvalResult(expected=expected, actual=None, is_correct=False)
+            for name, expected in work_item.payload.approved_labels.items()
+        },
         success=False,
         error=message,
         metadata={"run_index": work_item.run_index},
@@ -630,6 +632,23 @@ def _results_filename(
     )
     tokens = [normalize_filename_token(part) for part in parts]
     return "_".join([*tokens, f"{runs_per_example}runsPerExample", f"{timestamp}.json"])
+
+
+def _write_results_file(output_path: Path, payload: dict[str, Any]) -> Path:
+    """Write eval evidence without overwriting a result from another run."""
+    collision_index = 0
+    while True:
+        candidate = (
+            output_path
+            if collision_index == 0
+            else output_path.with_stem(f"{output_path.stem}_{collision_index}")
+        )
+        try:
+            with candidate.open("x", encoding="utf-8") as result_file:
+                json.dump(payload, result_file, indent=2)
+            return candidate
+        except FileExistsError:
+            collision_index += 1
 
 
 def _argument_parser() -> argparse.ArgumentParser:

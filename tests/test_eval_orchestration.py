@@ -190,6 +190,56 @@ def test_run_eval_scores_published_examples_and_writes_benchmark_identity(
     )
 
 
+def test_failed_eval_attempt_counts_as_incorrect(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    """Keep execution failures in the headline accuracy denominator."""
+    benchmark = _benchmark()
+    call_count = 0
+
+    def fake_run_pipeline(*args: object, **kwargs: object) -> PipelineReceipt:
+        nonlocal call_count
+        _ = args, kwargs
+        call_count += 1
+        if call_count == 2:
+            raise RuntimeError("model request failed")
+        return _successful_receipt()
+
+    monkeypatch.setattr(eval_orchestration, "run_pipeline", fake_run_pipeline)
+
+    output_path = eval_orchestration.run_eval(
+        Path("pipeline_configs/v1_3.ppln"),
+        benchmark_key=benchmark.benchmark_key,
+        repository=_Repository(benchmark),
+        output_root=tmp_path,
+        runs_per_example=2,
+        runtime="serial",
+        max_workers=1,
+    )
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    summary = payload["summary"]
+    assert summary["overall_classification_accuracy"] == 0.5
+    assert summary["evaluated_runs"] == 2
+    assert summary["successful_runs"] == 1
+    assert payload["results"][0]["runs"][1]["label_correctness"] == {
+        "classification": False,
+        "root_cause": False,
+    }
+
+
+def test_results_writer_never_overwrites_existing_evidence(tmp_path: Path) -> None:
+    output_path = tmp_path / "eval.json"
+
+    first = eval_orchestration._write_results_file(output_path, {"run": 1})
+    second = eval_orchestration._write_results_file(output_path, {"run": 2})
+
+    assert first == output_path
+    assert second == tmp_path / "eval_1.json"
+    assert json.loads(first.read_text(encoding="utf-8")) == {"run": 1}
+    assert json.loads(second.read_text(encoding="utf-8")) == {"run": 2}
+
+
 def test_eval_rejects_example_ids_outside_published_version(tmp_path: Path) -> None:
     benchmark = _benchmark()
 

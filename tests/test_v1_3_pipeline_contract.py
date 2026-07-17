@@ -125,3 +125,30 @@ def test_output_schema_matches_the_prototype_contract() -> None:
     )
 
     assert set(result.model_dump()) == {"classification", "root_cause"}
+
+
+def test_output_schema_rejects_inconsistent_root_cause() -> None:
+    invalid_pairs = (("Healthy", "Open Failure"), ("Failure", "N/A"))
+
+    for classification, root_cause in invalid_pairs:
+        try:
+            PulseFailureAnalysisResult.model_validate(
+                {
+                    "classification": {
+                        "value": classification,
+                        "confidence": "High",
+                        "explanation": "Evidence explanation.",
+                    },
+                    "root_cause": {
+                        "value": root_cause,
+                        "confidence": "High",
+                        "explanation": "Root-cause explanation.",
+                    },
+                }
+            )
+        except ValueError as error:
+            assert "require" in str(error)
+        else:
+            raise AssertionError(
+                f"Expected {classification}/{root_cause} to fail validation."
+            )

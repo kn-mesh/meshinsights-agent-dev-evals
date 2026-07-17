@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from io import BytesIO
+from typing import cast
 
 import pandas as pd
 
 from matplotlib import dates as mdates
 from matplotlib import pyplot as plt
+from matplotlib.artist import Artist
 from matplotlib.axes import Axes
 from mi.core.processors import BaseProcessor
 
@@ -34,15 +36,13 @@ class V1_3TemperatureGraphsProcessor(
 ):
     """Render the 365-day chart as four contiguous raw-data segments."""
 
-    config: V1_3TemperatureGraphsProcessorConfig
-
     def __init__(
         self, config: V1_3TemperatureGraphsProcessorConfig | None = None
     ) -> None:
         """Initialize the v1_3 chart processor with typed rendering settings."""
         resolved_config = config or V1_3TemperatureGraphsProcessorConfig()
         super().__init__(resolved_config)
-        self.config = resolved_config
+        self.v1_config = resolved_config
 
     def _render_combined_chart(
         self,
@@ -53,7 +53,7 @@ class V1_3TemperatureGraphsProcessor(
         window_days: int | None = None,
     ) -> bytes:
         """Render one chart, segmenting only the configured long window."""
-        if window_days != self.config.segmented_window_days:
+        if window_days != self.v1_config.segmented_window_days:
             return super()._render_combined_chart(
                 window_frame,
                 temperature_chart_title=temperature_chart_title,
@@ -79,7 +79,7 @@ class V1_3TemperatureGraphsProcessor(
         segment_ranges = self._build_segment_ranges(window_frame["timestamp"])
         figure, axes = plt.subplots(
             2,
-            self.config.segment_count,
+            self.v1_config.segment_count,
             figsize=(19.5, 8.8),
             gridspec_kw={"height_ratios": [3, 2]},
             squeeze=False,
@@ -114,9 +114,9 @@ class V1_3TemperatureGraphsProcessor(
             include_zero=True,
         )
 
-        temperature_handles: list[object] | None = None
+        temperature_handles: list[Artist] | None = None
         temperature_labels: list[str] | None = None
-        delta_handles: list[object] | None = None
+        delta_handles: list[Artist] | None = None
         delta_labels: list[str] | None = None
 
         for index, (segment_start, segment_end) in enumerate(segment_ranges):
@@ -254,11 +254,11 @@ class V1_3TemperatureGraphsProcessor(
         boundaries = pd.date_range(
             start=timestamps.min(),
             end=timestamps.max(),
-            periods=self.config.segment_count + 1,
+            periods=self.v1_config.segment_count + 1,
         )
         return [
             (boundaries[index], boundaries[index + 1])
-            for index in range(self.config.segment_count)
+            for index in range(self.v1_config.segment_count)
         ]
 
     def _slice_frame_for_segment(
@@ -386,7 +386,10 @@ class V1_3TemperatureGraphsProcessor(
         show_x_labels: bool,
     ) -> None:
         """Format one segmented time axis with a compact date scale."""
-        axis.set_xlim(segment_start, segment_end)
+        axis.set_xlim(
+            cast(float, mdates.date2num(segment_start.to_pydatetime())),
+            cast(float, mdates.date2num(segment_end.to_pydatetime())),
+        )
         axis.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=3, maxticks=5))
         axis.xaxis.set_major_formatter(mdates.DateFormatter("%y-%m-%d"))
         axis.tick_params(axis="x", which="both", bottom=True, labelbottom=show_x_labels)

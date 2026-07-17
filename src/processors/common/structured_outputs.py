@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ClassificationResult(BaseModel):
@@ -44,3 +44,15 @@ class PulseFailureAnalysisResult(BaseModel):
     root_cause: RootCauseResult = Field(
         description="Root cause classification output containing the value, confidence, and explanation for Open Failure, Closed Failure, Unknown, or N/A."
     )
+
+    @model_validator(mode="after")
+    def validate_classification_root_cause_consistency(self) -> Self:
+        """Reject root causes that contradict the top-level classification."""
+        is_healthy = self.classification.value == "Healthy"
+        is_not_applicable = self.root_cause.value == "N/A"
+        if is_healthy != is_not_applicable:
+            raise ValueError(
+                'Healthy classifications require root cause "N/A", and Failure '
+                'classifications require a failure root cause.'
+            )
+        return self

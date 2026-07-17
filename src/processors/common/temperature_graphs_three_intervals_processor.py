@@ -223,7 +223,10 @@ class TemperatureGraphsThreeIntervalsProcessor(
 
         nan_rows: list[dict[str, Any]] = []
         for idx in window_frame[gaps_mask].index:
-            previous_timestamp = pd.Timestamp(window_frame.loc[idx - 1, "timestamp"])
+            previous_value = window_frame.loc[idx - 1, "timestamp"]
+            if not isinstance(previous_value, datetime):
+                raise ValueError("Temperature history contains an invalid timestamp.")
+            previous_timestamp = pd.Timestamp(previous_value)
             nan_rows.append(
                 {
                     "timestamp": previous_timestamp + pd.Timedelta(seconds=1),
