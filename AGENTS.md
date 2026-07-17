@@ -4,13 +4,14 @@
 - The first thing a developer should do is populate the relevant files in `/docs/use_case/` with the durable details of the use case.
 - Do not update the markdown files in `/docs/use_case/` unless the user explicitly asks for it. They are not running implementation logs and must not be overwritten with notes about how the current pipeline or intermediate experiments work.
 
-## Where to find helpful documentation related to how to build a pipeline
-- The README.md file contains instructions on how to setup and run the pipeline locally as well as high level descriptions of the mi-core pipeline.
-- Use `docs/human_dev_guidance/` for human-oriented development guidance about template structure, customization, and lifecycle.
-- Use the available **agent skills** (`.agents/skills/`) as the primary reference for coding-agent implementation guidance when building and evolving a pipeline. When the skills prove insufficient, refer to the mi_core library.
+## Where to find development guidance
+- The README.md file contains setup, entry points, and a map of the available Codex skills.
+- Use `$project-guide` for developer questions about repository architecture, customization, lifecycle, ownership boundaries, or which specialized skill to use.
+- Use the available **agent skills** (`.agents/skills/`) as the primary development guidance. They should support both implementation work and questions from developers using Codex.
+- When a skill is insufficient or may be stale, inspect the current code, tests, pipeline configs, and the repository-local `mi-core/` source. The codebase is the source of truth for current behavior.
 
 ## How to interpret repo skills
-- The skills in `.agents/skills/` are recommended implementation guidance for AI coding agents working in `mi-core` style repos.
+- The skills in `.agents/skills/` are recommended development guidance for AI coding agents working in `mi-core` style repos.
 - The skills do not need to match the current repo exactly.
 - Existing repo code is the source of truth for current local behavior.
 - If the repo already uses a different but coherent approach, preserve that approach unless the user explicitly asks to migrate toward the skill pattern.
@@ -29,5 +30,5 @@
 
 ## src/experimental_core folder
 - This contains code that is not yet part of the mi_core library, but contains useful common code that can be used to build a pipeline.
-- Do not modify the experimental_core folder without asking the user for permissionb (unless they explicitly ask you to).
+- Do not modify the experimental_core folder without asking the user for permission (unless they explicitly ask you to).
 - Modify `mi-core/` directly when requested behavior belongs in the framework. Keep unrelated framework refactors out of scope and run the relevant `mi-core` tests after changes.

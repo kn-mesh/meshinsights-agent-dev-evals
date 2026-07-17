@@ -1,0 +1,38 @@
+name: pulse_alarm_failure_analysis_v1_3
+version: 1.3.0
+
+metadata_class: PulseFailureAnalysisMetadata
+
+objects:
+  process: PulseFailureAnalysisProcessObject
+  action: PulseFailureAnalysisActionObject
+
+retrieve:
+  hydrator: V1_3RetrieveToProcessHydrator
+  retrievers:
+    - retriever: PulseAlarmTemperatureHistoryRetriever
+      lookback_days: 365
+      post_alarm_hours: 0
+      keep_all_post_alarm_rows: false
+
+process:
+  hydrator: V1_3ProcessToActionHydrator
+  processors:
+    - processor: V1_3TemperatureEvidenceProcessor
+      window_days_list: [7, 30, 365]
+      segmented_window_days: 365
+      segment_count: 4
+    - processor: V1_3AlarmClassificationAgent
+      model: azure:gpt-5-mini
+      reasoning_effort: medium
+      max_turns: 10
+      timeout: 300
+      tool_timeout: 45
+      transport_retries: 3
+      tool_retries: 3
+      output_retries: 3
+
+action:
+  hydrator: V1_3FinalizeActionHydrator
+  actions:
+    - action: NoOpAction

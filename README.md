@@ -15,7 +15,7 @@ The root project uses editable path dependencies for `mi-core` and the CLI, so
 changes under `mi-core/` are immediately available through the root `uv`
 environment. Spirax pipeline code is intentionally not included yet.
 
-Use this README as the quick on-ramp. Use `docs/use_case/` for durable use-case context, `docs/human_dev_guidance/` for human-oriented development guidance, and the repo skills under `.agents/skills/` for coding-agent implementation guidance.
+Use this README as the quick on-ramp. Keep durable use-case context in `docs/use_case/`. For development guidance, ask Codex: the repo skills under `.agents/skills/` provide the project-specific playbooks, and the current codebase remains the source of truth.
 
 ## Prerequisites
 
@@ -120,17 +120,28 @@ uv run python -m streamlit run src/streamlit_apps/data_visualization_app.py
 uv run python -m streamlit run src/streamlit_apps/evaluation_results_app.py
 ```
 
-## Documentation Map
+## Working With Codex
 
-Start here, in order:
+Describe the outcome or ask the development question directly. Codex should inspect the relevant skill and verify its answer against the current code and tests instead of expecting you to translate guidance into code by hand.
 
-1. `docs/use_case/`
-2. `docs/human_dev_guidance/` for human developer guidance about template structure, customization, and lifecycle
-3. `.agents/skills/pipeline-builder/SKILL.md` or use `$pipeline-builder`
-4. `.agents/skills/agent-eval-builder/SKILL.md` or use `$agent-eval-builder` (only for AI output evaluation)
-5. `.agents/skills/external-runtime-setup/SKILL.md` or use `$external-runtime-setup` (only for AI/auth/telemetry setup)
-6. `.agents/skills/streamlit-app-builder/SKILL.md` or use `$streamlit-app-builder`
-7. `.agents/skills/ai-processor-builder/SKILL.md` or use `$ai-processor-builder` (only for AI processors)
+Use `$project-guide` for repository orientation, architecture, customization, lifecycle, ownership boundaries, and help choosing a more specialized skill.
+
+| Need | Skill |
+|---|---|
+| Build or evolve a staged pipeline | `$pipeline-builder` |
+| Build an `mi.ai` workflow, agent, toolset, capability, or skill | `$ai-processor-builder` |
+| Build evaluation orchestration or result contracts | `$agent-eval-builder` |
+| Analyze existing evaluation results | `$eval-results-analysis` |
+| Build or fix a Streamlit review/debug app | `$streamlit-app-builder` |
+| Configure auth, providers, runtime overrides, or tracing | `$external-runtime-setup` |
+
+Example questions:
+
+- “Use `$project-guide` to explain where this feature belongs and which existing code is the closest pattern.”
+- “Use `$pipeline-builder` to add the next pipeline stage and verify the relevant tests.”
+- “Which layer should own this behavior: the use-case project or `mi-core`?”
+
+Before implementation, populate the relevant files in `docs/use_case/` with durable business context. Do not use those files as implementation logs, and do not update them unless the user explicitly asks.
 
 ## Repository Layout
 
@@ -139,7 +150,6 @@ Start here, in order:
 data/
 docs/
   current-dev/
-  human_dev_guidance/
   product-strategy/
   use_case/
 mi-core/
@@ -165,4 +175,5 @@ src/
 ## Notes
 
 - Keep `README.md` focused on setup and navigation.
-- Put durable business and domain context in `docs/use_case/UseCaseContext.md`, broader human developer guidance in `docs/human_dev_guidance/`, and coding-agent implementation patterns in `.agents/skills/`.
+- Put durable business and domain context in `docs/use_case/` and project-specific development guidance in `.agents/skills/`.
+- Keep skills concise and procedural. When guidance depends on current behavior, have Codex inspect the implementation and tests rather than duplicating them in prose.
