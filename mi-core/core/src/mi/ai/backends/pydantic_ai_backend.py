@@ -5,10 +5,12 @@ from __future__ import annotations
 import base64
 import functools
 import inspect
-from typing import Any, TypeVar
+from typing import Any, TypeVar, get_type_hints
 
+import httpx
 from pydantic import BaseModel
-from pydantic_ai import Agent
+from pydantic_ai import Agent, AgentRetries, FunctionToolset, RunContext
+from pydantic_ai.capabilities import Capability as PydanticCapability
 from pydantic_ai.direct import model_request_sync
 from pydantic_ai.messages import (
     BinaryImage,
@@ -19,20 +21,28 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models import ModelRequestParameters
 from pydantic_ai.output import OutputObjectDefinition
+from pydantic_ai.retries import (
+    AsyncTenacityTransport,
+    RetryConfig,
+    wait_retry_after,
+)
 from pydantic_ai.tools import Tool as PydanticTool
-from pydantic_ai.usage import UsageLimits
+from pydantic_ai.usage import RunUsage, UsageLimits
+from tenacity import retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from mi.ai.backends.base import (
     AIBackend,
     AIUsage,
+    AIUsageLimits,
     AgentRequest,
     AgentResult,
     WorkflowRequest,
     WorkflowResult,
 )
+from mi.ai.capabilities import AICapability
 from mi.ai.message import ImageContent, TextContent, UserMessage
 from mi.ai.model_config import ReasoningEffort, ReasoningSpec
-from mi.ai.tools import Tool, normalize_tool_output
+from mi.ai.tools import Tool, ToolSet, normalize_tool_output
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
 
@@ -41,12 +51,19 @@ class PydanticAIBackend(AIBackend):
     """Executes mi.ai requests via pydantic-ai."""
 
     BACKEND_NAME = "pydantic_ai"
+    _RETRYABLE_STATUS_CODES = frozenset({408, 409, 429, 500, 502, 503, 504})
+
+    def __init__(self) -> None:
+        self._retrying_http_clients: dict[int, httpx.AsyncClient] = {}
 
     def run_workflow(
         self, request: WorkflowRequest[OutputT]
     ) -> WorkflowResult[OutputT]:
         model, settings_id = self._resolve_model(
-            request.model.provider, request.model.model, request.provider_options
+            request.model.provider,
+            request.model.model,
+            request.provider_options,
+            transport_retries=request.transport_retries,
         )
         model_settings = self._build_model_settings(
             request.reasoning_spec,
@@ -65,8 +82,8 @@ class PydanticAIBackend(AIBackend):
             ),
         )
 
-        last_exc: Exception | None = None
-        for attempt in range(1, request.retries + 1):
+        last_exc: ValueError | None = None
+        for attempt in range(request.output_retries + 1):
             try:
                 response = model_request_sync(
                     model=model,
@@ -89,12 +106,12 @@ class PydanticAIBackend(AIBackend):
                 if raw_text is None:
                     raise ValueError("Missing text output in model response.")
                 output = request.output_schema.model_validate_json(raw_text)
-                return WorkflowResult(
-                    output=output, usage=self._extract_direct_usage(response)
-                )
-            except Exception as exc:
+                usage = self._extract_direct_usage(response)
+                self._check_direct_usage_limits(request.usage_limits, usage)
+                return WorkflowResult(output=output, usage=usage)
+            except ValueError as exc:
                 last_exc = exc
-                if attempt >= request.retries:
+                if attempt >= request.output_retries:
                     raise
         raise (
             last_exc
@@ -106,7 +123,10 @@ class PydanticAIBackend(AIBackend):
         self, request: AgentRequest[OutputT], *, deps: Any | None = None
     ) -> AgentResult[OutputT]:
         model, settings_id = self._resolve_model(
-            request.model.provider, request.model.model, request.provider_options
+            request.model.provider,
+            request.model.model,
+            request.provider_options,
+            transport_retries=request.transport_retries,
         )
         model_settings = self._build_model_settings(
             request.reasoning_spec,
@@ -115,45 +135,64 @@ class PydanticAIBackend(AIBackend):
             request.timeout,
             request.backend_options,
         )
-        pydantic_tools = [self._build_tool(tool) for tool in request.tools]
+        pydantic_tools: list[PydanticTool[Any]] = [
+            self._build_tool(tool) for tool in request.tools
+        ]
+        pydantic_toolsets = [
+            self._build_toolset(toolset) for toolset in request.toolsets
+        ]
+        pydantic_capabilities = [
+            self._build_capability(capability)
+            for capability in request.capabilities
+        ]
+        agent_retries: int | AgentRetries = request.tool_retries
+        if request.output_retries is not None:
+            agent_retries = AgentRetries(
+                tools=request.tool_retries,
+                output=request.output_retries,
+            )
 
-        agent: Agent[Any, OutputT] = Agent(
+        agent = Agent[Any, OutputT](
             model,
             deps_type=type(deps) if deps is not None else object,
             output_type=request.output_schema,
             system_prompt=request.system_prompt,
             model_settings=model_settings,
             tools=pydantic_tools,
-            retries=request.retries,
-            output_retries=request.output_retries,
+            toolsets=pydantic_toolsets or None,
+            capabilities=pydantic_capabilities or None,
+            retries=agent_retries,
             tool_timeout=request.tool_timeout,
+            # Preserve v1 behavior: do not execute sibling function tools once
+            # a valid structured output has completed the run.
+            end_strategy="early",
         )
 
-        last_exc: Exception | None = None
-        for attempt in range(1, request.retries + 1):
-            try:
-                result = agent.run_sync(
-                    self._build_user_content(request.user_message),
-                    deps=deps,
-                    usage_limits=UsageLimits(request_limit=request.max_turns),
-                )
-                usage = result.usage()
-                return AgentResult(
-                    output=result.output,
-                    usage=AIUsage(
-                        requests=usage.requests,
-                        input_tokens=usage.input_tokens,
-                        output_tokens=usage.output_tokens,
-                    ),
-                )
-            except Exception as exc:
-                last_exc = exc
-                if attempt >= request.retries:
-                    raise
-        raise last_exc if last_exc is not None else ValueError("Agent execution failed")
+        result = agent.run_sync(
+            self._build_user_content(request.user_message),
+            deps=deps,
+            usage_limits=self._build_usage_limits(
+                request.usage_limits,
+                default_request_limit=request.max_turns,
+            ),
+        )
+        usage = result.usage
+        return AgentResult(
+            output=result.output,
+            usage=AIUsage(
+                requests=usage.requests,
+                input_tokens=usage.input_tokens,
+                output_tokens=usage.output_tokens,
+            ),
+        )
 
     def _resolve_model(
-        self, provider: str, model: str, provider_options: dict[str, Any]
+        self,
+        provider: str,
+        model: str,
+        provider_options: dict[str, Any],
+        *,
+        transport_retries: int | None = None,
     ) -> tuple[Any, str]:
         """Resolve provider + model + options into a pydantic-ai model reference.
 
@@ -169,23 +208,58 @@ class PydanticAIBackend(AIBackend):
               only for settings-builder prefix matching (e.g.
               ``"azure:claude-sonnet-4-5"``).
         """
+        http_client = (
+            self._get_retrying_http_client(transport_retries)
+            if transport_retries is not None
+            else None
+        )
+
         if provider == "azure":
             deployment = provider_options.get("deployment")
             name = deployment if isinstance(deployment, str) and deployment else model
             settings_id = f"azure:{name}"
 
             if model.startswith("claude"):
-                return self._build_foundry_model(model, provider_options), settings_id
+                return (
+                    self._build_foundry_model(
+                        model,
+                        provider_options,
+                        http_client=http_client,
+                    ),
+                    settings_id,
+                )
+
+            if http_client is not None:
+                return self._build_azure_model(name, http_client), settings_id
 
             return f"azure:{name}", settings_id
 
         if provider == "google":
-            return self._build_google_model(model, provider_options), f"google:{model}"
+            return (
+                self._build_google_model(
+                    model,
+                    provider_options,
+                    http_client=http_client,
+                ),
+                f"google:{model}",
+            )
+
+        if provider == "anthropic" and http_client is not None:
+            return self._build_anthropic_model(model, http_client), f"anthropic:{model}"
+
+        if provider == "openrouter" and http_client is not None:
+            return self._build_openrouter_model(model, http_client), f"openrouter:{model}"
 
         model_str = f"{provider}:{model}"
         return model_str, model_str
 
-    def _build_foundry_model(self, model: str, provider_options: dict[str, Any]) -> Any:
+    def _build_foundry_model(
+        self,
+        model: str,
+        provider_options: dict[str, Any],
+        *,
+        http_client: httpx.AsyncClient | None = None,
+    ) -> Any:
         """Build an ``AnthropicModel`` configured for Microsoft Azure Foundry.
 
         Credentials are resolved automatically by the ``anthropic`` SDK from
@@ -197,21 +271,134 @@ class PydanticAIBackend(AIBackend):
         from pydantic_ai.models.anthropic import AnthropicModel
         from pydantic_ai.providers.anthropic import AnthropicProvider
 
-        foundry_client = AsyncAnthropicFoundry()
+        foundry_client = AsyncAnthropicFoundry(http_client=http_client)
         anthropic_provider = AnthropicProvider(anthropic_client=foundry_client)
         return AnthropicModel(model, provider=anthropic_provider)
 
-    def _build_google_model(self, model: str, provider_options: dict[str, Any]) -> Any:
+    def _build_google_model(
+        self,
+        model: str,
+        provider_options: dict[str, Any],
+        *,
+        http_client: httpx.AsyncClient | None = None,
+    ) -> Any:
         """Build a direct Google Gemini model using the Generative Language API."""
         from pydantic_ai.models.google import GoogleModel
         from pydantic_ai.providers.google import GoogleProvider
 
         api_key = provider_options.get("api_key")
 
-        google_provider = GoogleProvider(
-            api_key=api_key if isinstance(api_key, str) and api_key else None,
-        )
+        if isinstance(api_key, str) and api_key:
+            google_provider = GoogleProvider(api_key=api_key, http_client=http_client)
+        else:
+            # The runtime signature supports environment-based credential lookup,
+            # but the public overloads only describe explicit key/client usage.
+            google_provider = GoogleProvider(  # pyright: ignore[reportCallIssue]
+                http_client=http_client
+            )
         return GoogleModel(model, provider=google_provider)
+
+    def _build_azure_model(
+        self, model: str, http_client: httpx.AsyncClient
+    ) -> Any:
+        from pydantic_ai.models.openai import OpenAIChatModel
+        from pydantic_ai.providers.azure import AzureProvider
+
+        provider = AzureProvider(  # pyright: ignore[reportCallIssue]
+            http_client=http_client
+        )
+        return OpenAIChatModel(model, provider=provider)
+
+    def _build_anthropic_model(
+        self, model: str, http_client: httpx.AsyncClient
+    ) -> Any:
+        from pydantic_ai.models.anthropic import AnthropicModel
+        from pydantic_ai.providers.anthropic import AnthropicProvider
+
+        provider = AnthropicProvider(  # pyright: ignore[reportCallIssue]
+            http_client=http_client
+        )
+        return AnthropicModel(model, provider=provider)
+
+    def _build_openrouter_model(
+        self, model: str, http_client: httpx.AsyncClient
+    ) -> Any:
+        from pydantic_ai.models.openrouter import OpenRouterModel
+        from pydantic_ai.providers.openrouter import OpenRouterProvider
+
+        provider = OpenRouterProvider(  # pyright: ignore[reportCallIssue]
+            http_client=http_client
+        )
+        return OpenRouterModel(model, provider=provider)
+
+    def _get_retrying_http_client(self, attempts: int) -> httpx.AsyncClient:
+        client = self._retrying_http_clients.get(attempts)
+        if client is None:
+            client = httpx.AsyncClient(
+                transport=self._build_retry_transport(attempts),
+                timeout=httpx.Timeout(600, connect=5),
+            )
+            self._retrying_http_clients[attempts] = client
+        return client
+
+    def _build_retry_transport(
+        self,
+        attempts: int,
+        *,
+        wrapped: httpx.AsyncBaseTransport | None = None,
+    ) -> AsyncTenacityTransport:
+        if attempts < 1:
+            raise ValueError("Transport retry attempts must be at least 1")
+
+        return AsyncTenacityTransport(
+            config=RetryConfig(
+                retry=retry_if_exception_type(
+                    (httpx.TransportError, httpx.HTTPStatusError)
+                ),
+                wait=wait_retry_after(
+                    fallback_strategy=wait_exponential(multiplier=1, max=30),
+                    max_wait=60,
+                ),
+                stop=stop_after_attempt(attempts),
+                reraise=True,
+            ),
+            wrapped=wrapped,
+            validate_response=self._validate_retryable_response,
+        )
+
+    def _validate_retryable_response(self, response: httpx.Response) -> None:
+        if response.status_code in self._RETRYABLE_STATUS_CODES:
+            response.raise_for_status()
+
+    def _build_usage_limits(
+        self,
+        limits: AIUsageLimits,
+        *,
+        default_request_limit: int | None = None,
+    ) -> UsageLimits:
+        return UsageLimits(
+            request_limit=(
+                limits.request_limit
+                if limits.request_limit is not None
+                else default_request_limit
+            ),
+            tool_calls_limit=limits.tool_calls_limit,
+            input_tokens_limit=limits.input_tokens_limit,
+            output_tokens_limit=limits.output_tokens_limit,
+            total_tokens_limit=limits.total_tokens_limit,
+            count_tokens_before_request=limits.count_tokens_before_request,
+        )
+
+    def _check_direct_usage_limits(
+        self, limits: AIUsageLimits, usage: AIUsage
+    ) -> None:
+        self._build_usage_limits(limits).check_tokens(
+            RunUsage(
+                requests=usage.requests,
+                input_tokens=usage.input_tokens,
+                output_tokens=usage.output_tokens,
+            )
+        )
 
     def _build_model_settings(
         self,
@@ -258,7 +445,7 @@ class PydanticAIBackend(AIBackend):
 
         return settings
 
-    def _build_tool(self, tool: Tool) -> PydanticTool:
+    def _build_tool(self, tool: Tool) -> PydanticTool[Any]:
         function = self._adapt_tool_function(tool)
         if (
             tool.timeout is not None
@@ -274,7 +461,12 @@ class PydanticAIBackend(AIBackend):
                 strict=tool.strict,
                 metadata=tool.metadata,
             )
-        if tool.name or tool.description or tool.takes_ctx is not None:
+        if (
+            tool.name
+            or tool.description
+            or tool.takes_ctx is not None
+            or tool.resolved_takes_ctx()
+        ):
             return PydanticTool(
                 function,
                 name=tool.resolved_name(),
@@ -282,6 +474,30 @@ class PydanticAIBackend(AIBackend):
                 takes_ctx=tool.resolved_takes_ctx(),
             )
         return function  # type: ignore[return-value]
+
+    def _build_toolset(self, toolset: ToolSet) -> FunctionToolset[Any]:
+        """Convert a backend-neutral toolset to a pydantic-ai toolset."""
+        return FunctionToolset(
+            tools=[self._build_tool(tool) for tool in toolset.tools],
+            id=toolset.id,
+            instructions=toolset.instructions,
+            defer_loading=toolset.defer_loading,
+        )
+
+    def _build_capability(
+        self, capability: AICapability
+    ) -> PydanticCapability[Any]:
+        """Convert a backend-neutral capability to a pydantic-ai capability."""
+        return PydanticCapability(
+            id=capability.id,
+            description=capability.description,
+            instructions=capability.instructions,
+            tools=[self._build_tool(tool) for tool in capability.tools],
+            toolsets=[
+                self._build_toolset(toolset) for toolset in capability.toolsets
+            ],
+            defer_loading=capability.defer_loading,
+        )
 
     def _adapt_tool_function(self, tool: Tool) -> Any:
         """Wrap an ``mi.ai.Tool`` function for pydantic-ai compatibility.
@@ -320,7 +536,9 @@ class PydanticAIBackend(AIBackend):
         # pydantic-ai will populate as RunContext.  Keep all other params.
         adapted_params = [
             inspect.Parameter(
-                "ctx", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Any
+                "ctx",
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                annotation=RunContext[Any],
             ),
             *original_params[1:],
         ]
@@ -333,6 +551,19 @@ class PydanticAIBackend(AIBackend):
             raw = original(context, **kwargs)
             return self._build_tool_content(raw)
 
+        try:
+            resolved_hints = get_type_hints(original, include_extras=True)
+        except (NameError, TypeError):
+            resolved_hints = {}
+        adapter_annotations: dict[str, Any] = {"ctx": RunContext[Any]}
+        for parameter in original_params[1:]:
+            annotation = resolved_hints.get(parameter.name, parameter.annotation)
+            if annotation is not inspect.Signature.empty:
+                adapter_annotations[parameter.name] = annotation
+        return_annotation = resolved_hints.get("return", original_sig.return_annotation)
+        if return_annotation is not inspect.Signature.empty:
+            adapter_annotations["return"] = return_annotation
+        _ctx_adapter.__annotations__ = adapter_annotations
         _ctx_adapter.__signature__ = adapted_sig  # type: ignore[attr-defined]
         return _ctx_adapter
 

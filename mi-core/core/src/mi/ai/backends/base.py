@@ -8,9 +8,10 @@ from typing import Any, ClassVar, Generic, TypeVar
 
 from pydantic import BaseModel
 
+from mi.ai.capabilities import AICapability
 from mi.ai.message import UserMessage
 from mi.ai.model_config import ModelRef, ReasoningEffort, ReasoningSpec
-from mi.ai.tools import Tool
+from mi.ai.tools import Tool, ToolSet
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
 
@@ -25,6 +26,18 @@ class AIUsage:
 
 
 @dataclass(frozen=True, slots=True)
+class AIUsageLimits:
+    """Backend-neutral limits for one AI execution."""
+
+    request_limit: int | None = None
+    tool_calls_limit: int | None = None
+    input_tokens_limit: int | None = None
+    output_tokens_limit: int | None = None
+    total_tokens_limit: int | None = None
+    count_tokens_before_request: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class WorkflowRequest(Generic[OutputT]):
     """Request payload for one-shot structured workflow execution."""
 
@@ -34,7 +47,9 @@ class WorkflowRequest(Generic[OutputT]):
     output_schema: type[OutputT]
     reasoning_spec: ReasoningSpec
     reasoning_effort: ReasoningEffort
-    retries: int
+    transport_retries: int = 3
+    output_retries: int = 3
+    usage_limits: AIUsageLimits = field(default_factory=AIUsageLimits)
     timeout: float | None = None
     provider_options: dict[str, Any] = field(default_factory=dict)
     backend_options: dict[str, Any] = field(default_factory=dict)
@@ -59,9 +74,13 @@ class AgentRequest(Generic[OutputT]):
     tools: list[Tool]
     reasoning_spec: ReasoningSpec
     reasoning_effort: ReasoningEffort
-    retries: int
     max_turns: int
+    toolsets: list[ToolSet] = field(default_factory=list)
+    capabilities: list[AICapability] = field(default_factory=list)
+    transport_retries: int = 3
+    tool_retries: int = 3
     output_retries: int | None = None
+    usage_limits: AIUsageLimits = field(default_factory=AIUsageLimits)
     tool_timeout: float | None = None
     timeout: float | None = None
     provider_options: dict[str, Any] = field(default_factory=dict)

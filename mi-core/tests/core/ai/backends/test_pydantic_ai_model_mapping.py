@@ -89,7 +89,12 @@ class TestResolveModel:
         monkeypatch.setenv("ANTHROPIC_FOUNDRY_API_KEY", "test-key")
         monkeypatch.setenv("ANTHROPIC_FOUNDRY_RESOURCE", "test-resource")
         monkeypatch.delenv("ANTHROPIC_FOUNDRY_BASE_URL", raising=False)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-api-key")
+        monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://test.openai.azure.com")
+        monkeypatch.setenv("AZURE_OPENAI_API_KEY", "test-azure-api-key")
+        monkeypatch.setenv("OPENAI_API_VERSION", "2025-01-01-preview")
         monkeypatch.setenv("GOOGLE_API_KEY", "test-google-api-key")
+        monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-api-key")
 
     def test_azure_gpt_returns_string(self, backend: PydanticAIBackend) -> None:
         model, settings_id = backend._resolve_model("azure", "gpt-5", {})
@@ -152,6 +157,36 @@ class TestResolveModel:
         )
         assert model == "openrouter:google/gemini-3-flash-preview"
         assert settings_id == "openrouter:google/gemini-3-flash-preview"
+
+    @pytest.mark.parametrize(
+        ("provider", "model_name", "expected_class_name"),
+        [
+            ("azure", "gpt-5", "OpenAIChatModel"),
+            ("anthropic", "claude-sonnet-4-5", "AnthropicModel"),
+            ("google", "gemini-3.1-flash-lite-preview", "GoogleModel"),
+            (
+                "openrouter",
+                "google/gemini-3-flash-preview",
+                "OpenRouterModel",
+            ),
+            ("azure", "claude-sonnet-4-5", "AnthropicModel"),
+        ],
+    )
+    def test_transport_retries_use_explicit_provider_models(
+        self,
+        backend: PydanticAIBackend,
+        provider: str,
+        model_name: str,
+        expected_class_name: str,
+    ) -> None:
+        model, _ = backend._resolve_model(
+            provider,
+            model_name,
+            {},
+            transport_retries=3,
+        )
+
+        assert type(model).__name__ == expected_class_name
 
 
 class TestReasoningSpecMatching:

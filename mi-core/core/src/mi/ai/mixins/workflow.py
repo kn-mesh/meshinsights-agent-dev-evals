@@ -26,14 +26,16 @@ class AIWorkflowMixin(AIProcessorMixin[PDO, OutputT]):
                 output_schema=self._get_output_schema(),
                 reasoning_spec=self._get_reasoning_spec(),
                 reasoning_effort=self._get_reasoning_effort(),
-                retries=self._get_retries(),
+                transport_retries=self._get_transport_retries(),
+                output_retries=self._get_effective_output_retries(),
+                usage_limits=self._get_usage_limits(request_limit=None),
                 timeout=self._get_timeout(),
                 provider_options=self._get_provider_options(),
                 backend_options=self._get_backend_options(),
             )
 
             self.logger.info(
-                f"AI workflow: model={request.model.canonical()}, backend={self.config.backend}, retries={request.retries}"
+                f"AI workflow: model={request.model.canonical()}, backend={self.config.backend}, transport_retries={request.transport_retries}, output_retries={request.output_retries}"
             )
 
             result = backend.run_workflow(request)

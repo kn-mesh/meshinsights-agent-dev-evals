@@ -7,7 +7,7 @@ from typing import Any, Generic, TYPE_CHECKING, TypeVar
 
 from pydantic import BaseModel, Field
 
-from mi.ai.backends.base import AIUsage
+from mi.ai.backends.base import AIUsage, AIUsageLimits
 from mi.ai.backends.resolver import resolve_backend
 from mi.ai.message import BuildableUserMessage, UserMessage, UserMessageBuilder
 from mi.ai.model_config import (
@@ -42,7 +42,11 @@ class AIProcessorConfig(BaseProcessorConfig):
         default=ReasoningEffort.MEDIUM,
         description="How much reasoning/thinking the model should use",
     )
-    max_turns: int = Field(default=10, description="Maximum turns for agent execution")
+    max_turns: int = Field(
+        default=10,
+        ge=1,
+        description="Maximum model requests for agent execution",
+    )
     attach_usage: bool | None = Field(
         default=True, description="Whether to attach usage metrics"
     )
@@ -53,13 +57,54 @@ class AIProcessorConfig(BaseProcessorConfig):
         default=None, description="Request timeout in seconds"
     )
     retries: int | None = Field(
-        default=3, description="Retry count for requests and tool calls"
+        default=None,
+        ge=0,
+        description=(
+            "Compatibility override applied to both transport_retries and "
+            "tool_retries"
+        ),
+    )
+    transport_retries: int = Field(
+        default=3,
+        ge=1,
+        description="Maximum HTTP attempts, including the initial request",
+    )
+    tool_retries: int = Field(
+        default=3,
+        ge=0,
+        description="Retries available to each agent tool",
     )
     output_retries: int | None = Field(
-        default=None, description="Retries for output validation"
+        default=None,
+        ge=0,
+        description="Retries for output validation; defaults to tool_retries",
     )
     tool_timeout: float | None = Field(
         default=None, description="Timeout per tool call in seconds"
+    )
+    input_tokens_limit: int | None = Field(
+        default=None,
+        ge=0,
+        description="Maximum input tokens per execution; unlimited by default",
+    )
+    output_tokens_limit: int | None = Field(
+        default=None,
+        ge=0,
+        description="Maximum output tokens per execution; unlimited by default",
+    )
+    total_tokens_limit: int | None = Field(
+        default=None,
+        ge=0,
+        description="Maximum combined tokens per execution; unlimited by default",
+    )
+    tool_calls_limit: int | None = Field(
+        default=None,
+        ge=0,
+        description="Maximum successful tool calls; unlimited by default",
+    )
+    count_tokens_before_request: bool = Field(
+        default=False,
+        description="Count tokens before agent requests when the provider supports it",
     )
     provider_options: dict[str, Any] | None = Field(
         default=None,
@@ -124,17 +169,58 @@ class AIProcessorMixin(Generic[PDO, OutputT]):
         )
 
     def _get_retries(self) -> int:
+        """Return the legacy retry value as a tool-retry compatibility shim."""
+        return self._get_tool_retries()
+
+    def _get_legacy_retries(self) -> int | None:
+        config = getattr(self, "config", None)
+        if config is None:
+            return None
+        retries = getattr(config, "retries", None)
+        return retries if isinstance(retries, int) else None
+
+    def _get_transport_retries(self) -> int:
+        legacy_retries = self._get_legacy_retries()
+        if legacy_retries is not None:
+            return max(1, legacy_retries)
         config = getattr(self, "config", None)
         if config is None:
             return 3
-        retries = getattr(config, "retries", 3)
-        return 3 if retries is None else retries
+        return getattr(config, "transport_retries", 3)
+
+    def _get_tool_retries(self) -> int:
+        legacy_retries = self._get_legacy_retries()
+        if legacy_retries is not None:
+            return legacy_retries
+        config = getattr(self, "config", None)
+        if config is None:
+            return 3
+        return getattr(config, "tool_retries", 3)
 
     def _get_output_retries(self) -> int | None:
         config = getattr(self, "config", None)
         if config is None:
             return None
         return getattr(config, "output_retries", None)
+
+    def _get_effective_output_retries(self) -> int:
+        output_retries = self._get_output_retries()
+        return self._get_tool_retries() if output_retries is None else output_retries
+
+    def _get_usage_limits(self, *, request_limit: int | None) -> AIUsageLimits:
+        config = getattr(self, "config", None)
+        if config is None:
+            return AIUsageLimits(request_limit=request_limit)
+        return AIUsageLimits(
+            request_limit=request_limit,
+            tool_calls_limit=getattr(config, "tool_calls_limit", None),
+            input_tokens_limit=getattr(config, "input_tokens_limit", None),
+            output_tokens_limit=getattr(config, "output_tokens_limit", None),
+            total_tokens_limit=getattr(config, "total_tokens_limit", None),
+            count_tokens_before_request=getattr(
+                config, "count_tokens_before_request", False
+            ),
+        )
 
     def _get_tool_timeout(self) -> float | None:
         config = getattr(self, "config", None)

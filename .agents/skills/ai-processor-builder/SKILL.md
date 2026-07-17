@@ -1,6 +1,6 @@
 ---
 name: ai-processor-builder
-description: Build or update AI workflow and agent processors in this repo using mi.ai. Use this skill when a request involves adding structured-output AI processors, multimodal user messages, DataFrame-to-string inputs, tool-enabled agent processors, or stable AI artifact attachment for downstream hydrators and evals.
+description: Build or update AI workflow and agent processors in this repo using mi.ai. Use this skill when a request involves structured-output AI processors, multimodal inputs, tool-enabled agents, reusable toolsets, progressively disclosed capabilities or Agent Skills, or stable AI artifacts for downstream hydrators and evals.
 ---
 
 # AI Processor Builder
@@ -33,6 +33,8 @@ Use `$external-runtime-setup` when the task also depends on provider auth, traci
 Use this skill when the user asks you to:
 - build a new AI workflow processor,
 - build a tool-enabled AI agent processor,
+- compose an agent from reusable toolsets or capabilities,
+- load an Agent Skills-compatible `SKILL.md` for progressive disclosure,
 - add structured model output with a Pydantic schema,
 - attach DataFrames or images to AI inputs,
 - fix unstable AI artifact or usage attachment behavior.
@@ -72,9 +74,14 @@ Required members:
 - `output_schema`
 - `system_prompt` or `_build_system_prompt(...)`
 - `_build_user_message(...)`
-- `_build_tools(...)`
+- at least one of `_build_tools(...)`, `_build_toolsets(...)`,
+  `_build_capabilities(...)`, or `_build_skills(...)` when tool-driven behavior
+  is needed
 
 Agent processors also require `max_turns` in `AIProcessorConfig`.
+
+Agent extension methods default to empty collections, so capability-only and
+skill-only agents do not need a dummy `_build_tools(...)` implementation.
 
 ## Config Surface
 
@@ -88,11 +95,20 @@ Important fields from the repository-local `mi.ai` source:
 - `attach_usage`: defaults to `True`
 - `attach_response`: defaults to `True`
 - `timeout`
-- `retries`: defaults to `3`
-- `output_retries`
+- `transport_retries`: defaults to `3` HTTP attempts including the initial request
+- `tool_retries`: defaults to `3`
+- `output_retries`: defaults to the tool retry budget
 - `tool_timeout`
+- `input_tokens_limit`: defaults to no limit
+- `output_tokens_limit`: defaults to no limit
+- `total_tokens_limit`: defaults to no limit
+- `tool_calls_limit`: defaults to no limit
+- `count_tokens_before_request`: defaults to `False`
 - `provider_options`
 - `backend_options`
+
+The legacy `retries` field is a compatibility override for both transport and
+tool retries. Prefer the split fields in new processors.
 
 Keep config focused. Do not bury prompt content or business logic in config objects.
 
@@ -251,6 +267,117 @@ Supported tool return shapes from `mi.ai`:
 
 Keep tools bounded. If a tool can compute the answer deterministically, prefer doing that outside the model loop entirely.
 
+## Toolsets, Capabilities, And Skills
+
+Choose the smallest composition primitive that represents the behavior:
+
+- Use a standalone `Tool` for one independent operation.
+- Use `ToolSet` when related tools share instructions or should be reused as a
+  collection.
+- Use `AICapability` when instructions, tools, and one or more toolsets form a
+  cohesive workflow.
+- Use `AISkill` when a specialist runbook should use Agent Skills-compatible
+  Markdown and progressive disclosure.
+
+### Reusable toolsets
+
+Return instruction-bearing toolsets from `_build_toolsets(...)`. A `ToolSet`
+returned from `_build_tools(...)` is flattened for backward compatibility, so
+its instructions and deferred-loading behavior are not preserved there.
+
+```python
+from mi.ai import ToolSet
+
+
+def _build_toolsets(self, data_object):
+    return [
+        (
+            ToolSet.builder()
+            .add(fetch_recent_events)
+            .add(fetch_historical_events)
+            .with_id("event-analysis")
+            .with_instructions("Use these tools together to compare event windows.")
+            .build()
+        )
+    ]
+```
+
+Use `.deferred()` only for large tool catalogs that benefit from per-tool
+discovery. A deferred toolset requires a stable ID.
+
+### Capabilities
+
+Capabilities are eager by default. Use `defer_loading=True` when an agent has
+several specialist workflows and most runs need only one. The model initially
+sees the capability ID and description, then pydantic-ai activates the bundled
+instructions and tools after `load_capability`.
+
+```python
+from mi.ai import AICapability
+
+
+def _build_capabilities(self, data_object):
+    return [
+        AICapability(
+            id="historical-review",
+            description="Use when the current pattern may have occurred before.",
+            instructions="Compare timing, magnitude, duration, and recovery.",
+            tools=[fetch_historical_events],
+            defer_loading=True,
+        )
+    ]
+```
+
+Deferred capability IDs must be stable and unique within the agent. Capability
+tools support `ToolContext` exactly like standalone tools. Loading and invoking
+them consumes the existing model-request and tool-call budgets, so leave enough
+`max_turns` for discovery, tool execution, and structured output.
+
+Keep always-used domain rules and the output contract in the base system prompt.
+Moving universally required instructions into a deferred capability adds cost
+and makes the agent less reliable.
+
+### Agent Skills
+
+Use `AISkill.from_path(...)` for Agent Skills-compatible directories containing
+`SKILL.md`. Skills are deferred by default.
+
+```python
+from pathlib import Path
+
+from mi.ai import AISkill, ai_tool
+
+
+def _build_skills(self, data_object):
+    @ai_tool(name="compare_with_history")
+    def compare_with_history(start: str, end: str) -> str:
+        return data_object.compare_window_with_history(start, end)
+
+    return [
+        AISkill.from_path(
+            Path("skills/historical-review"),
+            tools=[compare_with_history],
+        )
+    ]
+```
+
+The skill directory name must match its lowercase, hyphenated `name` field.
+`description` must clearly state what the skill does and when to use it. The
+loader reads only `SKILL.md`; it does not grant filesystem access, load reference
+files, or execute scripts. Expose any safe resource access explicitly through
+bounded tools.
+
+Use `load_skills("skills")` for a static catalog of child skill directories.
+Construct skills inside `_build_skills(...)` when their attached tools close over
+the current data object.
+
+### When capabilities are not useful
+
+Do not convert a one-shot workflow to an agent merely to use skills. Keep a
+workflow when every run needs the same instructions and evidence and no
+tool-driven investigation is useful. Capabilities and skills are most valuable
+for adaptive agents with distinct, selectively used specialist paths.
+
 ## Attachment Behavior
 
 This is the most important default to understand from `mi.ai`:
@@ -285,9 +412,11 @@ Before finishing an AI processor:
 2. Define the output schema first.
 3. Choose workflow or agent shape deliberately.
 4. Build the user message with `mi.ai` helpers instead of custom serializers.
-5. Override `_attach_response(...)` if downstream code needs a stable artifact key.
-6. Keep the final AI determination flowing into receipt metadata if the pipeline exposes it as an output.
-7. Verify prompts are explicit f-strings and easy to edit.
+5. Choose standalone tools, toolsets, capabilities, or skills deliberately.
+6. Keep common rules eager and defer only selectively used specialist behavior.
+7. Override `_attach_response(...)` if downstream code needs a stable artifact key.
+8. Keep the final AI determination flowing into receipt metadata if the pipeline exposes it as an output.
+9. Verify prompts are explicit f-strings and easy to edit.
 
 ## When Exact API Details Matter
 

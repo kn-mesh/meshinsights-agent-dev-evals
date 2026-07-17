@@ -35,7 +35,7 @@ OPENROUTER_API_KEY=""
 | Pattern | Use Case | Features |
 |---------|----------|----------|
 | **Workflow** | Single LLM call | Structured output, simple prompts |
-| **Agent** | Multi-turn reasoning | Tool use, iterative analysis |
+| **Agent** | Multi-turn reasoning | Tools, toolsets, capabilities, skills, iterative analysis |
 
 ### When to Use Workflows
 
@@ -126,13 +126,25 @@ config = AIProcessorConfig(
     attach_usage=True,                     # Optional, default: True
     attach_response=True,                  # Optional, default: True
     timeout=120.0,                         # Optional: request timeout in seconds
-    retries=3,                             # Optional, default: 3
-    output_retries=None,                   # Optional: retries for output validation
+    transport_retries=3,                   # Optional: HTTP attempts including initial
+    tool_retries=3,                        # Optional: retries per agent tool
+    output_retries=None,                   # Optional: defaults to tool_retries
     tool_timeout=30.0,                     # Optional: per-tool timeout in seconds
+    input_tokens_limit=None,               # Optional: unlimited by default
+    output_tokens_limit=None,              # Optional: unlimited by default
+    total_tokens_limit=None,               # Optional: unlimited by default
+    tool_calls_limit=None,                 # Optional: unlimited by default
+    count_tokens_before_request=False,     # Optional: agent preflight on supported providers
     provider_options={},                   # Optional: provider-specific (e.g. Azure deployment)
     backend_options={},                    # Optional: backend-specific adapter options
 )
 ```
+
+The legacy `retries` option remains available as a compatibility override for
+both `transport_retries` and `tool_retries`. New configurations should use the
+split settings so HTTP failures, tool failures, and output validation have
+independent budgets. Token and tool-call limits are opt-in; `None` means no
+limit.
 
 ### Model Identifiers
 
@@ -382,15 +394,26 @@ Agents support multi-turn execution with tool use.
 | Option | Default | Description |
 |--------|---------|-------------|
 | `model` | Required | Model identifier |
-| `max_turns` | 10 | Maximum agent turns (tool calls) |
+| `max_turns` | 10 | Maximum model requests during an agent run |
+| `transport_retries` | 3 | Maximum HTTP attempts, including the initial request |
+| `tool_retries` | 3 | Retries available to each agent tool |
+| `output_retries` | None | Output validation retries; inherits `tool_retries` |
 | `tool_timeout` | None | Per-tool call timeout in seconds |
+| `input_tokens_limit` | None | Maximum input tokens per execution |
+| `output_tokens_limit` | None | Maximum output tokens per execution |
+| `total_tokens_limit` | None | Maximum combined tokens per execution |
+| `tool_calls_limit` | None | Maximum successful tool calls per agent run |
+| `count_tokens_before_request` | False | Preflight token counting for supported agent providers |
 
 ### Methods to Implement
 
 | Method | Required | Description |
 |--------|----------|-------------|
 | `_build_user_message(data_object)` | Yes | Build the user message |
-| `_build_tools(data_object)` | Yes | Return tools (list, ToolSet, or ToolSetBuilder) |
+| `_build_tools(data_object)` | No | Return standalone tools; defaults to none |
+| `_build_toolsets(data_object)` | No | Return reusable toolsets with shared instructions |
+| `_build_capabilities(data_object)` | No | Return eager or deferred behavior bundles |
+| `_build_skills(data_object)` | No | Return Agent Skills; deferred by default |
 | `_build_system_prompt(data_object)` | No | Override if dynamic system prompt needed |
 | `_attach_response(data_object, response)` | No | Override to customize response storage |
 | `_attach_usage(data_object, usage)` | No | Override to customize usage storage |
@@ -457,6 +480,144 @@ def _build_tools(self, data_object):
         .build()
     )
 ```
+
+### Toolsets
+
+Use `_build_toolsets(...)` when a group of tools has shared usage instructions,
+needs a stable identifier, or should participate in deferred tool discovery.
+Returning a `ToolSet` from `_build_tools(...)` remains supported as a convenient
+way to flatten a group of tools, but its toolset-level instructions and loading
+behavior are preserved only through `_build_toolsets(...)`.
+
+```python
+from mi.ai import ToolSet
+
+class DataAnalysisAgent(AIAgentMixin[MyDataObject, AnalysisResult], BaseProcessor):
+    # output schema, prompts, and user message omitted
+
+    def _build_toolsets(self, data_object):
+        return [
+            (
+                ToolSet.builder()
+                .add(get_customer_data)
+                .add(get_current_time)
+                .with_id("customer-diagnostics")
+                .with_instructions(
+                    "Use these tools together when investigating customer records."
+                )
+                .build()
+            )
+        ]
+```
+
+Calling `.deferred()` hides a toolset's tools behind pydantic-ai tool discovery.
+A deferred toolset requires a stable ID. Toolsets are useful for reusable tool
+collections; use a capability when instructions and several toolsets form one
+cohesive workflow.
+
+### Capabilities
+
+`AICapability` bundles instructions, standalone tools, and toolsets. Capabilities
+are eager by default. Set `defer_loading=True` to expose only the capability ID
+and description until the model selects it with pydantic-ai's
+`load_capability` mechanism.
+
+```python
+from mi.ai import AICapability, ai_tool
+
+class DiagnosticAgent(AIAgentMixin[MyDataObject, DiagnosticResult], BaseProcessor):
+    # output schema, prompts, and user message omitted
+
+    def _build_capabilities(self, data_object):
+        @ai_tool(name="compare_with_history")
+        def compare_with_history(start: str, end: str) -> str:
+            return data_object.compare_window_with_history(start, end)
+
+        return [
+            AICapability(
+                id="historical-comparison",
+                description=(
+                    "Use when a current anomaly may match a recurring historical pattern."
+                ),
+                instructions=(
+                    "Compare timing, magnitude, duration, and recovery before deciding."
+                ),
+                tools=[compare_with_history],
+                defer_loading=True,
+            )
+        ]
+```
+
+Deferred capabilities require stable, unique IDs. Their tools retain normal
+`ToolContext` behavior and count toward the same request and tool-call usage
+limits as standalone tools.
+
+Use deferred capabilities when most runs need only one of several specialist
+workflows. Keep behavior eager when it is needed on nearly every run, because
+loading a deferred capability adds another model request.
+
+### Agent Skills
+
+`AISkill` is an Agent Skills-compatible capability. Skills use progressive
+disclosure by default: name and description form the initial catalog, and the
+Markdown instructions plus attached tools become active when selected.
+
+A conforming skill is a directory whose name matches the `name` in `SKILL.md`:
+
+```text
+skills/
+  historical-review/
+    SKILL.md
+    references/       # optional; not loaded automatically
+    scripts/          # optional; never executed automatically
+    assets/           # optional; not loaded automatically
+```
+
+```markdown
+---
+name: historical-review
+description: Use when an anomaly may match a recurring historical pattern.
+metadata:
+  owner: reliability
+  version: "1"
+---
+
+Compare the current event with prior events using timing, magnitude, duration,
+and recovery. Do not treat a brief visual similarity as sufficient evidence.
+```
+
+Load instructions and attach safe runtime tools in the processor:
+
+```python
+from pathlib import Path
+
+from mi.ai import AISkill, ai_tool
+
+class DiagnosticAgent(AIAgentMixin[MyDataObject, DiagnosticResult], BaseProcessor):
+    # output schema, prompts, and user message omitted
+
+    def _build_skills(self, data_object):
+        @ai_tool(name="compare_historical_events")
+        def compare_historical_events(start: str, end: str) -> str:
+            return data_object.compare_window_with_history(start, end)
+
+        return [
+            AISkill.from_path(
+                Path("skills/historical-review"),
+                tools=[compare_historical_events],
+            )
+        ]
+```
+
+Use `load_skills("skills")` to load every immediate child skill in deterministic
+name order. Pass `recursive=True` only when the catalog intentionally uses nested
+skill directories.
+
+The loader validates the Agent Skills naming, description, frontmatter, and
+parent-directory rules and preserves optional `license`, `compatibility`,
+`metadata`, and `allowed-tools` metadata. It reads only `SKILL.md`; references,
+assets, and scripts require explicit tools or application code. Loading a skill
+never grants filesystem access or permission to execute bundled scripts.
 
 ### ToolContext
 
@@ -576,14 +737,16 @@ except ValueError as e:
 
 ## Best Practices
 
-1. **Start with workflows** — use agents only when tools are necessary
+1. **Start with workflows** — use agents only when tool-driven iteration is useful
 2. **Keep tools simple** — each tool should do one thing well
-3. **Write clear docstrings** — they become tool descriptions for the LLM
-4. **Use `@ai_tool`** — prefer the decorator over raw `Tool()` for cleaner code
-5. **Use appropriate reasoning** — LOW for simple tasks, HIGH for complex analysis
-6. **Monitor usage** — check artifact storage for token costs
-7. **Set realistic max_turns** — prevent runaway agent loops
-8. **Use ToolContext** — processor and tool code should not import pydantic-ai directly
+3. **Group related tools** — use toolsets for shared instructions and reuse
+4. **Defer specialist behavior** — use capabilities or skills when most runs need only one path
+5. **Keep common behavior eager** — avoid a discovery round trip for instructions used on every run
+6. **Write clear descriptions** — deferred capability and skill selection depends on them
+7. **Use `@ai_tool`** — prefer the decorator over raw `Tool()` for cleaner code
+8. **Monitor usage** — skill loading and tools consume the existing request/tool budgets
+9. **Set realistic max_turns** — include room for capability loading and specialist tools
+10. **Use ToolContext** — processor and tool code should not import pydantic-ai directly
 
 ---
 

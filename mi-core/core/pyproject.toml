@@ -18,7 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 ai = [
-    "pydantic-ai>=1.77.0",
+    "pydantic-ai>=2.11.0",
     "logfire>=4.22.0",
     "tabulate>=0.9.0",
 ]
