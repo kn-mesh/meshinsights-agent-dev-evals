@@ -21,8 +21,9 @@ process:
     - processor: V1_3AlarmClassificationAIWorkflowProcessor
       model: azure:gpt-5-mini
       reasoning_effort: medium
-      timeout: 300
-      retries: 2
+      timeout: 120
+      transport_retries: 1
+      output_retries: 0
 
 action:
   hydrator: V1_3FinalizeActionHydrator

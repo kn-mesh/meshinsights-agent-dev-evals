@@ -15,8 +15,9 @@ class V1_3AlarmClassificationAIWorkflowProcessorConfig(AIProcessorConfig):
 
     name: str | None = "v1_3_alarm_classification_ai_workflow_processor"
     window_days_list: list[int] = [7, 30, 365]
-    timeout: float | None = 300
-    retries: int | None = 2
+    timeout: float | None = 120
+    transport_retries: int = 1
+    output_retries: int | None = 0
 
 
 class V1_3AlarmClassificationAIWorkflowProcessor(
