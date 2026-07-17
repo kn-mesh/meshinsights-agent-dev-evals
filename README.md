@@ -13,7 +13,9 @@ The source snapshots were imported from:
 
 The root project uses editable path dependencies for `mi-core` and the CLI, so
 changes under `mi-core/` are immediately available through the root `uv`
-environment. Spirax pipeline code is intentionally not included yet.
+environment. The Spirax v1_3 agent reads published benchmark identity and
+approved labels from Azure PostgreSQL, then downloads the exact immutable raw
+evidence frozen by that benchmark version from Azure Blob Storage.
 
 Use this README as the quick on-ramp. Keep durable use-case context in `docs/use_case/`. For development guidance, ask Codex: the repo skills under `.agents/skills/` provide the project-specific playbooks, and the current codebase remains the source of truth.
 
@@ -32,7 +34,11 @@ source .venv/bin/activate
 # Install project and dev dependencies into .venv
 uv sync
 
-# Create .env file with access to external systems (LLM inference APIs, Logfire)
+# Create .env from the template and provide Azure PostgreSQL, Blob Storage,
+# model-provider, and optional Logfire credentials.
+cp .env.example .env
+
+# Configure LLM inference and tracing credentials interactively when useful.
 ## Follow terminal instructions typically choosing
 ### Providers: "Azure Anthropic", "Azure OpenAI", "Google Gemini", "Logfire"
 #### Azure Auth: Subscription = "Olympus", Resource Group = "rg-mi-dv", Store "Resource Name"
@@ -42,7 +48,7 @@ uv run mi auth
 `uv sync` installs both the runtime dependencies and the local development CLI tooling for this repo.
 That includes `meshinsights-cli`, which provides `mi auth` in the project environment.
 
-If you want `mi auth` to detect the right providers reliably, add a repo-root `.env.template` or `.env.example` with variable names and placeholders only. Never commit real secrets.
+The committed `.env.example` contains placeholders only. Never commit real secrets.
 
 If you use AI-enabled pipelines or evals and the repo-managed `uv run mi auth` flow is unreliable on your machine, a separately installed machine-level `mi auth` is an acceptable fallback.
 
@@ -109,11 +115,17 @@ uv run python -m src.pipelines.data_visualization_pipeline --help
 
 # YAML pipeline runner CLI
 uv run python -m src.pipelines.pipeline_run_from_yaml --help
-uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1.ppln --unit-id LOC-008
+uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1_3.ppln \
+  --benchmark-key <published-benchmark-key> \
+  --benchmark-version <version-number> \
+  --example-id '<unit-id>|<decision-timestamp>'
 
 # Eval orchestration CLI
 uv run python -m src.evals.eval_orchestration --help
-uv run python -m src.evals.eval_orchestration pipeline_configs/v1.ppln --units all --runs 1
+uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
+  --benchmark-key <published-benchmark-key> \
+  --benchmark-version <version-number> \
+  --runs-per-example 1
 
 # Streamlit apps
 uv run python -m streamlit run src/streamlit_apps/data_visualization_app.py
@@ -156,8 +168,7 @@ mi-core/
   core/
   cli/
 pipeline_configs/
-  data_viz.ppln
-  v1.ppln
+  v1_3.ppln
 src/
   actions/
   hydrators/
@@ -165,6 +176,7 @@ src/
   processors/
     common/
     v1/
+    v1_3/
   retrievers/
   pipelines/
   evals/

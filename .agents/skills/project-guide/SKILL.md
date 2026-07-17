@@ -28,7 +28,7 @@ Run repository commands with `uv run ...`. Treat `mi-core/` and `mi.ai` as edita
 |---|---|
 | `mi-core/` | Reusable runtime mechanics, component APIs, registry behavior, pipeline orchestration, and general framework docs |
 | This root project | Use-case implementation, data integrations, pipeline variants, prompts, business rules, evals, and operator/debug tooling |
-| `docs/use_case/` | Durable business context, input/output meaning, rubric semantics, and domain terminology |
+| `docs/use_case/` | Durable business context, input/output meaning, benchmark semantics, and domain terminology |
 | `.agents/skills/` | Concise Codex playbooks for repository-specific development and analysis workflows |
 
 Modify `mi-core/` directly when requested behavior is generally reusable framework behavior. Keep use-case-specific rules, data shaping, prompts, and source-system knowledge in the root project. Do not add a root-project workaround solely because framework code was once external.
@@ -41,7 +41,7 @@ Use these locations by default:
 
 | Path | Purpose |
 |---|---|
-| `data/` | Local datasets, rubrics, and supporting artifacts |
+| `data/` | Non-secret local development assets; published benchmarks and eval evidence live in Azure |
 | `pipeline_configs/` | Declarative `.ppln` component wiring |
 | `src/retrievers/` | Source-system data acquisition |
 | `src/objects/` | Typed process, action, and metadata contracts |
@@ -62,7 +62,7 @@ Load the narrowest applicable skill before answering in depth or implementing:
 |---|---|
 | Pipeline components, YAML, variants, runners, or receipts | `$pipeline-builder` |
 | Structured AI processors, workflows, agents, tools, capabilities, or Agent Skills | `$ai-processor-builder` |
-| Eval orchestration, rubric contracts, repeated runs, or result apps | `$agent-eval-builder` |
+| Eval orchestration, benchmark contracts, repeated runs, or result apps | `$agent-eval-builder` |
 | Existing eval regressions, comparisons, or error analysis | `$eval-results-analysis` |
 | Streamlit layout, state, tables, charts, or debug workflows | `$streamlit-app-builder` |
 | `.env`, `mi auth`, provider credentials, runtime overrides, or Logfire | `$external-runtime-setup` |
@@ -76,7 +76,7 @@ When turning the template into a consumer project, recommend and, when asked, pe
 1. Capture durable domain context in `docs/use_case/`.
 2. Update `pyproject.toml` with the real project identity and dependencies.
 3. Rewrite `README.md` around the real application, boundaries, entry points, supported variants, and navigation.
-4. Add or document project data and rubric sources under `data/`.
+4. Configure the published benchmark repository and immutable evidence source.
 5. Replace example metadata, objects, retrievers, hydrators, processors, and actions under `src/`.
 6. Replace example `.ppln` files with project-specific pipeline variants.
 7. Add eval and operator tooling after the output contract is stable enough to compare.

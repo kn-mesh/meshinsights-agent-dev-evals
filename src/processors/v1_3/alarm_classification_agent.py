@@ -191,6 +191,8 @@ The following charts contain raw steam/inlet and condensate/outlet temperatures 
                     "Temperature history has no usable sensor relationship."
                 )
             split = max(len(frame) // 4, 1)
+            early_negative = frame.head(split)["delta"] < 0
+            recent_negative = frame.tail(split)["delta"] < 0
             return json.dumps(
                 {
                     "evidence_start": frame.iloc[0]["timestamp"].isoformat(),
@@ -199,13 +201,17 @@ The following charts contain raw steam/inlet and condensate/outlet temperatures 
                         float(frame.head(split)["delta"].median()), 2
                     ),
                     "early_negative_fraction": round(
-                        float((frame.head(split)["delta"] < 0).mean()), 3
+                        sum(bool(value) for value in early_negative.tolist())
+                        / len(early_negative),
+                        3,
                     ),
                     "recent_delta_median": round(
                         float(frame.tail(split)["delta"].median()), 2
                     ),
                     "recent_negative_fraction": round(
-                        float((frame.tail(split)["delta"] < 0).mean()), 3
+                        sum(bool(value) for value in recent_negative.tolist())
+                        / len(recent_negative),
+                        3,
                     ),
                 },
                 sort_keys=True,

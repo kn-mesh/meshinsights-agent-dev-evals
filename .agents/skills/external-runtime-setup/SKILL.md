@@ -63,6 +63,23 @@ Rules:
 - Keep bootstrap logic in runners or app startup, not in processors.
 - Fail fast with explicit auth and validation errors.
 
+## Published Benchmark And Evidence Access
+
+The active Spirax pipeline and eval path also requires hosted data access:
+
+| Variable | Purpose |
+|---|---|
+| `APP_PROJECT_KEY` | Scopes every benchmark query to the configured Label Benchmark project |
+| `DATABASE_URL` | Read-only connection to the Label Benchmark Azure PostgreSQL database |
+| `AZURE_STORAGE_CONNECTION_STRING` | Read access to immutable raw source artifacts |
+| `AZURE_STORAGE_CONTAINER` | Source-snapshot Blob container, normally `source-snapshots` |
+
+There is no MongoDB, local benchmark JSON, or filesystem snapshot fallback in
+normal pipeline/eval execution. Keep these credentials in `.env` or CI secret
+stores. Prefer a PostgreSQL identity that can only read the published benchmark
+tables needed by this repository, and do not enable Blob container creation or
+write access for agent/eval runs.
+
 ## `.env` And Template Files
 
 Create a `.env` file at repo root for local development.

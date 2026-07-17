@@ -34,7 +34,7 @@ Rules:
    The user will usually tell you which pipeline versions, runs, or prompt revisions matter. Focus on those runs first instead of diffing every eval folder in the repo.
 2. Read the relevant eval results.
    Start in versioned folders such as `src/evals/eval_results_v1_2` or `src/evals/eval_results_v2`.
-   Typical result files live under `src/evals/eval_results_<version>/<rubric>/all/*.json`.
+   Typical result files live under `src/evals/eval_results_<version>/<benchmark_key>/v<version>/all/*.json`.
 3. Identify the main regression or improvement pattern.
    Use the top-level `summary` and then drill into `results`.
    Look for misses by classification, root cause, confidence band, and repeated failure modes across multiple units.
@@ -48,7 +48,7 @@ Rules:
 - `summary`
   Use this for overall accuracy, class splits, confidence splits, and root-cause breakdowns.
 - `run_config`
-  Use this to confirm the pipeline config, rubric, model, reasoning effort, and retrieval snapshot settings used for that run.
+  Use this to confirm the pipeline config, published benchmark version, model, reasoning effort, and frozen source snapshot identities used for that run.
 - `results[].runs[]`
   Use this for unit-level expected vs actual outcomes, confidence, and explanation quality.
 
@@ -61,7 +61,7 @@ Rules:
   Is the model reading the data/charts incorrectly?
   Is the prompt asking the wrong question or weighting the wrong cues?
   Is the pipeline giving the model incomplete or misleading context?
-  Is the rubric or expected label itself uncertain?
+  Is the approved benchmark label itself uncertain?
 - Prefer changes that are likely to generalize across similar units, not just fix a single example.
 - Treat the eval set as a proxy for production accuracy, not the final objective. The target is better real-world performance with limited overfitting.
 

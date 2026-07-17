@@ -1,11 +1,11 @@
-"""Retriever exports for Pulse evidence packages."""
+"""Retriever exports for benchmark-frozen evidence packages."""
 
-from src.retrievers.pulse_data_retriever import (
-    PulseAlarmTemperatureHistoryRetriever,
-    PulseAlarmTemperatureHistoryRetrieverConfig,
+from src.retrievers.azure_blob_evidence_retriever import (
+    AzureBlobBenchmarkEvidenceRetriever,
+    AzureBlobBenchmarkEvidenceRetrieverConfig,
 )
 
 __all__ = [
-    "PulseAlarmTemperatureHistoryRetriever",
-    "PulseAlarmTemperatureHistoryRetrieverConfig",
+    "AzureBlobBenchmarkEvidenceRetriever",
+    "AzureBlobBenchmarkEvidenceRetrieverConfig",
 ]

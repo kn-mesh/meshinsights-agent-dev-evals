@@ -34,6 +34,13 @@ class V1_3ProcessToActionHydrator(
         context = source.get_alarm_context()
         return PulseFailureAnalysisActionObject().set_pipeline_result(
             {
+                "example_id": context["example_id"],
+                "benchmark_key": context["benchmark_key"],
+                "benchmark_version_id": context["benchmark_version_id"],
+                "benchmark_version_number": context[
+                    "benchmark_version_number"
+                ],
+                "source_snapshot_id": context["source_snapshot_id"],
                 "unit": context["unit"],
                 "sensor_id": context["sensor_id"],
                 "decision_timestamp": context["decision_timestamp"].isoformat(),

@@ -1,4 +1,4 @@
-"""Run a unit/timestamp Pulse pipeline from YAML."""
+"""Run one published benchmark example through the Pulse agent pipeline."""
 
 from __future__ import annotations
 
@@ -6,41 +6,61 @@ import argparse
 import copy
 import json
 import tempfile
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import yaml
-
 from mi.core.pipeline_builder import PipelineBuilder
 from mi.core.pipeline_receipt import PipelineReceipt
+
+from src.benchmarks import (
+    AzurePostgresBenchmarkRepository,
+    BenchmarkExample,
+    BenchmarkVersion,
+)
 
 
 def run_pipeline(
     yaml_path: str | Path,
     *,
-    unit: str,
-    sensor_id: int,
-    decision_timestamp: str | datetime,
+    benchmark: BenchmarkVersion,
+    example: BenchmarkExample,
     ai_model: str | None = None,
     ai_reasoning_effort: str | None = None,
-    retrieval_snapshot_mode: str | None = None,
-    retrieval_snapshot_dir: str | Path | None = None,
 ) -> PipelineReceipt:
-    """Run one portable unit/timestamp example through a YAML pipeline."""
+    """Run the exact raw inputs frozen for one published benchmark example."""
+    canonical_example = benchmark.get_example(example.example_id)
+    if canonical_example != example:
+        raise ValueError(
+            "The example content does not match the supplied benchmark version."
+        )
     source_path = Path(yaml_path).resolve()
     config = _load_pipeline_config(source_path)
     runtime_config = _apply_runtime_overrides(
         config,
-        unit=unit,
-        sensor_id=sensor_id,
-        decision_timestamp=_parse_timestamp(decision_timestamp),
+        benchmark=benchmark,
+        example=example,
         ai_model=ai_model,
         ai_reasoning_effort=ai_reasoning_effort,
-        retrieval_snapshot_mode=retrieval_snapshot_mode,
-        retrieval_snapshot_dir=retrieval_snapshot_dir,
     )
     return _execute_runtime_config(source_path, runtime_config)
+
+
+def load_benchmark_example(
+    *,
+    benchmark_key: str,
+    example_id: str,
+    benchmark_version: int | None = None,
+    project_key: str | None = None,
+) -> tuple[BenchmarkVersion, BenchmarkExample]:
+    """Load one exact example from Azure PostgreSQL for pipeline execution."""
+    benchmark = AzurePostgresBenchmarkRepository(
+        project_key=project_key
+    ).load_published_version(
+        benchmark_key=benchmark_key,
+        version_number=benchmark_version,
+    )
+    return benchmark, benchmark.get_example(example_id)
 
 
 def _load_pipeline_config(path: Path) -> dict[str, Any]:
@@ -54,33 +74,45 @@ def _load_pipeline_config(path: Path) -> dict[str, Any]:
 def _apply_runtime_overrides(
     pipeline_config: dict[str, Any],
     *,
-    unit: str,
-    sensor_id: int,
-    decision_timestamp: datetime,
+    benchmark: BenchmarkVersion,
+    example: BenchmarkExample,
     ai_model: str | None,
     ai_reasoning_effort: str | None,
-    retrieval_snapshot_mode: str | None,
-    retrieval_snapshot_dir: str | Path | None,
 ) -> dict[str, Any]:
-    """Build an ephemeral runtime config without mutating source YAML."""
+    """Build an ephemeral benchmark runtime config without mutating source YAML."""
     runtime = copy.deepcopy(pipeline_config)
-    metadata_class = str(runtime.pop("metadata_class", "PulseFailureAnalysisMetadata"))
+    metadata_class = str(
+        runtime.pop("metadata_class", "BenchmarkExamplePipelineMetadata")
+    )
     runtime["metadata"] = {
         "metadata": metadata_class,
-        "unit": _normalize_unit(unit),
-        "sensor_id": sensor_id,
-        "decision_timestamp": decision_timestamp.isoformat(),
+        "unit": example.unit_id,
+        "example_id": example.example_id,
+        "sensor_id": example.sensor_id,
+        "decision_timestamp": example.decision_timestamp.isoformat(),
+        "benchmark_key": benchmark.benchmark_key,
+        "benchmark_version_id": benchmark.benchmark_version_id,
+        "benchmark_version_number": benchmark.version_number,
+        "source_snapshot_id": example.source_snapshot_id,
+        "source_snapshot_content_sha256": example.raw_snapshot_content_sha256,
+        "source_kind": example.raw_source_kind,
+        "raw_captured_at": example.raw_captured_at.isoformat(),
+        "raw_window_start": (
+            example.raw_window_start.isoformat()
+            if example.raw_window_start is not None
+            else None
+        ),
+        "raw_window_end": (
+            example.raw_window_end.isoformat()
+            if example.raw_window_end is not None
+            else None
+        ),
+        "raw_known_gaps": list(example.raw_known_gaps),
+        "raw_artifacts": [
+            artifact.model_dump(mode="json") for artifact in example.raw_artifacts
+        ],
+        "example_metadata": example.example_metadata,
     }
-
-    for retriever in runtime.get("retrieve", {}).get("retrievers", []):
-        if not isinstance(retriever, dict):
-            continue
-        if retriever.get("retriever") != "PulseAlarmTemperatureHistoryRetriever":
-            continue
-        if retrieval_snapshot_mode is not None:
-            retriever["snapshot_mode"] = retrieval_snapshot_mode
-        if retrieval_snapshot_dir is not None:
-            retriever["snapshot_dir"] = str(Path(retrieval_snapshot_dir).resolve())
 
     normalized_model = _normalize_override(ai_model)
     normalized_effort = _normalize_override(ai_reasoning_effort)
@@ -118,33 +150,6 @@ def _execute_runtime_config(
             runtime_path.unlink(missing_ok=True)
 
 
-def _parse_timestamp(value: str | datetime) -> datetime:
-    """Parse an ISO decision timestamp and normalize aware values to naive UTC."""
-    if isinstance(value, datetime):
-        parsed = value
-    else:
-        normalized = value.strip()
-        if len(normalized) == 10 and "T" not in normalized:
-            parsed = datetime.fromisoformat(normalized).replace(
-                hour=23, minute=59, second=59, microsecond=999999
-            )
-        else:
-            parsed = datetime.fromisoformat(
-                normalized[:-1] + "+00:00" if normalized.endswith("Z") else normalized
-            )
-    if parsed.tzinfo is None:
-        return parsed
-    return parsed.astimezone(timezone.utc).replace(tzinfo=None)
-
-
-def _normalize_unit(value: str) -> str:
-    """Validate the non-empty unit identity."""
-    normalized = value.strip()
-    if not normalized:
-        raise ValueError("unit must not be empty.")
-    return normalized
-
-
 def _normalize_override(value: str | None) -> str | None:
     """Normalize a nullable CLI override."""
     if value is None:
@@ -177,35 +182,38 @@ def _receipt_summary(receipt: PipelineReceipt) -> dict[str, Any]:
 
 
 def _argument_parser() -> argparse.ArgumentParser:
-    """Build the command-line interface."""
+    """Build the benchmark-aware command-line interface."""
     parser = argparse.ArgumentParser(
-        description="Run a Pulse agent for one unit at a decision timestamp."
+        description=(
+            "Run a published benchmark example using its immutable Azure Blob "
+            "source evidence."
+        )
     )
     parser.add_argument("yaml_path", type=Path)
-    parser.add_argument("--unit", required=True)
-    parser.add_argument("--sensor-id", required=True, type=int)
-    parser.add_argument("--decision-timestamp", required=True)
+    parser.add_argument("--project-key")
+    parser.add_argument("--benchmark-key", required=True)
+    parser.add_argument("--benchmark-version", type=int)
+    parser.add_argument("--example-id", required=True)
     parser.add_argument("--ai-model")
     parser.add_argument("--ai-reasoning-effort")
-    parser.add_argument(
-        "--retrieval-snapshot-mode", choices=["off", "use", "refresh", "strict"]
-    )
-    parser.add_argument("--retrieval-snapshot-dir", type=Path)
     return parser
 
 
 def main() -> None:
-    """Run the configured pipeline and print its durable receipt output."""
+    """Load and run one published benchmark example."""
     args = _argument_parser().parse_args()
+    benchmark, example = load_benchmark_example(
+        project_key=args.project_key,
+        benchmark_key=args.benchmark_key,
+        benchmark_version=args.benchmark_version,
+        example_id=args.example_id,
+    )
     receipt = run_pipeline(
         args.yaml_path,
-        unit=args.unit,
-        sensor_id=args.sensor_id,
-        decision_timestamp=args.decision_timestamp,
+        benchmark=benchmark,
+        example=example,
         ai_model=args.ai_model,
         ai_reasoning_effort=args.ai_reasoning_effort,
-        retrieval_snapshot_mode=args.retrieval_snapshot_mode,
-        retrieval_snapshot_dir=args.retrieval_snapshot_dir,
     )
     print(json.dumps(_receipt_summary(receipt), indent=2))
 

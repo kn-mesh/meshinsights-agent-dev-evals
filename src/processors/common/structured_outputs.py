@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -50,7 +50,7 @@ class PulseFailureAnalysisResult(BaseModel):
     root_cause: RootCauseResult
 
     @model_validator(mode="after")
-    def validate_root_cause_consistency(self) -> "PulseFailureAnalysisResult":
+    def validate_root_cause_consistency(self) -> Self:
         """Require N/A only for healthy decisions and a failure cause otherwise."""
         healthy = self.classification.value == "Healthy"
         root_cause_is_na = self.root_cause.value == "N/A"

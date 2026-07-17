@@ -26,7 +26,7 @@ class V1_3RetrieveToProcessHydrator(
     ) -> PulseFailureAnalysisProcessObject:
         """Convert retrieval output into the typed process-stage payload."""
         _ = metadata
-        payload = source.mongo["pulse_alarm_temperature_history"]
+        payload = source.azure_blob["pulse_alarm_temperature_history"]
         self._validate_payload(payload)
         decision_timestamp = payload.get(
             "decision_timestamp", payload.get("requested_end_date")
@@ -42,6 +42,13 @@ class V1_3RetrieveToProcessHydrator(
             PulseFailureAnalysisProcessObject()
             .set_alarm_context(
                 {
+                    "example_id": payload["example_id"],
+                    "benchmark_key": payload["benchmark_key"],
+                    "benchmark_version_id": payload["benchmark_version_id"],
+                    "benchmark_version_number": payload[
+                        "benchmark_version_number"
+                    ],
+                    "source_snapshot_id": payload["source_snapshot_id"],
                     "unit": payload.get("unit", str(payload["sensor_id"])),
                     "sensor_id": payload["sensor_id"],
                     "decision_timestamp": decision_timestamp,
@@ -56,6 +63,25 @@ class V1_3RetrieveToProcessHydrator(
         )
 
         if receipt.retrieve_receipt is not None:
+            receipt.retrieve_receipt.set_metadata(
+                "example_id", payload["example_id"]
+            )
+            receipt.retrieve_receipt.set_metadata(
+                "benchmark_key", payload["benchmark_key"]
+            )
+            receipt.retrieve_receipt.set_metadata(
+                "benchmark_version_id", payload["benchmark_version_id"]
+            )
+            receipt.retrieve_receipt.set_metadata(
+                "benchmark_version_number", payload["benchmark_version_number"]
+            )
+            receipt.retrieve_receipt.set_metadata(
+                "source_snapshot_id", payload["source_snapshot_id"]
+            )
+            receipt.retrieve_receipt.set_metadata(
+                "source_snapshot_content_sha256",
+                payload["source_snapshot_content_sha256"],
+            )
             receipt.retrieve_receipt.set_metadata(
                 "unit", process_object.get_alarm_context()["unit"]
             )
@@ -77,6 +103,12 @@ class V1_3RetrieveToProcessHydrator(
         if not isinstance(payload, dict):
             raise ValueError("Pulse retrieval payload must be a mapping.")
         required = {
+            "example_id",
+            "benchmark_key",
+            "benchmark_version_id",
+            "benchmark_version_number",
+            "source_snapshot_id",
+            "source_snapshot_content_sha256",
             "sensor_id",
             "steam_trap_type",
             "selected_alarm",

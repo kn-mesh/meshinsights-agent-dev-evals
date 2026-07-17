@@ -76,7 +76,7 @@ Build in this order unless the user explicitly asks to skip ahead:
 ### Stage exit criteria
 
 - Visualization stage:
-  You can run one unit and all rubric units, render raw and derived data, and inspect the first baseline artifact.
+  You can run one benchmark example and all examples in a published benchmark version, render raw and derived data, and inspect the first baseline artifact.
 - Control pipeline stage:
   YAML runs for single and all units and the final pipeline determination appears on receipts.
 - AI stage:
@@ -103,9 +103,9 @@ This is the faster path when:
 
 #### What to build
 
-1. Dataset and rubric files under `data/<use_case>/` when needed.
+1. Published benchmark and raw-source access appropriate to the use case.
 2. A Streamlit app in `src/streamlit_apps/` that:
-   reads rubric or unit-selection context,
+   reads benchmark example-selection context,
    queries the backing data source directly,
    performs only the normalization needed for display and debugging,
    renders the raw data, derived views, and unit context needed for developer inspection.
@@ -132,11 +132,11 @@ Use this when the visualization stage is doing meaningful retrieval, normalizati
 
 #### What to build
 
-1. Dataset and rubric files under `data/<use_case>/`.
+1. Published benchmark and immutable raw-source access.
 2. A retriever in `src/retrievers/` that:
    resolves `PipelineMetadata.unit`,
    loads and normalizes raw rows,
-   attaches rubric context needed downstream.
+   attaches benchmark example and source-snapshot context needed downstream.
 3. A retrieve-to-process hydrator in `src/hydrators/` that validates retriever outputs and populates datasets and artifacts on the process object.
 4. A process object subclass in `src/objects/` with typed getters and setters for normalized datasets and important artifacts.
 5. One baseline compute processor in the relevant processor package.
@@ -192,7 +192,7 @@ Turn the visualization prototype into the real runnable pipeline shape for the r
 1. A pipeline YAML in `pipeline_configs/`.
 2. A YAML runner in `src/pipelines/` that supports:
    single unit execution,
-   all rubric units,
+   all examples in one published benchmark version,
    optional runtime AI overrides when AI processors exist.
 3. A process processor list that includes exactly the processors required for the use case.
 
@@ -200,8 +200,8 @@ Turn the visualization prototype into the real runnable pipeline shape for the r
 
 - Keep YAML focused on class wiring and constructor arguments.
 - Let `PipelineBuilder.from_yaml(...)` resolve relative `file_path` keys.
-- Resolve other path-like values such as `rubric_file` in your component or runner logic.
-- Runner patterns can infer rubric path from retriever config or accept `--rubric-file`.
+- Require an explicit benchmark key and resolve the requested or latest published version from the benchmark repository.
+- Keep benchmark identity and raw artifact manifests in runtime metadata rather than YAML secrets or local files.
 
 Minimal shape:
 
@@ -218,7 +218,7 @@ retrieve:
   retrievers:
     - retriever: YourCsvRetriever
       file_path: ../../data/your_use_case/data.csv
-      rubric_file: your_rubric.json
+      # Raw artifact identity is injected from the published benchmark example.
       unit_id: ${unit}
       dataset_name: your_dataset
 
@@ -232,7 +232,7 @@ action:
   hydrator: YourFinalizeActionHydrator
   actions:
     - action: YourAction
-      rubric_file: data/your_use_case/your_rubric.json
+      # Benchmark identity is injected by the runner.
 ```
 
 ### Runtime AI overrides
@@ -284,8 +284,8 @@ Keep one clear producer for each artifact whenever practical.
 
 - Empty visualization payload after a run:
   the sink reference was lost during deepcopy.
-- `--all-units` cannot resolve rubric IDs:
-  YAML or runner logic does not resolve `rubric_file` correctly.
+- Benchmark example selection fails:
+  the runner did not resolve the requested published benchmark version or example IDs.
 - AI provider validation fails:
   environment variables or provider settings are missing.
 - AI runtime overrides report that no processors were updated:

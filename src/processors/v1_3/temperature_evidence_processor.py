@@ -115,7 +115,11 @@ class V1_3TemperatureEvidenceProcessor(
             "condensate_max": self._rounded(window["condensate_temperature"].max()),
             "delta_median": self._rounded(delta.median()),
             "delta_last": self._rounded(delta.dropna().iloc[-1]),
-            "negative_delta_fraction": round(float((delta.dropna() < 0).mean()), 3),
+            "negative_delta_fraction": round(
+                sum(bool(value) for value in (delta.dropna() < 0).tolist())
+                / len(delta.dropna()),
+                3,
+            ),
         }
 
     def _temperature_frame(self, history: list[dict[str, Any]]) -> pd.DataFrame:

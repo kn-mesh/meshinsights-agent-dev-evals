@@ -1,7 +1,7 @@
 interface:
   display_name: "Agent-Eval-Builder"
-  short_description: "Build rubric-based eval orchestration and result contracts"
-  default_prompt: "Use $agent-eval-builder to build or update rubric-based evaluation orchestration for an AI-enabled pipeline in this repo, including the receipt handoff contract, stable eval JSON output, and an optional results app if needed."
+  short_description: "Build published-benchmark eval orchestration"
+  default_prompt: "Use $agent-eval-builder to build or update published-benchmark evaluation orchestration using Azure PostgreSQL benchmark versions, immutable Azure Blob evidence, receipt handoff contracts, and stable eval outputs."
 
 policy:
   allow_implicit_invocation: true
