@@ -15,6 +15,7 @@ from typing import Any
 
 from mi.core.utils.environment import bootstrap_environment
 
+from model_catalog import ModelCatalog, load_model_catalog, resolve_model
 from src.benchmarks import (
     AzurePostgresBenchmarkRepository,
     AzureContainerAppBenchmarkRepository,
@@ -100,6 +101,7 @@ def run_eval(
     """Run repeated evals against one immutable published benchmark version."""
     if runs_per_example < 1:
         raise ValueError("runs_per_example must be at least 1.")
+    ai_model = resolve_model(ai_model)
     ai_reasoning_effort = normalize_ai_reasoning_effort(ai_reasoning_effort)
     benchmark_repository = repository or AzurePostgresBenchmarkRepository(
         project_key=project_key
@@ -350,8 +352,7 @@ def _build_summary(
 ) -> dict[str, Any]:
     attempts = [attempt for result in results for attempt in result.attempts]
     classification_flags = [
-        attempt.evals.get("classification", _NO_EVAL).is_correct
-        for attempt in attempts
+        attempt.evals.get("classification", _NO_EVAL).is_correct for attempt in attempts
     ]
     evaluated_classifications = [
         flag for flag in classification_flags if flag is not None
@@ -361,9 +362,7 @@ def _build_summary(
     )
     accuracy_by_label: dict[str, float | None] = {}
     for name in label_names:
-        flags = [
-            attempt.evals.get(name, _NO_EVAL).is_correct for attempt in attempts
-        ]
+        flags = [attempt.evals.get(name, _NO_EVAL).is_correct for attempt in attempts]
         evaluated = [flag for flag in flags if flag is not None]
         accuracy_by_label[name] = EvalSummaryBuilder.safe_accuracy(
             correct=sum(flag is True for flag in evaluated), total=len(evaluated)
@@ -458,9 +457,7 @@ def _results_filename(
         scope,
     )
     tokens = [normalize_filename_token(part) for part in parts]
-    return "_".join(
-        [*tokens, f"{runs_per_example}runsPerExample", f"{timestamp}.json"]
-    )
+    return "_".join([*tokens, f"{runs_per_example}runsPerExample", f"{timestamp}.json"])
 
 
 def _argument_parser() -> argparse.ArgumentParser:
@@ -505,8 +502,13 @@ def _argument_parser() -> argparse.ArgumentParser:
         "--runtime", choices=["serial", "threaded", "process"], default="threaded"
     )
     parser.add_argument("--max-workers", type=int, default=4)
-    parser.add_argument("--error-action", choices=["stop", "continue"], default="continue")
-    parser.add_argument("--ai-model")
+    parser.add_argument(
+        "--error-action", choices=["stop", "continue"], default="continue"
+    )
+    parser.add_argument(
+        "--ai-model",
+        help="Model from the project-owned models.yaml catalog.",
+    )
     parser.add_argument(
         "--ai-reasoning-effort", choices=["default", "low", "medium", "high"]
     )
@@ -540,7 +542,9 @@ def _choose_published_benchmark_version(
 
     version_labels: dict[str, PublishedBenchmarkVersionSummary] = {}
     for version in sorted(
-        versions_by_key[selected_key], key=lambda item: item.version_number, reverse=True
+        versions_by_key[selected_key],
+        key=lambda item: item.version_number,
+        reverse=True,
     ):
         published = version.published_at.isoformat(timespec="seconds")
         label = (
@@ -574,14 +578,32 @@ def _resolve_cli_benchmark(
         )
 
     print(f"Retrieving published benchmarks for {project_key} from Azure...")
-    selected = _choose_published_benchmark_version(
-        repository.list_published_versions()
-    )
+    selected = _choose_published_benchmark_version(repository.list_published_versions())
     print(
         f"Selected {selected.benchmark_name} "
         f"({selected.benchmark_key}) v{selected.version_number}."
     )
     return selected.benchmark_key, selected.version_number
+
+
+def _resolve_cli_model(
+    args: argparse.Namespace,
+    *,
+    catalog: ModelCatalog,
+    parser: argparse.ArgumentParser,
+) -> str:
+    """Validate an explicit model or prompt from the project-owned catalog."""
+    if args.ai_model:
+        try:
+            return resolve_model(args.ai_model, catalog)
+        except ValueError as error:
+            parser.error(str(error))
+    if not sys.stdin.isatty():
+        return catalog.default_model
+    return prompt_select_option(
+        f"Choose an AI model (project default: {catalog.default_model}):",
+        list(catalog.models),
+    )
 
 
 def _resolve_pipeline_path(
@@ -607,6 +629,7 @@ def main() -> None:
     bootstrap_environment()
     parser = _argument_parser()
     args = parser.parse_args()
+    model_catalog = load_model_catalog()
     yaml_path = _resolve_pipeline_path(args.yaml_path, parser=parser)
     project_key = (args.project_key or os.getenv("APP_PROJECT_KEY", "")).strip()
     if not project_key:
@@ -622,6 +645,7 @@ def main() -> None:
         project_key=project_key,
         parser=parser,
     )
+    ai_model = _resolve_cli_model(args, catalog=model_catalog, parser=parser)
     blob_connection, blob_container = load_hosted_blob_configuration(
         resource_group=args.azure_resource_group,
         container_app=args.azure_container_app,
@@ -633,7 +657,7 @@ def main() -> None:
         project_key=project_key,
         benchmark_key=benchmark_key,
         benchmark_version=benchmark_version,
-        ai_model=args.ai_model,
+        ai_model=ai_model,
         ai_reasoning_effort=args.ai_reasoning_effort,
         example_ids=args.example_ids,
         unit_ids=args.unit_ids,

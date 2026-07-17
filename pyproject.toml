@@ -40,7 +40,7 @@ filterwarnings = [
 ]
 
 [tool.basedpyright]
-include = ["src"]
+include = ["src", "model_catalog.py"]
 typeCheckingMode = "standard"
 pythonVersion = "3.13"
 venvPath = "."

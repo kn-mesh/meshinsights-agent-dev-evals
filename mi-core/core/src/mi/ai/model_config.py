@@ -19,38 +19,10 @@ KnownProviderName: TypeAlias = Literal[
 ]
 ProviderName: TypeAlias = KnownProviderName | str
 
-KnownModelName: TypeAlias = Literal[
-    # Anthropic models
-    "anthropic:claude-haiku-4-5",
-    "anthropic:claude-sonnet-4-5",
-    "anthropic:claude-sonnet-4-6",
-    "anthropic:claude-opus-4-5",
-    "anthropic:claude-opus-4-6",
-    # OpenAI models
-    # "openai:gpt-5",
-    # "openai:gpt-5-mini",
-    # Gemini models through Google direct API
-    "google:gemini-3.1-flash-lite-preview",
-    "google:gemini-3.1-pro-preview",
-    "google:gemini-3-flash-preview",
-    # Gemini models through Openrouter
-    "openrouter:google/gemini-3-flash-preview",
-    "openrouter:google/gemini-3-pro-preview",
-    # Azure Foundry supported models
-    "azure:claude-haiku-4-5",
-    "azure:claude-sonnet-4-5",
-    "azure:claude-sonnet-4-6",
-    "azure:claude-opus-4-5",
-    "azure:claude-opus-4-6",
-    "azure:gpt-5-nano",
-    "azure:gpt-5-mini",
-    "azure:gpt-5.2",
-    "azure:gpt-5.3-codex",
-    "azure:gpt-5.4-nano",
-    "azure:gpt-5.4-mini",
-    "azure:gpt-5.4",
-]
-ModelName: TypeAlias = KnownModelName | str
+# Applications own their fast-moving model catalogs. These aliases intentionally
+# remain generic so mi-core does not need a release for every model addition.
+KnownModelName: TypeAlias = str
+ModelName: TypeAlias = str
 
 
 _KNOWN_PROVIDERS: frozenset[str] = frozenset(KnownProviderName.__args__)  # type: ignore[attr-defined]
@@ -111,7 +83,6 @@ class ModelRef:
 
 
 _REGISTERED_MODELS: set[str] = set()
-_KNOWN_MODEL_SET: frozenset[str] = frozenset(KnownModelName.__args__)  # type: ignore[attr-defined]
 
 
 def register_model(model_name: str) -> None:
@@ -121,9 +92,8 @@ def register_model(model_name: str) -> None:
 
 
 def is_registered_or_known_model(model: ModelRef) -> bool:
-    """Return whether this exact model was explicitly registered or is a built-in known literal."""
-    canonical = model.canonical()
-    return canonical in _KNOWN_MODEL_SET or canonical in _REGISTERED_MODELS
+    """Return whether this exact model was explicitly registered by an application."""
+    return model.canonical() in _REGISTERED_MODELS
 
 
 # NOTE: Reasoning effort

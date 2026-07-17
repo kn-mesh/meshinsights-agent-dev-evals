@@ -124,8 +124,8 @@ uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1_3.ppln
 uv run python -m src.evals.eval_orchestration --help
 
 # Interactive: choose the pipeline, retrieve all published versions from the
-# deployed Azure PostgreSQL source of truth, then choose the immutable benchmark
-# version to evaluate.
+# deployed Azure PostgreSQL source of truth, choose the immutable benchmark
+# version, then choose an AI model from models.yaml.
 uv run python -m src.evals.eval_orchestration
 
 # Azure CLI must be signed in so the CLI can run read-only benchmark queries in
@@ -139,6 +139,14 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --runs-per-example 1
 
 ```
+
+## AI Model Catalog
+
+The project-owned model catalog is [`models.yaml`](models.yaml). It is the only
+place this project enumerates selectable model identifiers and declares the
+default used by non-interactive runs. Update that root file as provider models
+evolve; `mi-core` validates generic `provider:model` identifiers without owning
+an application model list.
 
 ## Working With Codex
 

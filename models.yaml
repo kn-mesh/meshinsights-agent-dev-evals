@@ -1,0 +1,22 @@
+default_model: azure:gpt-5.4-mini
+
+models:
+  - anthropic:claude-haiku-4-5
+  - anthropic:claude-sonnet-4-5
+  - anthropic:claude-sonnet-4-6
+  - anthropic:claude-opus-4-5
+  - anthropic:claude-opus-4-6
+  - google:gemini-3.1-flash-lite-preview
+  - google:gemini-3.5-flash
+  - google:gemini-3.1-flash-lite
+  - openrouter:google/gemini-3.5-flash
+  - azure:claude-haiku-4-5
+  - azure:claude-sonnet-4-5
+  - azure:claude-sonnet-4-6
+  - azure:claude-opus-4-5
+  - azure:claude-opus-4-6
+  - azure:gpt-5.6-luna
+  - azure:gpt-5.6-terra
+  - azure:gpt-5.6-sol
+
+

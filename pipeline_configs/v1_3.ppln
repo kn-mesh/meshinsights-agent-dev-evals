@@ -20,7 +20,6 @@ process:
       segmented_window_days: 365
       segment_count: 4
     - processor: V1_3AlarmClassificationAgent
-      model: azure:gpt-5-mini
       reasoning_effort: medium
       max_turns: 10
       timeout: 300

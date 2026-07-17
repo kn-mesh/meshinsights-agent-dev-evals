@@ -13,6 +13,7 @@ import yaml
 from mi.core.pipeline_builder import PipelineBuilder
 from mi.core.pipeline_receipt import PipelineReceipt
 
+from model_catalog import resolve_model
 from src.benchmarks import (
     AzurePostgresBenchmarkRepository,
     BenchmarkExample,
@@ -29,6 +30,7 @@ def run_pipeline(
     ai_reasoning_effort: str | None = None,
 ) -> PipelineReceipt:
     """Run the exact raw inputs frozen for one published benchmark example."""
+    ai_model = resolve_model(ai_model)
     canonical_example = benchmark.get_example(example.example_id)
     if canonical_example != example:
         raise ValueError(
@@ -194,7 +196,10 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--benchmark-key", required=True)
     parser.add_argument("--benchmark-version", type=int)
     parser.add_argument("--example-id", required=True)
-    parser.add_argument("--ai-model")
+    parser.add_argument(
+        "--ai-model",
+        help="Model from the project-owned models.yaml catalog.",
+    )
     parser.add_argument("--ai-reasoning-effort")
     return parser
 

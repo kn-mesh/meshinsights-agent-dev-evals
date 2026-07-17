@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import Any
 
 from mi.core.pipeline_receipt import PipelineReceipt, StageReceipt
 
+from model_catalog import ModelCatalog
 from src.benchmarks.models import (
     BenchmarkExample,
     BenchmarkVersion,
@@ -74,6 +76,9 @@ class _Repository:
         assert benchmark_key == self.benchmark.benchmark_key
         assert version_number in {None, self.benchmark.version_number}
         return self.benchmark
+
+    def list_published_versions(self) -> tuple[PublishedBenchmarkVersionSummary, ...]:
+        return ()
 
 
 def _successful_receipt() -> PipelineReceipt:
@@ -141,12 +146,14 @@ def test_run_eval_scores_published_examples_and_writes_benchmark_identity(
     assert payload["run_config"]["benchmark_source"] == "azure_postgres"
     assert payload["run_config"]["evidence_source"] == "azure_blob"
     assert payload["run_config"]["benchmark_version_number"] == 4
+    assert payload["run_config"]["ai_model"] == "azure:gpt-5.4-mini"
     assert payload["summary"]["total_runs"] == 2
     assert payload["summary"]["accuracy_by_label"]["root_cause"] == 1.0
     assert payload["results"][0]["source_snapshot_id"] == "snapshot-id"
-    assert payload["results"][0]["runs"][0]["ai_output"]["classification"][
-        "confidence"
-    ] == "High"
+    assert (
+        payload["results"][0]["runs"][0]["ai_output"]["classification"]["confidence"]
+        == "High"
+    )
 
 
 def test_eval_rejects_example_ids_outside_published_version(tmp_path: Path) -> None:
@@ -207,7 +214,9 @@ def test_terminal_chooser_selects_benchmark_then_specific_version(
     def choose(prompt: str, options: list[str]) -> str:
         prompts.append((prompt, options))
         if len(prompts) == 1:
-            return next(option for option in options if "steam-trap-regression" in option)
+            return next(
+                option for option in options if "steam-trap-regression" in option
+            )
         return next(option for option in options if option.startswith("v1 "))
 
     monkeypatch.setattr(eval_orchestration, "prompt_select_option", choose)
@@ -226,3 +235,40 @@ def test_terminal_chooser_rejects_empty_azure_catalog() -> None:
         assert "No published benchmark versions" in str(error)
     else:
         raise AssertionError("Expected an empty Azure catalog to fail.")
+
+
+def test_terminal_model_chooser_uses_root_catalog(monkeypatch: Any) -> None:
+    catalog = ModelCatalog(
+        default_model="azure:gpt-5.4-mini",
+        models=("azure:gpt-5.4-mini", "azure:gpt-5.4"),
+    )
+    monkeypatch.setattr(eval_orchestration.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(
+        eval_orchestration,
+        "prompt_select_option",
+        lambda prompt, options: options[1],
+    )
+
+    selected = eval_orchestration._resolve_cli_model(
+        argparse.Namespace(ai_model=None),
+        catalog=catalog,
+        parser=eval_orchestration._argument_parser(),
+    )
+
+    assert selected == "azure:gpt-5.4"
+
+
+def test_noninteractive_model_selection_uses_catalog_default(monkeypatch: Any) -> None:
+    catalog = ModelCatalog(
+        default_model="azure:gpt-5.4-mini",
+        models=("azure:gpt-5.4-mini", "azure:gpt-5.4"),
+    )
+    monkeypatch.setattr(eval_orchestration.sys.stdin, "isatty", lambda: False)
+
+    selected = eval_orchestration._resolve_cli_model(
+        argparse.Namespace(ai_model=None),
+        catalog=catalog,
+        parser=eval_orchestration._argument_parser(),
+    )
+
+    assert selected == "azure:gpt-5.4-mini"
