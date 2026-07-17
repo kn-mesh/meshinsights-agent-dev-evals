@@ -4,7 +4,6 @@ build-backend = "setuptools.build_meta"
 
 [dependency-groups]
 dev = [
-    "watchdog>=2.1.0", # Faster Streamlit reloads
     "ipython>=8.0.0", # Better debugging
     "pytest>=7.0.0",
     "ruff>=0.1.0",

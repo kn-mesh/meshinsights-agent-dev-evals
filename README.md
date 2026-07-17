@@ -138,9 +138,6 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --benchmark-version <version-number> \
   --runs-per-example 1
 
-# Streamlit apps
-uv run python -m streamlit run src/streamlit_apps/data_visualization_app.py
-uv run python -m streamlit run src/streamlit_apps/evaluation_results_app.py
 ```
 
 ## Working With Codex
@@ -155,7 +152,6 @@ Use `$project-guide` for repository orientation, architecture, customization, li
 | Build an `mi.ai` workflow, agent, toolset, capability, or skill | `$ai-processor-builder` |
 | Build evaluation orchestration or result contracts | `$agent-eval-builder` |
 | Analyze existing evaluation results | `$eval-results-analysis` |
-| Build or fix a Streamlit review/debug app | `$streamlit-app-builder` |
 | Configure auth, providers, runtime overrides, or tracing | `$external-runtime-setup` |
 
 Example questions:
@@ -191,7 +187,6 @@ src/
   retrievers/
   pipelines/
   evals/
-  streamlit_apps/
   experimental_core/
 ```
 

@@ -50,7 +50,6 @@ Use these locations by default:
 | `src/actions/` | Final side effects or intentionally no-op terminal actions |
 | `src/pipelines/` | Runnable pipeline entry points and runner CLIs |
 | `src/evals/` | Evaluation orchestration and result handling |
-| `src/streamlit_apps/` | Inspection, comparison, and debugging interfaces |
 
 Treat example files as starting patterns, not required production behavior.
 
@@ -64,7 +63,6 @@ Load the narrowest applicable skill before answering in depth or implementing:
 | Structured AI processors, workflows, agents, tools, capabilities, or Agent Skills | `$ai-processor-builder` |
 | Eval orchestration, benchmark contracts, repeated runs, or result apps | `$agent-eval-builder` |
 | Existing eval regressions, comparisons, or error analysis | `$eval-results-analysis` |
-| Streamlit layout, state, tables, charts, or debug workflows | `$streamlit-app-builder` |
 | `.env`, `mi auth`, provider credentials, runtime overrides, or Logfire | `$external-runtime-setup` |
 
 Use multiple skills only when the request genuinely spans their domains.

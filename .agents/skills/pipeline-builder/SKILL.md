@@ -20,7 +20,6 @@ Rules:
 - When this skill describes a build order or recommended architecture, interpret that as the default agent path rather than a universal requirement that every repo already follows it.
 
 Use these narrower skills when the task enters a specialized area:
-- `$streamlit-app-builder` for Streamlit apps and UI patterns.
 - `$ai-processor-builder` for workflow or agent processor implementation details.
 - `$agent-eval-builder` for eval orchestration and eval JSON contracts.
 
@@ -88,49 +87,11 @@ Build in this order unless the user explicitly asks to skip ahead:
 
 Build this first to validate data quality and feature usefulness before committing to pipeline logic.
 
-There are two valid implementation options for the visualization stage. Choose based on how much reusable pipeline plumbing the visualization work actually needs.
+Build a real visualization pipeline when inspection requires meaningful
+retrieval, normalization, artifact production, or processor experimentation
+that should be reused in later pipeline stages.
 
-### Option 1: Query data directly in the Streamlit app
-
-Use this when retrieval and normalization are relatively simple and the main goal is fast inspection rather than building a reusable visualization-stage pipeline.
-
-This is the faster path when:
-
-- the app can query the source system directly with limited shared plumbing,
-- normalization is lightweight and can live close to the app,
-- you do not need process-stage artifacts to flow through `mi.core`,
-- the visualization work is mainly exploratory rather than a durable pipeline stage.
-
-#### What to build
-
-1. Published benchmark and raw-source access appropriate to the use case.
-2. A Streamlit app in `src/streamlit_apps/` that:
-   reads benchmark example-selection context,
-   queries the backing data source directly,
-   performs only the normalization needed for display and debugging,
-   renders the raw data, derived views, and unit context needed for developer inspection.
-3. Shared helper functions or lightweight service code only when it keeps the app readable.
-
-Use `$streamlit-app-builder` when building the app.
-
-#### Rules
-
-- Keep direct-query logic scoped to the visualization/debugging use case.
-- Do not pretend this is already a reusable pipeline stage if it is not.
-- Keep the app honest about what is app-only logic versus reusable pipeline logic.
-
-#### Done checklist
-
-- One selected unit can be queried and visualized directly from the app.
-- The app renders the raw source data, any lightweight derived views, and key unit metadata.
-- The implementation remains small enough that introducing a dedicated visualization pipeline would add more plumbing than value.
-
-
-### Option 2: Build a real visualization pipeline
-
-Use this when the visualization stage is doing meaningful retrieval, normalization, artifact production, or processor experimentation that you expect to reuse in later pipeline stages.
-
-#### What to build
+### What to build
 
 1. Published benchmark and immutable raw-source access.
 2. A retriever in `src/retrievers/` that:
@@ -142,15 +103,12 @@ Use this when the visualization stage is doing meaningful retrieval, normalizati
 5. One baseline compute processor in the relevant processor package.
 6. An action object, process-to-action hydrator, visualization hydrator, finalize hydrator, and visualization action.
 7. A visualization pipeline module in `src/pipelines/`.
-8. A Streamlit app in `src/streamlit_apps/`.
 
-Use `$streamlit-app-builder` when building the app.
-
-#### Why the visualization sink exists
+### Why the visualization sink exists
 
 `mi.core` clears intermediate objects as stages complete. If you need post-run inspection of process-stage artifacts, emit them through an action side effect rather than trying to read the process object after `pipeline.run()`.
 
-#### Critical deepcopy rule
+### Critical deepcopy rule
 
 If the visualization action stores a caller-provided sink dict, preserve that sink by reference in `__deepcopy__`. Otherwise `PipelineBuilder.build()` will deepcopy the action and the caller will read an empty sink.
 
@@ -175,11 +133,12 @@ def __deepcopy__(self, memo: dict[int, object]) -> "MyVisualizationAction":
     return result
 ```
 
-#### Done checklist
+### Done checklist
 
 - `run_unit(unit_id)` returns a receipt plus visualization payload.
 - `run_all_units(...)` works through orchestrator execution.
-- The app renders raw normalized data, the first baseline artifact, and key unit metadata.
+- The visualization payload contains raw normalized data, the first baseline
+  artifact, and key unit metadata for inspection by the caller.
 
 
 
