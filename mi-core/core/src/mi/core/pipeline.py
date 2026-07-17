@@ -24,6 +24,7 @@ from mi.core.utils.telemetry import (
     bootstrap_telemetry,
     get_current_span,
     get_tracer,
+    report_pipeline_error,
     set_span_error,
     ATTR_COMPONENT_LAYER,
 )
@@ -466,6 +467,12 @@ class Pipeline(Generic[PDO, ADO]):
 
         except Exception as e:
             set_span_error(current_span, e)
+            report_pipeline_error(
+                e,
+                pipeline_name=self.config.name,
+                pipeline_unit=self.config.metadata.unit,
+                stage="pipeline",
+            )
             self.logger.error(f"Pipeline execution failed: {e}", exc_info=True)
             self.receipt.success = False
             current_span.set_attribute("pipeline.success", False)
@@ -538,6 +545,12 @@ class Pipeline(Generic[PDO, ADO]):
 
             except Exception as e:
                 set_span_error(span, e)
+                report_pipeline_error(
+                    e,
+                    pipeline_name=self.config.name,
+                    pipeline_unit=self.config.metadata.unit,
+                    stage="retrieve",
+                )
                 self.logger.error(f"Retrieve stage failed: {e}", exc_info=True)
                 stage_receipt.error = str(e)
                 stage_receipt.success = False
@@ -608,6 +621,12 @@ class Pipeline(Generic[PDO, ADO]):
 
             except Exception as e:
                 set_span_error(span, e)
+                report_pipeline_error(
+                    e,
+                    pipeline_name=self.config.name,
+                    pipeline_unit=self.config.metadata.unit,
+                    stage="process",
+                )
                 self.logger.error(f"Process stage failed: {e}", exc_info=True)
                 stage_receipt.error = str(e)
                 stage_receipt.success = False
@@ -675,6 +694,12 @@ class Pipeline(Generic[PDO, ADO]):
 
             except Exception as e:
                 set_span_error(span, e)
+                report_pipeline_error(
+                    e,
+                    pipeline_name=self.config.name,
+                    pipeline_unit=self.config.metadata.unit,
+                    stage="act",
+                )
                 self.logger.error(f"Act stage failed: {e}", exc_info=True)
                 stage_receipt.error = str(e)
                 stage_receipt.success = False

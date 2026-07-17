@@ -1,17 +1,17 @@
-"""Processor exports for the Pulse v1_3 agent pipeline."""
+"""Processor exports for the Pulse v1_3 workflow pipeline."""
 
-from src.processors.v1_3.alarm_classification_agent import (
-    V1_3AlarmClassificationAgent,
-    V1_3AlarmClassificationAgentConfig,
+from src.processors.v1_3.v1_3_alarm_classification_ai_workflow_processor import (
+    V1_3AlarmClassificationAIWorkflowProcessor,
+    V1_3AlarmClassificationAIWorkflowProcessorConfig,
 )
-from src.processors.v1_3.temperature_evidence_processor import (
-    V1_3TemperatureEvidenceProcessor,
-    V1_3TemperatureEvidenceProcessorConfig,
+from src.processors.v1_3.v1_3_temperature_graphs_processor import (
+    V1_3TemperatureGraphsProcessor,
+    V1_3TemperatureGraphsProcessorConfig,
 )
 
 __all__ = [
-    "V1_3AlarmClassificationAgent",
-    "V1_3AlarmClassificationAgentConfig",
-    "V1_3TemperatureEvidenceProcessor",
-    "V1_3TemperatureEvidenceProcessorConfig",
+    "V1_3AlarmClassificationAIWorkflowProcessor",
+    "V1_3AlarmClassificationAIWorkflowProcessorConfig",
+    "V1_3TemperatureGraphsProcessor",
+    "V1_3TemperatureGraphsProcessorConfig",
 ]

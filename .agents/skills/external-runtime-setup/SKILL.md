@@ -65,20 +65,17 @@ Rules:
 
 ## Published Benchmark And Evidence Access
 
-The active Spirax pipeline and eval path also requires hosted data access:
+The active Spirax operator CLI uses hosted data access as follows:
 
-| Variable | Purpose |
+| Input | Purpose |
 |---|---|
 | `APP_PROJECT_KEY` | Scopes every benchmark query to the configured Label Benchmark project |
-| `DATABASE_URL` | Read-only connection to the Label Benchmark Azure PostgreSQL database |
-| `AZURE_STORAGE_CONNECTION_STRING` | Read access to immutable raw source artifacts |
-| `AZURE_STORAGE_CONTAINER` | Source-snapshot Blob container, normally `source-snapshots` |
+| Azure CLI login | Runs read-only benchmark queries through the deployed Container App and retrieves hosted Blob configuration |
 
-There is no MongoDB, local benchmark JSON, or filesystem snapshot fallback in
-normal pipeline/eval execution. Keep these credentials in `.env` or CI secret
-stores. Prefer a PostgreSQL identity that can only read the published benchmark
-tables needed by this repository, and do not enable Blob container creation or
-write access for agent/eval runs.
+Direct repository or programmatic execution may instead use `DATABASE_URL`,
+`AZURE_STORAGE_CONNECTION_STRING`, and `AZURE_STORAGE_CONTAINER`. There is no
+MongoDB, local benchmark JSON, or filesystem snapshot fallback. Keep credentials
+in `.env` or CI secret stores and use read-only access.
 
 ## `.env` And Template Files
 
@@ -132,14 +129,15 @@ What it does:
 
 ## Model Identifier Rules
 
-Use canonical `provider:model` format.
+Use canonical `provider:model` format and choose project-supported models from
+the root `models.yaml`. That catalog owns the fast-moving identifiers and each
+model's required API family.
 
 Examples:
-- `azure:gpt-5.4-mini`
-- `azure:gpt-5.4`
+- `azure:gpt-5.6-luna`
 - `azure:claude-sonnet-4-6`
-- `google:gemini-3.1-flash-lite-preview`
-- `openrouter:google/gemini-3-flash-preview`
+- `google:gemini-3.5-flash`
+- `openrouter:google/gemini-3.5-flash`
 
 Rules:
 - Keep provider support and credential mapping in runner validation, not in processor business logic.
@@ -147,17 +145,19 @@ Rules:
 
 ## Provider Credential Mapping
 
-Use centralized runner-side validation to map model prefixes to required environment variables.
+Use centralized runner-side validation to map catalog API families and model
+providers to required environment variables.
 
-Common mapping:
+Current mapping:
 
-| Model prefix | Required env vars |
+| Catalog API/provider | Required env vars |
 |---|---|
-| `azure:gpt-*` | `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `OPENAI_API_VERSION` |
-| `azure:claude-*` | `ANTHROPIC_FOUNDRY_API_KEY`, plus `ANTHROPIC_FOUNDRY_RESOURCE` or `ANTHROPIC_FOUNDRY_BASE_URL` |
-| `anthropic:*` | `ANTHROPIC_API_KEY` |
-| `google:*` | `GOOGLE_API_KEY` or `GEMINI_API_KEY` |
-| `openrouter:*` | `OPENROUTER_API_KEY` |
+| `openai_chat_completions` with `azure:*` | `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `OPENAI_API_VERSION` |
+| `openai_responses` with `azure:*` | `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`; the backend normalizes the endpoint to `/openai/v1` and does not send the dated API version |
+| `anthropic_messages` with `azure:*` | `ANTHROPIC_FOUNDRY_API_KEY`, plus `ANTHROPIC_FOUNDRY_RESOURCE` or `ANTHROPIC_FOUNDRY_BASE_URL` |
+| `anthropic_messages` with `anthropic:*` | `ANTHROPIC_API_KEY` |
+| `google_generate_content` | `GOOGLE_API_KEY` or `GEMINI_API_KEY` |
+| `openai_chat_completions` with `openrouter:*` | `OPENROUTER_API_KEY` |
 
 Notes:
 - `anthropic:*` may also use `ANTHROPIC_BASE_URL` for Anthropic-compatible Azure-hosted routing.

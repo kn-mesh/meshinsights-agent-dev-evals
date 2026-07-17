@@ -108,6 +108,38 @@ class TestResolveModel:
         assert model == "azure:my-gpt5-deploy"
         assert settings_id == "azure:my-gpt5-deploy"
 
+    def test_azure_responses_model_uses_v1_endpoint(
+        self, backend: PydanticAIBackend
+    ) -> None:
+        from pydantic_ai.models.openai import OpenAIResponsesModel
+
+        model, settings_id = backend._resolve_model(
+            "azure",
+            "gpt-5.6-luna",
+            {},
+            backend_options={"model_api": "openai_responses"},
+            transport_retries=3,
+        )
+
+        assert isinstance(model, OpenAIResponsesModel)
+        assert settings_id == "azure:gpt-5.6-luna"
+        assert str(model.client.base_url) == "https://test.openai.azure.com/openai/v1/"
+        assert model.client.max_retries == 0
+
+    def test_azure_chat_model_rejects_responses_metadata_mismatch(
+        self, backend: PydanticAIBackend
+    ) -> None:
+        with pytest.raises(
+            ValueError, match="requires model_api=openai_chat_completions"
+        ):
+            backend._resolve_model(
+                "azure",
+                "gpt-5.6-luna",
+                {},
+                backend_options={"model_api": "google_generate_content"},
+                transport_retries=3,
+            )
+
     def test_azure_claude_returns_anthropic_model(
         self, backend: PydanticAIBackend
     ) -> None:

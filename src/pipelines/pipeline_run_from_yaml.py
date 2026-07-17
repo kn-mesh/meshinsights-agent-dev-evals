@@ -13,7 +13,7 @@ import yaml
 from mi.core.pipeline_builder import PipelineBuilder
 from mi.core.pipeline_receipt import PipelineReceipt
 
-from model_catalog import resolve_model
+from model_catalog import resolve_model, resolve_model_definition
 from src.benchmarks import (
     AzurePostgresBenchmarkRepository,
     BenchmarkExample,
@@ -28,6 +28,7 @@ def run_pipeline(
     example: BenchmarkExample,
     ai_model: str | None = None,
     ai_reasoning_effort: str | None = None,
+    pipeline_log_level: str | None = None,
 ) -> PipelineReceipt:
     """Run the exact raw inputs frozen for one published benchmark example."""
     ai_model = resolve_model(ai_model)
@@ -44,6 +45,7 @@ def run_pipeline(
         example=example,
         ai_model=ai_model,
         ai_reasoning_effort=ai_reasoning_effort,
+        pipeline_log_level=pipeline_log_level,
     )
     return _execute_runtime_config(source_path, runtime_config)
 
@@ -80,9 +82,15 @@ def _apply_runtime_overrides(
     example: BenchmarkExample,
     ai_model: str | None,
     ai_reasoning_effort: str | None,
+    pipeline_log_level: str | None = None,
 ) -> dict[str, Any]:
     """Build an ephemeral benchmark runtime config without mutating source YAML."""
     runtime = copy.deepcopy(pipeline_config)
+    if pipeline_log_level is not None:
+        logger_config = runtime.setdefault("logger", {})
+        if not isinstance(logger_config, dict):
+            raise ValueError("Pipeline logger configuration must be a mapping.")
+        logger_config["level"] = pipeline_log_level
     metadata_class = str(
         runtime.pop("metadata_class", "BenchmarkExamplePipelineMetadata")
     )
@@ -118,11 +126,21 @@ def _apply_runtime_overrides(
 
     normalized_model = _normalize_override(ai_model)
     normalized_effort = _normalize_override(ai_reasoning_effort)
+    model_definition = (
+        resolve_model_definition(normalized_model)
+        if normalized_model is not None
+        else None
+    )
     for processor in runtime.get("process", {}).get("processors", []):
         if not isinstance(processor, dict) or not _is_ai_processor(processor):
             continue
         if normalized_model is not None:
             processor["model"] = normalized_model
+            backend_options = processor.setdefault("backend_options", {})
+            if not isinstance(backend_options, dict):
+                raise ValueError("AI processor backend_options must be a mapping.")
+            assert model_definition is not None
+            backend_options["model_api"] = model_definition.api
         if normalized_effort is not None:
             processor["reasoning_effort"] = normalized_effort
         elif normalized_model is not None:

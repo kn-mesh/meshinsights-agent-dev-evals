@@ -61,6 +61,7 @@ Load the narrowest applicable skill before answering in depth or implementing:
 |---|---|
 | Pipeline components, YAML, variants, runners, or receipts | `$pipeline-builder` |
 | Structured AI processors, workflows, agents, tools, capabilities, or Agent Skills | `$ai-processor-builder` |
+| Prepare, execute, or troubleshoot a use-case eval command | `$run-use-case-evals` |
 | Eval orchestration, benchmark contracts, repeated runs, or result apps | `$agent-eval-builder` |
 | Existing eval regressions, comparisons, or error analysis | `$eval-results-analysis` |
 | `.env`, `mi auth`, provider credentials, runtime overrides, or Logfire | `$external-runtime-setup` |

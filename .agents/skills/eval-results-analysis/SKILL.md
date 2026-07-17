@@ -33,8 +33,8 @@ Rules:
 1. Confirm scope from the user.
    The user will usually tell you which pipeline versions, runs, or prompt revisions matter. Focus on those runs first instead of diffing every eval folder in the repo.
 2. Read the relevant eval results.
-   Start in versioned folders such as `src/evals/eval_results_v1_2` or `src/evals/eval_results_v2`.
-   Typical result files live under `src/evals/eval_results_<version>/<benchmark_key>/v<version>/all/*.json`.
+   Start under `src/evals/eval_results_<pipeline-stem>/`.
+   Typical `v1_3` files live under `src/evals/eval_results_v1_3/<benchmark_key>/v<benchmark-version>/<scope>/*.json`.
 3. Identify the main regression or improvement pattern.
    Use the top-level `summary` and then drill into `results`.
    Look for misses by classification, root cause, confidence band, and repeated failure modes across multiple units.

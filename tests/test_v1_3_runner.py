@@ -67,19 +67,29 @@ def test_runtime_overrides_are_ephemeral_and_benchmark_scoped() -> None:
         source,
         benchmark=benchmark,
         example=example,
-        ai_model="azure:gpt-5.4-mini",
+        ai_model="azure:gpt-5.6-luna",
         ai_reasoning_effort="high",
+        pipeline_log_level="CRITICAL",
     )
 
     assert "metadata" not in source
     assert runtime["metadata"]["example_id"] == example.example_id
     assert runtime["metadata"]["source_snapshot_id"] == "snapshot-id"
     assert runtime["metadata"]["benchmark_version_number"] == 3
-    agent = runtime["process"]["processors"][1]
-    assert agent["model"] == "azure:gpt-5.4-mini"
-    assert agent["reasoning_effort"] == "high"
+    workflow = runtime["process"]["processors"][1]
+    assert workflow["processor"] == "V1_3AlarmClassificationAIWorkflowProcessor"
+    assert workflow["model"] == "azure:gpt-5.6-luna"
+    assert workflow["backend_options"]["model_api"] == "openai_responses"
+    assert workflow["reasoning_effort"] == "high"
+    assert runtime["logger"]["level"] == "CRITICAL"
     assert runtime["retrieve"]["retrievers"] == [
         {"retriever": "AzureBlobBenchmarkEvidenceRetriever"}
+    ]
+    assert [
+        processor["processor"] for processor in runtime["process"]["processors"]
+    ] == [
+        "V1_3TemperatureGraphsProcessor",
+        "V1_3AlarmClassificationAIWorkflowProcessor",
     ]
 
 

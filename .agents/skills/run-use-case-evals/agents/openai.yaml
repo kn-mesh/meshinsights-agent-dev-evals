@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Use-Case Evals"
+  short_description: "Run reproducible benchmark evals quickly"
+  default_prompt: "Use $run-use-case-evals to prepare or run an evaluation for this use case."

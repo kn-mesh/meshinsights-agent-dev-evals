@@ -4,12 +4,34 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast, Literal, TypeAlias
 
 import yaml
 
 
 MODEL_CATALOG_PATH = Path(__file__).with_name("models.yaml")
+ModelApi: TypeAlias = Literal[
+    "anthropic_messages",
+    "google_generate_content",
+    "openai_chat_completions",
+    "openai_responses",
+]
+_MODEL_APIS: frozenset[str] = frozenset(
+    {
+        "anthropic_messages",
+        "google_generate_content",
+        "openai_chat_completions",
+        "openai_responses",
+    }
+)
+
+
+@dataclass(frozen=True, slots=True)
+class ModelDefinition:
+    """One project-selectable model and the API family it requires."""
+
+    id: str
+    api: ModelApi
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,7 +39,20 @@ class ModelCatalog:
     """Validated model choices and the default used by unattended runs."""
 
     default_model: str
-    models: tuple[str, ...]
+    models: tuple[ModelDefinition, ...]
+
+    @property
+    def model_ids(self) -> tuple[str, ...]:
+        """Return model identifiers in their configured display order."""
+        return tuple(model.id for model in self.models)
+
+    def get(self, model_id: str) -> ModelDefinition:
+        """Return metadata for one model identifier."""
+        for model in self.models:
+            if model.id == model_id:
+                return model
+        choices = ", ".join(self.model_ids)
+        raise ValueError(f"Unknown model '{model_id}'. Choose one of: {choices}")
 
 
 def load_model_catalog(path: Path = MODEL_CATALOG_PATH) -> ModelCatalog:
@@ -32,12 +67,12 @@ def load_model_catalog(path: Path = MODEL_CATALOG_PATH) -> ModelCatalog:
         raise ValueError(f"Model catalog 'models' must be a non-empty list: {path}")
 
     models = tuple(
-        _model_identifier(value, f"models[{index}]")
-        for index, value in enumerate(raw_models)
+        _model_definition(value, index) for index, value in enumerate(raw_models)
     )
-    if len(set(models)) != len(models):
+    model_ids = tuple(model.id for model in models)
+    if len(set(model_ids)) != len(model_ids):
         raise ValueError(f"Model catalog contains duplicate model identifiers: {path}")
-    if default_model not in models:
+    if default_model not in model_ids:
         raise ValueError(
             f"Model catalog default '{default_model}' is not present in models: {path}"
         )
@@ -46,12 +81,31 @@ def load_model_catalog(path: Path = MODEL_CATALOG_PATH) -> ModelCatalog:
 
 def resolve_model(model: str | None, catalog: ModelCatalog | None = None) -> str:
     """Resolve a requested model or the project default and validate membership."""
+    return resolve_model_definition(model, catalog).id
+
+
+def resolve_model_definition(
+    model: str | None, catalog: ModelCatalog | None = None
+) -> ModelDefinition:
+    """Resolve a requested model and return its project-owned runtime metadata."""
     selected_catalog = catalog or load_model_catalog()
     selected = model.strip() if model is not None else selected_catalog.default_model
-    if selected not in selected_catalog.models:
-        choices = ", ".join(selected_catalog.models)
-        raise ValueError(f"Unknown model '{selected}'. Choose one of: {choices}")
-    return selected
+    return selected_catalog.get(selected)
+
+
+def _model_definition(value: object, index: int) -> ModelDefinition:
+    """Validate one structured model catalog entry."""
+    field = f"models[{index}]"
+    if not isinstance(value, dict):
+        raise ValueError(f"Model catalog '{field}' must be a mapping with id and api.")
+    model_id = _model_identifier(value.get("id"), f"{field}.id")
+    raw_api = value.get("api")
+    if not isinstance(raw_api, str) or raw_api not in _MODEL_APIS:
+        choices = ", ".join(sorted(_MODEL_APIS))
+        raise ValueError(
+            f"Model catalog '{field}.api' must be one of: {choices}; got {raw_api!r}."
+        )
+    return ModelDefinition(id=model_id, api=cast(ModelApi, raw_api))
 
 
 def _model_identifier(value: object, field: str) -> str:

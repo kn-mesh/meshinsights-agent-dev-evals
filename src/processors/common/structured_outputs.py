@@ -1,63 +1,46 @@
-"""Structured outputs shared by Pulse failure-analysis agents."""
+"""Shared structured output models for Pulse failure-analysis AI processors."""
 
 from __future__ import annotations
 
-from typing import Literal, Self
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 class ClassificationResult(BaseModel):
-    """Represent the top-level healthy-versus-failure decision."""
-
-    model_config = ConfigDict(extra="forbid")
+    """Store the top-level healthy-versus-failure decision."""
 
     value: Literal["Healthy", "Failure"] = Field(
-        description="Health classification for the steam trap at the decision point."
+        description='Issue classification for the steam trap: output "Healthy" or "Failure".'
     )
     confidence: Literal["High", "Low"] = Field(
-        description="High only when the phase and baseline are clear and the main alternative is reasonably excluded."
+        description='Confidence for the issue classification: output "High" when the operating phase and baseline are clear and the main alternative explanation can be ruled out; otherwise output "Low".'
     )
     explanation: str = Field(
-        min_length=1,
-        description="One or two sentences citing concrete historical and alarm-adjacent temperature evidence.",
+        description="1-2 sentences citing the specific temperature evidence and the operating phase for the issue classification. Name the historical baseline used for comparison, and prefer dates, temperatures, and patterns rather than referring to specific charts."
     )
 
 
 class RootCauseResult(BaseModel):
-    """Represent the detailed failure root-cause decision."""
-
-    model_config = ConfigDict(extra="forbid")
+    """Store the detailed failure root-cause decision."""
 
     value: Literal["Open Failure", "Closed Failure", "Unknown", "N/A"] = Field(
-        description="Failure mechanism, Unknown when direction is ambiguous, or N/A for Healthy."
+        description='Root cause classification: output "Open Failure", "Closed Failure", "Unknown", or "N/A". Output "N/A" when the issue classification is "Healthy".'
     )
     confidence: Literal["High", "Low"] = Field(
-        description="High only when the direction of change is clear."
+        description='Confidence for the root cause classification: output "High" when the direction of change is clear, otherwise output "Low". If open vs closed cannot be justified, prefer root cause "Unknown" rather than guessing.'
     )
     explanation: str = Field(
-        min_length=1,
-        description="One or two sentences identifying which side departed first, or N/A for Healthy.",
+        description='1-2 sentences citing which side changed and the trajectory evidence for the root cause classification. If the value is "Unknown", explain why open vs closed cannot be determined. If the issue classification is "Healthy", provide only "N/A". Prefer dates, temperatures, and patterns rather than referring to specific charts.'
     )
 
 
 class PulseFailureAnalysisResult(BaseModel):
-    """Represent one validated steam-trap health decision."""
+    """Store the shared structured AI result for Pulse failure analysis."""
 
-    model_config = ConfigDict(extra="forbid")
-
-    classification: ClassificationResult
-    root_cause: RootCauseResult
-
-    @model_validator(mode="after")
-    def validate_root_cause_consistency(self) -> Self:
-        """Require N/A only for healthy decisions and a failure cause otherwise."""
-        healthy = self.classification.value == "Healthy"
-        root_cause_is_na = self.root_cause.value == "N/A"
-        if healthy != root_cause_is_na:
-            raise ValueError(
-                "Healthy decisions require root cause N/A; failures require a failure cause."
-            )
-        if healthy and self.root_cause.explanation.strip() != "N/A":
-            raise ValueError("Healthy decisions require root cause explanation N/A.")
-        return self
+    classification: ClassificationResult = Field(
+        description="Top-level issue classification output containing the value, confidence, and explanation for whether the steam trap is Healthy or Failure."
+    )
+    root_cause: RootCauseResult = Field(
+        description="Root cause classification output containing the value, confidence, and explanation for Open Failure, Closed Failure, Unknown, or N/A."
+    )

@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import functools
 import inspect
+import os
 from typing import Any, TypeVar, get_type_hints
 
 import httpx
@@ -51,7 +52,9 @@ class PydanticAIBackend(AIBackend):
     """Executes mi.ai requests via pydantic-ai."""
 
     BACKEND_NAME = "pydantic_ai"
-    _RETRYABLE_STATUS_CODES = frozenset({408, 409, 429, 500, 502, 503, 504})
+    _RETRYABLE_STATUS_CODES = frozenset(
+        {408, 409, 429, 500, 502, 503, 504, 507}
+    )
 
     def __init__(self) -> None:
         self._retrying_http_clients: dict[int, httpx.AsyncClient] = {}
@@ -63,6 +66,7 @@ class PydanticAIBackend(AIBackend):
             request.model.provider,
             request.model.model,
             request.provider_options,
+            backend_options=request.backend_options,
             transport_retries=request.transport_retries,
         )
         model_settings = self._build_model_settings(
@@ -130,6 +134,7 @@ class PydanticAIBackend(AIBackend):
             request.model.provider,
             request.model.model,
             request.provider_options,
+            backend_options=request.backend_options,
             transport_retries=request.transport_retries,
         )
         model_settings = self._build_model_settings(
@@ -146,8 +151,7 @@ class PydanticAIBackend(AIBackend):
             self._build_toolset(toolset) for toolset in request.toolsets
         ]
         pydantic_capabilities = [
-            self._build_capability(capability)
-            for capability in request.capabilities
+            self._build_capability(capability) for capability in request.capabilities
         ]
         agent_retries: int | AgentRetries = request.tool_retries
         if request.output_retries is not None:
@@ -196,6 +200,7 @@ class PydanticAIBackend(AIBackend):
         model: str,
         provider_options: dict[str, Any],
         *,
+        backend_options: dict[str, Any] | None = None,
         transport_retries: int | None = None,
     ) -> tuple[Any, str]:
         """Resolve provider + model + options into a pydantic-ai model reference.
@@ -217,6 +222,9 @@ class PydanticAIBackend(AIBackend):
             if transport_retries is not None
             else None
         )
+        model_api = (backend_options or {}).get("model_api")
+        if model_api is not None and not isinstance(model_api, str):
+            raise ValueError("backend_options.model_api must be a string.")
 
         if provider == "azure":
             deployment = provider_options.get("deployment")
@@ -224,6 +232,12 @@ class PydanticAIBackend(AIBackend):
             settings_id = f"azure:{name}"
 
             if model.startswith("claude"):
+                self._validate_model_api(
+                    model_api,
+                    expected="anthropic_messages",
+                    provider=provider,
+                    model=model,
+                )
                 return (
                     self._build_foundry_model(
                         model,
@@ -233,12 +247,41 @@ class PydanticAIBackend(AIBackend):
                     settings_id,
                 )
 
+            if model_api == "openai_responses":
+                return (
+                    self._build_azure_model(
+                        name,
+                        http_client,
+                        model_api=model_api,
+                    ),
+                    settings_id,
+                )
+
+            self._validate_model_api(
+                model_api,
+                expected="openai_chat_completions",
+                provider=provider,
+                model=model,
+            )
             if http_client is not None:
-                return self._build_azure_model(name, http_client), settings_id
+                return (
+                    self._build_azure_model(
+                        name,
+                        http_client,
+                        model_api="openai_chat_completions",
+                    ),
+                    settings_id,
+                )
 
             return f"azure:{name}", settings_id
 
         if provider == "google":
+            self._validate_model_api(
+                model_api,
+                expected="google_generate_content",
+                provider=provider,
+                model=model,
+            )
             return (
                 self._build_google_model(
                     model,
@@ -248,11 +291,31 @@ class PydanticAIBackend(AIBackend):
                 f"google:{model}",
             )
 
-        if provider == "anthropic" and http_client is not None:
-            return self._build_anthropic_model(model, http_client), f"anthropic:{model}"
+        if provider == "anthropic":
+            self._validate_model_api(
+                model_api,
+                expected="anthropic_messages",
+                provider=provider,
+                model=model,
+            )
+            if http_client is not None:
+                return (
+                    self._build_anthropic_model(model, http_client),
+                    f"anthropic:{model}",
+                )
 
-        if provider == "openrouter" and http_client is not None:
-            return self._build_openrouter_model(model, http_client), f"openrouter:{model}"
+        if provider == "openrouter":
+            self._validate_model_api(
+                model_api,
+                expected="openai_chat_completions",
+                provider=provider,
+                model=model,
+            )
+            if http_client is not None:
+                return (
+                    self._build_openrouter_model(model, http_client),
+                    f"openrouter:{model}",
+                )
 
         model_str = f"{provider}:{model}"
         return model_str, model_str
@@ -318,20 +381,56 @@ class PydanticAIBackend(AIBackend):
         return GoogleModel(model, provider=google_provider)
 
     def _build_azure_model(
-        self, model: str, http_client: httpx.AsyncClient
+        self,
+        model: str,
+        http_client: httpx.AsyncClient | None,
+        *,
+        model_api: str,
     ) -> Any:
-        from pydantic_ai.models.openai import OpenAIChatModel
+        from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModel
         from pydantic_ai.providers.azure import AzureProvider
 
-        provider = AzureProvider(  # pyright: ignore[reportCallIssue]
-            http_client=http_client
-        )
-        provider.client.max_retries = 0
+        provider_kwargs: dict[str, Any] = {}
+        if http_client is not None:
+            provider_kwargs["http_client"] = http_client
+        if model_api == "openai_responses":
+            provider_kwargs["azure_endpoint"] = self._azure_responses_endpoint()
+        provider = AzureProvider(**provider_kwargs)
+        if http_client is not None:
+            provider.client.max_retries = 0
+        if model_api == "openai_responses":
+            return OpenAIResponsesModel(model, provider=provider)
         return OpenAIChatModel(model, provider=provider)
 
-    def _build_anthropic_model(
-        self, model: str, http_client: httpx.AsyncClient
-    ) -> Any:
+    def _azure_responses_endpoint(self) -> str:
+        """Return the configured Azure endpoint normalized to its v1 API root."""
+        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "").strip().rstrip("/")
+        if not endpoint:
+            raise ValueError(
+                "AZURE_OPENAI_ENDPOINT is required for Azure Responses API models."
+            )
+        if endpoint.endswith("/openai/v1") or endpoint.endswith("/v1"):
+            return endpoint
+        if endpoint.endswith("/openai"):
+            return f"{endpoint}/v1"
+        return f"{endpoint}/openai/v1"
+
+    def _validate_model_api(
+        self,
+        model_api: str | None,
+        *,
+        expected: str,
+        provider: str,
+        model: str,
+    ) -> None:
+        """Reject project metadata that conflicts with provider routing."""
+        if model_api is not None and model_api != expected:
+            raise ValueError(
+                f"Model {provider}:{model} requires model_api={expected}; "
+                f"got {model_api}."
+            )
+
+    def _build_anthropic_model(self, model: str, http_client: httpx.AsyncClient) -> Any:
         from pydantic_ai.models.anthropic import AnthropicModel
         from pydantic_ai.providers.anthropic import AnthropicProvider
 
@@ -411,9 +510,7 @@ class PydanticAIBackend(AIBackend):
             count_tokens_before_request=limits.count_tokens_before_request,
         )
 
-    def _check_direct_usage_limits(
-        self, limits: AIUsageLimits, usage: AIUsage
-    ) -> None:
+    def _check_direct_usage_limits(self, limits: AIUsageLimits, usage: AIUsage) -> None:
         self._build_usage_limits(limits).check_tokens(
             RunUsage(
                 requests=usage.requests,
@@ -506,18 +603,14 @@ class PydanticAIBackend(AIBackend):
             defer_loading=toolset.defer_loading,
         )
 
-    def _build_capability(
-        self, capability: AICapability
-    ) -> PydanticCapability[Any]:
+    def _build_capability(self, capability: AICapability) -> PydanticCapability[Any]:
         """Convert a backend-neutral capability to a pydantic-ai capability."""
         return PydanticCapability(
             id=capability.id,
             description=capability.description,
             instructions=capability.instructions,
             tools=[self._build_tool(tool) for tool in capability.tools],
-            toolsets=[
-                self._build_toolset(toolset) for toolset in capability.toolsets
-            ],
+            toolsets=[self._build_toolset(toolset) for toolset in capability.toolsets],
             defer_loading=capability.defer_loading,
         )
 

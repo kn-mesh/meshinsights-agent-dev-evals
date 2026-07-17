@@ -122,31 +122,19 @@ uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1_3.ppln
 
 # Eval orchestration CLI
 uv run python -m src.evals.eval_orchestration --help
-
-# Interactive: choose the pipeline, retrieve all published versions from the
-# deployed Azure PostgreSQL source of truth, choose the immutable benchmark
-# version, then choose an AI model from models.yaml.
-uv run python -m src.evals.eval_orchestration
-
-# Azure CLI must be signed in so the CLI can run read-only benchmark queries in
-# the deployed Container App and read its source-snapshots storage secret.
-
-# Non-interactive/automation: select the benchmark explicitly. Omitting the
-# version intentionally resolves the latest published version for that key.
-uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
-  --benchmark-key <published-benchmark-key> \
-  --benchmark-version <version-number> \
-  --runs-per-example 1
-
 ```
+
+See [`EvalRunbook.md`](EvalRunbook.md) for the explicit, reproducible eval
+command shape. Prefer it over the slower interactive benchmark chooser.
 
 ## AI Model Catalog
 
 The project-owned model catalog is [`models.yaml`](models.yaml). It is the only
 place this project enumerates selectable model identifiers and declares the
-default used by non-interactive runs. Update that root file as provider models
-evolve; `mi-core` validates generic `provider:model` identifiers without owning
-an application model list.
+default used by non-interactive runs. Each entry also declares the API family
+required to invoke it. Update that root file as provider models evolve;
+`mi-core` validates generic `provider:model` identifiers without owning an
+application model list.
 
 ## Working With Codex
 
@@ -158,6 +146,7 @@ Use `$project-guide` for repository orientation, architecture, customization, li
 |---|---|
 | Build or evolve a staged pipeline | `$pipeline-builder` |
 | Build an `mi.ai` workflow, agent, toolset, capability, or skill | `$ai-processor-builder` |
+| Prepare, run, or troubleshoot a use-case eval | `$run-use-case-evals` |
 | Build evaluation orchestration or result contracts | `$agent-eval-builder` |
 | Analyze existing evaluation results | `$eval-results-analysis` |
 | Configure auth, providers, runtime overrides, or tracing | `$external-runtime-setup` |

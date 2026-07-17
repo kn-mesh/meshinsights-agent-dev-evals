@@ -226,6 +226,38 @@ def test_retry_transport_retries_only_transient_responses(
     assert attempts == 3
 
 
+def test_retry_transport_retries_azure_request_buffer_507(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    backend = PydanticAIBackend()
+    attempts = 0
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        status_code = 507 if attempts == 1 else 200
+        return httpx.Response(status_code, request=request)
+
+    monkeypatch.setattr(
+        backend_module,
+        "wait_retry_after",
+        lambda **_kwargs: wait_none(),
+    )
+    transport = backend._build_retry_transport(
+        3,
+        wrapped=httpx.MockTransport(handler),
+    )
+
+    async def send_request() -> httpx.Response:
+        async with httpx.AsyncClient(transport=transport) as client:
+            return await client.get("https://example.test")
+
+    response = asyncio.run(send_request())
+
+    assert response.status_code == 200
+    assert attempts == 2
+
+
 def test_retry_transport_does_not_retry_non_transient_client_errors(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -78,8 +78,8 @@ skill-only agents do not need a dummy `_build_tools(...)` implementation.
 Use `AIProcessorConfig` or a small subclass of it for processor config.
 
 Important fields from the repository-local `mi.ai` source:
-- `model`: required at execution time; use a provider/model identifier such as
-  `azure:gpt-5.4`
+- `model`: required at execution time; choose a provider/model identifier from
+  the root `models.yaml` catalog
 - `backend`: defaults to `"auto"`
 - `reasoning_effort`: defaults to `medium`
 - `max_turns`: defaults to `10`

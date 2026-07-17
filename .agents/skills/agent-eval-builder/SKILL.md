@@ -1,6 +1,6 @@
 ---
 name: agent-eval-builder
-description: Build or update published-benchmark evaluation orchestration for AI-enabled pipelines in this repo. Use when work involves Azure PostgreSQL benchmark versions, benchmark examples, immutable Azure Blob evidence, repeated eval runs, result contracts, or evaluation-results apps.
+description: Build or update published-benchmark evaluation orchestration for AI-enabled pipelines in this repo. Use when changing Azure PostgreSQL benchmark loading, immutable Azure Blob evidence, repeated-run execution, result contracts, scoring, or evaluation-results apps. Do not use merely to prepare, execute, or troubleshoot an existing use-case eval command; use run-use-case-evals for that.
 ---
 
 # Agent Eval Builder
@@ -46,18 +46,20 @@ accuracy, path, and filename helpers where useful, but do not expose their
 rubric-specific models or file loaders in new public contracts. Do not modify
 `src/experimental_core/` without explicit user permission.
 
-## Required Hosted Inputs
+## Hosted Inputs
 
-Normal pipeline and eval execution requires:
+The operator CLI uses `APP_PROJECT_KEY` plus Azure CLI authentication. It runs
+read-only benchmark queries through the deployed Label Benchmark Container App
+and loads Blob configuration from that hosted environment.
 
-- `APP_PROJECT_KEY`
-- `DATABASE_URL` for the Label Benchmark Azure PostgreSQL database
-- `AZURE_STORAGE_CONNECTION_STRING`
-- `AZURE_STORAGE_CONTAINER`
+Direct repository or programmatic execution may instead require:
 
-Use a read-only PostgreSQL runtime identity for this repository. Never commit
-credentials. There is no local database or filesystem fallback in the active
-benchmark/evidence path.
+- `DATABASE_URL` for the Label Benchmark Azure PostgreSQL database;
+- `AZURE_STORAGE_CONNECTION_STRING`;
+- `AZURE_STORAGE_CONTAINER`.
+
+Use read-only identities. Never commit credentials. There is no local database
+or filesystem fallback in the active benchmark/evidence path.
 
 ## Required Evaluation Flow
 
@@ -114,19 +116,12 @@ Keep these top-level keys in order:
 Each result must include `example_id`, `unit_id`, `decision_timestamp`,
 `source_snapshot_id`, expected labels, repeated runs, and per-label correctness.
 
-## CLI Pattern
+## Operator Commands
 
-```bash
-uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
-  --benchmark-key <published-benchmark-key> \
-  --benchmark-version <version-number> \
-  --runs-per-example 3 \
-  --runtime threaded \
-  --max-workers 4
-```
-
-Omitting `--benchmark-version` intentionally selects the latest published
-version for the named benchmark. Never infer a benchmark key.
+Do not maintain eval command templates in this builder skill. Read the root
+`EvalRunbook.md` and use `$run-use-case-evals` for preparing, executing, or
+troubleshooting real use-case eval runs. Keep this skill focused on changing
+orchestration and result contracts.
 
 ## Tests
 

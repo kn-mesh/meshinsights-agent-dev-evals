@@ -6,7 +6,10 @@ import argparse
 import json
 import logging
 import os
+import random
 import sys
+import threading
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import partial
@@ -39,11 +42,20 @@ from src.experimental_core.evals import (
     normalize_ai_reasoning_effort,
     normalize_filename_token,
 )
-from src.experimental_core.evals.cli.prompts import prompt_select_option
+from src.experimental_core.evals.cli.prompts import (
+    prompt_positive_int,
+    prompt_select_option,
+)
 from src.pipelines.pipeline_run_from_yaml import run_pipeline
 from src.storage.hosted_azure_config import load_hosted_blob_configuration
 
 logger = logging.getLogger(__name__)
+
+_AZURE_HTTP_LOGGER = "azure.core.pipeline.policies.http_logging_policy"
+_QUIET_EXECUTOR_LOGGER = logging.getLogger(f"{__name__}.executor_internal")
+_QUIET_EXECUTOR_LOGGER.addHandler(logging.NullHandler())
+_QUIET_EXECUTOR_LOGGER.propagate = False
+_QUIET_EXECUTOR_LOGGER.setLevel(logging.CRITICAL)
 
 BASE_RESULTS_DIR = Path("src/evals/eval_results")
 DEFAULT_AZURE_RESOURCE_GROUP = "rg-misprx-dv"
@@ -80,6 +92,110 @@ class _ExampleEvalResult:
     classification_accuracy: float | None
 
 
+class _EvalProgressTracker:
+    """Report completions, failures, and genuinely running slow work."""
+
+    def __init__(self, *, total_runs: int, heartbeat_seconds: float) -> None:
+        self._total_runs = total_runs
+        self._heartbeat_seconds = heartbeat_seconds
+        self._successful = 0
+        self._failed = 0
+        self._running: dict[tuple[str, int], float] = {}
+        self._lock = threading.Lock()
+        self._stop = threading.Event()
+        self._thread = threading.Thread(
+            target=self._heartbeat_loop,
+            name="eval-progress-heartbeat",
+            daemon=True,
+        )
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        self._thread.join()
+
+    def started(self, work_item: RepeatedEvalWorkItem[BenchmarkExample]) -> None:
+        with self._lock:
+            self._running[(work_item.unit_id, work_item.run_index)] = time.monotonic()
+
+    def completed(
+        self,
+        work_item: RepeatedEvalWorkItem[BenchmarkExample],
+        attempt: EvalAttempt,
+    ) -> None:
+        with self._lock:
+            self._running.pop((work_item.unit_id, work_item.run_index), None)
+            if attempt.success:
+                self._successful += 1
+                successful = self._successful
+            else:
+                self._failed += 1
+                successful = None
+        if successful is not None:
+            logger.info(
+                "SUCCESS: %d/%d | %s run %d",
+                successful,
+                self._total_runs,
+                work_item.unit_id,
+                work_item.run_index,
+            )
+        else:
+            logger.error(
+                "FAILURE: %s run %d | %s",
+                work_item.unit_id,
+                work_item.run_index,
+                attempt.error or "Pipeline receipt reported failure.",
+            )
+
+    def raised(
+        self,
+        work_item: RepeatedEvalWorkItem[BenchmarkExample],
+        exception: Exception,
+    ) -> None:
+        with self._lock:
+            self._running.pop((work_item.unit_id, work_item.run_index), None)
+            self._failed += 1
+        logger.error(
+            "FAILURE: %s run %d | %s",
+            work_item.unit_id,
+            work_item.run_index,
+            exception,
+        )
+        setattr(exception, "_eval_failure_reported", True)
+
+    def _heartbeat_loop(self) -> None:
+        while not self._stop.wait(self._heartbeat_seconds):
+            message = self._heartbeat_message()
+            if message is not None:
+                logger.info(message)
+
+    def _heartbeat_message(self) -> str | None:
+        now = time.monotonic()
+        with self._lock:
+            if not self._running:
+                return None
+            slowest = sorted(
+                (
+                    (now - started_at, unit_id, run_index)
+                    for (unit_id, run_index), started_at in self._running.items()
+                ),
+                reverse=True,
+            )[:3]
+            completed = self._successful + self._failed
+            queued = self._total_runs - completed - len(self._running)
+            details = ", ".join(
+                f"{unit_id} run {run_index} ({elapsed:.0f}s)"
+                for elapsed, unit_id, run_index in slowest
+            )
+            return (
+                f"PROGRESS: {self._successful}/{self._total_runs} succeeded, "
+                f"{self._failed} failed, {len(self._running)} running, "
+                f"{max(queued, 0)} queued | slowest: {details}"
+            )
+
+
 def run_eval(
     yaml_path: Path,
     *,
@@ -91,16 +207,20 @@ def run_eval(
     example_ids: list[str] | None = None,
     unit_ids: list[str] | None = None,
     classifications: list[str] | None = None,
+    root_causes: list[str] | None = None,
     runs_per_example: int = 1,
     runtime: RuntimeType = "threaded",
     max_workers: int = 4,
     error_action: ErrorActionType = "continue",
+    progress_interval_seconds: float = 30.0,
     repository: BenchmarkRepository | None = None,
     output_root: Path | None = None,
 ) -> Path:
     """Run repeated evals against one immutable published benchmark version."""
     if runs_per_example < 1:
         raise ValueError("runs_per_example must be at least 1.")
+    if progress_interval_seconds <= 0:
+        raise ValueError("progress_interval_seconds must be greater than 0.")
     ai_model = resolve_model(ai_model)
     ai_reasoning_effort = normalize_ai_reasoning_effort(ai_reasoning_effort)
     benchmark_repository = repository or AzurePostgresBenchmarkRepository(
@@ -115,6 +235,7 @@ def run_eval(
         example_ids=example_ids,
         unit_ids=unit_ids,
         classifications=classifications,
+        root_causes=root_causes,
     )
     if not examples:
         raise ValueError("No benchmark examples match the provided filters.")
@@ -132,12 +253,14 @@ def run_eval(
         runtime=runtime,
         max_workers=max_workers,
         error_action=error_action,
+        progress_interval_seconds=progress_interval_seconds,
     )
     completed_at = datetime.now(timezone.utc)
     scope = _scope_token(
         example_ids=example_ids,
         unit_ids=unit_ids,
         classifications=classifications,
+        root_causes=root_causes,
     )
     payload = {
         "summary": _build_summary(results, runs_per_example=runs_per_example),
@@ -155,6 +278,7 @@ def run_eval(
             "runtime": runtime,
             "max_workers": max_workers,
             "error_action": error_action,
+            "progress_interval_seconds": progress_interval_seconds,
             "ai_provider": _extract_provider(ai_model),
             "ai_model": ai_model,
             "ai_reasoning_effort": ai_reasoning_effort,
@@ -184,7 +308,6 @@ def run_eval(
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    logger.info("Eval results written to %s", output_path)
     return output_path
 
 
@@ -194,6 +317,7 @@ def _select_examples(
     example_ids: list[str] | None,
     unit_ids: list[str] | None,
     classifications: list[str] | None,
+    root_causes: list[str] | None,
 ) -> list[BenchmarkExample]:
     selected = list(examples)
     if example_ids:
@@ -218,6 +342,13 @@ def _select_examples(
             for example in selected
             if example.approved_labels.get("classification") in requested_labels
         ]
+    if root_causes:
+        requested_root_causes = {value.strip() for value in root_causes}
+        selected = [
+            example
+            for example in selected
+            if example.approved_labels.get("root_cause") in requested_root_causes
+        ]
     return selected
 
 
@@ -229,23 +360,42 @@ def _run_all_examples(
     runtime: RuntimeType,
     max_workers: int,
     error_action: ErrorActionType,
+    progress_interval_seconds: float,
 ) -> list[_ExampleEvalResult]:
+    tracker = (
+        _EvalProgressTracker(
+            total_runs=len(examples) * runs_per_example,
+            heartbeat_seconds=progress_interval_seconds,
+        )
+        if runtime != "process"
+        else None
+    )
     executor = RepeatedEvalExecutor[BenchmarkExample, EvalAttempt](
         RepeatedEvalExecutorConfig(
             runtime=runtime,
             max_workers=max_workers,
             error_action=error_action,
         ),
-        logger=logger,
+        logger=logger if runtime == "process" else _QUIET_EXECUTOR_LOGGER,
     )
-    records = executor.run(
-        examples,
-        runs_per_unit=runs_per_example,
-        get_unit_id=lambda example: example.example_id,
-        run_once=partial(_run_work_item, pipeline_args=pipeline_args),
-        build_failure_result=_build_failure_attempt,
-        has_error=lambda attempt: attempt.has_error,
-    )
+    if tracker is not None:
+        tracker.start()
+    try:
+        records = executor.run(
+            examples,
+            runs_per_unit=runs_per_example,
+            get_unit_id=lambda example: example.example_id,
+            run_once=partial(
+                _run_work_item,
+                pipeline_args=pipeline_args,
+                progress_tracker=tracker,
+            ),
+            build_failure_result=_build_failure_attempt,
+            has_error=lambda attempt: attempt.has_error,
+        )
+    finally:
+        if tracker is not None:
+            tracker.stop()
     attempts_by_example: dict[str, list[EvalAttempt]] = {}
     for record in records:
         attempts_by_example.setdefault(record.work_item.unit_id, []).append(
@@ -276,38 +426,50 @@ def _run_work_item(
     work_item: RepeatedEvalWorkItem[BenchmarkExample],
     *,
     pipeline_args: _PipelineArgs,
+    progress_tracker: _EvalProgressTracker | None = None,
 ) -> EvalAttempt:
-    receipt = run_pipeline(
-        pipeline_args.yaml_path,
-        benchmark=pipeline_args.benchmark,
-        example=work_item.payload,
-        ai_model=pipeline_args.ai_model,
-        ai_reasoning_effort=pipeline_args.ai_reasoning_effort,
-    )
-    extracted = extract_receipt_fields(
-        receipt,
-        field_specs=_RECEIPT_FIELD_SPECS,
-        stage_name="act",
-    )
-    actual_values = {
-        name: extracted.actual_values.get(name)
-        for name in work_item.payload.approved_labels
-    }
-    evals = {
-        name: _evaluate_label(expected, actual_values.get(name))
-        for name, expected in work_item.payload.approved_labels.items()
-    }
-    return EvalAttempt(
-        actual_values=actual_values,
-        evals=evals,
-        success=receipt.success,
-        error=None if receipt.success else _receipt_error(receipt),
-        artifacts=extracted.artifacts,
-        metadata={
-            "source_snapshot_id": work_item.payload.source_snapshot_id,
-            "run_index": work_item.run_index,
-        },
-    )
+    if progress_tracker is not None:
+        progress_tracker.started(work_item)
+    try:
+        receipt = run_pipeline(
+            pipeline_args.yaml_path,
+            benchmark=pipeline_args.benchmark,
+            example=work_item.payload,
+            ai_model=pipeline_args.ai_model,
+            ai_reasoning_effort=pipeline_args.ai_reasoning_effort,
+            pipeline_log_level="CRITICAL",
+        )
+        extracted = extract_receipt_fields(
+            receipt,
+            field_specs=_RECEIPT_FIELD_SPECS,
+            stage_name="act",
+        )
+        actual_values = {
+            name: extracted.actual_values.get(name)
+            for name in work_item.payload.approved_labels
+        }
+        evals = {
+            name: _evaluate_label(expected, actual_values.get(name))
+            for name, expected in work_item.payload.approved_labels.items()
+        }
+        attempt = EvalAttempt(
+            actual_values=actual_values,
+            evals=evals,
+            success=receipt.success,
+            error=None if receipt.success else _receipt_error(receipt),
+            artifacts=extracted.artifacts,
+            metadata={
+                "source_snapshot_id": work_item.payload.source_snapshot_id,
+                "run_index": work_item.run_index,
+            },
+        )
+    except Exception as exception:
+        if progress_tracker is not None:
+            progress_tracker.raised(work_item, exception)
+        raise
+    if progress_tracker is not None:
+        progress_tracker.completed(work_item, attempt)
+    return attempt
 
 
 def _evaluate_label(expected: str, actual: str | None) -> EvalResult:
@@ -323,8 +485,15 @@ def _build_failure_attempt(
     message: str,
     exception: Exception | None,
 ) -> EvalAttempt:
-    if exception is not None:
-        logger.warning("Example %s failed: %s", work_item.unit_id, exception)
+    if exception is not None and not getattr(
+        exception, "_eval_failure_reported", False
+    ):
+        logger.error(
+            "FAILURE: %s run %d | %s",
+            work_item.unit_id,
+            work_item.run_index,
+            exception,
+        )
     return EvalAttempt(
         actual_values={},
         evals={},
@@ -421,6 +590,7 @@ def _scope_token(
     example_ids: list[str] | None,
     unit_ids: list[str] | None,
     classifications: list[str] | None,
+    root_causes: list[str] | None,
 ) -> str:
     if example_ids:
         return "example_subset"
@@ -428,6 +598,8 @@ def _scope_token(
         return "unit_subset"
     if classifications:
         return normalize_filename_token("_".join(sorted(classifications)))
+    if root_causes:
+        return normalize_filename_token("_".join(sorted(root_causes)))
     return "all"
 
 
@@ -497,13 +669,20 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--example-ids", nargs="*")
     parser.add_argument("--unit-ids", nargs="*")
     parser.add_argument("--classifications", nargs="*")
-    parser.add_argument("--runs-per-example", type=int, default=1)
+    parser.add_argument("--root-causes", nargs="*")
+    parser.add_argument("--runs-per-example", type=int)
     parser.add_argument(
         "--runtime", choices=["serial", "threaded", "process"], default="threaded"
     )
     parser.add_argument("--max-workers", type=int, default=4)
     parser.add_argument(
         "--error-action", choices=["stop", "continue"], default="continue"
+    )
+    parser.add_argument(
+        "--progress-interval-seconds",
+        type=float,
+        default=30.0,
+        help="Seconds between slow-running pipeline heartbeats.",
     )
     parser.add_argument(
         "--ai-model",
@@ -602,8 +781,92 @@ def _resolve_cli_model(
         return catalog.default_model
     return prompt_select_option(
         f"Choose an AI model (project default: {catalog.default_model}):",
-        list(catalog.models),
+        list(catalog.model_ids),
     )
+
+
+def _resolve_cli_reasoning_effort(args: argparse.Namespace) -> str | None:
+    """Use an explicit effort or prompt for one in an interactive terminal."""
+    if args.ai_reasoning_effort is not None:
+        return normalize_ai_reasoning_effort(args.ai_reasoning_effort)
+    if not sys.stdin.isatty():
+        return None
+    selected = prompt_select_option(
+        "Choose AI reasoning effort (default: model default):",
+        ["default", "low", "medium", "high"],
+    )
+    return normalize_ai_reasoning_effort(selected)
+
+
+def _resolve_cli_runs_per_example(
+    args: argparse.Namespace, *, parser: argparse.ArgumentParser
+) -> int:
+    """Use an explicit run count or prompt in an interactive terminal."""
+    if args.runs_per_example is not None:
+        if args.runs_per_example < 1:
+            parser.error("--runs-per-example must be at least 1.")
+        return args.runs_per_example
+    if not sys.stdin.isatty():
+        return 1
+    return prompt_positive_int("Number of runs per example", default=1)
+
+
+def _resolve_cli_example_scope(
+    args: argparse.Namespace,
+    *,
+    benchmark: BenchmarkVersion,
+    parser: argparse.ArgumentParser,
+) -> tuple[list[str] | None, list[str] | None, list[str] | None, list[str] | None]:
+    """Use explicit filters or prompt for a benchmark example category."""
+    explicit_filters = (
+        args.example_ids,
+        args.unit_ids,
+        args.classifications,
+        args.root_causes,
+    )
+    if any(value is not None for value in explicit_filters):
+        return explicit_filters
+    if not sys.stdin.isatty():
+        return None, None, None, None
+
+    options = [
+        "All examples",
+        "Closed failures",
+        "Open failures",
+        "Unknown failures",
+        "Healthy",
+        "Single example (random)",
+    ]
+    selected = prompt_select_option(
+        "Which benchmark examples should be analyzed?", options
+    )
+    if selected == "All examples":
+        return None, None, None, None
+    if selected == "Healthy":
+        filters = (None, None, ["Healthy"], None)
+    elif selected == "Closed failures":
+        filters = (None, None, None, ["Closed Failure"])
+    elif selected == "Open failures":
+        filters = (None, None, None, ["Open Failure"])
+    elif selected == "Unknown failures":
+        filters = (None, None, None, ["Unknown"])
+    else:
+        example = random.choice(benchmark.examples)
+        print(
+            f"Randomly selected example: {example.example_id} (unit {example.unit_id})."
+        )
+        return [example.example_id], None, None, None
+
+    matching = _select_examples(
+        benchmark.examples,
+        example_ids=filters[0],
+        unit_ids=filters[1],
+        classifications=filters[2],
+        root_causes=filters[3],
+    )
+    if not matching:
+        parser.error(f"No benchmark examples match the selected scope: {selected}.")
+    return filters
 
 
 def _resolve_pipeline_path(
@@ -624,8 +887,37 @@ def _resolve_pipeline_path(
     return labels[selected]
 
 
+def _configure_cli_logging() -> None:
+    """Keep operator output useful without Azure SDK request/response dumps."""
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
+    logging.getLogger(_AZURE_HTTP_LOGGER).setLevel(logging.WARNING)
+    if not any(getattr(handler, "_eval_cli", False) for handler in logger.handlers):
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        handler._eval_cli = True  # type: ignore[attr-defined]
+        logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+
+def _print_cli_outcome(path: Path) -> None:
+    """Print one clear outcome for a completed evaluation."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    summary = payload["summary"]
+    total_runs = int(summary["total_runs"])
+    successful_runs = int(summary["successful_runs"])
+    failed_runs = total_runs - successful_runs
+    if failed_runs:
+        print(
+            f"FAILED: {successful_runs}/{total_runs} succeeded; {failed_runs} failed."
+        )
+    else:
+        print(f"SUCCESS: {successful_runs}/{total_runs} succeeded; 0 failed.")
+    print(f"Results written to: {path}")
+
+
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    _configure_cli_logging()
     bootstrap_environment()
     parser = _argument_parser()
     args = parser.parse_args()
@@ -645,7 +937,19 @@ def main() -> None:
         project_key=project_key,
         parser=parser,
     )
+    benchmark = repository.load_published_version(
+        benchmark_key=benchmark_key,
+        version_number=benchmark_version,
+    )
+    benchmark_version = benchmark.version_number
+    example_ids, unit_ids, classifications, root_causes = _resolve_cli_example_scope(
+        args,
+        benchmark=benchmark,
+        parser=parser,
+    )
     ai_model = _resolve_cli_model(args, catalog=model_catalog, parser=parser)
+    ai_reasoning_effort = _resolve_cli_reasoning_effort(args)
+    runs_per_example = _resolve_cli_runs_per_example(args, parser=parser)
     blob_connection, blob_container = load_hosted_blob_configuration(
         resource_group=args.azure_resource_group,
         container_app=args.azure_container_app,
@@ -658,17 +962,19 @@ def main() -> None:
         benchmark_key=benchmark_key,
         benchmark_version=benchmark_version,
         ai_model=ai_model,
-        ai_reasoning_effort=args.ai_reasoning_effort,
-        example_ids=args.example_ids,
-        unit_ids=args.unit_ids,
-        classifications=args.classifications,
-        runs_per_example=args.runs_per_example,
+        ai_reasoning_effort=ai_reasoning_effort,
+        example_ids=example_ids,
+        unit_ids=unit_ids,
+        classifications=classifications,
+        root_causes=root_causes,
+        runs_per_example=runs_per_example,
         runtime=args.runtime,
         max_workers=args.max_workers,
         error_action=args.error_action,
+        progress_interval_seconds=args.progress_interval_seconds,
         repository=repository,
     )
-    print(f"Results written to: {path}")
+    _print_cli_outcome(path)
 
 
 if __name__ == "__main__":
