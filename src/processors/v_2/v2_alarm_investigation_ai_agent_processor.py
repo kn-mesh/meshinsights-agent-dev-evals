@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-import json
-from datetime import datetime
-from typing import Any
-
-import pandas as pd
 from mi.ai import (
     AIAgentMixin,
-    AICapability,
     AIProcessorConfig,
     ImageContent,
     TextContent,
+    Tool,
     ToolContext,
     UserMessage,
     ai_tool,
@@ -22,6 +17,9 @@ from pydantic import Field
 
 from src.objects.process_object import PulseFailureAnalysisProcessObject
 from src.processors.common.structured_outputs import PulseFailureAnalysisResult
+from src.processors.common.temperature_window_analysis import (
+    TemperatureWindowAnalyzer,
+)
 from src.processors.v1_3.v1_3_temperature_graphs_processor import (
     V1_3TemperatureGraphsProcessor,
     V1_3TemperatureGraphsProcessorConfig,
@@ -35,8 +33,8 @@ class V2AlarmInvestigationAIAgentProcessorConfig(AIProcessorConfig):
     window_days_list: list[int] = [7, 30, 365]
     max_investigation_days: int = Field(default=45, ge=1, le=365)
     investigation_chart_dpi: int = Field(default=120, ge=40, le=240)
-    max_turns: int = 6
-    tool_calls_limit: int | None = 4
+    max_turns: int = 5
+    tool_calls_limit: int | None = 3
     tool_timeout: float | None = 30
     timeout: float | None = 180
     transport_retries: int = 1
@@ -82,9 +80,9 @@ alarm-adjacent period. Do not call investigation tools when the supplied evidenc
 already supports a clear decision.
 
 When healthy control modulation remains difficult to distinguish from a closed
-failure, load the control-modulation-review capability. Use its measurement tool
-before relying on visual impressions, and request a zoom only when a more precise
-view of a specific interval would discriminate between the competing explanations.
+failure, call measure_temperature_window before relying on visual impressions.
+Call render_temperature_zoom only when a more precise view of that interval would
+discriminate between the competing explanations.
 Tool windows must be no longer than {self.config.max_investigation_days} days and
 must not extend beyond the FDE alarm timestamp.
 </evidence_policy>
@@ -164,11 +162,14 @@ alarm-adjacent timing.
             message.add_image(charts[days], media_type="image/png")
         return message
 
-    def _build_capabilities(
+    def _build_tools(
         self, data_object: PulseFailureAnalysisProcessObject
-    ) -> list[AICapability]:
-        """Expose a deferred specialist investigation with bounded tools."""
+    ) -> list[Tool]:
+        """Expose two eager, bounded investigation tools."""
         _ = data_object
+        analyzer = TemperatureWindowAnalyzer(
+            max_window_days=self.config.max_investigation_days
+        )
 
         @ai_tool(name="measure_temperature_window")
         def measure_temperature_window(
@@ -176,22 +177,21 @@ alarm-adjacent timing.
             start: str,
             end: str,
         ) -> str:
-            """Measure trends, coupling, and raw and normalized delta in an ISO-8601 interval."""
-            range_start, range_end = self._validate_tool_range(
-                ctx.data_object,
+            """Measure edge medians, directional coupling, and delta in an ISO-8601 interval."""
+            alarm_at = ctx.data_object.get_alarm_context()["selected_alarm"][
+                "detected_at"
+            ]
+            range_start, range_end = analyzer.resolve_range(
                 start=start,
                 end=end,
+                alarm_at=alarm_at,
             )
-            frame = self._build_tool_window(
-                ctx.data_object,
+            summary = analyzer.summarize(
+                ctx.data_object.get_temperature_history(),
                 range_start=range_start,
                 range_end=range_end,
             )
-            return json.dumps(
-                self._measure_window(frame),
-                sort_keys=True,
-                separators=(",", ":"),
-            )
+            return summary.model_dump_json()
 
         @ai_tool(name="render_temperature_zoom")
         def render_temperature_zoom(
@@ -200,10 +200,13 @@ alarm-adjacent timing.
             end: str,
         ) -> list[TextContent | ImageContent]:
             """Render raw temperatures and rolling delta for a bounded ISO-8601 interval."""
-            range_start, range_end = self._validate_tool_range(
-                ctx.data_object,
+            alarm_at = ctx.data_object.get_alarm_context()["selected_alarm"][
+                "detected_at"
+            ]
+            range_start, range_end = analyzer.resolve_range(
                 start=start,
                 end=end,
+                alarm_at=alarm_at,
             )
             chart_processor = V1_3TemperatureGraphsProcessor(
                 V1_3TemperatureGraphsProcessorConfig(
@@ -214,9 +217,7 @@ alarm-adjacent timing.
                 ctx.data_object.get_temperature_history(),
                 range_start=range_start,
                 range_end=range_end,
-                alarm_detected_at=ctx.data_object.get_alarm_context()["selected_alarm"][
-                    "detected_at"
-                ],
+                alarm_detected_at=alarm_at,
             )
             return [
                 TextContent(
@@ -228,135 +229,7 @@ alarm-adjacent timing.
                 ImageContent.from_bytes(chart_bytes, media_type="image/png"),
             ]
 
-        return [
-            AICapability(
-                id="control-modulation-review",
-                description=(
-                    "Use when a temperature step or downward regime could be "
-                    "either healthy control modulation or a closed failure."
-                ),
-                instructions=(
-                    "Form the healthy-modulation and closed-failure hypotheses. "
-                    "Measure the disputed interval first. Compare beginning and "
-                    "ending levels, raw and normalized delta, direction of each "
-                    "sensor, coupling, and stability. Render a zoom only if the "
-                    "numerical result leaves an important visual ambiguity. "
-                    "Relate the findings back to a comparable baseline in the "
-                    "overview before finalizing."
-                ),
-                tools=[measure_temperature_window, render_temperature_zoom],
-                defer_loading=True,
-            )
-        ]
-
-    def _validate_tool_range(
-        self,
-        data_object: PulseFailureAnalysisProcessObject,
-        *,
-        start: str,
-        end: str,
-    ) -> tuple[datetime, datetime]:
-        """Parse and bound one model-requested investigation interval."""
-        alarm_at = data_object.get_alarm_context()["selected_alarm"]["detected_at"]
-        range_start = self._parse_datetime_like_alarm(start, alarm_at=alarm_at)
-        range_end = self._parse_datetime_like_alarm(end, alarm_at=alarm_at)
-        if range_start >= range_end:
-            raise ValueError("Investigation start must be before end.")
-        if range_end > alarm_at:
-            raise ValueError(
-                "Investigation end cannot be after the FDE alarm timestamp."
-            )
-        duration_days = (range_end - range_start).total_seconds() / 86_400
-        if duration_days > self.config.max_investigation_days:
-            raise ValueError(
-                "Investigation window cannot exceed "
-                f"{self.config.max_investigation_days} days."
-            )
-        return range_start, range_end
-
-    def _parse_datetime_like_alarm(self, value: str, *, alarm_at: datetime) -> datetime:
-        """Parse ISO-8601 input and align its timezone shape with the alarm."""
-        try:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError as exc:
-            raise ValueError(f"Invalid ISO-8601 timestamp: {value}") from exc
-
-        if alarm_at.tzinfo is None:
-            return parsed.replace(tzinfo=None)
-        if parsed.tzinfo is None:
-            return parsed.replace(tzinfo=alarm_at.tzinfo)
-        return parsed.astimezone(alarm_at.tzinfo)
-
-    def _build_tool_window(
-        self,
-        data_object: PulseFailureAnalysisProcessObject,
-        *,
-        range_start: datetime,
-        range_end: datetime,
-    ) -> pd.DataFrame:
-        """Build a validated numeric telemetry window for deterministic tools."""
-        frame = pd.DataFrame(data_object.get_temperature_history())
-        if frame.empty:
-            raise ValueError("Temperature history is empty.")
-        frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=False)
-        frame = frame.loc[
-            (frame["timestamp"] >= range_start) & (frame["timestamp"] <= range_end),
-            ["timestamp", "steam_temperature", "condensate_temperature"],
-        ].copy()
-        frame = frame.dropna(subset=["steam_temperature", "condensate_temperature"])
-        if len(frame) < 3:
-            raise ValueError(
-                "Investigation window must contain at least three paired readings."
-            )
-        return frame.sort_values("timestamp").reset_index(drop=True)
-
-    def _measure_window(self, frame: pd.DataFrame) -> dict[str, Any]:
-        """Calculate compact measurements that distinguish trend from modulation."""
-        steam = frame["steam_temperature"].astype(float)
-        condensate = frame["condensate_temperature"].astype(float)
-        delta = steam - condensate
-        normalized_delta = delta / steam.where(steam.abs() > 1e-9)
-        edge_count = max(1, len(frame) // 5)
-
-        first_steam = float(steam.iloc[:edge_count].median())
-        last_steam = float(steam.iloc[-edge_count:].median())
-        first_condensate = float(condensate.iloc[:edge_count].median())
-        last_condensate = float(condensate.iloc[-edge_count:].median())
-        first_delta = float(delta.iloc[:edge_count].median())
-        last_delta = float(delta.iloc[-edge_count:].median())
-        duration_days = max(
-            (frame["timestamp"].iloc[-1] - frame["timestamp"].iloc[0]).total_seconds()
-            / 86_400,
-            1 / 48,
-        )
-        correlation = steam.corr(condensate)
-
-        return {
-            "window_start": frame["timestamp"].iloc[0].isoformat(),
-            "window_end": frame["timestamp"].iloc[-1].isoformat(),
-            "paired_readings": len(frame),
-            "median_steam_c": round(float(steam.median()), 3),
-            "median_condensate_c": round(float(condensate.median()), 3),
-            "median_delta_c": round(float(delta.median()), 3),
-            "median_normalized_delta": round(float(normalized_delta.median()), 5),
-            "steam_change_c": round(last_steam - first_steam, 3),
-            "condensate_change_c": round(last_condensate - first_condensate, 3),
-            "delta_change_c": round(last_delta - first_delta, 3),
-            "steam_trend_c_per_day": round(
-                (last_steam - first_steam) / duration_days, 3
-            ),
-            "condensate_trend_c_per_day": round(
-                (last_condensate - first_condensate) / duration_days, 3
-            ),
-            "delta_trend_c_per_day": round(
-                (last_delta - first_delta) / duration_days, 3
-            ),
-            "delta_stddev_c": round(float(delta.std(ddof=0)), 3),
-            "sensor_correlation": (
-                round(float(correlation), 4) if pd.notna(correlation) else None
-            ),
-            "nonpositive_delta_fraction": round(float((delta <= 0).mean()), 4),
-        }
+        return [measure_temperature_window, render_temperature_zoom]
 
     def _build_image_description(self, *, index: int, days: int) -> str:
         """Describe one overview image without embedding unit-specific facts."""
@@ -380,4 +253,3 @@ alarm-adjacent timing.
     ) -> None:
         """Preserve the stable decision artifact consumed by existing hydrators."""
         data_object.set_ai_result(response.model_dump())
-        super()._attach_response(data_object, response)

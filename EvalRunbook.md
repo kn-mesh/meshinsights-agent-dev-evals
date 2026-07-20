@@ -121,6 +121,15 @@ src/evals/eval_results_v1_3/<benchmark-key>/v<version>/<scope>/*.json
 Confirm `run_config` records the intended benchmark version, model, reasoning
 effort, runtime, worker count, and run count before comparing results.
 
+Result schema version 2 separates the summary into `accuracy`, `reliability`,
+and `performance`. Accuracy includes only runs that completed successfully and
+produced the entire required structured-output contract. Provider, pipeline,
+timeout, cancellation, and receipt-contract failures are reported under
+`reliability` and excluded from accuracy denominators. `performance` records
+wall time, throughput, run-duration statistics, and available stage timings.
+Confidence coverage and High/Low accuracy are emitted for outputs whose agent
+contract declares optional confidence.
+
 ## Fast Diagnosis
 
 - Azure Blob status `206` is a successful ranged download.

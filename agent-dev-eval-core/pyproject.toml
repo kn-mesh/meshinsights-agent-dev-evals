@@ -1,0 +1,13 @@
+[project]
+name = "agent-dev-eval-core"
+version = "0.1.0"
+description = "Reusable execution and metrics primitives for agent evaluations"
+readme = "README.md"
+requires-python = ">=3.13.5"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["evaluation"]

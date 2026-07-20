@@ -3,6 +3,11 @@ revision = 2
 requires-python = ">=3.13.5"
 
 [[package]]
+name = "agent-dev-eval-core"
+version = "0.1.0"
+source = { editable = "agent-dev-eval-core" }
+
+[[package]]
 name = "aiofile"
 version = "3.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1082,6 +1087,7 @@ name = "mesh-insights-template"
 version = "0.3.0"
 source = { editable = "." }
 dependencies = [
+    { name = "agent-dev-eval-core" },
     { name = "azure-storage-blob" },
     { name = "logfire" },
     { name = "matplotlib" },
@@ -1104,6 +1110,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "agent-dev-eval-core", editable = "agent-dev-eval-core" },
     { name = "azure-storage-blob", specifier = ">=12.28.0" },
     { name = "logfire", specifier = ">=4.22.0" },
     { name = "matplotlib", specifier = ">=3.10.8" },

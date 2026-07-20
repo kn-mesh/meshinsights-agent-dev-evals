@@ -21,15 +21,9 @@ process:
     - processor: V2AlarmInvestigationAIAgentProcessor
       model: azure:gpt-5-mini
       reasoning_effort: medium
-      max_turns: 6
-      tool_calls_limit: 4
-      tool_timeout: 30
+      max_turns: 5
+      tool_calls_limit: 3
       max_investigation_days: 45
-      investigation_chart_dpi: 120
-      timeout: 180
-      transport_retries: 1
-      tool_retries: 1
-      output_retries: 1
 
 action:
   hydrator: V1_3FinalizeActionHydrator

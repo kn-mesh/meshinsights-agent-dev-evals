@@ -82,7 +82,7 @@ def _build_process_object() -> PulseFailureAnalysisProcessObject:
     return process_object
 
 
-def test_v_2_builds_a_bounded_deferred_investigation_agent() -> None:
+def test_v_2_builds_a_bounded_agent_with_eager_tools() -> None:
     backend = CapturingAgentBackend()
     agent = V2AlarmInvestigationAIAgentProcessor(
         V2AlarmInvestigationAIAgentProcessorConfig(model="azure:gpt-5-mini")
@@ -94,19 +94,17 @@ def test_v_2_builds_a_bounded_deferred_investigation_agent() -> None:
 
     assert len(backend.requests) == 1
     request = backend.requests[0]
-    assert request.max_turns == 6
-    assert request.usage_limits.tool_calls_limit == 4
+    assert request.max_turns == 5
+    assert request.usage_limits.tool_calls_limit == 3
     assert request.output_schema is PulseFailureAnalysisResult
-    assert request.tools == []
-    assert len(request.capabilities) == 1
-    capability = request.capabilities[0]
-    assert capability.id == "control-modulation-review"
-    assert capability.defer_loading is True
-    assert [tool.resolved_name() for tool in capability.tools] == [
+    assert request.capabilities == []
+    assert [tool.resolved_name() for tool in request.tools] == [
         "measure_temperature_window",
         "render_temperature_zoom",
     ]
     assert process_object.get_ai_result() is not None
+    assert process_object.get_artifact(f"{agent._get_artifact_key()}_response") is None
+    assert process_object.get_artifact(f"{agent._get_artifact_key()}_usage") is not None
 
 
 def test_v_2_tools_return_deterministic_measurements_and_png_zoom() -> None:
@@ -116,8 +114,10 @@ def test_v_2_tools_return_deterministic_measurements_and_png_zoom() -> None:
             model="azure:gpt-5-mini", investigation_chart_dpi=40
         )
     )
-    capability = agent._build_capabilities(process_object)[0]
-    tools = {tool.resolved_name(): tool.function for tool in capability.tools}
+    tools = {
+        tool.resolved_name(): tool.function
+        for tool in agent._build_tools(process_object)
+    }
     context = ToolContext(data_object=process_object)
     alarm_at = process_object.get_alarm_context()["selected_alarm"]["detected_at"]
     start = (alarm_at - timedelta(days=1)).isoformat()
@@ -129,7 +129,9 @@ def test_v_2_tools_return_deterministic_measurements_and_png_zoom() -> None:
     assert isinstance(measurement_result, str)
     measurements = json.loads(measurement_result)
     assert measurements["paired_readings"] == 49
-    assert measurements["median_delta_c"] > 0
+    assert measurements["start_delta_median_c"] > 0
+    assert measurements["end_delta_median_c"] > 0
+    assert "steam_trend_c_per_day" not in measurements
     assert isinstance(zoom, list)
     assert isinstance(zoom[0], TextContent)
     assert isinstance(zoom[1], ImageContent)

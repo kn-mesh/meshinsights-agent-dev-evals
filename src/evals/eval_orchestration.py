@@ -16,6 +16,29 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
+from evaluation import (
+    AttemptStatus,
+    ErrorActionType,
+    EvalAttempt,
+    ExecutionCancelledError,
+    FailureType,
+    LabelEvaluation,
+    RepeatedEvalExecutor,
+    RepeatedEvalExecutorConfig,
+    RepeatedEvalWorkItem,
+    RuntimeType,
+    StructuredOutputSpec,
+    build_confidence_accuracy,
+    build_performance_summary,
+    build_reliability_summary,
+    build_results_dir_for_pipeline,
+    extract_structured_outputs,
+    group_metric_counts,
+    metric_counts,
+    normalize_filename_token,
+    validate_metadata_identity,
+    write_json_exclusive,
+)
 from mi.core.utils.environment import bootstrap_environment
 
 from model_catalog import ModelCatalog, load_model_catalog, resolve_model
@@ -27,22 +50,8 @@ from src.benchmarks import (
     BenchmarkVersion,
     PublishedBenchmarkVersionSummary,
 )
-from src.experimental_core.evals import (
-    ErrorActionType,
-    EvalAttempt,
-    EvalResult,
-    EvalSummaryBuilder,
-    ReceiptFieldSpec,
-    RepeatedEvalExecutor,
-    RepeatedEvalExecutorConfig,
-    RepeatedEvalWorkItem,
-    RuntimeType,
-    build_results_dir_for_pipeline,
-    extract_receipt_fields,
+from src.evals.cli_support import (
     normalize_ai_reasoning_effort,
-    normalize_filename_token,
-)
-from src.experimental_core.evals.cli.prompts import (
     prompt_positive_int,
     prompt_select_option,
 )
@@ -60,20 +69,18 @@ _QUIET_EXECUTOR_LOGGER.setLevel(logging.CRITICAL)
 BASE_RESULTS_DIR = Path("src/evals/eval_results")
 DEFAULT_AZURE_RESOURCE_GROUP = "rg-misprx-dv"
 DEFAULT_AZURE_CONTAINER_APP = "label-benchmark"
-_NO_EVAL = EvalResult(None, None, None)
-_CONFIDENCE_LEVELS = ("High", "Low")
-_RECEIPT_FIELD_SPECS: tuple[ReceiptFieldSpec, ...] = (
-    ReceiptFieldSpec(
-        output_name="classification",
+_STRUCTURED_OUTPUT_SPECS: tuple[StructuredOutputSpec, ...] = (
+    StructuredOutputSpec(
+        name="classification",
         metadata_key="classification",
         value_path=("value",),
-        artifact_group="ai_output",
+        confidence_path=("confidence",),
     ),
-    ReceiptFieldSpec(
-        output_name="root_cause",
+    StructuredOutputSpec(
+        name="root_cause",
         metadata_key="root_cause",
         value_path=("value",),
-        artifact_group="ai_output",
+        confidence_path=("confidence",),
     ),
 )
 
@@ -119,7 +126,9 @@ class _EvalProgressTracker:
 
     def started(self, work_item: RepeatedEvalWorkItem[BenchmarkExample]) -> None:
         with self._lock:
-            self._running[(work_item.unit_id, work_item.run_index)] = time.monotonic()
+            self._running[(work_item.item_id, work_item.attempt_index)] = (
+                time.monotonic()
+            )
 
     def completed(
         self,
@@ -127,7 +136,7 @@ class _EvalProgressTracker:
         attempt: EvalAttempt,
     ) -> None:
         with self._lock:
-            self._running.pop((work_item.unit_id, work_item.run_index), None)
+            self._running.pop((work_item.item_id, work_item.attempt_index), None)
             if attempt.success:
                 self._successful += 1
                 successful = self._successful
@@ -139,14 +148,14 @@ class _EvalProgressTracker:
                 "SUCCESS: %d/%d | %s run %d",
                 successful,
                 self._total_runs,
-                work_item.unit_id,
-                work_item.run_index,
+                work_item.item_id,
+                work_item.attempt_index,
             )
         else:
             logger.error(
                 "FAILURE: %s run %d | %s",
-                work_item.unit_id,
-                work_item.run_index,
+                work_item.item_id,
+                work_item.attempt_index,
                 attempt.error or "Pipeline receipt reported failure.",
             )
 
@@ -156,12 +165,12 @@ class _EvalProgressTracker:
         exception: Exception,
     ) -> None:
         with self._lock:
-            self._running.pop((work_item.unit_id, work_item.run_index), None)
+            self._running.pop((work_item.item_id, work_item.attempt_index), None)
             self._failed += 1
         logger.error(
             "FAILURE: %s run %d | %s",
-            work_item.unit_id,
-            work_item.run_index,
+            work_item.item_id,
+            work_item.attempt_index,
             exception,
         )
         setattr(exception, "_eval_failure_reported", True)
@@ -247,6 +256,7 @@ def run_eval(
         ai_model=ai_model,
         ai_reasoning_effort=ai_reasoning_effort,
     )
+    evaluation_started_at = time.monotonic()
     results = _run_all_examples(
         examples,
         pipeline_args=pipeline_args,
@@ -256,6 +266,7 @@ def run_eval(
         error_action=error_action,
         progress_interval_seconds=progress_interval_seconds,
     )
+    evaluation_wall_time_seconds = time.monotonic() - evaluation_started_at
     completed_at = datetime.now(timezone.utc)
     scope = _scope_token(
         example_ids=example_ids,
@@ -264,8 +275,13 @@ def run_eval(
         root_causes=root_causes,
     )
     payload = {
-        "summary": _build_summary(results, runs_per_example=runs_per_example),
+        "summary": _build_summary(
+            results,
+            runs_per_example=runs_per_example,
+            evaluation_wall_time_seconds=evaluation_wall_time_seconds,
+        ),
         "run_config": {
+            "eval_result_schema_version": 2,
             "yaml_path": str(yaml_path),
             "project_key": benchmark.project_key,
             "benchmark_key": benchmark.benchmark_key,
@@ -308,7 +324,7 @@ def run_eval(
         / filename
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    return _write_results_file(output_path, payload)
+    return write_json_exclusive(output_path, payload)
 
 
 def _select_examples(
@@ -375,6 +391,7 @@ def _run_all_examples(
             runtime=runtime,
             max_workers=max_workers,
             error_action=error_action,
+            pending_heartbeat_seconds=progress_interval_seconds,
         ),
         logger=logger if runtime == "process" else _QUIET_EXECUTOR_LOGGER,
     )
@@ -383,8 +400,8 @@ def _run_all_examples(
     try:
         records = executor.run(
             examples,
-            runs_per_unit=runs_per_example,
-            get_unit_id=lambda example: example.example_id,
+            attempts_per_item=runs_per_example,
+            get_item_id=lambda example: example.example_id,
             run_once=partial(
                 _run_work_item,
                 pipeline_args=pipeline_args,
@@ -398,25 +415,22 @@ def _run_all_examples(
             tracker.stop()
     attempts_by_example: dict[str, list[EvalAttempt]] = {}
     for record in records:
-        attempts_by_example.setdefault(record.work_item.unit_id, []).append(
+        attempts_by_example.setdefault(record.work_item.item_id, []).append(
             record.result
         )
     results: list[_ExampleEvalResult] = []
     for example in examples:
         attempts = attempts_by_example.get(example.example_id, [])
         flags = [
-            attempt.evals.get("classification", _NO_EVAL).is_correct
+            attempt.evaluations["classification"].is_correct
             for attempt in attempts
+            if "classification" in attempt.evaluations
         ]
-        evaluated = [flag for flag in flags if flag is not None]
         results.append(
             _ExampleEvalResult(
                 example=example,
                 attempts=tuple(attempts),
-                classification_accuracy=EvalSummaryBuilder.safe_accuracy(
-                    correct=sum(flag is True for flag in evaluated),
-                    total=len(evaluated),
-                ),
+                classification_accuracy=metric_counts(flags).accuracy,
             )
         )
     return results
@@ -430,6 +444,7 @@ def _run_work_item(
 ) -> EvalAttempt:
     if progress_tracker is not None:
         progress_tracker.started(work_item)
+    started_at = time.monotonic()
     try:
         receipt = run_pipeline(
             pipeline_args.yaml_path,
@@ -439,30 +454,82 @@ def _run_work_item(
             ai_reasoning_effort=pipeline_args.ai_reasoning_effort,
             pipeline_log_level="CRITICAL",
         )
-        extracted = extract_receipt_fields(
-            receipt,
-            field_specs=_RECEIPT_FIELD_SPECS,
-            stage_name="act",
-        )
-        actual_values = {
-            name: extracted.actual_values.get(name)
-            for name in work_item.payload.approved_labels
-        }
-        evals = {
-            name: _evaluate_label(expected, actual_values.get(name))
-            for name, expected in work_item.payload.approved_labels.items()
-        }
-        attempt = EvalAttempt(
-            actual_values=actual_values,
-            evals=evals,
-            success=receipt.success,
-            error=None if receipt.success else _receipt_error(receipt),
-            artifacts=extracted.artifacts,
-            metadata={
-                "source_snapshot_id": work_item.payload.source_snapshot_id,
-                "run_index": work_item.run_index,
-            },
-        )
+        duration_seconds = _receipt_duration(receipt, started_at=started_at)
+        stage_durations = _stage_durations(receipt)
+        if not receipt.success:
+            receipt_error = _receipt_error(receipt)
+            attempt = _failed_attempt(
+                message=receipt_error,
+                failure_type=_classify_failure_message(
+                    receipt_error,
+                    default=FailureType.PIPELINE_ERROR,
+                ),
+                duration_seconds=duration_seconds,
+                stage_durations_seconds=stage_durations,
+                work_item=work_item,
+            )
+        elif receipt.act_receipt is None or not receipt.act_receipt.success:
+            attempt = _failed_attempt(
+                message="Pipeline did not produce a successful act-stage receipt.",
+                failure_type=FailureType.RECEIPT_CONTRACT_ERROR,
+                duration_seconds=duration_seconds,
+                stage_durations_seconds=stage_durations,
+                work_item=work_item,
+            )
+        else:
+            act_metadata = receipt.act_receipt.metadata
+            identity_errors = validate_metadata_identity(
+                act_metadata,
+                expected={
+                    "example_id": work_item.payload.example_id,
+                    "benchmark_key": pipeline_args.benchmark.benchmark_key,
+                    "benchmark_version_id": (
+                        pipeline_args.benchmark.benchmark_version_id
+                    ),
+                    "benchmark_version_number": pipeline_args.benchmark.version_number,
+                    "source_snapshot_id": work_item.payload.source_snapshot_id,
+                },
+            )
+            expected_names = set(work_item.payload.approved_labels)
+            specs = tuple(
+                spec for spec in _STRUCTURED_OUTPUT_SPECS if spec.name in expected_names
+            )
+            extracted = extract_structured_outputs(act_metadata, specs=specs)
+            contract_errors = (*identity_errors, *extracted.errors)
+            if contract_errors:
+                attempt = _failed_attempt(
+                    message="; ".join(contract_errors),
+                    failure_type=FailureType.RECEIPT_CONTRACT_ERROR,
+                    duration_seconds=duration_seconds,
+                    stage_durations_seconds=stage_durations,
+                    work_item=work_item,
+                    artifacts={"ai_output": extracted.raw_outputs},
+                )
+            else:
+                actual_values = {
+                    name: extracted.actual_values[name] for name in expected_names
+                }
+                attempt = EvalAttempt(
+                    status=AttemptStatus.SUCCEEDED,
+                    actual_values=actual_values,
+                    evaluations={
+                        name: LabelEvaluation(
+                            expected=expected,
+                            actual=actual_values[name],
+                            is_correct=expected == actual_values[name],
+                        )
+                        for name, expected in work_item.payload.approved_labels.items()
+                    },
+                    confidence_values={
+                        name: confidence
+                        for name, confidence in extracted.confidence_values.items()
+                        if name in expected_names
+                    },
+                    duration_seconds=duration_seconds,
+                    stage_durations_seconds=stage_durations,
+                    artifacts={"ai_output": extracted.raw_outputs},
+                    metadata=_attempt_metadata(work_item),
+                )
     except Exception as exception:
         if progress_tracker is not None:
             progress_tracker.raised(work_item, exception)
@@ -472,38 +539,105 @@ def _run_work_item(
     return attempt
 
 
-def _evaluate_label(expected: str, actual: str | None) -> EvalResult:
-    return EvalResult(
-        expected=expected,
-        actual=actual,
-        is_correct=actual is not None and expected == actual,
-    )
-
-
 def _build_failure_attempt(
     work_item: RepeatedEvalWorkItem[BenchmarkExample],
     message: str,
     exception: Exception | None,
+    duration_seconds: float,
 ) -> EvalAttempt:
     if exception is not None and not getattr(
         exception, "_eval_failure_reported", False
     ):
         logger.error(
             "FAILURE: %s run %d | %s",
-            work_item.unit_id,
-            work_item.run_index,
+            work_item.item_id,
+            work_item.attempt_index,
             exception,
         )
-    return EvalAttempt(
-        actual_values={},
-        evals={
-            name: EvalResult(expected=expected, actual=None, is_correct=False)
-            for name, expected in work_item.payload.approved_labels.items()
-        },
-        success=False,
-        error=message,
-        metadata={"run_index": work_item.run_index},
+    cancelled = isinstance(exception, ExecutionCancelledError)
+    return _failed_attempt(
+        message=message,
+        failure_type=(
+            FailureType.CANCELLED if cancelled else _classify_exception(exception)
+        ),
+        duration_seconds=duration_seconds,
+        stage_durations_seconds={},
+        work_item=work_item,
+        cancelled=cancelled,
     )
+
+
+def _failed_attempt(
+    *,
+    message: str,
+    failure_type: FailureType,
+    duration_seconds: float,
+    stage_durations_seconds: dict[str, float],
+    work_item: RepeatedEvalWorkItem[BenchmarkExample],
+    artifacts: dict[str, Any] | None = None,
+    cancelled: bool = False,
+) -> EvalAttempt:
+    return EvalAttempt(
+        status=AttemptStatus.CANCELLED if cancelled else AttemptStatus.FAILED,
+        error=message,
+        failure_type=failure_type,
+        duration_seconds=duration_seconds,
+        stage_durations_seconds=stage_durations_seconds,
+        artifacts=artifacts or {},
+        metadata=_attempt_metadata(work_item),
+    )
+
+
+def _attempt_metadata(
+    work_item: RepeatedEvalWorkItem[BenchmarkExample],
+) -> dict[str, Any]:
+    return {
+        "source_snapshot_id": work_item.payload.source_snapshot_id,
+        "run_index": work_item.attempt_index,
+    }
+
+
+def _classify_exception(exception: Exception | None) -> FailureType:
+    if isinstance(exception, TimeoutError):
+        return FailureType.TIMEOUT
+    if exception is None:
+        return FailureType.UNKNOWN
+    return _classify_failure_message(
+        f"{type(exception).__name__}: {exception}",
+        default=FailureType.PIPELINE_ERROR,
+    )
+
+
+def _classify_failure_message(
+    message: str,
+    *,
+    default: FailureType,
+) -> FailureType:
+    normalized = message.lower()
+    if "timeout" in normalized or "timed out" in normalized:
+        return FailureType.TIMEOUT
+    provider_markers = ("status_code", "model request", "rate limit", "provider")
+    if any(marker in normalized for marker in provider_markers):
+        return FailureType.PROVIDER_ERROR
+    return default
+
+
+def _receipt_duration(receipt: Any, *, started_at: float) -> float:
+    reported = getattr(receipt, "total_execution_time_seconds", 0.0)
+    return (
+        reported
+        if isinstance(reported, (int, float)) and reported > 0
+        else time.monotonic() - started_at
+    )
+
+
+def _stage_durations(receipt: Any) -> dict[str, float]:
+    durations: dict[str, float] = {}
+    for stage_name in ("retrieve", "process", "act"):
+        stage = receipt.get_stage_receipt(stage_name)
+        if stage is not None and stage.execution_time_seconds >= 0:
+            durations[stage_name] = stage.execution_time_seconds
+    return durations
 
 
 def _receipt_error(receipt: Any) -> str:
@@ -520,30 +654,31 @@ def _receipt_error(receipt: Any) -> str:
 
 
 def _build_summary(
-    results: list[_ExampleEvalResult], *, runs_per_example: int
+    results: list[_ExampleEvalResult],
+    *,
+    runs_per_example: int,
+    evaluation_wall_time_seconds: float,
 ) -> dict[str, Any]:
     attempts = [attempt for result in results for attempt in result.attempts]
+    valid_attempts = [attempt for attempt in attempts if attempt.success]
     classification_flags = [
-        attempt.evals.get("classification", _NO_EVAL).is_correct for attempt in attempts
-    ]
-    evaluated_classifications = [
-        flag for flag in classification_flags if flag is not None
+        attempt.evaluations["classification"].is_correct
+        for attempt in valid_attempts
+        if "classification" in attempt.evaluations
     ]
     label_names = sorted(
         {name for result in results for name in result.example.approved_labels}
     )
     accuracy_by_label: dict[str, float | None] = {}
     for name in label_names:
-        flags = [attempt.evals.get(name, _NO_EVAL).is_correct for attempt in attempts]
-        evaluated = [flag for flag in flags if flag is not None]
-        accuracy_by_label[name] = EvalSummaryBuilder.safe_accuracy(
-            correct=sum(flag is True for flag in evaluated), total=len(evaluated)
+        counts = metric_counts(
+            attempt.evaluations[name].is_correct
+            for attempt in valid_attempts
+            if name in attempt.evaluations
         )
-    return {
-        "overall_classification_accuracy": EvalSummaryBuilder.safe_accuracy(
-            correct=sum(flag is True for flag in evaluated_classifications),
-            total=len(evaluated_classifications),
-        ),
+        accuracy_by_label[name] = counts.accuracy
+    accuracy: dict[str, Any] = {
+        "overall_classification_accuracy": metric_counts(classification_flags).accuracy,
         "accuracy_by_label": accuracy_by_label,
         "accuracy_by_classification": _accuracy_by_expected_label(
             results,
@@ -553,22 +688,38 @@ def _build_summary(
             _failure_results(results),
             label_name="root_cause",
         ),
-        "classification_accuracy_by_confidence": _accuracy_by_confidence(
+        "evaluated_runs": len(valid_attempts),
+        "correct_classification_runs": sum(classification_flags),
+    }
+    configured_confidence_labels = {
+        spec.name
+        for spec in _STRUCTURED_OUTPUT_SPECS
+        if spec.confidence_path is not None
+    }
+    if "classification" in configured_confidence_labels:
+        accuracy["classification_accuracy_by_confidence"] = _accuracy_by_confidence(
             results,
             label_name="classification",
             group_name="by_classification",
-        ),
-        "root_cause_accuracy_by_confidence": _accuracy_by_confidence(
+        )
+    if "root_cause" in configured_confidence_labels:
+        accuracy["root_cause_accuracy_by_confidence"] = _accuracy_by_confidence(
             _failure_results(results),
             label_name="root_cause",
             group_name="by_failure_root_cause",
+        )
+    return {
+        "accuracy": accuracy,
+        "reliability": build_reliability_summary(
+            attempts,
+            planned_runs=len(results) * runs_per_example,
+        ),
+        "performance": build_performance_summary(
+            attempts,
+            evaluation_wall_time_seconds=evaluation_wall_time_seconds,
         ),
         "total_examples": len(results),
         "runs_per_example": runs_per_example,
-        "total_runs": len(attempts),
-        "successful_runs": sum(attempt.success for attempt in attempts),
-        "evaluated_runs": len(evaluated_classifications),
-        "correct_runs": sum(flag is True for flag in evaluated_classifications),
     }
 
 
@@ -589,25 +740,24 @@ def _accuracy_by_expected_label(
     label_name: str,
 ) -> dict[str, float | None]:
     """Compute run accuracy grouped by the approved value for one label."""
-    counts: dict[str, dict[str, int]] = {}
+    observations: list[tuple[str, bool]] = []
+    expected_values: set[str] = set()
     for result in results:
         expected = result.example.approved_labels.get(label_name)
         if expected is None:
             continue
-        bucket = counts.setdefault(expected, {"correct": 0, "evaluated": 0})
+        expected_values.add(expected)
         for attempt in result.attempts:
-            correct = attempt.evals.get(label_name, _NO_EVAL).is_correct
-            if correct is None:
-                continue
-            bucket["evaluated"] += 1
-            bucket["correct"] += correct is True
-    return {
-        expected: EvalSummaryBuilder.safe_accuracy(
-            correct=bucket["correct"],
-            total=bucket["evaluated"],
-        )
-        for expected, bucket in sorted(counts.items())
-    }
+            evaluation = attempt.evaluations.get(label_name)
+            if evaluation is not None:
+                observations.append((expected, evaluation.is_correct))
+    grouped = group_metric_counts(
+        observations,
+        key_fn=lambda observation: observation[0],
+        correct_fn=lambda observation: observation[1],
+        expected_keys=expected_values,
+    )
+    return {expected: counts.accuracy for expected, counts in grouped.items()}
 
 
 def _accuracy_by_confidence(
@@ -617,60 +767,20 @@ def _accuracy_by_confidence(
     group_name: str,
 ) -> dict[str, Any]:
     """Compute accuracy for each model confidence, overall and by expected label."""
-    all_counts = _empty_confidence_counts()
-    grouped_counts: dict[str, dict[str, dict[str, int]]] = {}
-    for result in results:
-        expected = result.example.approved_labels.get(label_name)
-        if expected is None:
-            continue
-        expected_counts = grouped_counts.setdefault(
-            expected,
-            _empty_confidence_counts(),
-        )
-        for attempt in result.attempts:
-            ai_output = attempt.get_artifact("ai_output")
-            label_output = (
-                ai_output.get(label_name) if isinstance(ai_output, dict) else None
-            )
-            confidence = (
-                label_output.get("confidence")
-                if isinstance(label_output, dict)
-                else None
-            )
-            correct = attempt.evals.get(label_name, _NO_EVAL).is_correct
-            if confidence not in _CONFIDENCE_LEVELS or correct is None:
-                continue
-            for counts in (all_counts, expected_counts):
-                counts[confidence]["evaluated"] += 1
-                counts[confidence]["correct"] += correct is True
-    return {
-        "all": _serialize_confidence_counts(all_counts),
-        group_name: {
-            expected: _serialize_confidence_counts(counts)
-            for expected, counts in sorted(grouped_counts.items())
-        },
+    expected_values = {
+        expected
+        for result in results
+        if (expected := result.example.approved_labels.get(label_name)) is not None
     }
-
-
-def _empty_confidence_counts() -> dict[str, dict[str, int]]:
+    summary = build_confidence_accuracy(
+        (attempt for result in results for attempt in result.attempts),
+        label_name=label_name,
+        expected_values=expected_values,
+    )
     return {
-        confidence: {"correct": 0, "evaluated": 0} for confidence in _CONFIDENCE_LEVELS
-    }
-
-
-def _serialize_confidence_counts(
-    counts: dict[str, dict[str, int]],
-) -> dict[str, dict[str, int | float | None]]:
-    return {
-        confidence: {
-            "accuracy": EvalSummaryBuilder.safe_accuracy(
-                correct=counts[confidence]["correct"],
-                total=counts[confidence]["evaluated"],
-            ),
-            "correct_runs": counts[confidence]["correct"],
-            "evaluated_runs": counts[confidence]["evaluated"],
-        }
-        for confidence in _CONFIDENCE_LEVELS
+        "confidence_coverage": summary["confidence_coverage"],
+        "all": summary["all"],
+        group_name: summary["by_expected_value"],
     }
 
 
@@ -683,14 +793,23 @@ def _build_results(results: list[_ExampleEvalResult]) -> list[dict[str, Any]]:
             runs.append(
                 {
                     "run_index": attempt.metadata.get("run_index"),
+                    "status": attempt.status.value,
                     "actual_labels": attempt.actual_values,
                     "label_correctness": {
                         name: evaluation.is_correct
-                        for name, evaluation in attempt.evals.items()
+                        for name, evaluation in attempt.evaluations.items()
                     },
+                    "confidence": attempt.confidence_values,
                     "ai_output": ai_output,
                     "success": attempt.success,
+                    "failure_type": (
+                        attempt.failure_type.value
+                        if attempt.failure_type is not None
+                        else None
+                    ),
                     "error": attempt.error,
+                    "duration_seconds": attempt.duration_seconds,
+                    "stage_durations_seconds": attempt.stage_durations_seconds,
                 }
             )
         output.append(
@@ -756,20 +875,8 @@ def _results_filename(
 
 
 def _write_results_file(output_path: Path, payload: dict[str, Any]) -> Path:
-    """Write eval evidence without overwriting a result from another run."""
-    collision_index = 0
-    while True:
-        candidate = (
-            output_path
-            if collision_index == 0
-            else output_path.with_stem(f"{output_path.stem}_{collision_index}")
-        )
-        try:
-            with candidate.open("x", encoding="utf-8") as result_file:
-                json.dump(payload, result_file, indent=2)
-            return candidate
-        except FileExistsError:
-            collision_index += 1
+    """Compatibility wrapper for the core immutable evidence writer."""
+    return write_json_exclusive(output_path, payload)
 
 
 def _argument_parser() -> argparse.ArgumentParser:
@@ -1043,10 +1150,10 @@ def _configure_cli_logging() -> None:
 def _print_cli_outcome(path: Path) -> None:
     """Print one clear outcome for a completed evaluation."""
     payload = json.loads(path.read_text(encoding="utf-8"))
-    summary = payload["summary"]
-    total_runs = int(summary["total_runs"])
-    successful_runs = int(summary["successful_runs"])
-    failed_runs = total_runs - successful_runs
+    reliability = payload["summary"]["reliability"]
+    total_runs = int(reliability["planned_runs"])
+    successful_runs = int(reliability["successful_runs"])
+    failed_runs = int(reliability["failed_runs"]) + int(reliability["cancelled_runs"])
     if failed_runs:
         print(
             f"FAILED: {successful_runs}/{total_runs} succeeded; {failed_runs} failed."

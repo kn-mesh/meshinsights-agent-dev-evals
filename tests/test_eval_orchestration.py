@@ -115,26 +115,42 @@ class _Repository:
         return ()
 
 
-def _successful_receipt() -> PipelineReceipt:
+def _successful_receipt(
+    *,
+    include_root_cause: bool = True,
+    include_confidence: bool = True,
+) -> PipelineReceipt:
     receipt = PipelineReceipt(
         pipeline_id="eval-test",
+        retrieve_receipt=StageReceipt("retrieve", True, 0.1),
+        process_receipt=StageReceipt("process", True, 0.2),
         act_receipt=StageReceipt("act", True, 0.0),
+        total_execution_time_seconds=0.3,
     )
     assert receipt.act_receipt is not None
     receipt.act_receipt.metadata.update(
         {
+            "example_id": "250000116|2026-03-04T08:01:36",
+            "benchmark_key": "steam-trap-regression",
+            "benchmark_version_id": "benchmark-version-id",
+            "benchmark_version_number": 4,
+            "source_snapshot_id": "snapshot-id",
             "classification": {
                 "value": "Failure",
-                "confidence": "High",
                 "explanation": "The inlet temperature fell first.",
-            },
-            "root_cause": {
-                "value": "Closed Failure",
-                "confidence": "High",
-                "explanation": "The temperature delta collapsed.",
             },
         }
     )
+    classification = receipt.act_receipt.metadata["classification"]
+    assert isinstance(classification, dict)
+    if include_confidence:
+        classification["confidence"] = "High"
+    if include_root_cause:
+        receipt.act_receipt.metadata["root_cause"] = {
+            "value": "Closed Failure",
+            "explanation": "The temperature delta collapsed.",
+            **({"confidence": "High"} if include_confidence else {}),
+        }
     return receipt
 
 
@@ -181,51 +197,76 @@ def test_run_eval_scores_published_examples_and_writes_benchmark_identity(
     assert payload["run_config"]["evidence_source"] == "azure_blob"
     assert payload["run_config"]["benchmark_version_number"] == 4
     assert payload["run_config"]["ai_model"] == "azure:gpt-5.6-luna"
-    assert payload["summary"]["total_runs"] == 2
-    assert payload["summary"]["accuracy_by_label"]["root_cause"] == 1.0
-    assert payload["summary"]["accuracy_by_classification"] == {"Failure": 1.0}
-    assert payload["summary"]["accuracy_by_failure_root_cause"] == {
-        "Closed Failure": 1.0
+    assert payload["run_config"]["eval_result_schema_version"] == 2
+    summary = payload["summary"]
+    accuracy = summary["accuracy"]
+    assert accuracy["accuracy_by_label"]["root_cause"] == 1.0
+    assert accuracy["accuracy_by_classification"] == {"Failure": 1.0}
+    assert accuracy["accuracy_by_failure_root_cause"] == {"Closed Failure": 1.0}
+    classification_confidence = accuracy["classification_accuracy_by_confidence"]
+    assert classification_confidence["confidence_coverage"] == {
+        "outputs_with_confidence": 2,
+        "evaluated_outputs": 2,
+        "coverage": 1.0,
     }
-    assert payload["summary"]["classification_accuracy_by_confidence"] == {
-        "all": {
-            "High": {"accuracy": 1.0, "correct_runs": 2, "evaluated_runs": 2},
-            "Low": {"accuracy": None, "correct_runs": 0, "evaluated_runs": 0},
-        },
-        "by_classification": {
-            "Failure": {
-                "High": {
-                    "accuracy": 1.0,
-                    "correct_runs": 2,
-                    "evaluated_runs": 2,
-                },
-                "Low": {
-                    "accuracy": None,
-                    "correct_runs": 0,
-                    "evaluated_runs": 0,
-                },
-            }
-        },
+    assert classification_confidence["all"] == {
+        "High": {"accuracy": 1.0, "correct_runs": 2, "evaluated_runs": 2},
+        "Low": {"accuracy": None, "correct_runs": 0, "evaluated_runs": 0},
     }
-    assert payload["summary"]["root_cause_accuracy_by_confidence"] == {
-        "all": {
-            "High": {"accuracy": 1.0, "correct_runs": 2, "evaluated_runs": 2},
-            "Low": {"accuracy": None, "correct_runs": 0, "evaluated_runs": 0},
-        },
-        "by_failure_root_cause": {
-            "Closed Failure": {
-                "High": {
-                    "accuracy": 1.0,
-                    "correct_runs": 2,
-                    "evaluated_runs": 2,
-                },
-                "Low": {
-                    "accuracy": None,
-                    "correct_runs": 0,
-                    "evaluated_runs": 0,
-                },
-            }
-        },
+    assert classification_confidence["by_classification"] == {
+        "Failure": {
+            "High": {
+                "accuracy": 1.0,
+                "correct_runs": 2,
+                "evaluated_runs": 2,
+            },
+            "Low": {
+                "accuracy": None,
+                "correct_runs": 0,
+                "evaluated_runs": 0,
+            },
+        }
+    }
+    root_cause_confidence = accuracy["root_cause_accuracy_by_confidence"]
+    assert root_cause_confidence["confidence_coverage"] == {
+        "outputs_with_confidence": 2,
+        "evaluated_outputs": 2,
+        "coverage": 1.0,
+    }
+    assert root_cause_confidence["all"] == {
+        "High": {"accuracy": 1.0, "correct_runs": 2, "evaluated_runs": 2},
+        "Low": {"accuracy": None, "correct_runs": 0, "evaluated_runs": 0},
+    }
+    assert root_cause_confidence["by_failure_root_cause"] == {
+        "Closed Failure": {
+            "High": {
+                "accuracy": 1.0,
+                "correct_runs": 2,
+                "evaluated_runs": 2,
+            },
+            "Low": {
+                "accuracy": None,
+                "correct_runs": 0,
+                "evaluated_runs": 0,
+            },
+        }
+    }
+    assert summary["reliability"] == {
+        "planned_runs": 2,
+        "recorded_runs": 2,
+        "successful_runs": 2,
+        "failed_runs": 0,
+        "cancelled_runs": 0,
+        "reliability": 1.0,
+        "failures_by_type": {},
+    }
+    assert summary["performance"]["run_duration_seconds"] == {
+        "count": 2,
+        "minimum": 0.3,
+        "maximum": 0.3,
+        "mean": 0.3,
+        "median": 0.3,
+        "p95": 0.3,
     }
     assert payload["results"][0]["source_snapshot_id"] == "snapshot-id"
     assert (
@@ -234,10 +275,10 @@ def test_run_eval_scores_published_examples_and_writes_benchmark_identity(
     )
 
 
-def test_failed_eval_attempt_counts_as_incorrect(
+def test_failed_eval_attempt_reduces_reliability_but_not_accuracy(
     monkeypatch: Any, tmp_path: Path
 ) -> None:
-    """Keep execution failures in the headline accuracy denominator."""
+    """Separate operational reliability from accuracy on valid agent outputs."""
     benchmark = _benchmark()
     call_count = 0
 
@@ -263,13 +304,80 @@ def test_failed_eval_attempt_counts_as_incorrect(
 
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     summary = payload["summary"]
-    assert summary["overall_classification_accuracy"] == 0.5
-    assert summary["evaluated_runs"] == 2
-    assert summary["successful_runs"] == 1
-    assert payload["results"][0]["runs"][1]["label_correctness"] == {
-        "classification": False,
-        "root_cause": False,
+    assert summary["accuracy"]["overall_classification_accuracy"] == 1.0
+    assert summary["accuracy"]["evaluated_runs"] == 1
+    assert summary["reliability"] == {
+        "planned_runs": 2,
+        "recorded_runs": 2,
+        "successful_runs": 1,
+        "failed_runs": 1,
+        "cancelled_runs": 0,
+        "reliability": 0.5,
+        "failures_by_type": {"provider_error": 1},
     }
+    assert payload["results"][0]["runs"][1]["label_correctness"] == {}
+    assert payload["results"][0]["runs"][1]["failure_type"] == "provider_error"
+
+
+def test_partial_structured_output_is_unreliable_and_excluded_from_accuracy(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    monkeypatch.setattr(
+        eval_orchestration,
+        "run_pipeline",
+        lambda *args, **kwargs: _successful_receipt(include_root_cause=False),
+    )
+
+    output_path = eval_orchestration.run_eval(
+        Path("pipeline_configs/v1_3.ppln"),
+        benchmark_key=benchmark.benchmark_key,
+        repository=_Repository(benchmark),
+        output_root=tmp_path,
+        runtime="serial",
+        max_workers=1,
+    )
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["summary"]["accuracy"]["evaluated_runs"] == 0
+    assert payload["summary"]["accuracy"]["overall_classification_accuracy"] is None
+    assert payload["summary"]["reliability"]["reliability"] == 0.0
+    run = payload["results"][0]["runs"][0]
+    assert run["status"] == "failed"
+    assert run["failure_type"] == "receipt_contract_error"
+    assert run["label_correctness"] == {}
+
+
+def test_missing_optional_confidence_keeps_run_valid_and_reports_coverage(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    monkeypatch.setattr(
+        eval_orchestration,
+        "run_pipeline",
+        lambda *args, **kwargs: _successful_receipt(include_confidence=False),
+    )
+
+    output_path = eval_orchestration.run_eval(
+        Path("pipeline_configs/v1_3.ppln"),
+        benchmark_key=benchmark.benchmark_key,
+        repository=_Repository(benchmark),
+        output_root=tmp_path,
+        runtime="serial",
+        max_workers=1,
+    )
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["summary"]["reliability"]["reliability"] == 1.0
+    assert payload["summary"]["accuracy"]["overall_classification_accuracy"] == 1.0
+    confidence = payload["summary"]["accuracy"]["classification_accuracy_by_confidence"]
+    assert confidence["confidence_coverage"] == {
+        "outputs_with_confidence": 0,
+        "evaluated_outputs": 1,
+        "coverage": 0.0,
+    }
+    assert confidence["all"]["High"]["evaluated_runs"] == 0
+    assert payload["results"][0]["runs"][0]["confidence"] == {}
 
 
 def test_results_writer_never_overwrites_existing_evidence(tmp_path: Path) -> None:
@@ -579,7 +687,18 @@ def test_cli_logging_suppresses_azure_http_diagnostics() -> None:
 def test_cli_outcome_reports_success(tmp_path: Path, capsys: Any) -> None:
     path = tmp_path / "results.json"
     path.write_text(
-        json.dumps({"summary": {"total_runs": 2, "successful_runs": 2}}),
+        json.dumps(
+            {
+                "summary": {
+                    "reliability": {
+                        "planned_runs": 2,
+                        "successful_runs": 2,
+                        "failed_runs": 0,
+                        "cancelled_runs": 0,
+                    }
+                }
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -593,7 +712,18 @@ def test_cli_outcome_reports_success(tmp_path: Path, capsys: Any) -> None:
 def test_cli_outcome_reports_failed_runs(tmp_path: Path, capsys: Any) -> None:
     path = tmp_path / "results.json"
     path.write_text(
-        json.dumps({"summary": {"total_runs": 3, "successful_runs": 1}}),
+        json.dumps(
+            {
+                "summary": {
+                    "reliability": {
+                        "planned_runs": 3,
+                        "successful_runs": 1,
+                        "failed_runs": 2,
+                        "cancelled_runs": 0,
+                    }
+                }
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -619,29 +749,30 @@ def test_progress_tracker_reports_success_failure_and_slowest_running(
         heartbeat_seconds=30.0,
     )
     first = eval_orchestration.RepeatedEvalWorkItem(
-        unit_id="example-a", payload=_benchmark().examples[0], run_index=1
+        item_id="example-a", payload=_benchmark().examples[0], attempt_index=1
     )
     second = eval_orchestration.RepeatedEvalWorkItem(
-        unit_id="example-b", payload=_benchmark().examples[0], run_index=1
+        item_id="example-b", payload=_benchmark().examples[0], attempt_index=1
     )
     tracker.started(first)
     tracker.started(second)
     with tracker._lock:
-        tracker._running[(first.unit_id, first.run_index)] -= 45.0
-        tracker._running[(second.unit_id, second.run_index)] -= 10.0
+        tracker._running[(first.item_id, first.attempt_index)] -= 45.0
+        tracker._running[(second.item_id, second.attempt_index)] -= 10.0
 
     heartbeat = tracker._heartbeat_message()
     tracker.completed(
         second,
-        eval_orchestration.EvalAttempt(actual_values={}, evals={}, success=True),
+        eval_orchestration.EvalAttempt(
+            status=eval_orchestration.AttemptStatus.SUCCEEDED
+        ),
     )
     tracker.completed(
         first,
         eval_orchestration.EvalAttempt(
-            actual_values={},
-            evals={},
-            success=False,
+            status=eval_orchestration.AttemptStatus.FAILED,
             error="model request failed",
+            failure_type=eval_orchestration.FailureType.PROVIDER_ERROR,
         ),
     )
 

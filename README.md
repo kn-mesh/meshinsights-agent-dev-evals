@@ -160,6 +160,9 @@ Before implementation, populate the relevant files in `docs/use_case/` with dura
 
 ```text
 .agents/
+agent-dev-eval-core/
+  evaluation/
+  tests/
 data/
 docs/
   current-dev/
@@ -181,7 +184,6 @@ src/
   retrievers/
   pipelines/
   evals/
-  experimental_core/
 ```
 
 ## Notes

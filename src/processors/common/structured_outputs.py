@@ -53,6 +53,6 @@ class PulseFailureAnalysisResult(BaseModel):
         if is_healthy != is_not_applicable:
             raise ValueError(
                 'Healthy classifications require root cause "N/A", and Failure '
-                'classifications require a failure root cause.'
+                "classifications require a failure root cause."
             )
         return self

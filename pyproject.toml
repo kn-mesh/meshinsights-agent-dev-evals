@@ -5,6 +5,7 @@ description = "Mesh Insights Template"
 readme = "README.md"
 requires-python = ">=3.13.5"
 dependencies = [
+    "agent-dev-eval-core",
     "mi-core[ai]",
     "pandas==2.3.3",
     "pandas-stubs>=2.3.3.251201",
@@ -29,6 +30,7 @@ dev-dependencies = [
 ]
 
 [tool.uv.sources]
+agent-dev-eval-core = { path = "agent-dev-eval-core", editable = true }
 mi-core = { path = "mi-core/core", editable = true }
 meshinsights-cli = { path = "mi-core/cli", editable = true }
 
@@ -40,7 +42,8 @@ filterwarnings = [
 ]
 
 [tool.basedpyright]
-include = ["src", "model_catalog.py"]
+include = ["src", "agent-dev-eval-core/evaluation", "model_catalog.py"]
+extraPaths = ["agent-dev-eval-core"]
 typeCheckingMode = "standard"
 pythonVersion = "3.13"
 venvPath = "."
