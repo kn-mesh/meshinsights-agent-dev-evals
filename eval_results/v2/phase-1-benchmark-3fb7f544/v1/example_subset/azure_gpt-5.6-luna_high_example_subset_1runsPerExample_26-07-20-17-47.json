@@ -1,0 +1,250 @@
+{
+  "summary": {
+    "accuracy": {
+      "overall_classification_accuracy": 1.0,
+      "accuracy_by_label": {
+        "classification": 1.0,
+        "root_cause": 0.0
+      },
+      "accuracy_by_classification": {
+        "Failure": 1.0
+      },
+      "accuracy_by_failure_root_cause": {
+        "Open Failure": 0.0
+      },
+      "evaluated_runs": 1,
+      "correct_classification_runs": 1,
+      "classification_accuracy_by_confidence": {
+        "confidence_coverage": {
+          "outputs_with_confidence": 1,
+          "evaluated_outputs": 1,
+          "coverage": 1.0
+        },
+        "all": {
+          "High": {
+            "accuracy": 1.0,
+            "correct_runs": 1,
+            "evaluated_runs": 1
+          },
+          "Low": {
+            "accuracy": null,
+            "correct_runs": 0,
+            "evaluated_runs": 0
+          }
+        },
+        "by_classification": {
+          "Failure": {
+            "High": {
+              "accuracy": 1.0,
+              "correct_runs": 1,
+              "evaluated_runs": 1
+            },
+            "Low": {
+              "accuracy": null,
+              "correct_runs": 0,
+              "evaluated_runs": 0
+            }
+          }
+        }
+      },
+      "root_cause_accuracy_by_confidence": {
+        "confidence_coverage": {
+          "outputs_with_confidence": 1,
+          "evaluated_outputs": 1,
+          "coverage": 1.0
+        },
+        "all": {
+          "High": {
+            "accuracy": 0.0,
+            "correct_runs": 0,
+            "evaluated_runs": 1
+          },
+          "Low": {
+            "accuracy": null,
+            "correct_runs": 0,
+            "evaluated_runs": 0
+          }
+        },
+        "by_failure_root_cause": {
+          "Open Failure": {
+            "High": {
+              "accuracy": 0.0,
+              "correct_runs": 0,
+              "evaluated_runs": 1
+            },
+            "Low": {
+              "accuracy": null,
+              "correct_runs": 0,
+              "evaluated_runs": 0
+            }
+          }
+        }
+      }
+    },
+    "reliability": {
+      "planned_runs": 1,
+      "recorded_runs": 1,
+      "successful_runs": 1,
+      "failed_runs": 0,
+      "cancelled_runs": 0,
+      "reliability": 1.0,
+      "failures_by_type": {}
+    },
+    "performance": {
+      "evaluation_wall_time_seconds": 78.49087079102173,
+      "throughput_runs_per_minute": 0.7644201089289376,
+      "run_duration_seconds": {
+        "count": 1,
+        "minimum": 77.57719302177429,
+        "maximum": 77.57719302177429,
+        "mean": 77.57719302177429,
+        "median": 77.57719302177429,
+        "p95": 77.57719302177429
+      },
+      "successful_run_duration_seconds": {
+        "count": 1,
+        "minimum": 77.57719302177429,
+        "maximum": 77.57719302177429,
+        "mean": 77.57719302177429,
+        "median": 77.57719302177429,
+        "p95": 77.57719302177429
+      },
+      "failed_run_duration_seconds": {
+        "count": 0,
+        "minimum": null,
+        "maximum": null,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "stage_duration_seconds": {
+        "act": {
+          "count": 1,
+          "minimum": 3.62396240234375e-05,
+          "maximum": 3.62396240234375e-05,
+          "mean": 3.62396240234375e-05,
+          "median": 3.62396240234375e-05,
+          "p95": 3.62396240234375e-05
+        },
+        "process": {
+          "count": 1,
+          "minimum": 75.16899704933167,
+          "maximum": 75.16899704933167,
+          "mean": 75.16899704933167,
+          "median": 75.16899704933167,
+          "p95": 75.16899704933167
+        },
+        "retrieve": {
+          "count": 1,
+          "minimum": 2.4072811603546143,
+          "maximum": 2.4072811603546143,
+          "mean": 2.4072811603546143,
+          "median": 2.4072811603546143,
+          "p95": 2.4072811603546143
+        }
+      }
+    },
+    "total_examples": 1,
+    "runs_per_example": 1
+  },
+  "run_config": {
+    "eval_result_schema_version": 2,
+    "yaml_path": "pipeline_configs/v2.ppln",
+    "project_key": "spirax-pulse",
+    "benchmark_key": "phase-1-benchmark-3fb7f544",
+    "benchmark_version_id": "b8667849-57a4-4a16-b3ca-4db7cfa98da8",
+    "benchmark_version_number": 1,
+    "benchmark_source_state_sha256": "f3ae4b8824b73df17ded93100d0ff7cff832162de4aff76dab404768fcc5ae7d",
+    "benchmark_source": "azure_postgres",
+    "evidence_source": "azure_blob",
+    "scope": "example_subset",
+    "runs_per_example": 1,
+    "runtime": "serial",
+    "max_workers": 1,
+    "error_action": "stop",
+    "progress_interval_seconds": 30.0,
+    "ai_provider": "azure",
+    "ai_model": "azure:gpt-5.6-luna",
+    "ai_reasoning_effort": "high",
+    "ai_execution_policies": [
+      {
+        "processor": "V2CaseBriefAIWorkflowProcessor",
+        "model": "azure:gpt-5.6-luna",
+        "reasoning_effort": "high",
+        "timeout_seconds_per_attempt": null,
+        "transport_attempts": 3,
+        "output_retries": 3
+      },
+      {
+        "processor": "V2CapabilityInvestigationAIAgentProcessor",
+        "model": "azure:gpt-5.6-luna",
+        "reasoning_effort": "high",
+        "timeout_seconds_per_attempt": null,
+        "transport_attempts": 3,
+        "output_retries": 3
+      }
+    ],
+    "completed_at_utc": "2026-07-20T17:47:19+00:00"
+  },
+  "selected_example_ids": [
+    "250005732|2026-02-17T18:22:10"
+  ],
+  "results": [
+    {
+      "example_id": "250005732|2026-02-17T18:22:10",
+      "unit_id": "250005732",
+      "decision_timestamp": "2026-02-17T18:22:10+00:00",
+      "source_snapshot_id": "spirax_src_c098612d610607a8",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Open Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "classification": "Failure",
+            "root_cause": "Closed Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "During the on-state from 2026-02-07 through the 2026-02-17 alarm, Steam stayed essentially steady at 171.6\u2013171.8 \u00b0C while Condensate rose from a 112.2 \u00b0C median to 130.2 \u00b0C and the 4-hour delta narrowed from 58.2 \u00b0C to 41.4 \u00b0C. This is a sustained departure from the recent 2025-11-18\u20132026-02-06 baseline of roughly 170 \u00b0C Steam, 104\u2013110 \u00b0C Condensate, and 60\u201367 \u00b0C delta; the 2025-06-10\u201320 historical shift instead stabilized near 98 \u00b0C Condensate with delta around 72\u201375 \u00b0C."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The failure trajectory is on the condensate side: from 2026-02-05 to the alarm, Condensate increased from a 109.8 \u00b0C median to 129.6 \u00b0C while Steam remained near 171.6\u2013171.8 \u00b0C, driving the delta from 61.1 \u00b0C to 41.6 \u00b0C. Steam did not fall toward an off-state, and the persistent convergence under elevated Steam supports a closed trap rather than a normal shutdown or open failure."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 77.57719302177429,
+          "stage_durations_seconds": {
+            "retrieve": 2.4072811603546143,
+            "process": 75.16899704933167,
+            "act": 3.62396240234375e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005732",
+        "steam_trap_type": "Thermodynamic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    }
+  ]
+}

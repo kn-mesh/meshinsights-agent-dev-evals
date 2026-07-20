@@ -22,7 +22,7 @@ process:
       window_days_list: [30, 365]
     - processor: V2CapabilityInvestigationAIAgentProcessor
       max_turns: 8
-      tool_calls_limit: 5
+      tool_calls_limit: 4
       max_investigation_days: 45
 
 action:

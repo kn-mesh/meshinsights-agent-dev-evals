@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 from typing import Sequence
 
@@ -23,6 +22,7 @@ from src.objects.process_object import PulseFailureAnalysisProcessObject
 from src.processors.common.structured_outputs import PulseFailureAnalysisResult
 from src.processors.common.temperature_window_analysis import (
     TemperatureWindowAnalyzer,
+    TemperatureWindowResolution,
     TemperatureWindowSummary,
 )
 from src.processors.v1_3.v1_3_temperature_graphs_processor import (
@@ -39,7 +39,7 @@ class V2CapabilityInvestigationAIAgentProcessorConfig(AIProcessorConfig):
     max_investigation_days: int = Field(default=45, ge=1, le=365)
     investigation_chart_dpi: int = Field(default=120, ge=40, le=240)
     max_turns: int = 8
-    tool_calls_limit: int | None = 5
+    tool_calls_limit: int | None = 4
     tool_timeout: float | None = 30
     timeout: float | None = 180
     transport_retries: int = 3
@@ -76,11 +76,11 @@ case brief is a first-pass hypothesis, not ground truth. The FDE alarm is only a
 review trigger, and each unit must be judged relative to its own historical
 operating baseline.
 
-Before deciding, load at least one deferred investigation skill and use its chart
-tool to resolve the case brief's main uncertainty. Start with the recommended
-skill unless another skill is clearly better. Load a second skill only when the
-first investigation changes the leading explanation or leaves a material
-alternative unresolved.
+Before deciding, load exactly one deferred investigation skill and call exactly
+one of that skill's chart tools to resolve the case brief's main uncertainty.
+Use the recommended skill unless another single skill is clearly better. Do not
+load a second skill or request another chart: comparison tools already return
+both charts in one call. Then make the final structured decision.
 
 Every requested chart interval must be no longer than
 {self.config.max_investigation_days} days and must end no later than the alarm.
@@ -230,7 +230,17 @@ First-pass case brief:
         label: str,
     ) -> list[TextContent | ImageContent]:
         """Return one bounded chart with compact measurements."""
-        range_start, range_end, summary, chart = self._analyze_and_render(
+        existing_evidence = ctx.data_object.get_investigation_evidence()
+        if existing_evidence:
+            return [
+                TextContent(
+                    text=(
+                        "The one-call investigation evidence budget is already used. "
+                        "Use the existing chart evidence and return the final decision."
+                    )
+                )
+            ]
+        resolution, summary, chart = self._analyze_and_render(
             ctx,
             start=start,
             end=end,
@@ -239,8 +249,11 @@ First-pass case brief:
             {
                 "kind": "window",
                 "label": label,
-                "start": range_start.isoformat(),
-                "end": range_end.isoformat(),
+                "requested_start": resolution.requested_start.isoformat(),
+                "requested_end": resolution.requested_end.isoformat(),
+                "start": resolution.range_start.isoformat(),
+                "end": resolution.range_end.isoformat(),
+                "adjustments": resolution.adjustments,
             }
         )
         return [
@@ -248,8 +261,7 @@ First-pass case brief:
                 text=self._format_summary(
                     label=label,
                     summary=summary,
-                    requested_start=range_start.isoformat(),
-                    requested_end=range_end.isoformat(),
+                    resolution=resolution,
                 )
             ),
             ImageContent.from_bytes(chart, media_type="image/png"),
@@ -267,11 +279,21 @@ First-pass case brief:
         second_label: str,
     ) -> list[TextContent | ImageContent]:
         """Return two independently scaled charts with comparable measurements."""
-        first_range_start, first_range_end, first_summary, first_chart = (
-            self._analyze_and_render(ctx, start=first_start, end=first_end)
+        existing_evidence = ctx.data_object.get_investigation_evidence()
+        if existing_evidence:
+            return [
+                TextContent(
+                    text=(
+                        "The one-call investigation evidence budget is already used. "
+                        "Use the existing chart evidence and return the final decision."
+                    )
+                )
+            ]
+        first_resolution, first_summary, first_chart = self._analyze_and_render(
+            ctx, start=first_start, end=first_end
         )
-        second_range_start, second_range_end, second_summary, second_chart = (
-            self._analyze_and_render(ctx, start=second_start, end=second_end)
+        second_resolution, second_summary, second_chart = self._analyze_and_render(
+            ctx, start=second_start, end=second_end
         )
         ctx.data_object.add_investigation_evidence(
             {
@@ -279,13 +301,19 @@ First-pass case brief:
                 "intervals": [
                     {
                         "label": first_label,
-                        "start": first_range_start.isoformat(),
-                        "end": first_range_end.isoformat(),
+                        "requested_start": first_resolution.requested_start.isoformat(),
+                        "requested_end": first_resolution.requested_end.isoformat(),
+                        "start": first_resolution.range_start.isoformat(),
+                        "end": first_resolution.range_end.isoformat(),
+                        "adjustments": first_resolution.adjustments,
                     },
                     {
                         "label": second_label,
-                        "start": second_range_start.isoformat(),
-                        "end": second_range_end.isoformat(),
+                        "requested_start": second_resolution.requested_start.isoformat(),
+                        "requested_end": second_resolution.requested_end.isoformat(),
+                        "start": second_resolution.range_start.isoformat(),
+                        "end": second_resolution.range_end.isoformat(),
+                        "adjustments": second_resolution.adjustments,
                     },
                 ],
             }
@@ -295,8 +323,7 @@ First-pass case brief:
                 text=self._format_summary(
                     label=first_label,
                     summary=first_summary,
-                    requested_start=first_range_start.isoformat(),
-                    requested_end=first_range_end.isoformat(),
+                    resolution=first_resolution,
                 )
             ),
             ImageContent.from_bytes(first_chart, media_type="image/png"),
@@ -304,8 +331,7 @@ First-pass case brief:
                 text=self._format_summary(
                     label=second_label,
                     summary=second_summary,
-                    requested_start=second_range_start.isoformat(),
-                    requested_end=second_range_end.isoformat(),
+                    resolution=second_resolution,
                 )
             ),
             ImageContent.from_bytes(second_chart, media_type="image/png"),
@@ -317,22 +343,23 @@ First-pass case brief:
         *,
         start: str,
         end: str,
-    ) -> tuple[datetime, datetime, TemperatureWindowSummary, bytes]:
+    ) -> tuple[TemperatureWindowResolution, TemperatureWindowSummary, bytes]:
         """Resolve, summarize, and chart one model-requested interval."""
         alarm_at = ctx.data_object.get_alarm_context()["selected_alarm"]["detected_at"]
         analyzer = TemperatureWindowAnalyzer(
             max_window_days=self.config.max_investigation_days
         )
-        range_start, range_end = analyzer.resolve_range(
+        history = ctx.data_object.get_temperature_history()
+        resolution = analyzer.resolve_available_range(
+            history,
             start=start,
             end=end,
             alarm_at=alarm_at,
         )
-        history = ctx.data_object.get_temperature_history()
         summary = analyzer.summarize(
             history,
-            range_start=range_start,
-            range_end=range_end,
+            range_start=resolution.range_start,
+            range_end=resolution.range_end,
         )
         chart_processor = V1_3TemperatureGraphsProcessor(
             V1_3TemperatureGraphsProcessorConfig(
@@ -341,24 +368,30 @@ First-pass case brief:
         )
         chart = chart_processor.render_custom_combined_chart(
             history,
-            range_start=range_start,
-            range_end=range_end,
+            range_start=resolution.range_start,
+            range_end=resolution.range_end,
             alarm_detected_at=alarm_at,
         )
-        return range_start, range_end, summary, chart
+        return resolution, summary, chart
 
     def _format_summary(
         self,
         *,
         label: str,
         summary: TemperatureWindowSummary,
-        requested_start: str,
-        requested_end: str,
+        resolution: TemperatureWindowResolution,
     ) -> str:
         """Format only the basic measurements needed to orient chart reading."""
+        adjustment_text = (
+            "None" if not resolution.adjustments else " ".join(resolution.adjustments)
+        )
         return (
             f"{label}\n"
-            f"Requested interval: {requested_start} through {requested_end}\n"
+            f"Requested interval: {resolution.requested_start.isoformat()} through "
+            f"{resolution.requested_end.isoformat()}\n"
+            f"Rendered interval: {resolution.range_start.isoformat()} through "
+            f"{resolution.range_end.isoformat()}\n"
+            f"Automatic interval adjustments: {adjustment_text}\n"
             f"Available paired readings: {summary.paired_readings}\n"
             f"Start medians (Steam / Condensate / Delta): "
             f"{summary.start_steam_median_c:.1f}C / "

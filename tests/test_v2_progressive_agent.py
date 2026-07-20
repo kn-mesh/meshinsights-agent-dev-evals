@@ -220,7 +220,7 @@ def test_investigation_agent_progressively_discloses_four_skills() -> None:
     assert request.tools == []
     assert request.toolsets == []
     assert request.max_turns == 8
-    assert request.usage_limits.tool_calls_limit == 5
+    assert request.usage_limits.tool_calls_limit == 4
     assert [capability.id for capability in request.capabilities] == [
         "open-failure-investigation",
         "closed-vs-shutdown",
@@ -275,6 +275,46 @@ def test_deferred_skill_tool_returns_chart_and_basic_context() -> None:
     assert "Start medians (Steam / Condensate / Delta)" in result[0].text
     assert isinstance(result[1], ImageContent)
     assert result[1].base64_data.startswith("iVBOR")
+
+    repeated_result = tool.function(
+        ToolContext(data_object=process_object),
+        (alarm_at - timedelta(days=3)).isoformat(),
+        alarm_at.isoformat(),
+    )
+    assert isinstance(repeated_result, list)
+    assert len(repeated_result) == 1
+    assert isinstance(repeated_result[0], TextContent)
+    assert "evidence budget is already used" in repeated_result[0].text
+    assert len(process_object.get_investigation_evidence()) == 1
+
+
+def test_deferred_skill_tool_normalizes_unsafe_model_ranges() -> None:
+    process_object = _process_object().set_investigation_case_brief(
+        _case_brief().model_dump()
+    )
+    agent = V2CapabilityInvestigationAIAgentProcessor(
+        V2CapabilityInvestigationAIAgentProcessorConfig(
+            model="azure:gpt-5-mini", investigation_chart_dpi=40
+        )
+    )
+    skills = {skill.name: skill for skill in agent._build_skills(process_object)}
+    tool = skills["modulation-vs-failure"].tools[0]
+    alarm_at = process_object.get_alarm_context()["selected_alarm"]["detected_at"]
+
+    result = tool.function(
+        ToolContext(data_object=process_object),
+        (alarm_at - timedelta(days=60)).isoformat(),
+        (alarm_at + timedelta(days=1)).isoformat(),
+    )
+
+    assert isinstance(result, list)
+    assert isinstance(result[0], TextContent)
+    assert "End was clamped to the FDE alarm timestamp" in result[0].text
+    assert "enforce the 45-day limit" in result[0].text
+    assert isinstance(result[1], ImageContent)
+    evidence = process_object.get_investigation_evidence()[0]
+    assert evidence["end"] == alarm_at.isoformat()
+    assert len(evidence["adjustments"]) == 2
 
 
 def test_final_decision_is_rejected_without_focused_chart_evidence() -> None:

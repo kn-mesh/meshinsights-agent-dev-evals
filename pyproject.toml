@@ -1,7 +1,7 @@
 [project]
 name = "mesh.insights.template"
 version = "0.3.0"
-description = "Mesh Insights Template"
+description = "MeshInsights Agent Workbench use-case project"
 readme = "README.md"
 requires-python = ">=3.13.5"
 dependencies = [

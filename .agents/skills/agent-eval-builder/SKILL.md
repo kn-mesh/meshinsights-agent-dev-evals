@@ -1,16 +1,16 @@
 ---
 name: agent-eval-builder
-description: Build or update published-benchmark evaluation orchestration for AI-enabled pipelines in this repo. Use when changing Azure PostgreSQL benchmark loading, immutable Azure Blob evidence, repeated-run execution, result contracts, scoring, or evaluation-results apps. Do not use merely to prepare, execute, or troubleshoot an existing use-case eval command; use run-use-case-evals for that.
+description: Build or update MeshInsights Agent Workbench published-benchmark evaluation orchestration for AI-enabled pipelines in this repo. Use when changing Azure PostgreSQL benchmark loading, immutable Azure Blob evidence, repeated-run execution, result contracts, scoring, or evaluation-results apps. Do not use merely to prepare, execute, or troubleshoot an existing use-case eval command; use run-use-case-evals for that.
 ---
 
 # Agent Eval Builder
 
-Use this skill for evaluation work tied to published benchmarks and AI pipeline
-receipts in this repository.
+Use this skill for Agent Workbench evaluation work tied to published benchmarks
+and AI pipeline receipts in this repository.
 
 ## Terminology And Sources Of Truth
 
-Use the terminology established by the Label Benchmark product and company AI
+Use the terminology established by MeshInsights Benchmark Studio and company AI
 strategy:
 
 - A **benchmark** is a customer-owned, versioned set of approved examples used
@@ -33,7 +33,7 @@ local evidence snapshots into active pipeline/eval execution.
 - `src/benchmarks/models.py` defines `BenchmarkVersion`, `BenchmarkExample`,
   and `SourceArtifact`.
 - `src/benchmarks/postgres_repository.py` reads published benchmark versions
-  from the Label Benchmark Azure PostgreSQL schema.
+  from the Benchmark Studio Azure PostgreSQL schema.
 - `src/storage/azure_blob.py` performs read-only, integrity-checked artifact
   downloads.
 - `src/retrievers/azure_blob_evidence_retriever.py` decodes the raw Spirax
@@ -52,12 +52,12 @@ models.
 ## Hosted Inputs
 
 The operator CLI uses `APP_PROJECT_KEY` plus Azure CLI authentication. It runs
-read-only benchmark queries through the deployed Label Benchmark Container App
+read-only benchmark queries through the deployed Benchmark Studio Container App
 and loads Blob configuration from that hosted environment.
 
 Direct repository or programmatic execution may instead require:
 
-- `DATABASE_URL` for the Label Benchmark Azure PostgreSQL database;
+- `DATABASE_URL` for the Benchmark Studio Azure PostgreSQL database;
 - `AZURE_STORAGE_CONNECTION_STRING`;
 - `AZURE_STORAGE_CONTAINER`.
 

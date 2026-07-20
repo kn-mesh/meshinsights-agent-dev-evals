@@ -1,0 +1,242 @@
+{
+  "summary": {
+    "accuracy": {
+      "overall_classification_accuracy": 1.0,
+      "accuracy_by_label": {
+        "classification": 1.0,
+        "root_cause": 1.0
+      },
+      "accuracy_by_classification": {
+        "Failure": 1.0
+      },
+      "accuracy_by_failure_root_cause": {
+        "Unknown": 1.0
+      },
+      "evaluated_runs": 1,
+      "correct_classification_runs": 1,
+      "classification_accuracy_by_confidence": {
+        "confidence_coverage": {
+          "outputs_with_confidence": 1,
+          "evaluated_outputs": 1,
+          "coverage": 1.0
+        },
+        "all": {
+          "High": {
+            "accuracy": 1.0,
+            "correct_runs": 1,
+            "evaluated_runs": 1
+          },
+          "Low": {
+            "accuracy": null,
+            "correct_runs": 0,
+            "evaluated_runs": 0
+          }
+        },
+        "by_classification": {
+          "Failure": {
+            "High": {
+              "accuracy": 1.0,
+              "correct_runs": 1,
+              "evaluated_runs": 1
+            },
+            "Low": {
+              "accuracy": null,
+              "correct_runs": 0,
+              "evaluated_runs": 0
+            }
+          }
+        }
+      },
+      "root_cause_accuracy_by_confidence": {
+        "confidence_coverage": {
+          "outputs_with_confidence": 1,
+          "evaluated_outputs": 1,
+          "coverage": 1.0
+        },
+        "all": {
+          "High": {
+            "accuracy": null,
+            "correct_runs": 0,
+            "evaluated_runs": 0
+          },
+          "Low": {
+            "accuracy": 1.0,
+            "correct_runs": 1,
+            "evaluated_runs": 1
+          }
+        },
+        "by_failure_root_cause": {
+          "Unknown": {
+            "High": {
+              "accuracy": null,
+              "correct_runs": 0,
+              "evaluated_runs": 0
+            },
+            "Low": {
+              "accuracy": 1.0,
+              "correct_runs": 1,
+              "evaluated_runs": 1
+            }
+          }
+        }
+      }
+    },
+    "reliability": {
+      "planned_runs": 1,
+      "recorded_runs": 1,
+      "successful_runs": 1,
+      "failed_runs": 0,
+      "cancelled_runs": 0,
+      "reliability": 1.0,
+      "failures_by_type": {}
+    },
+    "performance": {
+      "evaluation_wall_time_seconds": 20.525316999992356,
+      "throughput_runs_per_minute": 2.923219163924355,
+      "run_duration_seconds": {
+        "count": 1,
+        "minimum": 19.484781742095947,
+        "maximum": 19.484781742095947,
+        "mean": 19.484781742095947,
+        "median": 19.484781742095947,
+        "p95": 19.484781742095947
+      },
+      "successful_run_duration_seconds": {
+        "count": 1,
+        "minimum": 19.484781742095947,
+        "maximum": 19.484781742095947,
+        "mean": 19.484781742095947,
+        "median": 19.484781742095947,
+        "p95": 19.484781742095947
+      },
+      "failed_run_duration_seconds": {
+        "count": 0,
+        "minimum": null,
+        "maximum": null,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "stage_duration_seconds": {
+        "act": {
+          "count": 1,
+          "minimum": 5.698204040527344e-05,
+          "maximum": 5.698204040527344e-05,
+          "mean": 5.698204040527344e-05,
+          "median": 5.698204040527344e-05,
+          "p95": 5.698204040527344e-05
+        },
+        "process": {
+          "count": 1,
+          "minimum": 18.428452968597412,
+          "maximum": 18.428452968597412,
+          "mean": 18.428452968597412,
+          "median": 18.428452968597412,
+          "p95": 18.428452968597412
+        },
+        "retrieve": {
+          "count": 1,
+          "minimum": 1.0538599491119385,
+          "maximum": 1.0538599491119385,
+          "mean": 1.0538599491119385,
+          "median": 1.0538599491119385,
+          "p95": 1.0538599491119385
+        }
+      }
+    },
+    "total_examples": 1,
+    "runs_per_example": 1
+  },
+  "run_config": {
+    "eval_result_schema_version": 2,
+    "yaml_path": "pipeline_configs/v1_3.ppln",
+    "project_key": "spirax-pulse",
+    "benchmark_key": "phase-1-benchmark-3fb7f544",
+    "benchmark_version_id": "b8667849-57a4-4a16-b3ca-4db7cfa98da8",
+    "benchmark_version_number": 1,
+    "benchmark_source_state_sha256": "f3ae4b8824b73df17ded93100d0ff7cff832162de4aff76dab404768fcc5ae7d",
+    "benchmark_source": "azure_postgres",
+    "evidence_source": "azure_blob",
+    "scope": "example_subset",
+    "runs_per_example": 1,
+    "runtime": "serial",
+    "max_workers": 1,
+    "error_action": "stop",
+    "progress_interval_seconds": 30.0,
+    "ai_provider": "azure",
+    "ai_model": "azure:gpt-5.6-terra",
+    "ai_reasoning_effort": "high",
+    "ai_execution_policies": [
+      {
+        "processor": "V1_3AlarmClassificationAIWorkflowProcessor",
+        "model": "azure:gpt-5.6-terra",
+        "reasoning_effort": "high",
+        "timeout_seconds_per_attempt": 120,
+        "transport_attempts": 3,
+        "output_retries": 0
+      }
+    ],
+    "completed_at_utc": "2026-07-20T22:03:10+00:00"
+  },
+  "selected_example_ids": [
+    "260000115|2026-03-07T22:07:58"
+  ],
+  "results": [
+    {
+      "example_id": "260000115|2026-03-07T22:07:58",
+      "unit_id": "260000115",
+      "decision_timestamp": "2026-03-07T22:07:58+00:00",
+      "source_snapshot_id": "spirax_src_31c1a4847b4dee5f",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Unknown"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "classification": "Failure",
+            "root_cause": "Unknown"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "Low"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "The established On-state baseline was approximately 125\u2013130\u00b0C steam and 85\u201390\u00b0C condensate with a sustained +30 to +40\u00b0C delta (for example February 7\u201312, 2026). After the February 26 restart, the unit remained in an unprecedented elevated but low-temperature regime of roughly 40\u201380\u00b0C with a persistently collapsed/reversed delta, generally -5 to -20\u00b0C through the March 7 alarm; this is not healthy modulation."
+            },
+            "root_cause": {
+              "value": "Unknown",
+              "confidence": "Low",
+              "explanation": "The earliest sustained abnormal regime formed following the February 26 restart with both sides far below their historical On-state temperatures and the condensate often above the steam side. Because the abnormal low/reversed delta appeared during this restart transition rather than showing a clear, sustained first movement of either condensate upward or steam downward, open versus closed failure cannot be determined from these temperatures."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 19.484781742095947,
+          "stage_durations_seconds": {
+            "retrieve": 1.0538599491119385,
+            "process": 18.428452968597412,
+            "act": 5.698204040527344e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260000115",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    }
+  ]
+}

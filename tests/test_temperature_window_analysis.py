@@ -64,6 +64,50 @@ def test_range_rejects_post_alarm_and_oversized_windows() -> None:
         )
 
 
+def test_agent_safe_range_clamps_alarm_and_duration_boundaries() -> None:
+    alarm_at = datetime(2026, 3, 17, 12, 0)
+    analyzer = TemperatureWindowAnalyzer(max_window_days=2)
+
+    resolution = analyzer.resolve_available_range(
+        _history(alarm_at),
+        start=(alarm_at - timedelta(days=3)).isoformat(),
+        end=(alarm_at + timedelta(hours=1)).isoformat(),
+        alarm_at=alarm_at,
+    )
+
+    assert resolution.requested_end == alarm_at + timedelta(hours=1)
+    assert resolution.range_end == alarm_at
+    assert resolution.range_start == alarm_at - timedelta(days=2)
+    assert resolution.adjustments == [
+        "End was clamped to the FDE alarm timestamp.",
+        "Start was moved forward to enforce the 2-day limit.",
+    ]
+
+
+def test_agent_safe_range_snaps_to_nearest_available_readings() -> None:
+    alarm_at = datetime(2026, 3, 17, 12, 0)
+    analyzer = TemperatureWindowAnalyzer(max_window_days=2)
+
+    resolution = analyzer.resolve_available_range(
+        _history(alarm_at),
+        start=(alarm_at - timedelta(hours=36)).isoformat(),
+        end=(alarm_at - timedelta(hours=24)).isoformat(),
+        alarm_at=alarm_at,
+    )
+
+    assert resolution.range_start == alarm_at - timedelta(hours=6)
+    assert resolution.range_end == alarm_at - timedelta(hours=4)
+    assert resolution.adjustments == [
+        "Interval was moved to the nearest available three-reading window."
+    ]
+    summary = analyzer.summarize(
+        _history(alarm_at),
+        range_start=resolution.range_start,
+        range_end=resolution.range_end,
+    )
+    assert summary.paired_readings == 3
+
+
 def test_summary_rejects_incomplete_telemetry_contract() -> None:
     alarm_at = datetime(2026, 3, 17, 12, 0)
     analyzer = TemperatureWindowAnalyzer(max_window_days=2)

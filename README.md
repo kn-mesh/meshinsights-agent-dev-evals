@@ -1,7 +1,7 @@
-# MeshInsights Agent Development and Evals MVP
+# MeshInsights Agent Workbench
 
 This repository combines the full `mi-core` source with a root-level use-case
-template for building and evaluating connected-system agents. It is Python-only,
+Agent Workbench project for building and evaluating connected-system agents. It is Python-only,
 and all Python dependencies are managed with `uv`.
 
 The source snapshots were imported from:

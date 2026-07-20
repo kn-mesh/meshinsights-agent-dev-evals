@@ -69,7 +69,7 @@ The active Spirax operator CLI uses hosted data access as follows:
 
 | Input | Purpose |
 |---|---|
-| `APP_PROJECT_KEY` | Scopes every benchmark query to the configured Label Benchmark project |
+| `APP_PROJECT_KEY` | Scopes every benchmark query to the configured Benchmark Studio project |
 | Azure CLI login | Runs read-only benchmark queries through the deployed Container App and retrieves hosted Blob configuration |
 
 Direct repository or programmatic execution may instead use `DATABASE_URL`,

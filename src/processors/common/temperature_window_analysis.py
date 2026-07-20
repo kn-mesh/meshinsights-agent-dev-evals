@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 import pandas as pd
@@ -27,6 +27,18 @@ class TemperatureWindowSummary(BaseModel):
     median_normalized_delta: float
     same_direction_movement_fraction: float | None = Field(default=None, ge=0, le=1)
     nonpositive_delta_fraction: float = Field(ge=0, le=1)
+
+
+class TemperatureWindowResolution(BaseModel):
+    """Record how a model-requested interval was made safe and renderable."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    requested_start: datetime
+    requested_end: datetime
+    range_start: datetime
+    range_end: datetime
+    adjustments: list[str] = Field(default_factory=list)
 
 
 class TemperatureWindowAnalyzer:
@@ -59,6 +71,69 @@ class TemperatureWindowAnalyzer:
                 f"Investigation window cannot exceed {self.max_window_days} days."
             )
         return range_start, range_end
+
+    def resolve_available_range(
+        self,
+        temperature_history: list[dict[str, Any]],
+        *,
+        start: str,
+        end: str,
+        alarm_at: datetime,
+    ) -> TemperatureWindowResolution:
+        """Normalize a model-selected interval into a bounded range with data."""
+        requested_start = self._parse_datetime_like_alarm(start, alarm_at=alarm_at)
+        requested_end = self._parse_datetime_like_alarm(end, alarm_at=alarm_at)
+        range_start = requested_start
+        range_end = requested_end
+        adjustments: list[str] = []
+
+        if range_end > alarm_at:
+            range_end = alarm_at
+            adjustments.append("End was clamped to the FDE alarm timestamp.")
+        if range_start >= range_end:
+            range_start = range_end - timedelta(days=min(1, self.max_window_days))
+            adjustments.append(
+                "Start was moved before the end to create a valid interval."
+            )
+
+        earliest_allowed = range_end - timedelta(days=self.max_window_days)
+        if range_start < earliest_allowed:
+            range_start = earliest_allowed
+            adjustments.append(
+                f"Start was moved forward to enforce the {self.max_window_days}-day limit."
+            )
+
+        paired_frame = self._build_paired_frame(temperature_history)
+        paired_frame = paired_frame.loc[
+            paired_frame["timestamp"] <= alarm_at
+        ].reset_index(drop=True)
+        if len(paired_frame) < 3:
+            raise ValueError(
+                "Temperature history must contain at least three paired readings at "
+                "or before the FDE alarm."
+            )
+
+        selected = paired_frame.loc[
+            (paired_frame["timestamp"] >= range_start)
+            & (paired_frame["timestamp"] <= range_end)
+        ]
+        if len(selected) < 3:
+            range_start, range_end = self._nearest_three_reading_range(
+                paired_frame,
+                requested_start=range_start,
+                requested_end=range_end,
+            )
+            adjustments.append(
+                "Interval was moved to the nearest available three-reading window."
+            )
+
+        return TemperatureWindowResolution(
+            requested_start=requested_start,
+            requested_end=requested_end,
+            range_start=range_start,
+            range_end=range_end,
+            adjustments=adjustments,
+        )
 
     def summarize(
         self,
@@ -130,6 +205,21 @@ class TemperatureWindowAnalyzer:
         range_end: datetime,
     ) -> pd.DataFrame:
         """Build one sorted interval containing usable paired readings."""
+        frame = self._build_paired_frame(temperature_history)
+        frame = frame.loc[
+            (frame["timestamp"] >= range_start) & (frame["timestamp"] <= range_end),
+            ["timestamp", "steam_temperature", "condensate_temperature"],
+        ].copy()
+        if len(frame) < 3:
+            raise ValueError(
+                "Investigation window must contain at least three paired readings."
+            )
+        return frame.reset_index(drop=True)
+
+    def _build_paired_frame(
+        self, temperature_history: list[dict[str, Any]]
+    ) -> pd.DataFrame:
+        """Build sorted telemetry containing valid paired measurements."""
         frame = pd.DataFrame(temperature_history)
         if frame.empty:
             raise ValueError("Temperature history is empty.")
@@ -142,16 +232,54 @@ class TemperatureWindowAnalyzer:
             )
 
         frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=False)
-        frame = frame.loc[
-            (frame["timestamp"] >= range_start) & (frame["timestamp"] <= range_end),
-            ["timestamp", "steam_temperature", "condensate_temperature"],
-        ].copy()
-        frame = frame.dropna(subset=["steam_temperature", "condensate_temperature"])
-        if len(frame) < 3:
-            raise ValueError(
-                "Investigation window must contain at least three paired readings."
+        return (
+            frame.loc[:, ["timestamp", "steam_temperature", "condensate_temperature"]]
+            .dropna(subset=["timestamp", "steam_temperature", "condensate_temperature"])
+            .sort_values("timestamp")
+            .reset_index(drop=True)
+        )
+
+    def _nearest_three_reading_range(
+        self,
+        paired_frame: pd.DataFrame,
+        *,
+        requested_start: datetime,
+        requested_end: datetime,
+    ) -> tuple[datetime, datetime]:
+        """Select the closest consecutive three-reading window within the limit."""
+        requested_midpoint = requested_start + (requested_end - requested_start) / 2
+        max_duration = timedelta(days=self.max_window_days)
+        best_range: tuple[pd.Timestamp, pd.Timestamp] | None = None
+        best_distance_seconds: float | None = None
+
+        for index in range(len(paired_frame) - 2):
+            candidate_start = paired_frame["timestamp"].iloc[index]
+            candidate_end = paired_frame["timestamp"].iloc[index + 2]
+            candidate_duration = candidate_end - candidate_start
+            if (
+                candidate_duration <= pd.Timedelta(0)
+                or candidate_duration > max_duration
+            ):
+                continue
+            candidate_midpoint = candidate_start + candidate_duration / 2
+            distance_seconds = abs(
+                (
+                    candidate_midpoint.to_pydatetime() - requested_midpoint
+                ).total_seconds()
             )
-        return frame.sort_values("timestamp").reset_index(drop=True)
+            if (
+                best_distance_seconds is None
+                or distance_seconds < best_distance_seconds
+            ):
+                best_range = (candidate_start, candidate_end)
+                best_distance_seconds = distance_seconds
+
+        if best_range is None:
+            raise ValueError(
+                "Temperature history has no three-reading interval within the "
+                f"{self.max_window_days}-day investigation limit."
+            )
+        return best_range[0].to_pydatetime(), best_range[1].to_pydatetime()
 
     def _parse_datetime_like_alarm(self, value: str, *, alarm_at: datetime) -> datetime:
         """Parse ISO-8601 input and align its timezone shape with the alarm."""

@@ -1,7 +1,7 @@
 # Development Backlog
 
-This backlog covers deferred capabilities for the agent-development and
-evaluation workspace. The separate Label Benchmark product owns candidate
+This backlog covers deferred capabilities for MeshInsights Agent Workbench.
+The separate MeshInsights Benchmark Studio product owns candidate
 intake, evidence review, labeling, benchmark creation and publication, and
 production-feedback conversion. Features here may consume its published Azure
 artifacts but must not recreate or mutate those workflows.
@@ -10,13 +10,13 @@ artifacts but must not recreate or mutate those workflows.
 
 **Status:** Missing; define before the next use-case project is initialized.
 
-Create a repeatable bootstrap flow that configures a new agent-development
-project from the outputs of the use case's labeling/readiness phase.
+Create a repeatable bootstrap flow that configures a new Agent Workbench project
+from the outputs of the use case's labeling/readiness phase.
 
 The flow should retrieve or record, without copying customer secrets into the
 repository:
 
-- Azure environment and deployed Label Benchmark application identity;
+- Azure environment and deployed Benchmark Studio application identity;
 - project key, use-case identity, and published benchmark catalog;
 - configured evaluation-label fields and the label/output schema they imply;
 - evidence-recipe identity and immutable source-snapshot contract;
@@ -58,7 +58,7 @@ The workflow should:
   benchmark truth;
 - define retention, naming, deduplication, and redaction rules;
 - use a dedicated least-privilege write destination that cannot update the
-  Label Benchmark PostgreSQL tables or immutable source-snapshot objects.
+  Benchmark Studio PostgreSQL tables or immutable source-snapshot objects.
 
 Open design questions:
 
@@ -74,7 +74,7 @@ Open design questions:
 **Status:** TBD; strategic handoff artifact with no implemented manifest yet.
 
 Define a versioned, inspectable package that promotes a validated agent variant
-from this R&D/eval workspace into a customer-owned pilot or production runtime.
+from Agent Workbench into a customer-owned pilot or production runtime.
 The package is a deployment handoff contract, not a new generic production
 runtime or hosting platform.
 
@@ -91,7 +91,7 @@ At minimum, the package should identify:
 - action policy, confidence/escalation behavior, and safety constraints;
 - supporting published benchmark version and selected promoted eval results;
 - known limitations and supported benchmark or operating slices;
-- production feedback schema and routing contract for the Label Benchmark
+- production feedback schema and routing contract for the Benchmark Studio
   product to ingest through its own feedback workflow.
 
 The package should be portable across Microsoft Foundry and other approved

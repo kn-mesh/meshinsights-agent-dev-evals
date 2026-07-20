@@ -1,11 +1,17 @@
 ---
 name: project-guide
-description: Orient developers in this repository and give codebase-grounded development guidance. Use when a developer asks how the project fits together, where a change belongs, how to customize the template, what development sequence to follow, whether behavior belongs in the use-case project or mi-core, which source files explain current behavior, or which specialized repo skill should handle a task.
+description: Orient developers in the MeshInsights Agent Workbench repository and give codebase-grounded development guidance. Use when a developer asks how the project fits together, where a change belongs, how to customize the template, what development sequence to follow, whether behavior belongs in the use-case project or mi-core, which source files explain current behavior, or which specialized repo skill should handle a task.
 ---
 
 # Project Guide
 
 Use this skill to answer developer questions with current repository evidence and to route implementation work. Do not make developers reconstruct an implementation from prose when Codex can inspect and change the code directly.
+
+This repository is a use-case implementation of **MeshInsights Agent
+Workbench**. It consumes published benchmark versions and frozen evidence from
+**MeshInsights Benchmark Studio** through read-only contracts, then develops,
+compares, evaluates, and packages agent variants. It does not own Benchmark
+Studio workflow truth or the production agent runtime.
 
 ## Ground Answers In The Repository
 
