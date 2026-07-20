@@ -1,0 +1,37 @@
+name: pulse_alarm_failure_analysis_v_2
+version: 2.0.0
+
+metadata_class: BenchmarkExamplePipelineMetadata
+
+objects:
+  process: PulseFailureAnalysisProcessObject
+  action: PulseFailureAnalysisActionObject
+
+retrieve:
+  hydrator: V1_3RetrieveToProcessHydrator
+  retrievers:
+    - retriever: AzureBlobBenchmarkEvidenceRetriever
+
+process:
+  hydrator: V1_3ProcessToActionHydrator
+  processors:
+    - processor: V1_3TemperatureGraphsProcessor
+      window_days_list: [7, 30, 365]
+      segment_count: 4
+    - processor: V2AlarmInvestigationAIAgentProcessor
+      model: azure:gpt-5-mini
+      reasoning_effort: medium
+      max_turns: 6
+      tool_calls_limit: 4
+      tool_timeout: 30
+      max_investigation_days: 45
+      investigation_chart_dpi: 120
+      timeout: 180
+      transport_retries: 1
+      tool_retries: 1
+      output_retries: 1
+
+action:
+  hydrator: V1_3FinalizeActionHydrator
+  actions:
+    - action: NoOpAction

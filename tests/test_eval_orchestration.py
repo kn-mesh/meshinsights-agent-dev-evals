@@ -183,6 +183,50 @@ def test_run_eval_scores_published_examples_and_writes_benchmark_identity(
     assert payload["run_config"]["ai_model"] == "azure:gpt-5.6-luna"
     assert payload["summary"]["total_runs"] == 2
     assert payload["summary"]["accuracy_by_label"]["root_cause"] == 1.0
+    assert payload["summary"]["accuracy_by_classification"] == {"Failure": 1.0}
+    assert payload["summary"]["accuracy_by_failure_root_cause"] == {
+        "Closed Failure": 1.0
+    }
+    assert payload["summary"]["classification_accuracy_by_confidence"] == {
+        "all": {
+            "High": {"accuracy": 1.0, "correct_runs": 2, "evaluated_runs": 2},
+            "Low": {"accuracy": None, "correct_runs": 0, "evaluated_runs": 0},
+        },
+        "by_classification": {
+            "Failure": {
+                "High": {
+                    "accuracy": 1.0,
+                    "correct_runs": 2,
+                    "evaluated_runs": 2,
+                },
+                "Low": {
+                    "accuracy": None,
+                    "correct_runs": 0,
+                    "evaluated_runs": 0,
+                },
+            }
+        },
+    }
+    assert payload["summary"]["root_cause_accuracy_by_confidence"] == {
+        "all": {
+            "High": {"accuracy": 1.0, "correct_runs": 2, "evaluated_runs": 2},
+            "Low": {"accuracy": None, "correct_runs": 0, "evaluated_runs": 0},
+        },
+        "by_failure_root_cause": {
+            "Closed Failure": {
+                "High": {
+                    "accuracy": 1.0,
+                    "correct_runs": 2,
+                    "evaluated_runs": 2,
+                },
+                "Low": {
+                    "accuracy": None,
+                    "correct_runs": 0,
+                    "evaluated_runs": 0,
+                },
+            }
+        },
+    }
     assert payload["results"][0]["source_snapshot_id"] == "snapshot-id"
     assert (
         payload["results"][0]["runs"][0]["ai_output"]["classification"]["confidence"]

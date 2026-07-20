@@ -61,6 +61,7 @@ BASE_RESULTS_DIR = Path("src/evals/eval_results")
 DEFAULT_AZURE_RESOURCE_GROUP = "rg-misprx-dv"
 DEFAULT_AZURE_CONTAINER_APP = "label-benchmark"
 _NO_EVAL = EvalResult(None, None, None)
+_CONFIDENCE_LEVELS = ("High", "Low")
 _RECEIPT_FIELD_SPECS: tuple[ReceiptFieldSpec, ...] = (
     ReceiptFieldSpec(
         output_name="classification",
@@ -544,12 +545,132 @@ def _build_summary(
             total=len(evaluated_classifications),
         ),
         "accuracy_by_label": accuracy_by_label,
+        "accuracy_by_classification": _accuracy_by_expected_label(
+            results,
+            label_name="classification",
+        ),
+        "accuracy_by_failure_root_cause": _accuracy_by_expected_label(
+            _failure_results(results),
+            label_name="root_cause",
+        ),
+        "classification_accuracy_by_confidence": _accuracy_by_confidence(
+            results,
+            label_name="classification",
+            group_name="by_classification",
+        ),
+        "root_cause_accuracy_by_confidence": _accuracy_by_confidence(
+            _failure_results(results),
+            label_name="root_cause",
+            group_name="by_failure_root_cause",
+        ),
         "total_examples": len(results),
         "runs_per_example": runs_per_example,
         "total_runs": len(attempts),
         "successful_runs": sum(attempt.success for attempt in attempts),
         "evaluated_runs": len(evaluated_classifications),
         "correct_runs": sum(flag is True for flag in evaluated_classifications),
+    }
+
+
+def _failure_results(
+    results: list[_ExampleEvalResult],
+) -> list[_ExampleEvalResult]:
+    """Return examples whose approved classification requires root-cause scoring."""
+    return [
+        result
+        for result in results
+        if result.example.approved_labels.get("classification") == "Failure"
+    ]
+
+
+def _accuracy_by_expected_label(
+    results: list[_ExampleEvalResult],
+    *,
+    label_name: str,
+) -> dict[str, float | None]:
+    """Compute run accuracy grouped by the approved value for one label."""
+    counts: dict[str, dict[str, int]] = {}
+    for result in results:
+        expected = result.example.approved_labels.get(label_name)
+        if expected is None:
+            continue
+        bucket = counts.setdefault(expected, {"correct": 0, "evaluated": 0})
+        for attempt in result.attempts:
+            correct = attempt.evals.get(label_name, _NO_EVAL).is_correct
+            if correct is None:
+                continue
+            bucket["evaluated"] += 1
+            bucket["correct"] += correct is True
+    return {
+        expected: EvalSummaryBuilder.safe_accuracy(
+            correct=bucket["correct"],
+            total=bucket["evaluated"],
+        )
+        for expected, bucket in sorted(counts.items())
+    }
+
+
+def _accuracy_by_confidence(
+    results: list[_ExampleEvalResult],
+    *,
+    label_name: str,
+    group_name: str,
+) -> dict[str, Any]:
+    """Compute accuracy for each model confidence, overall and by expected label."""
+    all_counts = _empty_confidence_counts()
+    grouped_counts: dict[str, dict[str, dict[str, int]]] = {}
+    for result in results:
+        expected = result.example.approved_labels.get(label_name)
+        if expected is None:
+            continue
+        expected_counts = grouped_counts.setdefault(
+            expected,
+            _empty_confidence_counts(),
+        )
+        for attempt in result.attempts:
+            ai_output = attempt.get_artifact("ai_output")
+            label_output = (
+                ai_output.get(label_name) if isinstance(ai_output, dict) else None
+            )
+            confidence = (
+                label_output.get("confidence")
+                if isinstance(label_output, dict)
+                else None
+            )
+            correct = attempt.evals.get(label_name, _NO_EVAL).is_correct
+            if confidence not in _CONFIDENCE_LEVELS or correct is None:
+                continue
+            for counts in (all_counts, expected_counts):
+                counts[confidence]["evaluated"] += 1
+                counts[confidence]["correct"] += correct is True
+    return {
+        "all": _serialize_confidence_counts(all_counts),
+        group_name: {
+            expected: _serialize_confidence_counts(counts)
+            for expected, counts in sorted(grouped_counts.items())
+        },
+    }
+
+
+def _empty_confidence_counts() -> dict[str, dict[str, int]]:
+    return {
+        confidence: {"correct": 0, "evaluated": 0} for confidence in _CONFIDENCE_LEVELS
+    }
+
+
+def _serialize_confidence_counts(
+    counts: dict[str, dict[str, int]],
+) -> dict[str, dict[str, int | float | None]]:
+    return {
+        confidence: {
+            "accuracy": EvalSummaryBuilder.safe_accuracy(
+                correct=counts[confidence]["correct"],
+                total=counts[confidence]["evaluated"],
+            ),
+            "correct_runs": counts[confidence]["correct"],
+            "evaluated_runs": counts[confidence]["evaluated"],
+        }
+        for confidence in _CONFIDENCE_LEVELS
     }
 
 
