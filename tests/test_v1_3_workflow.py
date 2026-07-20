@@ -90,7 +90,7 @@ def test_v1_3_executes_one_structured_multimodal_workflow_request() -> None:
     request = backend.requests[0]
     assert request.output_schema is PulseFailureAnalysisResult
     assert request.timeout == 120
-    assert request.transport_retries == 1
+    assert request.transport_retries == 3
     assert request.output_retries == 0
     assert "<decision_framework>" in request.system_prompt
     assert "<critical_rules>" in request.system_prompt

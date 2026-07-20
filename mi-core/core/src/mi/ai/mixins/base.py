@@ -325,7 +325,19 @@ class AIProcessorMixin(Generic[PDO, OutputT]):
         return str(value) if value is not None else None
 
     def _normalize_error(self, error: Exception, prefix: str = "AI") -> ValueError:
-        message = str(error)
-        if isinstance(error, ValueError) and message.startswith(f"{self.name}:"):
+        if isinstance(error, ValueError) and str(error).startswith(f"{self.name}:"):
             return error
+        message = self._describe_error(error)
         return ValueError(f"{self.name}: {prefix} failed: {message}")
+
+    @staticmethod
+    def _describe_error(error: Exception) -> str:
+        """Retain provider exception identity and safe request diagnostics."""
+        details = [f"{type(error).__name__}: {error}"]
+        status_code = getattr(error, "status_code", None)
+        if isinstance(status_code, int):
+            details.append(f"status_code={status_code}")
+        request_id = getattr(error, "request_id", None)
+        if isinstance(request_id, str) and request_id:
+            details.append(f"request_id={request_id}")
+        return " | ".join(details)

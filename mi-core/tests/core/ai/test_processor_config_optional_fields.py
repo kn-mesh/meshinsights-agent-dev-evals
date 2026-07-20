@@ -118,6 +118,22 @@ def test_split_retry_values_override_defaults_independently() -> None:
     assert mixin._get_effective_output_retries() == 1
 
 
+def test_normalized_errors_retain_exception_type_and_provider_diagnostics() -> None:
+    class ProviderError(Exception):
+        status_code = 503
+        request_id = "request-123"
+
+    mixin = _DummyMixin(AIProcessorConfig(model="azure:gpt-5"))
+
+    error = mixin._normalize_error(ProviderError("temporarily unavailable"), "Workflow")
+
+    assert str(error) == (
+        "dummy: Workflow failed: ProviderError: temporarily unavailable | "
+        "status_code=503 | request_id=request-123"
+    )
+    assert mixin._normalize_error(error, "Workflow") is error
+
+
 def test_usage_limits_are_backend_neutral_and_opt_in() -> None:
     config = AIProcessorConfig(
         model="azure:gpt-5",

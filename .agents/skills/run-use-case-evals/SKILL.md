@@ -16,6 +16,9 @@ in this skill.
    Do not execute an eval when the user only asks for guidance.
 2. Read `models.yaml`; confirm the requested model exists and note its `api`
    family. Catalog membership proves selectability, not runtime compatibility.
+   When the user explicitly requests the default model, resolve `default_model`
+   from the catalog and pass that concrete model explicitly after confirming its
+   API family is supported.
    If the user did not name a model and compatibility is not already proven,
    retain the runbook's `<provider:model>` placeholder instead of inserting the
    catalog default.
@@ -30,6 +33,9 @@ in this skill.
    successful Blob `206` logs or thread-shutdown noise for the root cause.
 6. Verify the resulting JSON `run_config` matches the requested benchmark,
    model, reasoning effort, scope, and repetition settings.
+7. Expect persisted results under
+   `eval_results/<pipeline>/<benchmark-key>/v<version>/<scope>/`. Report the
+   exact written file rather than reconstructing its timestamped name.
 
 ## Boundaries
 

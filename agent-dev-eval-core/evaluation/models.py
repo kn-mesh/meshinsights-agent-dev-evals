@@ -19,6 +19,7 @@ class FailureType(StrEnum):
     """Normalized operational failure categories."""
 
     PROVIDER_ERROR = "provider_error"
+    TRANSPORT_ERROR = "transport_error"
     TIMEOUT = "timeout"
     PIPELINE_ERROR = "pipeline_error"
     RECEIPT_CONTRACT_ERROR = "receipt_contract_error"

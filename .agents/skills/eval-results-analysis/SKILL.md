@@ -33,8 +33,9 @@ Rules:
 1. Confirm scope from the user.
    The user will usually tell you which pipeline versions, runs, or prompt revisions matter. Focus on those runs first instead of diffing every eval folder in the repo.
 2. Read the relevant eval results.
-   Start under `src/evals/eval_results_<pipeline-stem>/`.
-   Typical `v1_3` files live under `src/evals/eval_results_v1_3/<benchmark_key>/v<benchmark-version>/<scope>/*.json`.
+   Start under root-level `eval_results/<pipeline-stem>/`.
+   Typical `v1_3` files live under
+   `eval_results/v1_3/<benchmark_key>/v<benchmark-version>/<scope>/*.json`.
 3. Identify the main regression or improvement pattern.
    Use the top-level `summary` and then drill into `results`.
    Look for misses by classification, root cause, confidence band, and repeated failure modes across multiple units.
@@ -46,7 +47,10 @@ Rules:
 ## What To Look At
 
 - `summary`
-  Use this for overall accuracy, class splits, confidence splits, and root-cause breakdowns.
+  Use `summary.accuracy` for class, confidence, and root-cause breakdowns.
+  Review `summary.reliability` separately for provider, pipeline, timeout,
+  cancellation, and receipt-contract failures; failed runs are excluded from
+  accuracy. Use `summary.performance` for throughput and latency distributions.
 - `run_config`
   Use this to confirm the pipeline config, published benchmark version, model, reasoning effort, and frozen source snapshot identities used for that run.
 - `results[].runs[]`

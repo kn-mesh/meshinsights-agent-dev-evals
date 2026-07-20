@@ -3,13 +3,22 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from evaluation import (
     StructuredOutputSpec,
+    build_results_dir_for_pipeline,
     extract_structured_outputs,
     validate_metadata_identity,
     write_json_exclusive,
 )
+
+
+def test_pipeline_results_are_nested_under_one_outer_directory() -> None:
+    assert build_results_dir_for_pipeline(
+        base_results_dir=Path("eval_results"),
+        yaml_path=Path("pipeline_configs/v1_3.ppln"),
+    ) == Path("eval_results/v1_3")
 
 
 def test_confidence_is_optional_when_configured() -> None:

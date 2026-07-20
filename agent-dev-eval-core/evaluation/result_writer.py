@@ -20,7 +20,7 @@ def normalize_filename_token(value: str | None) -> str:
 def build_results_dir_for_pipeline(*, base_results_dir: Path, yaml_path: Path) -> Path:
     """Return the output directory scoped to one pipeline filename."""
     pipeline_token = normalize_filename_token(yaml_path.stem)
-    return base_results_dir.parent / f"{base_results_dir.name}_{pipeline_token}"
+    return base_results_dir / pipeline_token
 
 
 def write_json_exclusive(output_path: Path, payload: dict[str, Any]) -> Path:

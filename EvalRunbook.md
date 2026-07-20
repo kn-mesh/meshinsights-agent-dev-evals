@@ -48,6 +48,12 @@ Replace every angle-bracket placeholder. Choose `--ai-model` from
 `models.yaml`. Keep `--benchmark-version` explicit for comparable runs;
 omitting it selects the latest published version.
 
+`models.yaml` currently declares `azure:gpt-5.6-luna` as the default model and
+routes it through the `openai_responses` API family. Omitting `--ai-model`
+selects that catalog default, but explicit commands should still include
+`--ai-model azure:gpt-5.6-luna` so the persisted run configuration and operator
+intent are immediately clear.
+
 Do not replace `<provider:model>` with the catalog default merely because it is
 listed. Confirm that the current runtime adapter supports the entry's `api`
 family first. Models marked `openai_responses` are routed through Azure's
@@ -83,7 +89,26 @@ combined as an intersection.
 - `--unit-ids <id> [<id> ...]`: every selected example for those units.
 - `--classifications <label> [<label> ...]`: examples with those approved
   classification labels.
+- `--root-causes <label> [<label> ...]`: examples with those approved root-cause
+  labels. Quote values containing spaces, such as `--root-causes 'Open Failure'`.
 - No scope flag: every example in the selected benchmark version.
+
+For example, run every approved Open Failure example once with the catalog
+default model:
+
+```bash
+uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
+  --project-key spirax-pulse \
+  --benchmark-key phase-1-benchmark-3fb7f544 \
+  --benchmark-version 1 \
+  --root-causes 'Open Failure' \
+  --ai-model azure:gpt-5.6-luna \
+  --ai-reasoning-effort medium \
+  --runs-per-example 1 \
+  --runtime threaded \
+  --max-workers 4 \
+  --error-action continue
+```
 
 ## One-Time Benchmark Discovery
 
@@ -115,7 +140,7 @@ The command prints the exact result file when it completes. For `v1_3`, files
 are written under:
 
 ```text
-src/evals/eval_results_v1_3/<benchmark-key>/v<version>/<scope>/*.json
+eval_results/v1_3/<benchmark-key>/v<version>/<scope>/*.json
 ```
 
 Confirm `run_config` records the intended benchmark version, model, reasoning
@@ -129,6 +154,21 @@ timeout, cancellation, and receipt-contract failures are reported under
 wall time, throughput, run-duration statistics, and available stage timings.
 Confidence coverage and High/Low accuracy are emitted for outputs whose agent
 contract declares optional confidence.
+
+## Reliability And Transient Failures
+
+AI processor `transport_retries` values are total HTTP attempts, including the
+initial request. A value of `3` therefore allows two retries after transient
+timeouts, connection failures, rate limits, and retryable server responses.
+The v1_3 pipeline keeps a 120-second timeout per attempt and uses three
+transport attempts.
+
+Persisted `run_config.ai_execution_policies` records the effective timeout and
+retry policy for every AI processor. Failed runs also include
+`failure_details`, with the failed stage, pipeline and stage correlation IDs,
+and a bounded exception chain. Use `summary.reliability.failures_by_type` to
+separate `timeout`, `transport_error`, `provider_error`, and pipeline or receipt
+contract failures. Operationally failed runs remain excluded from accuracy.
 
 ## Fast Diagnosis
 

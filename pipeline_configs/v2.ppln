@@ -1,4 +1,4 @@
-name: pulse_alarm_failure_analysis_v_2
+name: pulse_alarm_failure_analysis_v2
 version: 2.0.0
 
 metadata_class: BenchmarkExamplePipelineMetadata
@@ -13,16 +13,16 @@ retrieve:
     - retriever: AzureBlobBenchmarkEvidenceRetriever
 
 process:
-  hydrator: V1_3ProcessToActionHydrator
+  hydrator: V2ProcessToActionHydrator
   processors:
     - processor: V1_3TemperatureGraphsProcessor
-      window_days_list: [7, 30, 365]
+      window_days_list: [30, 365]
       segment_count: 4
-    - processor: V2AlarmInvestigationAIAgentProcessor
-      model: azure:gpt-5-mini
-      reasoning_effort: medium
-      max_turns: 5
-      tool_calls_limit: 3
+    - processor: V2CaseBriefAIWorkflowProcessor
+      window_days_list: [30, 365]
+    - processor: V2CapabilityInvestigationAIAgentProcessor
+      max_turns: 8
+      tool_calls_limit: 5
       max_investigation_days: 45
 
 action:

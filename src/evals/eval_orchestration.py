@@ -16,6 +16,8 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from evaluation import (
     AttemptStatus,
     ErrorActionType,
@@ -66,7 +68,7 @@ _QUIET_EXECUTOR_LOGGER.addHandler(logging.NullHandler())
 _QUIET_EXECUTOR_LOGGER.propagate = False
 _QUIET_EXECUTOR_LOGGER.setLevel(logging.CRITICAL)
 
-BASE_RESULTS_DIR = Path("src/evals/eval_results")
+BASE_RESULTS_DIR = Path("eval_results")
 DEFAULT_AZURE_RESOURCE_GROUP = "rg-misprx-dv"
 DEFAULT_AZURE_CONTAINER_APP = "label-benchmark"
 _STRUCTURED_OUTPUT_SPECS: tuple[StructuredOutputSpec, ...] = (
@@ -299,6 +301,11 @@ def run_eval(
             "ai_provider": _extract_provider(ai_model),
             "ai_model": ai_model,
             "ai_reasoning_effort": ai_reasoning_effort,
+            "ai_execution_policies": _ai_execution_policies(
+                yaml_path,
+                ai_model=ai_model,
+                ai_reasoning_effort=ai_reasoning_effort,
+            ),
             "completed_at_utc": completed_at.isoformat(timespec="seconds"),
         },
         "selected_example_ids": [example.example_id for example in examples],
@@ -467,6 +474,7 @@ def _run_work_item(
                 duration_seconds=duration_seconds,
                 stage_durations_seconds=stage_durations,
                 work_item=work_item,
+                artifacts={"failure_details": _receipt_failure_details(receipt)},
             )
         elif receipt.act_receipt is None or not receipt.act_receipt.success:
             attempt = _failed_attempt(
@@ -616,6 +624,18 @@ def _classify_failure_message(
     normalized = message.lower()
     if "timeout" in normalized or "timed out" in normalized:
         return FailureType.TIMEOUT
+    transport_markers = (
+        "connection error",
+        "connectionerror",
+        "connecterror",
+        "network error",
+        "networkerror",
+        "readerror",
+        "writeerror",
+        "remoteprotocolerror",
+    )
+    if any(marker in normalized for marker in transport_markers):
+        return FailureType.TRANSPORT_ERROR
     provider_markers = ("status_code", "model request", "rate limit", "provider")
     if any(marker in normalized for marker in provider_markers):
         return FailureType.PROVIDER_ERROR
@@ -651,6 +671,90 @@ def _receipt_error(receipt: Any) -> str:
         if stage is not None and stage.error
     ]
     return "; ".join(errors) or "Pipeline receipt reported failure."
+
+
+def _receipt_failure_details(receipt: Any) -> dict[str, Any]:
+    """Return structured, correlation-safe diagnostics for failed stages."""
+    stages: list[dict[str, Any]] = []
+    for stage_name in ("retrieve", "process", "act"):
+        stage = receipt.get_stage_receipt(stage_name)
+        if stage is None or stage.success:
+            continue
+        details: dict[str, Any] = {
+            "stage": stage_name,
+            "correlation_id": stage.correlation_id,
+            "duration_seconds": stage.execution_time_seconds,
+            "error": stage.error,
+        }
+        error_details = stage.metadata.get("error_details")
+        if isinstance(error_details, dict):
+            details["error_details"] = error_details
+        stages.append(details)
+    return {
+        "pipeline_id": getattr(receipt, "pipeline_id", None),
+        "correlation_id": getattr(receipt, "correlation_id", None),
+        "failed_stages": stages,
+    }
+
+
+def _ai_execution_policies(
+    yaml_path: Path,
+    *,
+    ai_model: str | None,
+    ai_reasoning_effort: str | None,
+) -> list[dict[str, Any]]:
+    """Describe effective AI request safeguards persisted with an eval run."""
+    config = yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(config, dict):
+        raise ValueError("Pipeline YAML must define a mapping at its root.")
+    process_config = config.get("process", {})
+    processors = (
+        process_config.get("processors", [])
+        if isinstance(process_config, dict)
+        else []
+    )
+    policies: list[dict[str, Any]] = []
+    for processor in processors:
+        if not isinstance(processor, dict):
+            continue
+        processor_name = str(processor.get("processor", ""))
+        if not (
+            "AI" in processor_name
+            or "Agent" in processor_name
+            or "model" in processor
+        ):
+            continue
+        legacy_retries = processor.get("retries")
+        transport_attempts = (
+            max(1, legacy_retries)
+            if isinstance(legacy_retries, int)
+            else processor.get("transport_retries", 3)
+        )
+        tool_retries = (
+            legacy_retries
+            if isinstance(legacy_retries, int)
+            else processor.get("tool_retries", 3)
+        )
+        configured_output_retries = processor.get("output_retries")
+        policies.append(
+            {
+                "processor": processor_name,
+                "model": ai_model or processor.get("model"),
+                "reasoning_effort": (
+                    ai_reasoning_effort
+                    or processor.get("reasoning_effort")
+                    or "medium"
+                ),
+                "timeout_seconds_per_attempt": processor.get("timeout"),
+                "transport_attempts": transport_attempts,
+                "output_retries": (
+                    tool_retries
+                    if configured_output_retries is None
+                    else configured_output_retries
+                ),
+            }
+        )
+    return policies
 
 
 def _build_summary(
@@ -808,6 +912,7 @@ def _build_results(results: list[_ExampleEvalResult]) -> list[dict[str, Any]]:
                         else None
                     ),
                     "error": attempt.error,
+                    "failure_details": attempt.get_artifact("failure_details"),
                     "duration_seconds": attempt.duration_seconds,
                     "stage_durations_seconds": attempt.stage_durations_seconds,
                 }

@@ -164,6 +164,8 @@ agent-dev-eval-core/
   evaluation/
   tests/
 data/
+eval_results/
+  <pipeline>/
 docs/
   current-dev/
   product-strategy/

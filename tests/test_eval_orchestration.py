@@ -21,6 +21,10 @@ from src.benchmarks.models import (
 from src.evals import eval_orchestration
 
 
+def test_default_results_directory_is_at_repository_root() -> None:
+    assert eval_orchestration.BASE_RESULTS_DIR == Path("eval_results")
+
+
 def _benchmark() -> BenchmarkVersion:
     artifacts = (
         SourceArtifact(
@@ -198,6 +202,16 @@ def test_run_eval_scores_published_examples_and_writes_benchmark_identity(
     assert payload["run_config"]["benchmark_version_number"] == 4
     assert payload["run_config"]["ai_model"] == "azure:gpt-5.6-luna"
     assert payload["run_config"]["eval_result_schema_version"] == 2
+    assert payload["run_config"]["ai_execution_policies"] == [
+        {
+            "processor": "V1_3AlarmClassificationAIWorkflowProcessor",
+            "model": "azure:gpt-5.6-luna",
+            "reasoning_effort": "medium",
+            "timeout_seconds_per_attempt": 120,
+            "transport_attempts": 3,
+            "output_retries": 0,
+        }
+    ]
     summary = payload["summary"]
     accuracy = summary["accuracy"]
     assert accuracy["accuracy_by_label"]["root_cause"] == 1.0
@@ -317,6 +331,57 @@ def test_failed_eval_attempt_reduces_reliability_but_not_accuracy(
     }
     assert payload["results"][0]["runs"][1]["label_correctness"] == {}
     assert payload["results"][0]["runs"][1]["failure_type"] == "provider_error"
+
+
+def test_connection_errors_are_classified_as_transport_failures() -> None:
+    assert (
+        eval_orchestration._classify_failure_message(
+            "Workflow failed: APIConnectionError: Connection error.",
+            default=eval_orchestration.FailureType.PIPELINE_ERROR,
+        )
+        is eval_orchestration.FailureType.TRANSPORT_ERROR
+    )
+
+
+def test_failed_receipt_preserves_stage_diagnostics() -> None:
+    stage = StageReceipt(
+        "process",
+        False,
+        51.4,
+        error="Workflow failed: APIConnectionError: Connection error.",
+        correlation_id="stage-correlation",
+        metadata={
+            "error_details": {
+                "exception_chain": [
+                    {
+                        "exception_type": "APIConnectionError",
+                        "message": "Connection error.",
+                        "request_id": "request-123",
+                    }
+                ]
+            }
+        },
+    )
+    receipt = PipelineReceipt(
+        pipeline_id="pipeline-run",
+        correlation_id="pipeline-correlation",
+        process_receipt=stage,
+        success=False,
+    )
+
+    assert eval_orchestration._receipt_failure_details(receipt) == {
+        "pipeline_id": "pipeline-run",
+        "correlation_id": "pipeline-correlation",
+        "failed_stages": [
+            {
+                "stage": "process",
+                "correlation_id": "stage-correlation",
+                "duration_seconds": 51.4,
+                "error": "Workflow failed: APIConnectionError: Connection error.",
+                "error_details": stage.metadata["error_details"],
+            }
+        ],
+    }
 
 
 def test_partial_structured_output_is_unreliable_and_excluded_from_accuracy(

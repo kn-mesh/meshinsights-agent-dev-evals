@@ -19,10 +19,8 @@ process:
       window_days_list: [7, 30, 365]
       segment_count: 4
     - processor: V1_3AlarmClassificationAIWorkflowProcessor
-      model: azure:gpt-5-mini
-      reasoning_effort: medium
       timeout: 120
-      transport_retries: 1
+      transport_retries: 3
       output_retries: 0
 
 action:

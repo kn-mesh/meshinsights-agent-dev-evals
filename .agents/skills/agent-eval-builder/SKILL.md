@@ -39,12 +39,15 @@ local evidence snapshots into active pipeline/eval execution.
 - `src/retrievers/azure_blob_evidence_retriever.py` decodes the raw Spirax
   artifacts into the pipeline evidence contract.
 - `src/evals/eval_orchestration.py` owns repeated benchmark evaluation.
+- `agent-dev-eval-core/evaluation` owns use-case-neutral execution, typed
+  attempts, structured-output extraction, accuracy/reliability/performance
+  aggregation, and immutable JSON writing.
+- Root-level `eval_results/<pipeline>/` contains persisted evaluation evidence.
 
-The older helpers under `src/experimental_core/evals` still contain legacy
-rubric terminology. Reuse their generic execution, receipt extraction,
-accuracy, path, and filename helpers where useful, but do not expose their
-rubric-specific models or file loaders in new public contracts. Do not modify
-`src/experimental_core/` without explicit user permission.
+Do not reintroduce local rubric models or filesystem label truth. Keep benchmark
+loading, use-case label semantics, and named metric views in `src/evals`; keep
+the standalone evaluation package independent of `src` and Spirax-specific
+models.
 
 ## Hosted Inputs
 
@@ -79,7 +82,8 @@ or filesystem fallback in the active benchmark/evidence path.
    is reproducible.
 
 Prefer `RepeatedEvalExecutor` for repeated serial, threaded, and process runs.
-Prefer `ReceiptFieldSpec` plus `extract_receipt_fields` for final output parsing.
+Prefer `StructuredOutputSpec`, `extract_structured_outputs`, and
+`validate_metadata_identity` for final output parsing and receipt validation.
 
 ## Receipt Contract
 
@@ -115,6 +119,15 @@ Keep these top-level keys in order:
 
 Each result must include `example_id`, `unit_id`, `decision_timestamp`,
 `source_snapshot_id`, expected labels, repeated runs, and per-label correctness.
+Write result evidence below `eval_results/<pipeline>/`; never place generated
+results below `src/`.
+
+Persist effective AI timeout and transport-attempt policies in `run_config`.
+For failed runs, preserve stage and pipeline correlation IDs plus a bounded,
+structured exception chain. Classify connection/network failures separately from
+provider responses, timeouts, pipeline errors, and receipt-contract failures.
+Remember that `transport_retries` is the total number of HTTP attempts,
+including the initial request.
 
 ## Operator Commands
 
