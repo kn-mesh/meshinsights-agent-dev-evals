@@ -176,7 +176,7 @@ assuming classifications such as the current `classification` and
 The MVP harness must support:
 
 - exact or normalized comparison for configured structured fields;
-- configurable deterministic and AI graders where equality is insufficient;
+- configurable deterministic graders;
 - field-level and complete-contract correctness;
 - benchmark slices and user-selected example subsets;
 - aggregate metrics plus results grouped by expected label, confidence, slice,
