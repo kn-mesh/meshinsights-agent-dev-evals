@@ -4,7 +4,7 @@
 # 1. Create a new project repo
 - Each project / use case has it's own repo which will contain multiple versions of agents with results from their evals.
 - The project always starts with the same core agent pipeline and agent workbench libraries. These are the building blocks for building and evaluating agents. 
-- Each project will have a directory structure (template) where the use case specific code is written. Each 
+- Each project will have a directory structure (template) where the use case specific code is written. 
 
 # 2. Port Lightweight Agent Pipeline From 'Benchmark Studio' into this codebase
 - A lightweight pipeline is created for the Benchmark Studio to create the evidence packages for each example in the benchmark. 
@@ -26,4 +26,4 @@
 - Build, evaluation, improve, repeat...
 
 # 8. Save agent version and benchmarks
-- Over time some agent versions will achieve meaningful progress and the agent version and benchmark along with the evals need to be versioned. This is how we show progress and continue to improve. 
+- Over time some agent versions will achieve meaningful progress and the agent version and benchmark along with the evals need to be versioned. This is how we show progress and continue to improve. We don't want to continuously evolve without being able to rollback to previous versions
