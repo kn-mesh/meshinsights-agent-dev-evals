@@ -1,0 +1,4240 @@
+{
+  "summary": {
+    "accuracy": {
+      "overall_classification_accuracy": 0.8571428571428571,
+      "accuracy_by_label": {
+        "classification": 0.8571428571428571,
+        "root_cause": 0.8
+      },
+      "accuracy_by_classification": {
+        "Failure": 0.8863636363636364,
+        "Healthy": 0.8076923076923077
+      },
+      "accuracy_by_failure_root_cause": {
+        "Closed Failure": 0.7407407407407407,
+        "Open Failure": 1.0,
+        "Unknown": 0.6
+      },
+      "evaluated_runs": 70,
+      "correct_classification_runs": 60,
+      "classification_accuracy_by_confidence": {
+        "confidence_coverage": {
+          "outputs_with_confidence": 70,
+          "evaluated_outputs": 70,
+          "coverage": 1.0
+        },
+        "all": {
+          "High": {
+            "accuracy": 0.855072463768116,
+            "correct_runs": 59,
+            "evaluated_runs": 69
+          },
+          "Low": {
+            "accuracy": 1.0,
+            "correct_runs": 1,
+            "evaluated_runs": 1
+          }
+        },
+        "by_classification": {
+          "Failure": {
+            "High": {
+              "accuracy": 0.8837209302325582,
+              "correct_runs": 38,
+              "evaluated_runs": 43
+            },
+            "Low": {
+              "accuracy": 1.0,
+              "correct_runs": 1,
+              "evaluated_runs": 1
+            }
+          },
+          "Healthy": {
+            "High": {
+              "accuracy": 0.8076923076923077,
+              "correct_runs": 21,
+              "evaluated_runs": 26
+            },
+            "Low": {
+              "accuracy": null,
+              "correct_runs": 0,
+              "evaluated_runs": 0
+            }
+          }
+        }
+      },
+      "root_cause_accuracy_by_confidence": {
+        "confidence_coverage": {
+          "outputs_with_confidence": 44,
+          "evaluated_outputs": 44,
+          "coverage": 1.0
+        },
+        "all": {
+          "High": {
+            "accuracy": 0.8048780487804879,
+            "correct_runs": 33,
+            "evaluated_runs": 41
+          },
+          "Low": {
+            "accuracy": 0.6666666666666666,
+            "correct_runs": 2,
+            "evaluated_runs": 3
+          }
+        },
+        "by_failure_root_cause": {
+          "Closed Failure": {
+            "High": {
+              "accuracy": 0.7692307692307693,
+              "correct_runs": 20,
+              "evaluated_runs": 26
+            },
+            "Low": {
+              "accuracy": 0.0,
+              "correct_runs": 0,
+              "evaluated_runs": 1
+            }
+          },
+          "Open Failure": {
+            "High": {
+              "accuracy": 1.0,
+              "correct_runs": 12,
+              "evaluated_runs": 12
+            },
+            "Low": {
+              "accuracy": null,
+              "correct_runs": 0,
+              "evaluated_runs": 0
+            }
+          },
+          "Unknown": {
+            "High": {
+              "accuracy": 0.3333333333333333,
+              "correct_runs": 1,
+              "evaluated_runs": 3
+            },
+            "Low": {
+              "accuracy": 1.0,
+              "correct_runs": 2,
+              "evaluated_runs": 2
+            }
+          }
+        }
+      }
+    },
+    "reliability": {
+      "planned_runs": 70,
+      "recorded_runs": 70,
+      "successful_runs": 70,
+      "failed_runs": 0,
+      "cancelled_runs": 0,
+      "reliability": 1.0,
+      "failures_by_type": {}
+    },
+    "performance": {
+      "evaluation_wall_time_seconds": 298.62865775002865,
+      "throughput_runs_per_minute": 14.0642898496221,
+      "run_duration_seconds": {
+        "count": 70,
+        "minimum": 10.616721153259277,
+        "maximum": 41.73649597167969,
+        "mean": 16.619055652618407,
+        "median": 15.8817857503891,
+        "p95": 21.561373221874234
+      },
+      "successful_run_duration_seconds": {
+        "count": 70,
+        "minimum": 10.616721153259277,
+        "maximum": 41.73649597167969,
+        "mean": 16.619055652618407,
+        "median": 15.8817857503891,
+        "p95": 21.561373221874234
+      },
+      "failed_run_duration_seconds": {
+        "count": 0,
+        "minimum": null,
+        "maximum": null,
+        "mean": null,
+        "median": null,
+        "p95": null
+      },
+      "stage_duration_seconds": {
+        "act": {
+          "count": 70,
+          "minimum": 2.6226043701171875e-05,
+          "maximum": 0.00013208389282226562,
+          "mean": 5.328655242919922e-05,
+          "median": 4.1961669921875e-05,
+          "p95": 0.00011191368103027343
+        },
+        "process": {
+          "count": 70,
+          "minimum": 9.813388109207153,
+          "maximum": 41.108153104782104,
+          "mean": 15.809246110916138,
+          "median": 15.172886967658997,
+          "p95": 20.581428861618043
+        },
+        "retrieve": {
+          "count": 70,
+          "minimum": 0.549705982208252,
+          "maximum": 1.8984320163726807,
+          "mean": 0.807457685470581,
+          "median": 0.7639955282211304,
+          "p95": 1.1364515066146847
+        }
+      }
+    },
+    "total_examples": 70,
+    "runs_per_example": 1
+  },
+  "run_config": {
+    "eval_result_schema_version": 2,
+    "yaml_path": "pipeline_configs/v1_3.ppln",
+    "project_key": "spirax-pulse",
+    "benchmark_key": "phase-1-benchmark-3fb7f544",
+    "benchmark_version_id": "b8667849-57a4-4a16-b3ca-4db7cfa98da8",
+    "benchmark_version_number": 1,
+    "benchmark_source_state_sha256": "f3ae4b8824b73df17ded93100d0ff7cff832162de4aff76dab404768fcc5ae7d",
+    "benchmark_source": "azure_postgres",
+    "evidence_source": "azure_blob",
+    "scope": "all",
+    "runs_per_example": 1,
+    "runtime": "threaded",
+    "max_workers": 4,
+    "error_action": "continue",
+    "progress_interval_seconds": 30.0,
+    "ai_provider": "google",
+    "ai_model": "google:gemini-3.6-flash",
+    "ai_reasoning_effort": "high",
+    "ai_execution_policies": [
+      {
+        "processor": "V1_3AlarmClassificationAIWorkflowProcessor",
+        "model": "google:gemini-3.6-flash",
+        "reasoning_effort": "high",
+        "timeout_seconds_per_attempt": 120,
+        "transport_attempts": 3,
+        "output_retries": 0
+      }
+    ],
+    "completed_at_utc": "2026-07-21T16:29:57+00:00"
+  },
+  "selected_example_ids": [
+    "250000101|2024-11-03T14:00:32",
+    "250000116|2026-03-04T08:01:36",
+    "250000214|2025-10-20T05:25:06",
+    "250000642|2025-05-07T20:56:38",
+    "250001578|2026-01-06T09:34:00",
+    "250001616|2024-04-09T19:33:43",
+    "250002155|2024-12-25T17:55:46",
+    "250002410|2025-01-21T20:41:07",
+    "250002765|2026-02-21T02:11:24",
+    "250002804|2026-03-17T02:33:11",
+    "250003032|2024-06-27T19:23:30",
+    "250003575|2026-03-17T06:48:00",
+    "250003602|2026-03-17T02:30:43",
+    "250003694|2024-10-08T14:37:16",
+    "250003740|2026-03-17T04:42:58",
+    "250003873|2026-03-08T13:24:10",
+    "250003921|2026-03-17T06:53:01",
+    "250003969|2026-03-09T00:13:56",
+    "250004137|2026-02-24T08:29:14",
+    "250004177|2026-02-07T00:14:51",
+    "250004218|2025-10-30T12:59:43",
+    "250004325|2025-04-10T17:11:11",
+    "250004348|2026-01-15T02:24:28",
+    "250004418|2026-03-17T04:42:04",
+    "250004437|2026-01-28T18:48:06",
+    "250004743|2024-08-08T20:38:12",
+    "250004859|2026-03-17T11:09:22",
+    "250004862|2026-03-17T11:08:05",
+    "250004871|2026-03-17T11:07:54",
+    "250004877|2024-08-15T08:48:21",
+    "250005067|2026-01-19T12:48:30",
+    "250005150|2025-10-20T01:34:20",
+    "250005354|2026-03-17T11:06:43",
+    "250005404|2026-03-13T11:55:27",
+    "250005500|2026-03-17T06:47:26",
+    "250005501|2024-09-18T17:07:25",
+    "250005577|2025-01-24T14:25:40",
+    "250005605|2025-10-03T01:08:35",
+    "250005653|2025-10-25T10:09:11",
+    "250005692|2025-10-31T01:39:54",
+    "250005696|2026-01-13T05:36:58",
+    "250005732|2026-02-17T18:22:10",
+    "250005883|2025-11-26T17:38:20",
+    "260000115|2026-03-07T22:07:58",
+    "260000116|2026-01-21T20:14:04",
+    "260000143|2026-03-11T01:39:27",
+    "260000167|2025-03-02T14:55:43",
+    "260000170|2026-02-25T01:43:53",
+    "260000292|2026-03-17T09:02:42",
+    "260000374|2025-04-20T07:04:26",
+    "260000478|2025-10-15T18:45:05",
+    "260000499|2025-03-03T10:50:22",
+    "260000510|2025-10-09T23:50:11",
+    "260000701|2026-03-16T17:55:13",
+    "260000953|2026-02-18T20:16:00",
+    "260001111|2026-03-17T02:35:35",
+    "260001345|2026-01-30T02:44:00",
+    "260001377|2026-03-03T06:04:25",
+    "260001438|2026-03-08T00:24:00",
+    "260001535|2025-12-09T15:37:41",
+    "260001642|2026-03-17T11:12:07",
+    "260001742|2025-10-17T20:23:09",
+    "260002518|2025-11-20T20:16:19",
+    "260002680|2026-03-12T14:21:29",
+    "260002782|2026-02-20T17:32:41",
+    "260002797|2026-02-08T06:26:07",
+    "260002816|2026-03-17T11:08:17",
+    "260003042|2026-03-17T04:39:09",
+    "260003441|2026-03-17T08:58:12",
+    "260003552|2026-03-17T04:38:26"
+  ],
+  "results": [
+    {
+      "example_id": "250000101|2024-11-03T14:00:32",
+      "unit_id": "250000101",
+      "decision_timestamp": "2024-11-03T14:00:32+00:00",
+      "source_snapshot_id": "spirax_src_27a61fb99fbfb12a",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Following startup on October 28, 2024, the unit operated normally until November 2, 2024, when the steam temperature continuously degraded from 110\u00b0C down to 55-80\u00b0C while the condensate temperature remained near its operating baseline of ~95\u00b0C, causing a severe negative delta of -15\u00b0C to -25\u00b0C."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam side temperature dropped significantly from 110\u00b0C down toward ambient/cool levels while the condensate side stayed flat near its prior operating baseline around 95\u00b0C, indicating condensate backup typical of a closed failure."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 19.41821002960205,
+          "stage_durations_seconds": {
+            "retrieve": 1.1802639961242676,
+            "process": 18.236645221710205,
+            "act": 3.886222839355469e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250000101",
+        "organization": "Invista Inc. - Maitland, ON",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250000116|2026-03-04T08:01:36",
+      "unit_id": "250000116",
+      "decision_timestamp": "2026-03-04T08:01:36+00:00",
+      "source_snapshot_id": "spirax_src_104b22cf39c2b357",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "On March 4, 2026, the steam temperature dropped sharply from its historical ~148\u00b0C baseline to ~102\u00b0C while the condensate temperature remained steady at ~92\u00b0C, collapsing the delta from ~55\u00b0C to ~10\u00b0C."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam side degraded precipitously toward the condensate baseline on March 4, 2026, while the condensate side held steady around ~92\u00b0C without a corresponding drop."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 21.787302017211914,
+          "stage_durations_seconds": {
+            "retrieve": 1.2052881717681885,
+            "process": 20.58019781112671,
+            "act": 3.981590270996094e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250000116",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250000214|2025-10-20T05:25:06",
+      "unit_id": "250000214",
+      "decision_timestamp": "2025-10-20T05:25:06+00:00",
+      "source_snapshot_id": "spirax_src_68347e7deb55df4f",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 0.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": false,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Starting on October 19, 2025, steam temperature dropped sharply from its normal operating baseline of ~190C and fluctuated erratically between 130C and 165C, while condensate temperature dropped only slightly to ~111C. This resulted in a persistent collapse of the temperature delta from its historical baseline of ~60C down to ~20C-30C."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The failure was initiated by a sharp degradation on the steam side while condensate remained elevated at ~111C, leading to a persistent collapse in the temperature delta indicative of a blockage or closed failure."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 17.393081188201904,
+          "stage_durations_seconds": {
+            "retrieve": 0.995424747467041,
+            "process": 16.39549422264099,
+            "act": 4.1961669921875e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250000214",
+        "organization": "Invista Inc. - Maitland, ON",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250000642|2025-05-07T20:56:38",
+      "unit_id": "250000642",
+      "decision_timestamp": "2025-05-07T20:56:38+00:00",
+      "source_snapshot_id": "spirax_src_fd8347470591ccf4",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Starting April 28, 2025, the steam temperature dropped from its historical On-state baseline of ~170\u00b0C down to 40\u2013100\u00b0C during operation, causing the normal ~60\u00b0C delta to collapse and invert to between -10\u00b0C and -40\u00b0C through May 7, 2025."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The failure was driven by the steam side collapsing from its baseline of ~170\u00b0C down to below 100\u00b0C while the condensate side remained near its typical operating baseline of 80\u2013100\u00b0C, indicating a blocked condition preventing steam from reaching the trap."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 20.20235586166382,
+          "stage_durations_seconds": {
+            "retrieve": 1.1851530075073242,
+            "process": 19.015252828598022,
+            "act": 5.2928924560546875e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250000642",
+        "organization": "Mohawk Medbuy -old",
+        "steam_trap_type": "Inverted Bucket",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250001578|2026-01-06T09:34:00",
+      "unit_id": "250001578",
+      "decision_timestamp": "2026-01-06T09:34:00+00:00",
+      "source_snapshot_id": "spirax_src_3cc45240293007a2",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Open Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Prior to December 2025, the unit maintained a consistent historical baseline with steam near 145\u00b0C, condensate near 88-90\u00b0C, and a stable temperature delta around 57\u00b0C. Starting around December 9, 2025, the condensate temperature permanently shifted upward to 105-110\u00b0C with spikes up to 130\u00b0C, causing a sustained delta collapse to ~35\u00b0C that persisted through the alarm date."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "The failure initiated when the condensate temperature independently rose toward the steam temperature while the steam side remained steady at ~145\u00b0C. This sustained upward condensate trajectory and narrowed delta are characteristic of live steam leaking through an open trap."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 15.091941118240356,
+          "stage_durations_seconds": {
+            "retrieve": 0.9726648330688477,
+            "process": 14.116316795349121,
+            "act": 6.413459777832031e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250001578",
+        "steam_trap_type": "None",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250001616|2024-04-09T19:33:43",
+      "unit_id": "250001616",
+      "decision_timestamp": "2024-04-09T19:33:43+00:00",
+      "source_snapshot_id": "spirax_src_4ef781c129dd78bc",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Compared to the historical baseline from November 2023 to mid-March 2024 where steam operated at ~108\u00b0C and condensate at ~97\u00b0C with a stable +11\u00b0C delta, the steam temperature collapsed to ~90\u00b0C around March 21, 2024. This caused a persistent delta collapse near 0\u00b0C through April 9, 2024, confirming a sustained failure state."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "Around March 21, 2024, the steam side temperature degraded from ~108\u00b0C down to ~90\u00b0C while the condensate side remained near its historical baseline of ~90\u201395\u00b0C. This steam-side drop drove the collapse in temperature delta, which is characteristic of a closed failure."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 16.49440884590149,
+          "stage_durations_seconds": {
+            "retrieve": 0.6959359645843506,
+            "process": 15.795647144317627,
+            "act": 4.410743713378906e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250001616",
+        "organization": "Resilience Biotechnologies",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250002155|2024-12-25T17:55:46",
+      "unit_id": "250002155",
+      "decision_timestamp": "2024-12-25T17:55:46+00:00",
+      "source_snapshot_id": "spirax_src_74406be36368299f",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Compared to the historical baseline of steam at ~142\u00b0C and condensate at ~112\u00b0C with a positive delta of ~30\u00b0C, the trap entered an abnormal operating state after December 23, 2024, characterized by severe steam temperature drops and persistent negative deltas."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam side temperature repeatedly collapsed down to 40\u201370\u00b0C while the condensate side remained elevated around 70\u2013110\u00b0C, indicating steam-side temperature degradation consistent with a closed trap failure."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 14.644613027572632,
+          "stage_durations_seconds": {
+            "retrieve": 0.9468569755554199,
+            "process": 13.696176052093506,
+            "act": 0.00013208389282226562
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250002155",
+        "organization": "Cameco Inc.",
+        "steam_trap_type": "TD",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250002410|2025-01-21T20:41:07",
+      "unit_id": "250002410",
+      "decision_timestamp": "2025-01-21T20:41:07+00:00",
+      "source_snapshot_id": "spirax_src_ef3aebae2bb32a6f",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Unknown"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Following a system restart around January 19, 2025, the condensate temperature elevated to 90\u2013100\u00b0C and persistently exceeded the steam temperature, resulting in a inverted temperature delta compared to the healthy historical baseline delta of ~30\u00b0C."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "The condensate side departed from baseline first on January 19, 2025, spiking to ~90\u00b0C while the steam side remained cold, and consistently remained near or above steam temperatures through January 21, 2025."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 16.43971610069275,
+          "stage_durations_seconds": {
+            "retrieve": 0.9200208187103271,
+            "process": 15.51659083366394,
+            "act": 6.198883056640625e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250002410",
+        "organization": "Resilience Biotechnologies",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250002765|2026-02-21T02:11:24",
+      "unit_id": "250002765",
+      "decision_timestamp": "2026-02-21T02:11:24+00:00",
+      "source_snapshot_id": "spirax_src_a52cefa12b724d95",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Open Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "Low",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "Low",
+              "explanation": "Compared to the historical baseline established from August 2025 through mid-January 2026 with a steady delta of 5\u20137\u00b0C, the temperature delta collapsed to around 0\u00b0C starting around January 20, 2026. Although a slight delta rebound occurred in the final three days before the alarm on February 21, 2026, the unit spent weeks in a collapsed delta state without confirming a sustained healthy recovery."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "Starting in late January 2026, the condensate line temperature rose independently from its normal ~80\u00b0C baseline up to ~85\u00b0C to meet the steam line temperature, which remained near 85\u00b0C. This independent upward movement of the condensate side towards the steam side caused the delta collapse, indicating an open failure where live steam passes into condensate."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 15.249332904815674,
+          "stage_durations_seconds": {
+            "retrieve": 0.8263759613037109,
+            "process": 14.42040491104126,
+            "act": 5.412101745605469e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250002765",
+        "steam_trap_type": "90BH",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250002804|2026-03-17T02:33:11",
+      "unit_id": "250002804",
+      "decision_timestamp": "2026-03-17T02:33:11+00:00",
+      "source_snapshot_id": "spirax_src_4ef5b97649eb6442",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "The unit operates on an intermittent batch process where steam temperature periodically spikes to 105-112\u00b0C during active operation before returning to an ambient standby near 28-35\u00b0C, while condensate temperature stays consistently around 94\u00b0C on a shared return line. The operational cycle on March 16, 2026 perfectly mirrors this established 365-day historical baseline pattern."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 23.983659029006958,
+          "stage_durations_seconds": {
+            "retrieve": 0.8030667304992676,
+            "process": 23.178598165512085,
+            "act": 3.695487976074219e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250002804",
+        "steam_trap_type": "APT 14",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250003032|2024-06-27T19:23:30",
+      "unit_id": "250003032",
+      "decision_timestamp": "2024-06-27T19:23:30+00:00",
+      "source_snapshot_id": "spirax_src_d3e55d6bd6b9f6d1",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Starting on June 26, 2024, the steam temperature experienced a gradual, multi-day drop from its historical baseline of ~150C down toward ~95C while the condensate side remained flat at ~85C, causing the historical ~64C delta to collapse."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam temperature degraded first over a period of 24 to 36 hours while the condensate temperature held steady at its baseline, which is indicative of condensate backing up due to a blockage."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 12.774198055267334,
+          "stage_durations_seconds": {
+            "retrieve": 0.9351420402526855,
+            "process": 11.836153030395508,
+            "act": 4.506111145019531e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250003032",
+        "organization": "London Health Science Centre",
+        "steam_trap_type": "Inverted Bucket",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250003575|2026-03-17T06:48:00",
+      "unit_id": "250003575",
+      "decision_timestamp": "2026-03-17T06:48:00+00:00",
+      "source_snapshot_id": "spirax_src_4269da812af95540",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "Between March 16 and March 17, 2026, the unit operated in a healthy On-state with steam at ~175-180\u00b0C, condensate at ~145-150\u00b0C, and a stable ~30\u00b0C delta matching its historical baseline. The temperature decrease on March 17 represents a simultaneous rapid drop of both sensors during a process shutdown, which matches the unit's normal historical shutdown behavior."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 14.483808994293213,
+          "stage_durations_seconds": {
+            "retrieve": 0.7197971343994141,
+            "process": 13.761964082717896,
+            "act": 3.504753112792969e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250003575",
+        "steam_trap_type": "Inverted Bucket",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250003602|2026-03-17T02:30:43",
+      "unit_id": "250003602",
+      "decision_timestamp": "2026-03-17T02:30:43+00:00",
+      "source_snapshot_id": "spirax_src_fba4fb9647369756",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "The steam trap exhibits normal operating behavior since its mid-January 2026 startup, maintainining a healthy and stable positive temperature delta of 1.0\u00b0C to 3.5\u00b0C between operating cycles of 40\u00b0C to 75\u00b0C. Both sensors remain tightly thermally coupled during process modulation, with no evidence of delta collapse or thermal degradation around the alarm timestamp."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 13.543894052505493,
+          "stage_durations_seconds": {
+            "retrieve": 0.8590137958526611,
+            "process": 12.68162488937378,
+            "act": 4.410743713378906e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250003602",
+        "organization": "UHN",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250003694|2024-10-08T14:37:16",
+      "unit_id": "250003694",
+      "decision_timestamp": "2024-10-08T14:37:16+00:00",
+      "source_snapshot_id": "spirax_src_98e1e8a55a3f08dd",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 0.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": false,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "The steam trap displays healthy operation, showing close thermal coupling during process modulation (Oct 1-5) and rapid simultaneous drops during plant shutdowns. Following the restart on Oct 7, steam temperature reaches 120-140C while maintaining a strong positive delta of 15-50C through the alarm timestamp on Oct 8."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 18.179035902023315,
+          "stage_durations_seconds": {
+            "retrieve": 0.8605201244354248,
+            "process": 17.316516160964966,
+            "act": 5.221366882324219e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250003694",
+        "organization": "UHN",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250003740|2026-03-17T04:42:58",
+      "unit_id": "250003740",
+      "decision_timestamp": "2026-03-17T04:42:58+00:00",
+      "source_snapshot_id": "spirax_src_3b7d7c4cf4c9d38a",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "Prior to the alarm on March 17, 2026, the unit maintained its historical On-state baseline with steam around 75\u00b0C and a stable 3\u20134\u00b0C delta. Both sensors dropped simultaneously to ambient temperature (~36\u00b0C) on March 16\u201317, representing a normal process shutdown."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 13.6957368850708,
+          "stage_durations_seconds": {
+            "retrieve": 0.7942562103271484,
+            "process": 12.899267196655273,
+            "act": 3.361701965332031e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250003740",
+        "organization": "St. Jerome Hospital",
+        "steam_trap_type": "Balanced Pressure",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250003873|2026-03-08T13:24:10",
+      "unit_id": "250003873",
+      "decision_timestamp": "2026-03-08T13:24:10+00:00",
+      "source_snapshot_id": "spirax_src_6f078d3bada018af",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Following a drop on 2026-03-01, the steam-side temperature failed to recover to its historical baseline of ~85\u00b0C and remained depressed at ~76-81\u00b0C through 2026-03-08, while condensate returned to ~84-86\u00b0C, resulting in a persistent negative delta of -4\u00b0C to -7\u00b0C."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam-side temperature degraded significantly below its operating baseline while the condensate side remained elevated near ~85\u00b0C, causing a collapsed and inverted temperature delta characteristic of a closed or blocked trap."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 18.083182096481323,
+          "stage_durations_seconds": {
+            "retrieve": 0.798043966293335,
+            "process": 17.283259868621826,
+            "act": 5.1975250244140625e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250003873",
+        "steam_trap_type": "N/A",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250003921|2026-03-17T06:53:01",
+      "unit_id": "250003921",
+      "decision_timestamp": "2026-03-17T06:53:01+00:00",
+      "source_snapshot_id": "spirax_src_113d469231f997fb",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "During the broader operating period leading up to the alarm from March 11 to March 17, 2026, the trap operated in a stable On-state with steam temperatures around 108\u00b0C, condensate around 93\u00b0C, and a consistent delta of 12-16\u00b0C. This behavior matches the unit's established healthy baseline observed since November 2025, indicating that the transient dip at the alarm timestamp is not a sustained failure."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 16.935699939727783,
+          "stage_durations_seconds": {
+            "retrieve": 0.8110849857330322,
+            "process": 16.122392892837524,
+            "act": 3.790855407714844e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250003921",
+        "steam_trap_type": "N/A",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250003969|2026-03-09T00:13:56",
+      "unit_id": "250003969",
+      "decision_timestamp": "2026-03-09T00:13:56+00:00",
+      "source_snapshot_id": "spirax_src_c053b54fbac62f83",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Unknown"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Unknown",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Following the startup on March 5, 2026, the unit settled into an abnormal operating state where the steam temperature (~85-90\u00b0C) dropped below the condensate temperature (~90-95\u00b0C), resulting in a persistent negative delta of around -5\u00b0C compared to the historical healthy baseline of a +10\u00b0C to +15\u00b0C delta."
+            },
+            "root_cause": {
+              "value": "Unknown",
+              "confidence": "High",
+              "explanation": "The abnormal state appeared fully formed immediately upon the March 5, 2026 restart with an inverted delta, making it ambiguous whether the steam side degraded due to condensate backup or the condensate side remained elevated from backpressure or blowing steam."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 17.62842893600464,
+          "stage_durations_seconds": {
+            "retrieve": 0.7995779514312744,
+            "process": 16.8267879486084,
+            "act": 2.9087066650390625e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250003969",
+        "organization": "Gay Lea Foods",
+        "steam_trap_type": "N/A",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250004137|2026-02-24T08:29:14",
+      "unit_id": "250004137",
+      "decision_timestamp": "2026-02-24T08:29:14+00:00",
+      "source_snapshot_id": "spirax_src_05c02737611b75d8",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Open Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Compared to the historical baseline where steam operated at ~135\u00b0C and condensate at ~105\u00b0C with a steady ~30\u00b0C delta, the condensate temperature gradually rose toward steam starting in early February 2026. This led to delta collapse and significant temperature inversion by February 24, 2026."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "The primary departure from baseline occurred when condensate temperatures independently trended upward from ~105\u00b0C toward ~130\u00b0C+ starting around February 5, 2026, while steam remained at full operating temperature, consistent with an open trap passing live steam."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 12.83049488067627,
+          "stage_durations_seconds": {
+            "retrieve": 0.880425214767456,
+            "process": 11.948653936386108,
+            "act": 4.410743713378906e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250004137",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250004177|2026-02-07T00:14:51",
+      "unit_id": "250004177",
+      "decision_timestamp": "2026-02-07T00:14:51+00:00",
+      "source_snapshot_id": "spirax_src_c479c90239315ee1",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Starting February 3, 2026, the steam side temperature began fluctuating wildly and degraded from its historical baseline of ~143\u00b0C down to ~45\u00b0C, while condensate remained flat at ~105-110\u00b0C, causing a severe delta collapse."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The failure is closed because the steam side temperature departed from baseline and repeatedly collapsed well below the condensate temperature while the condensate side held steady near its normal operating level."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 12.086853265762329,
+          "stage_durations_seconds": {
+            "retrieve": 0.7051939964294434,
+            "process": 11.378130197525024,
+            "act": 0.00011610984802246094
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250004177",
+        "steam_trap_type": "TD",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250004218|2025-10-30T12:59:43",
+      "unit_id": "250004218",
+      "decision_timestamp": "2025-10-30T12:59:43+00:00",
+      "source_snapshot_id": "spirax_src_6f107c707ae723ca",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "The unit maintained a steady baseline of approximately 140\u00b0C steam and 94\u00b0C condensate with a stable 45\u00b0C delta for nearly a year until mid-October 2025. Starting around October 22, 2025, the steam temperature began repeatedly collapsing down to 55\u201370\u00b0C, resulting in persistent severe delta collapse and negative delta inversions."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The failure is steam-led, as the steam temperature drops significantly below its historical baseline to 65\u201370\u00b0C while the condensate temperature remains elevated around 80\u201394\u00b0C, driving the temperature delta to collapse and repeatedly invert."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 14.372978925704956,
+          "stage_durations_seconds": {
+            "retrieve": 0.7156238555908203,
+            "process": 13.655671119689941,
+            "act": 2.7894973754882812e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250004218",
+        "steam_trap_type": "Ball float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250004325|2025-04-10T17:11:11",
+      "unit_id": "250004325",
+      "decision_timestamp": "2025-04-10T17:11:11+00:00",
+      "source_snapshot_id": "spirax_src_816a7ba3df42097e",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Prior to late March 2025, the trap established a consistent healthy baseline with steam around 162\u00b0C, condensate around 86\u00b0C, and a delta of 76\u00b0C. Beginning March 28, 2025, the steam temperature collapsed while condensate remained elevated, and subsequent restarted operation settled into an unprecedented low-delta regime of 10\u00b0C to 20\u00b0C."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The earliest sustained departure occurred on March 28, 2025, when the steam temperature abruptly dropped from 162\u00b0C to 92\u00b0C while the condensate side held steady at its baseline around 85\u00b0C, causing the temperature delta to collapse."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 15.965469360351562,
+          "stage_durations_seconds": {
+            "retrieve": 0.7786238193511963,
+            "process": 15.185059070587158,
+            "act": 3.695487976074219e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250004325",
+        "organization": "Laval University",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250004348|2026-01-15T02:24:28",
+      "unit_id": "250004348",
+      "decision_timestamp": "2026-01-15T02:24:28+00:00",
+      "source_snapshot_id": "spirax_src_c2f54490783f01c1",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "During operational periods leading up to the alarm on January 15, the trap maintained its historical baseline temperatures (~140-146C steam, ~132-138C condensate) with a healthy ~8C delta, and the temperature drop near the alarm reflects a normal process shutdown with both sensors dropping simultaneously."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 15.798102140426636,
+          "stage_durations_seconds": {
+            "retrieve": 0.6356551647186279,
+            "process": 15.160714864730835,
+            "act": 2.9087066650390625e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250004348",
+        "steam_trap_type": "TD",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250004418|2026-03-17T04:42:04",
+      "unit_id": "250004418",
+      "decision_timestamp": "2026-03-17T04:42:04+00:00",
+      "source_snapshot_id": "spirax_src_7da6fcb7fecc9534",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "The steam trap maintains a stable operating baseline across the entire 365-day history, consistently displaying steam cycling up to 100-110\u00b0C and a steady 4-hour rolling average delta around 20\u00b0C. During the alarm-adjacent period in March 2026, both sensors remain thermally coupled with expected condensate responses during load cycles."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 12.124081134796143,
+          "stage_durations_seconds": {
+            "retrieve": 0.9644391536712646,
+            "process": 11.157541036605835,
+            "act": 0.00011897087097167969
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250004418",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250004437|2026-01-28T18:48:06",
+      "unit_id": "250004437",
+      "decision_timestamp": "2026-01-28T18:48:06+00:00",
+      "source_snapshot_id": "spirax_src_a044c0083d169275",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Compared to the historical On-state baseline of approximately 140C steam temperature with a 50C positive delta, the operating periods in late December 2025 and late January 2026 show steam temperatures suppressed near 70-75C with an inverted delta of around -10C."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam-side temperature degraded significantly from its historical 140C baseline down toward 70-75C while the condensate side remained near its normal operating level of 80-85C, causing the temperature delta to collapse."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 17.488651037216187,
+          "stage_durations_seconds": {
+            "retrieve": 0.7951927185058594,
+            "process": 16.691321849822998,
+            "act": 3.886222839355469e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250004437",
+        "steam_trap_type": "FT14HC",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250004743|2024-08-08T20:38:12",
+      "unit_id": "250004743",
+      "decision_timestamp": "2024-08-08T20:38:12+00:00",
+      "source_snapshot_id": "spirax_src_080d8d66279f9c0e",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Starting around 2024-08-02, the trap departed from its historical operating baseline of 115-130\u00b0C steam temperature and a positive 15-30\u00b0C delta, exhibiting severe steam-side temperature fluctuations between 60\u00b0C and 105\u00b0C and a collapsed, persistently inverted delta."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam-side temperature degraded first, repeatedly dropping below 80\u00b0C while the condensate side remained elevated around 100\u00b0C, causing a negative temperature delta characteristic of a closed failure."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 15.524616003036499,
+          "stage_durations_seconds": {
+            "retrieve": 0.6793580055236816,
+            "process": 14.843539953231812,
+            "act": 3.719329833984375e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250004743",
+        "organization": "Ferrero Canada",
+        "steam_trap_type": "Thermodynamic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250004859|2026-03-17T11:09:22",
+      "unit_id": "250004859",
+      "decision_timestamp": "2026-03-17T11:09:22+00:00",
+      "source_snapshot_id": "spirax_src_e8a1f654c4c7b90b",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "Prior to the alarm on 2026-03-17, the trap operated at a stable baseline with steam around 120\u2013130\u00b0C, condensate around 95\u00b0C, and a strong delta of 25\u201335\u00b0C. The temperature drop on 2026-03-17 occurred simultaneously on both sensors, consistent with a normal process shutdown rather than a failure."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 13.42418098449707,
+          "stage_durations_seconds": {
+            "retrieve": 0.8301289081573486,
+            "process": 12.592285871505737,
+            "act": 4.1961669921875e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250004859",
+        "steam_trap_type": "TD42",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250004862|2026-03-17T11:08:05",
+      "unit_id": "250004862",
+      "decision_timestamp": "2026-03-17T11:08:05+00:00",
+      "source_snapshot_id": "spirax_src_cdbb9451023fb4d5",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "The trap's temperature behavior around the alarm date on March 17, 2026, shows normal active cycling with steam temperatures spiking up to 142\u00b0C and strong positive deltas reaching 48\u00b0C, which perfectly aligns with its established year-long historical operating baseline."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 17.45525288581848,
+          "stage_durations_seconds": {
+            "retrieve": 1.0829029083251953,
+            "process": 16.36910891532898,
+            "act": 6.008148193359375e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250004862",
+        "organization": "Vale",
+        "steam_trap_type": "TD42",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250004871|2026-03-17T11:07:54",
+      "unit_id": "250004871",
+      "decision_timestamp": "2026-03-17T11:07:54+00:00",
+      "source_snapshot_id": "spirax_src_88843d02887447aa",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "Prior to the alarm on March 17, 2026, the unit maintained its normal healthy On-state baseline of ~130\u00b0C steam and ~91\u00b0C condensate with a stable ~37\u00b0C delta. The temperature drop at the alarm timestamp is a simultaneous decline in both sensors within 30 minutes, matching the unit's historical process shutdown pattern seen repeatedly over the past year."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 13.04557490348816,
+          "stage_durations_seconds": {
+            "retrieve": 0.7303919792175293,
+            "process": 12.31204891204834,
+            "act": 6.29425048828125e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250004871",
+        "steam_trap_type": "Yarway 711",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250004877|2024-08-15T08:48:21",
+      "unit_id": "250004877",
+      "decision_timestamp": "2024-08-15T08:48:21+00:00",
+      "source_snapshot_id": "spirax_src_589f5cd04c379685",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Following startup on 2024-08-10, the trap established a healthy baseline of ~95\u00b0C steam and ~92\u00b0C condensate with a positive +3\u00b0C delta. Starting 2024-08-13, steam temperature exhibited progressive instability before collapsing to ~59\u00b0C on 2024-08-15 while condensate remained elevated around 86-90\u00b0C, causing a severe delta inversion."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam side degraded first from 92\u00b0C down to 59\u00b0C while condensate stayed elevated near operating baseline (~90\u00b0C), leading to a collapsing delta consistent with condensate backing up behind a closed trap."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 16.849971055984497,
+          "stage_durations_seconds": {
+            "retrieve": 0.7587971687316895,
+            "process": 16.0880446434021,
+            "act": 0.00010132789611816406
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250004877",
+        "organization": "Mackenzie Hospital",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250005067|2026-01-19T12:48:30",
+      "unit_id": "250005067",
+      "decision_timestamp": "2026-01-19T12:48:30+00:00",
+      "source_snapshot_id": "spirax_src_6549a0b4486dd95d",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Open Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Compared to the historical on-state baseline delta of approximately 16\u00b0C (steam at 110\u00b0C, condensate at 94\u00b0C), the unit shows an abnormal regime where condensate temperature rises to ~107\u00b0C while steam remains elevated at ~108-110\u00b0C, collapsing the delta to ~1.5\u00b0C through January 18\u201319, 2026."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "The failure is driven by the condensate side increasing upward from its historical baseline of 94\u00b0C to near steam temperature (~107\u00b0C) while the steam side remains constant at operating level, indicating live steam passing through an open trap."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 16.050355911254883,
+          "stage_durations_seconds": {
+            "retrieve": 0.7277660369873047,
+            "process": 15.320770978927612,
+            "act": 3.314018249511719e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005067",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250005150|2025-10-20T01:34:20",
+      "unit_id": "250005150",
+      "decision_timestamp": "2025-10-20T01:34:20+00:00",
+      "source_snapshot_id": "spirax_src_2f6890d52d28d292",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "The unit exhibits a long-standing historical sensor reversal where the blue sensor acts as steam (~86C) and red as condensate (~78C). Following a simultaneous healthy shutdown to 25C on October 19, 2025, the system restarted on October 20 with the steam side warming to ~80C while condensate lagged at ~42C, producing a normal expanded positive delta during warmup."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 19.517740964889526,
+          "stage_durations_seconds": {
+            "retrieve": 0.7649059295654297,
+            "process": 18.749270915985107,
+            "act": 6.794929504394531e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005150",
+        "organization": "Teva Canada - Stouffville",
+        "steam_trap_type": "Thermodynamic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250005354|2026-03-17T11:06:43",
+      "unit_id": "250005354",
+      "decision_timestamp": "2026-03-17T11:06:43+00:00",
+      "source_snapshot_id": "spirax_src_3c5dd903d9de867f",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 0.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": false,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Beginning in late February 2026, the steam temperature progressively degraded from its historical operating baseline of 110-120C down to the condensate baseline of ~94C, leading to a sustained collapse of the temperature delta to near 0C compared to the historical baseline of 15-25C."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam temperature degraded downward toward the condensate baseline while condensate remained flat near 94C, causing the temperature delta to collapse to zero between March 12 and March 16, 2026."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 15.57067584991455,
+          "stage_durations_seconds": {
+            "retrieve": 0.923015832901001,
+            "process": 14.645956039428711,
+            "act": 2.8848648071289062e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005354",
+        "steam_trap_type": "Thermodynamic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250005404|2026-03-13T11:55:27",
+      "unit_id": "250005404",
+      "decision_timestamp": "2026-03-13T11:55:27+00:00",
+      "source_snapshot_id": "spirax_src_e7c985d1e1c0385d",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 0.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": false,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "On 2026-03-11, both steam and condensate temperatures dropped simultaneously from their normal On-state baseline of ~160\u00b0C and ~106\u00b0C (delta ~54\u00b0C) to ~40-80\u00b0C, indicating a system shutdown. A brief recovery back to ~157\u00b0C and ~104\u00b0C re-established the normal ~53\u00b0C delta before both sensors returned to a thermally coupled off-state, confirming healthy trap operation."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 21.285238027572632,
+          "stage_durations_seconds": {
+            "retrieve": 0.7008240222930908,
+            "process": 20.582436084747314,
+            "act": 3.6716461181640625e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005404",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250005500|2026-03-17T06:47:26",
+      "unit_id": "250005500",
+      "decision_timestamp": "2026-03-17T06:47:26+00:00",
+      "source_snapshot_id": "spirax_src_b960593702382b10",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "The temperature sensors are flipped across the full 365-day history, with the true steam side operating at ~162\u00b0C and the true condensate side at ~95\u00b0C. Evaluating with corrected sensor identities shows a stable, healthy temperature differential of ~67\u00b0C leading up to and during the alarm event on March 17, 2026, matching historical baseline operation."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 14.662872076034546,
+          "stage_durations_seconds": {
+            "retrieve": 0.8532981872558594,
+            "process": 13.80660080909729,
+            "act": 0.000102996826171875
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005500",
+        "steam_trap_type": "Thermodynamic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250005501|2024-09-18T17:07:25",
+      "unit_id": "250005501",
+      "decision_timestamp": "2024-09-18T17:07:25+00:00",
+      "source_snapshot_id": "spirax_src_36b92e4e6855c9d6",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 0.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": false,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "Prior to September 17, the unit established a consistent healthy baseline with steam at 106\u00b0C and condensate at 94\u00b0C (maintaining a stable delta of ~12\u00b0C). The drops on September 17 and September 18 represent simultaneous process shutdowns where both sensors dropped within a single data point to ambient (~30\u00b0C), showing healthy thermal coupling and positive delta during the intervening restart."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 19.586199045181274,
+          "stage_durations_seconds": {
+            "retrieve": 0.7622580528259277,
+            "process": 18.818941831588745,
+            "act": 8.988380432128906e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005501",
+        "organization": "St. Annes Hospital",
+        "steam_trap_type": "Float & Thermostatic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250005577|2025-01-24T14:25:40",
+      "unit_id": "250005577",
+      "decision_timestamp": "2025-01-24T14:25:40+00:00",
+      "source_snapshot_id": "spirax_src_cf4ac8f783b8eb2c",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Compared to the historical On-state baseline of approximately 150\u00b0C steam and 90\u00b0C condensate (delta of ~60\u00b0C), the steam temperature steadily degraded from 150\u00b0C down to 85\u00b0C between January 19 and January 22, 2025 while the condensate temperature remained stable near 88\u00b0C, resulting in a complete collapse of the temperature delta."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam-side temperature departed from its baseline first by gradually dropping toward the condensate temperature while the condensate side held steady around 88\u00b0C, causing the delta to collapse."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 15.328563928604126,
+          "stage_durations_seconds": {
+            "retrieve": 0.923954963684082,
+            "process": 14.402068138122559,
+            "act": 3.600120544433594e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005577",
+        "organization": "Evonik",
+        "steam_trap_type": "N/A",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250005605|2025-10-03T01:08:35",
+      "unit_id": "250005605",
+      "decision_timestamp": "2025-10-03T01:08:35+00:00",
+      "source_snapshot_id": "spirax_src_95fad9f3d35feae6",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 0.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": false,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "Prior to the alarm, the trap operated within its historical baseline with steam temperatures between 110\u00b0C and 128\u00b0C and condensate around 100\u00b0C. On October 2, both steam and condensate sensors began a simultaneous rapid drop toward ambient temperatures (~60\u00b0C), which reflects a normal system shutdown rather than a failure."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 18.435744047164917,
+          "stage_durations_seconds": {
+            "retrieve": 0.7390508651733398,
+            "process": 17.69394302368164,
+            "act": 4.100799560546875e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005605",
+        "organization": "CRCHUM",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250005653|2025-10-25T10:09:11",
+      "unit_id": "250005653",
+      "decision_timestamp": "2025-10-25T10:09:11+00:00",
+      "source_snapshot_id": "spirax_src_fcac084c0164c19d",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Compared to the historical baseline On-state delta of 55-60C (steam at ~150C, condensate at ~90C), the unit shows sustained steam temperature degradation following the October 22 restart, with steam dropping down to ~100-120C while condensate remains flat at ~90C."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam side degraded from its 155C peak on October 22 down toward 90C while the condensate side held steady near its 90C baseline, causing a progressive collapse in temperature delta consistent with condensate backing up."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 14.732882022857666,
+          "stage_durations_seconds": {
+            "retrieve": 0.8438482284545898,
+            "process": 13.887010097503662,
+            "act": 4.291534423828125e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005653",
+        "steam_trap_type": "Inverted Bucket",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250005692|2025-10-31T01:39:54",
+      "unit_id": "250005692",
+      "decision_timestamp": "2025-10-31T01:39:54+00:00",
+      "source_snapshot_id": "spirax_src_585be3291662cad1",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "On 2025-10-30, both steam and condensate temperatures dropped simultaneously from their stable baseline levels of ~101\u00b0C and ~95\u00b0C (delta ~5-6\u00b0C), which indicates a normal process shutdown rather than a trap failure."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 13.997827053070068,
+          "stage_durations_seconds": {
+            "retrieve": 0.8305580615997314,
+            "process": 13.163707971572876,
+            "act": 3.910064697265625e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005692",
+        "organization": "St. Jerome Hospital",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250005696|2026-01-13T05:36:58",
+      "unit_id": "250005696",
+      "decision_timestamp": "2026-01-13T05:36:58+00:00",
+      "source_snapshot_id": "spirax_src_33de7ad7d265f59f",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Open Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Compared to the historical baseline from January to October 2025 where steam temperature was consistently above condensate temperature with a positive delta of +20\u00b0C to +30\u00b0C, the temperature delta persistently inverted starting in November 2025 and remained negative through January 2026."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "Starting in November 2025, condensate side temperatures trended upward from their normal baseline of 110\u00b0C\u2013130\u00b0C to around 150\u00b0C, rising above the steam side temperature (~140\u00b0C\u2013145\u00b0C), which indicates live steam blowing through an open trap."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 16.26524329185486,
+          "stage_durations_seconds": {
+            "retrieve": 0.7482337951660156,
+            "process": 15.51486086845398,
+            "act": 6.914138793945312e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005696",
+        "steam_trap_type": "Thermodynamic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250005732|2026-02-17T18:22:10",
+      "unit_id": "250005732",
+      "decision_timestamp": "2026-02-17T18:22:10+00:00",
+      "source_snapshot_id": "spirax_src_c098612d610607a8",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Open Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "The condensate side temperature shows a clear, sustained upward trend starting in early February 2026 from its historical baseline of 100-105C up to over 130C, while steam temperature remains constant at around 170C. This sustained rise causes the temperature delta to shrink from a historical 65-70C down to 40C, which is unprecedented in the 365-day history."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "The condensate temperature independently departed from its historical baseline and trended upward toward the steam temperature beginning around February 5-8, 2026, while the steam side remained steady at operating temperature, indicating live steam leaking through the valve."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 10.616721153259277,
+          "stage_durations_seconds": {
+            "retrieve": 0.8011250495910645,
+            "process": 9.813388109207153,
+            "act": 3.0994415283203125e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005732",
+        "steam_trap_type": "Thermodynamic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "250005883|2025-11-26T17:38:20",
+      "unit_id": "250005883",
+      "decision_timestamp": "2025-11-26T17:38:20+00:00",
+      "source_snapshot_id": "spirax_src_a5f0fba001efa6ec",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 0.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": false,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "On November 14, 2025, both steam and condensate temperatures dropped simultaneously from their historical On-state baseline of ~170\u00b0C steam and ~87\u00b0C condensate into an Off-state period. During a brief steam restart on November 19, 2025, the trap immediately restored its historical baseline delta of ~85\u00b0C, confirming healthy trap performance during process shutdowns and low-load warmup conditions."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 18.669397115707397,
+          "stage_durations_seconds": {
+            "retrieve": 0.7408998012542725,
+            "process": 17.925469160079956,
+            "act": 9.822845458984375e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "250005883",
+        "organization": "Providence Health - BC",
+        "steam_trap_type": "Inverted Bucket",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260000115|2026-03-07T22:07:58",
+      "unit_id": "260000115",
+      "decision_timestamp": "2026-03-07T22:07:58+00:00",
+      "source_snapshot_id": "spirax_src_31c1a4847b4dee5f",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Unknown"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Unknown",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "Low"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Following the restart on 2026-02-27, the trap failed to re-establish its historical healthy baseline of 130\u00b0C steam temperature and +40\u00b0C delta observed in early February 2026. Instead, temperatures remained abnormally low with condensate temperature exceeding steam temperature, maintaining a persistent negative delta through 2026-03-07."
+            },
+            "root_cause": {
+              "value": "Unknown",
+              "confidence": "Low",
+              "explanation": "The failure state with inverted delta emerged fully formed out of a shutdown period starting 2026-02-27, making it ambiguous whether the steam side is failing to admit steam or external/shared line heat is elevating the condensate sensor."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 20.711029052734375,
+          "stage_durations_seconds": {
+            "retrieve": 0.7867887020111084,
+            "process": 19.921369791030884,
+            "act": 5.817413330078125e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260000115",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260000116|2026-01-21T20:14:04",
+      "unit_id": "260000116",
+      "decision_timestamp": "2026-01-21T20:14:04+00:00",
+      "source_snapshot_id": "spirax_src_80ce07423e8c4dbf",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Open Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "During continuous On-state operation at ~140\u00b0C, the temperature delta experienced a persistent and unprecedented collapse from its historical baseline of ~50\u00b0C down to ~20\u00b0C leading up to January 2026."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "Beginning in late November 2025, condensate pipe temperature steadily departed from its ~95\u00b0C baseline and rose toward steam temperature, reaching ~120\u00b0C by January 2026 while steam temperature remained steady at ~140\u00b0C."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 12.419670104980469,
+          "stage_durations_seconds": {
+            "retrieve": 0.7368590831756592,
+            "process": 11.67993688583374,
+            "act": 3.910064697265625e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260000116",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260000143|2026-03-11T01:39:27",
+      "unit_id": "260000143",
+      "decision_timestamp": "2026-03-11T01:39:27+00:00",
+      "source_snapshot_id": "spirax_src_532e96f91f10b948",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "Prior to March 10, 2026, the trap maintained a stable healthy baseline with steam around 150\u00b0C, condensate around 138\u00b0C, and a steady ~14\u00b0C delta. On March 10, 2026, both sensors dropped simultaneously into a process shutdown, where the condensate line retained heat from the shared system, matching healthy shutdown dynamics."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 19.27659010887146,
+          "stage_durations_seconds": {
+            "retrieve": 0.9251747131347656,
+            "process": 18.347897052764893,
+            "act": 4.982948303222656e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260000143",
+        "organization": "Creative Energy",
+        "steam_trap_type": "Inverted Bucket",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260000167|2025-03-02T14:55:43",
+      "unit_id": "260000167",
+      "decision_timestamp": "2025-03-02T14:55:43+00:00",
+      "source_snapshot_id": "spirax_src_6305bd0b7257c86e",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "The unit departed from its established healthy baseline (steam at ~155\u00b0C, condensate at ~110\u00b0C, delta ~+45\u00b0C) on February 16, 2025, when the steam side collapsed to ~92\u00b0C while the condensate side remained elevated near ~110\u00b0C. This created a sustained inverted delta of ~-20\u00b0C for over two weeks, which was not resolved by a brief transient spike on March 2."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The failure was driven by the steam side temperature dropping from ~155\u00b0C to ~92\u00b0C while condensate temperature held steady near its operating baseline of ~110\u00b0C\u2013115\u00b0C. This severe steam-side degradation with condensate remaining elevated is characteristic of condensate backup from a closed failure."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 11.560420989990234,
+          "stage_durations_seconds": {
+            "retrieve": 0.6755530834197998,
+            "process": 10.882866859436035,
+            "act": 3.910064697265625e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260000167",
+        "organization": "Coca Cola - Fairlife",
+        "steam_trap_type": "Thermodynamic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260000170|2026-02-25T01:43:53",
+      "unit_id": "260000170",
+      "decision_timestamp": "2026-02-25T01:43:53+00:00",
+      "source_snapshot_id": "spirax_src_fbc77362ea1483e6",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Unknown"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Unknown",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "Low"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Following a shutdown from Feb 1 to Feb 15, 2026, the unit restarted on Feb 15 with both steam and condensate temperatures converging near 85\u00b0C, producing a near-zero delta. This persistent delta collapse severely deviates from the pre-shutdown healthy On-state baseline of ~130\u00b0C steam and ~80\u00b0C condensate with a stable ~45\u00b0C delta."
+            },
+            "root_cause": {
+              "value": "Unknown",
+              "confidence": "Low",
+              "explanation": "The abnormal zero-delta state appeared fully formed immediately upon system restart on Feb 15, 2026. Because there is no leading trajectory showing whether steam temperature degraded first or condensate temperature rose first, open versus closed failure cannot be conclusively determined."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 20.018308877944946,
+          "stage_durations_seconds": {
+            "retrieve": 0.7824733257293701,
+            "process": 19.23346471786499,
+            "act": 8.916854858398438e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260000170",
+        "steam_trap_type": "N/A",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260000292|2026-03-17T09:02:42",
+      "unit_id": "260000292",
+      "decision_timestamp": "2026-03-17T09:02:42+00:00",
+      "source_snapshot_id": "spirax_src_119a528a8b1bd4d3",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "The steam trap is operating normally, displaying its established pattern of transitioning from steady high load (~96\u00b0C steam with ~13\u00b0C delta) into thermal modulation where steam and condensate cycle in unison between 45\u00b0C and 85\u00b0C with a healthy positive average delta of ~5\u00b0C. This behavior matches the unit's recurring 365-day historical operating baseline."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 14.697243928909302,
+          "stage_durations_seconds": {
+            "retrieve": 0.7216441631317139,
+            "process": 13.972352981567383,
+            "act": 0.00011086463928222656
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260000292",
+        "steam_trap_type": "Float & Thermostatic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260000374|2025-04-20T07:04:26",
+      "unit_id": "260000374",
+      "decision_timestamp": "2025-04-20T07:04:26+00:00",
+      "source_snapshot_id": "spirax_src_66af788fb71cf0b0",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Starting around April 11, 2025, the steam temperature degraded from its long-standing baseline of ~153\u00b0C down toward ~90\u00b0C, causing the temperature delta to collapse from ~75\u00b0C to ~20\u201330\u00b0C over a multi-day period."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam side began degrading first on April 11 while the condensate side initially held steady near its normal ~75\u201378\u00b0C operating baseline, causing the delta to collapse as condensate backed up behind a failing/blocked trap."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 15.759341955184937,
+          "stage_durations_seconds": {
+            "retrieve": 0.9127979278564453,
+            "process": 14.84458875656128,
+            "act": 3.2901763916015625e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260000374",
+        "organization": "Invista Inc. - Maitland, ON",
+        "steam_trap_type": "N/A",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260000478|2025-10-15T18:45:05",
+      "unit_id": "260000478",
+      "decision_timestamp": "2025-10-15T18:45:05+00:00",
+      "source_snapshot_id": "spirax_src_4ddc916fbe26ff1d",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Between October 1 and October 4, 2025, the trap established a healthy operating baseline with steam at ~155\u00b0C and condensate at ~112\u00b0C (delta ~43\u00b0C). From October 5 through October 15, 2025, the delta collapsed to ~0\u00b0C as both sensors equalized around 122\u00b0C during active operation, demonstrating a sustained failure state."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "On October 4\u20135, 2025, condensate temperature increased sharply from its historical baseline of ~112\u00b0C up to ~132\u00b0C and equalized with steam temperature. This elevation of condensate side temperature to match steam indicates an open failure blowing live steam into the condensate return line."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 19.468268871307373,
+          "stage_durations_seconds": {
+            "retrieve": 0.7594668865203857,
+            "process": 18.705053091049194,
+            "act": 7.104873657226562e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260000478",
+        "organization": "Cortellucci Vaughan Hospital",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260000499|2025-03-03T10:50:22",
+      "unit_id": "260000499",
+      "decision_timestamp": "2025-03-03T10:50:22+00:00",
+      "source_snapshot_id": "spirax_src_54f4ea569590d931",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Beginning around 2025-02-26, the steam temperature steadily degraded from its established ~140\u00b0C baseline down to ~120\u00b0C while condensate held flat at ~107\u00b0C, causing the temperature delta to collapse from ~35\u00b0C down to ~10-15\u00b0C."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam side degraded first while the condensate side remained steady at its operating baseline, indicating condensate backup and loss of steam flow characteristic of a closed trap failure before overall system temperatures further declined around 2025-03-03."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 12.744796752929688,
+          "stage_durations_seconds": {
+            "retrieve": 0.6686880588531494,
+            "process": 12.073984861373901,
+            "act": 2.8848648071289062e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260000499",
+        "organization": "Cortellucci Vaughan Hospital",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260000510|2025-10-09T23:50:11",
+      "unit_id": "260000510",
+      "decision_timestamp": "2025-10-09T23:50:11+00:00",
+      "source_snapshot_id": "spirax_src_bf209cc970d2435b",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Unknown"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Starting on October 4, 2025, the trap entered a persistent abnormal state where the temperature delta reduced from its historical baseline of ~43\u00b0C down to ~22\u00b0C, before fully collapsing into a negative delta during a steam drop on October 9. This sustained departure from the established healthy baseline confirms a failure."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "The earliest sustained break from baseline occurred on October 4, 2025, when the condensate temperature stepped up independently from ~115\u00b0C to ~136\u00b0C toward the steady ~158\u00b0C steam side. This condensate-led rise toward steam temperature is characteristic of an open failure."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 13.406214237213135,
+          "stage_durations_seconds": {
+            "retrieve": 0.6274592876434326,
+            "process": 12.775838851928711,
+            "act": 9.393692016601562e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260000510",
+        "organization": "Cortellucci Vaughan Hospital",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260000701|2026-03-16T17:55:13",
+      "unit_id": "260000701",
+      "decision_timestamp": "2026-03-16T17:55:13+00:00",
+      "source_snapshot_id": "spirax_src_e3d98d77c26b829e",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 0.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": false,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Starting on March 15, 2026, the steam temperature degraded from its historical baseline of ~160\u00b0C down to 120\u2013130\u00b0C while condensate stayed elevated near ~85\u00b0C, causing the delta to collapse from ~68\u00b0C to ~38\u00b0C for over 24 hours prior to a complete system shutdown on March 16."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The failure was initiated by the steam-side temperature dropping and oscillating significantly while condensate maintained its baseline level, resulting in a severe delta collapse characteristic of steam-side restriction or condensate backing up."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 17.310633897781372,
+          "stage_durations_seconds": {
+            "retrieve": 0.6912591457366943,
+            "process": 16.615965127944946,
+            "act": 6.222724914550781e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260000701",
+        "organization": "Invista Inc. - Maitland, ON",
+        "steam_trap_type": "N/A",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260000953|2026-02-18T20:16:00",
+      "unit_id": "260000953",
+      "decision_timestamp": "2026-02-18T20:16:00+00:00",
+      "source_snapshot_id": "spirax_src_b2700826069f71b0",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Unknown",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "Low"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "The steam-minus-condensate temperature delta persistently collapsed from its historical baseline of 10-12\u00b0C down to 1-2\u00b0C starting after a shutdown on February 4, 2026, and remained collapsed through the alarm timestamp on February 18, 2026."
+            },
+            "root_cause": {
+              "value": "Unknown",
+              "confidence": "Low",
+              "explanation": "Following the February 4, 2026 restart, steam and condensate temperatures converged to approximately 95\u00b0C with a collapsed delta, making it ambiguous whether the failure was driven by open blow-through or closed condensate backup."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 21.916206121444702,
+          "stage_durations_seconds": {
+            "retrieve": 0.7067480087280273,
+            "process": 21.207385063171387,
+            "act": 4.100799560546875e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260000953",
+        "steam_trap_type": "Float & Thermostatic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260001111|2026-03-17T02:35:35",
+      "unit_id": "260001111",
+      "decision_timestamp": "2026-03-17T02:35:35+00:00",
+      "source_snapshot_id": "spirax_src_7f7333fd644cc9ad",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "The unit exhibits normal process cycling consistent with its 365-day historical baseline, reaching typical operating temperatures of ~100-110 C steam and ~90-100 C condensate. During process cooldowns, including around the March 17, 2026 alarm, both steam and condensate sensors drop simultaneously within 30 minutes, demonstrating healthy thermal coupling and expected system behavior."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 19.454483032226562,
+          "stage_durations_seconds": {
+            "retrieve": 0.7588851451873779,
+            "process": 18.69369602203369,
+            "act": 3.504753112792969e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260001111",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260001345|2026-01-30T02:44:00",
+      "unit_id": "260001345",
+      "decision_timestamp": "2026-01-30T02:44:00+00:00",
+      "source_snapshot_id": "spirax_src_05401d7173550484",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Open Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Starting around January 21, 2026, the condensate temperature rose from its historical baseline of ~102\u00b0C to ~125\u00b0C while steam temperature remained steady at ~139\u00b0C, causing the temperature delta to persistently collapse from ~37\u00b0C to ~12-15\u00b0C."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "The condensate side moved upward toward the steam temperature while the steam side remained unchanged at operating levels, indicating live steam leakage passing through a trap failing open."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 14.618488073348999,
+          "stage_durations_seconds": {
+            "retrieve": 0.6182956695556641,
+            "process": 13.997878074645996,
+            "act": 3.0040740966796875e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260001345",
+        "steam_trap_type": "Thermodynamic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260001377|2026-03-03T06:04:25",
+      "unit_id": "260001377",
+      "decision_timestamp": "2026-03-03T06:04:25+00:00",
+      "source_snapshot_id": "spirax_src_f2310494a9461908",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Open Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "From July 2025 through February 2026, the trap maintained a consistent baseline delta of ~30\u00b0C with steam at ~155\u00b0C and condensate at ~126\u00b0C. Around February 25, 2026, the condensate temperature persistently rose to ~138\u00b0C while steam stayed at ~155\u00b0C, resulting in a sustained delta collapse to ~17\u00b0C."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "The condensate side increased independently toward the steam side around February 24-25, 2026, while the steam side remained steady at its normal operating baseline of ~155\u00b0C."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 13.612700939178467,
+          "stage_durations_seconds": {
+            "retrieve": 0.7411799430847168,
+            "process": 12.869341135025024,
+            "act": 4.1961669921875e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260001377",
+        "steam_trap_type": "Thermodynamic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260001438|2026-03-08T00:24:00",
+      "unit_id": "260001438",
+      "decision_timestamp": "2026-03-08T00:24:00+00:00",
+      "source_snapshot_id": "spirax_src_6e0b0be83e95eff6",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 0.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": false,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Compared to the healthy baseline in early 2025 where both sensors operated near 130\u00b0C with a balanced delta, the steam side degraded to 95\u2013100\u00b0C starting in September 2025 while condensate maintained 130\u00b0C, creating a sustained negative delta. In early March 2026, condensate remains elevated near 60\u00b0C from shared line heating while the steam side remains cold at ambient temperature (~25\u00b0C)."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The failure was initiated by the steam side temperature dropping from 130\u00b0C down to ~95\u2013100\u00b0C while the condensate side held steady at 130\u00b0C, causing a severe delta collapse. This pattern of steam-side temperature degradation relative to condensate indicates condensate backup and steam blockage within the trap."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 20.224801063537598,
+          "stage_durations_seconds": {
+            "retrieve": 0.8172769546508789,
+            "process": 19.404932260513306,
+            "act": 8.893013000488281e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260001438",
+        "organization": "Corru-Kraft - Buena Park",
+        "steam_trap_type": "Ball float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260001535|2025-12-09T15:37:41",
+      "unit_id": "260001535",
+      "decision_timestamp": "2025-12-09T15:37:41+00:00",
+      "source_snapshot_id": "spirax_src_8fecd27763fe8699",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "The trap departed from its healthy baseline of 112\u00b0C steam and 92\u00b0C condensate (20\u00b0C delta) on December 8 when steam temperature dropped to 84-90\u00b0C while condensate remained elevated at 92\u00b0C, resulting in a persistent negative delta prior to a system shutdown."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam side degraded first, falling from 112\u00b0C to 84\u00b0C while condensate held steady at 92\u00b0C, followed by steam plunging to ambient temperatures hours ahead of condensate."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 16.190696954727173,
+          "stage_durations_seconds": {
+            "retrieve": 0.6352448463439941,
+            "process": 15.553200721740723,
+            "act": 3.409385681152344e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260001535",
+        "steam_trap_type": "Bucket trap",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260001642|2026-03-17T11:12:07",
+      "unit_id": "260001642",
+      "decision_timestamp": "2026-03-17T11:12:07+00:00",
+      "source_snapshot_id": "spirax_src_96aff8c3bd70aec8",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "The trap demonstrates normal operation, with steam holding around 100-102\u00b0C and condensate returning to 68-75\u00b0C following a brief simultaneous drop on March 17, re-establishing a healthy delta of 25-28\u00b0C consistent with historical baseline patterns."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 19.20024585723877,
+          "stage_durations_seconds": {
+            "retrieve": 1.8984320163726807,
+            "process": 17.300102949142456,
+            "act": 3.886222839355469e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260001642",
+        "steam_trap_type": "Float",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260001742|2025-10-17T20:23:09",
+      "unit_id": "260001742",
+      "decision_timestamp": "2025-10-17T20:23:09+00:00",
+      "source_snapshot_id": "spirax_src_a430b2d0e98f0bf7",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Open Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "The trap entered an abnormal operating state starting around October 10, 2025, where the temperature delta collapsed from its healthy baseline of +50\u00b0C down to near zero while steam remained at full operating temperature around 157\u00b0C."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "The failure was driven by the condensate temperature rising independently from its baseline of 100-110\u00b0C up to match and slightly exceed the steam temperature at 160\u00b0C, indicating live steam blowing through the valve."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 15.52895474433899,
+          "stage_durations_seconds": {
+            "retrieve": 0.763085126876831,
+            "process": 14.764314889907837,
+            "act": 5.316734313964844e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260001742",
+        "steam_trap_type": "Thermodynamic",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260002518|2025-11-20T20:16:19",
+      "unit_id": "260002518",
+      "decision_timestamp": "2025-11-20T20:16:19+00:00",
+      "source_snapshot_id": "spirax_src_85b07bc14e7e645e",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Open Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "The trap departed from its normal operating baseline of ~150C steam, ~85C condensate, and ~60C delta starting November 17, as condensate temperatures rose to meet steam temperatures around 150C-155C by November 19-20, collapsing the delta to zero."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "Beginning November 17, the condensate side departed from its baseline and steadily rose toward the ~150C steam temperature while steam temperature remained elevated, characteristic of live steam blowing through an open trap valve."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 12.73379397392273,
+          "stage_durations_seconds": {
+            "retrieve": 0.549705982208252,
+            "process": 12.182939052581787,
+            "act": 2.6941299438476562e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260002518",
+        "steam_trap_type": "Inverted Bucket",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260002680|2026-03-12T14:21:29",
+      "unit_id": "260002680",
+      "decision_timestamp": "2026-03-12T14:21:29+00:00",
+      "source_snapshot_id": "spirax_src_f0a1a4d94df7e1cb",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 0.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": false,
+            "root_cause": false
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Compared to the healthy historical baseline from September to November 2025 where steam operated at 35-60\u00b0C and condensate at 20-40\u00b0C with a positive delta near +15\u00b0C, the unit entered a sustained abnormal operating state in December 2025. Condensate temperature elevated to ~102\u00b0C while steam remained at ~90\u00b0C, creating a persistent negative delta of -12\u00b0C that continued through March 2026."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "The failure is open because the condensate side departed from baseline first in December 2025, stepping up to ~102\u00b0C and surpassing the steam temperature as live steam blew directly into the condensate line. This inverted delta persisted for over three months, and condensate temperature again trends upward toward steam at the end of the observed period in March 2026."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 41.73649597167969,
+          "stage_durations_seconds": {
+            "retrieve": 0.6265013217926025,
+            "process": 41.108153104782104,
+            "act": 2.6226043701171875e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260002680",
+        "steam_trap_type": "Inconnu",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260002782|2026-02-20T17:32:41",
+      "unit_id": "260002782",
+      "decision_timestamp": "2026-02-20T17:32:41+00:00",
+      "source_snapshot_id": "spirax_src_0b7b83aa9fa331c2",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Open Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Open Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Starting on February 18, 2026, the steam-minus-condensate temperature delta collapsed from its historical baseline of 50-60\u00b0C down to around 17\u00b0C while the steam line remained at full operating temperature (~148-150\u00b0C)."
+            },
+            "root_cause": {
+              "value": "Open Failure",
+              "confidence": "High",
+              "explanation": "The failure was driven by the condensate temperature rising sharply from its typical ~95-100\u00b0C baseline up to ~130\u00b0C toward the steam line temperature while steam remained steady, indicating live steam blowing through the open trap."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 13.015329122543335,
+          "stage_durations_seconds": {
+            "retrieve": 0.7471420764923096,
+            "process": 12.2658109664917,
+            "act": 0.00011277198791503906
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260002782",
+        "steam_trap_type": "FIO",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260002797|2026-02-08T06:26:07",
+      "unit_id": "260002797",
+      "decision_timestamp": "2026-02-08T06:26:07+00:00",
+      "source_snapshot_id": "spirax_src_8934128bfa059272",
+      "expected_labels": {
+        "classification": "Failure",
+        "root_cause": "Closed Failure"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "Closed Failure",
+            "classification": "Failure"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Failure",
+              "confidence": "High",
+              "explanation": "Starting in late January 2026, steam temperature dropped sharply from its historical baseline of 110-115C down to 90-95C while condensate temperature remained around 100C. This resulted in a persistent inverted delta of -5C to -10C leading up to the alarm date of February 8, 2026."
+            },
+            "root_cause": {
+              "value": "Closed Failure",
+              "confidence": "High",
+              "explanation": "The steam side temperature degraded significantly while condensate held steady near 100C, causing the temperature delta to collapse and invert as condensate backed up behind the trap."
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 13.582498788833618,
+          "stage_durations_seconds": {
+            "retrieve": 0.6520068645477295,
+            "process": 12.928257703781128,
+            "act": 5.030632019042969e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260002797",
+        "steam_trap_type": "Inverted Bucket",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260002816|2026-03-17T11:08:17",
+      "unit_id": "260002816",
+      "decision_timestamp": "2026-03-17T11:08:17+00:00",
+      "source_snapshot_id": "spirax_src_b82766d4a774de77",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "The unit operates in a batch process where the ON-state baseline maintains steam around 155\u00b0C, condensate around 135-140\u00b0C, and a healthy delta of 15-20\u00b0C. The shutdown on March 14 showed both sensors dropping rapidly and simultaneously to ambient, followed by a normal restart on March 16 that returned directly to the established healthy operating baseline."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 15.42711591720581,
+          "stage_durations_seconds": {
+            "retrieve": 0.5965590476989746,
+            "process": 14.829269886016846,
+            "act": 3.1948089599609375e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260002816",
+        "steam_trap_type": "N/A",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260003042|2026-03-17T04:39:09",
+      "unit_id": "260003042",
+      "decision_timestamp": "2026-03-17T04:39:09+00:00",
+      "source_snapshot_id": "spirax_src_e7c605e5b93dcb86",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "Following a brief process shutdown on March 14\u201315, the trap fully recovered to its normal operating baseline of ~133\u00b0C steam, ~93\u00b0C condensate, and a ~40\u00b0C delta, maintaining stable operation for over 30 hours prior to the alarm. Similar temporary shutdown events occurred in late February and early March with identical full recoveries, confirming this is normal recurring process behavior."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 19.706188201904297,
+          "stage_durations_seconds": {
+            "retrieve": 0.7034296989440918,
+            "process": 19.00097894668579,
+            "act": 3.0994415283203125e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260003042",
+        "steam_trap_type": "Inverted bucket",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260003441|2026-03-17T08:58:12",
+      "unit_id": "260003441",
+      "decision_timestamp": "2026-03-17T08:58:12+00:00",
+      "source_snapshot_id": "spirax_src_53e3b84564cbb2f4",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "The steam trap operates at its normal healthy baseline (~157\u00b0C steam, ~98\u00b0C condensate, ~58\u00b0C delta) at the alarm timestamp on March 17, 2026. The temporary drops in steam temperature with elevated condensate represent recurring process shutdown events observed historically (e.g., late January, late February, and early March 2026), after each of which the trap consistently recovers to its stable operating state."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 16.36658811569214,
+          "stage_durations_seconds": {
+            "retrieve": 0.6030497550964355,
+            "process": 15.762386322021484,
+            "act": 2.9087066650390625e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260003441",
+        "steam_trap_type": "Inverted bucket",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    },
+    {
+      "example_id": "260003552|2026-03-17T04:38:26",
+      "unit_id": "260003552",
+      "decision_timestamp": "2026-03-17T04:38:26+00:00",
+      "source_snapshot_id": "spirax_src_c51eaa9b7d34feeb",
+      "expected_labels": {
+        "classification": "Healthy",
+        "root_cause": "N/A"
+      },
+      "classification_accuracy": 1.0,
+      "runs": [
+        {
+          "run_index": 1,
+          "status": "succeeded",
+          "actual_labels": {
+            "root_cause": "N/A",
+            "classification": "Healthy"
+          },
+          "label_correctness": {
+            "classification": true,
+            "root_cause": true
+          },
+          "confidence": {
+            "classification": "High",
+            "root_cause": "High"
+          },
+          "ai_output": {
+            "classification": {
+              "value": "Healthy",
+              "confidence": "High",
+              "explanation": "During active operation around March 16-17, 2026, the steam temperature reaches ~135\u00b0C and condensate stays near ~90\u00b0C, maintaining a stable positive delta of 35-45\u00b0C consistent with the unit's historical operating baseline established in January 2026."
+            },
+            "root_cause": {
+              "value": "N/A",
+              "confidence": "High",
+              "explanation": "N/A"
+            }
+          },
+          "success": true,
+          "failure_type": null,
+          "error": null,
+          "failure_details": null,
+          "duration_seconds": 14.93249797821045,
+          "stage_durations_seconds": {
+            "retrieve": 0.591372013092041,
+            "process": 14.33942723274231,
+            "act": 5.507469177246094e-05
+          }
+        }
+      ],
+      "metadata": {
+        "sensor_id": "260003552",
+        "steam_trap_type": "Inverted bucket",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      }
+    }
+  ]
+}

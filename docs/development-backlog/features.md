@@ -107,3 +107,8 @@ Open design questions:
   semantics.
 - Minimum adapter contract for Microsoft Foundry and customer-developed
   runtimes.
+
+## Link the frozen benchmark version to a frozen agent version
+- Need to have a mechanism to version agents (similar to benchmark versioning)
+- Eval results need to reference each benchmark and agent version (along with the other configs such as model). Both the benchmark and agent version will evolve over time, so we need to keep frozen copies for as long as needed (FDE will selectively delete old eval results and agent versions as the agents and benchmarks improve)
+
