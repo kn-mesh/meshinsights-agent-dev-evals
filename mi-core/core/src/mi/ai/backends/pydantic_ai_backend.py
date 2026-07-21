@@ -52,9 +52,7 @@ class PydanticAIBackend(AIBackend):
     """Executes mi.ai requests via pydantic-ai."""
 
     BACKEND_NAME = "pydantic_ai"
-    _RETRYABLE_STATUS_CODES = frozenset(
-        {408, 409, 429, 500, 502, 503, 504, 507}
-    )
+    _RETRYABLE_STATUS_CODES = frozenset({408, 409, 429, 500, 502, 503, 504, 507})
 
     def __init__(self) -> None:
         self._retrying_http_clients: dict[int, httpx.AsyncClient] = {}
@@ -191,6 +189,9 @@ class PydanticAIBackend(AIBackend):
                 requests=usage.requests,
                 input_tokens=usage.input_tokens,
                 output_tokens=usage.output_tokens,
+                cached_input_tokens=getattr(usage, "cache_read_tokens", 0) or 0,
+                reasoning_tokens=self._reasoning_tokens(getattr(usage, "details", {})),
+                tool_calls=getattr(usage, "tool_calls", 0) or 0,
             ),
         )
 
@@ -736,6 +737,9 @@ class PydanticAIBackend(AIBackend):
             requests=1,
             input_tokens=getattr(req_usage, "input_tokens", 0) or 0,
             output_tokens=getattr(req_usage, "output_tokens", 0) or 0,
+            cached_input_tokens=getattr(req_usage, "cache_read_tokens", 0) or 0,
+            reasoning_tokens=self._reasoning_tokens(getattr(req_usage, "details", {})),
+            output_validation_attempts=1,
         )
 
     def _combine_usage(self, current: AIUsage, additional: AIUsage) -> AIUsage:
@@ -744,4 +748,26 @@ class PydanticAIBackend(AIBackend):
             requests=current.requests + additional.requests,
             input_tokens=current.input_tokens + additional.input_tokens,
             output_tokens=current.output_tokens + additional.output_tokens,
+            cached_input_tokens=(
+                current.cached_input_tokens + additional.cached_input_tokens
+            ),
+            reasoning_tokens=current.reasoning_tokens + additional.reasoning_tokens,
+            tool_calls=current.tool_calls + additional.tool_calls,
+            output_validation_attempts=(
+                current.output_validation_attempts
+                + additional.output_validation_attempts
+            ),
+        )
+
+    @staticmethod
+    def _reasoning_tokens(details: Any) -> int:
+        if not isinstance(details, dict):
+            return 0
+        return sum(
+            int(value)
+            for key, value in details.items()
+            if "reasoning" in str(key).lower()
+            and isinstance(value, int)
+            and not isinstance(value, bool)
+            and value > 0
         )

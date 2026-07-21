@@ -28,3 +28,6 @@ wheels/
 # caches
 .ruff_cache/
 .pytest_cache/
+
+# Local immutable agent-version manifests and content-addressed objects
+/agent_versions/

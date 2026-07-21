@@ -338,6 +338,7 @@ def test_workflow_retries_output_validation_separately_from_transport(
         requests=2,
         input_tokens=20,
         output_tokens=6,
+        output_validation_attempts=2,
     )
 
 

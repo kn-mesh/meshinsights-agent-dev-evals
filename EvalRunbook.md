@@ -11,9 +11,11 @@ examples. This command evaluates every example once:
 
 ```bash
 uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
+  --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
   --project-key spirax-pulse \
   --benchmark-key phase-1-benchmark-3fb7f544 \
   --benchmark-version 1 \
+  --all-examples \
   --ai-model azure:gpt-5.6-luna \
   --ai-reasoning-effort medium \
   --runs-per-example 1 \
@@ -27,15 +29,17 @@ smoke-run pattern below when validating a new pipeline or model configuration.
 
 ## Prefer The Explicit Command
 
-Pass the benchmark, version, model, and execution settings explicitly. This
-skips the slow interactive benchmark-catalog query and makes the run
-reproducible.
+Pass the evaluation profile, benchmark, version, model, and execution settings
+explicitly. This skips the slow interactive benchmark-catalog query and makes
+the run reproducible.
 
 ```bash
 uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
+  --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
   --project-key spirax-pulse \
   --benchmark-key <published-benchmark-key> \
   --benchmark-version <version-number> \
+  --all-examples \
   --ai-model <provider:model> \
   --ai-reasoning-effort <low|medium|high> \
   --runs-per-example <count> \
@@ -46,13 +50,32 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
 
 Replace every angle-bracket placeholder. Choose `--ai-model` from
 `models.yaml`. Keep `--benchmark-version` explicit for comparable runs;
-omitting it selects the latest published version.
+the non-interactive CLI requires it rather than silently selecting latest.
 
-`models.yaml` currently declares `azure:gpt-5.6-luna` as the default model and
-routes it through the `openai_responses` API family. Omitting `--ai-model`
-selects that catalog default, but explicit commands should still include
-`--ai-model azure:gpt-5.6-luna` so the persisted run configuration and operator
-intent are immediately clear.
+Every run automatically resolves the matching
+`agent_version_configs/<pipeline-stem>.agent.yaml`, creates an immutable
+candidate manifest, and writes it beside the durable run. Use
+`--agent-version-id av_<hash>` or `--require-promoted-agent-version` when a run
+must use content already promoted into the local catalog. `--agent-version` is
+retained only as a deprecated display label and is not identity.
+
+Promote a useful completed run without resolving the current checkout again:
+
+```bash
+uv run python -m src.agent_versions.cli promote \
+  --from-run eval_<run-id> \
+  --alias <human-readable-alias>
+```
+
+Use `src.agent_versions.cli inspect`, `verify`, and `reconstruct` to audit a
+promoted version. Promotion defaults to a clean version surface; pass
+`--dirty-policy capture` explicitly when promoting current dirty pipeline work.
+
+`models.yaml` currently declares `azure:gpt-5.6-luna` as the interactive
+default model and routes it through the `openai_responses` API family.
+Non-interactive execution requires `--ai-model` (or `--compare-model`) and an
+explicit reasoning setting, including `default` when provider defaults are
+intentional.
 
 Do not replace `<provider:model>` with the catalog default merely because it is
 listed. Confirm that the current runtime adapter supports the entry's `api`
@@ -65,6 +88,7 @@ Run one known example serially before evaluating the full benchmark:
 
 ```bash
 uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
+  --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
   --project-key spirax-pulse \
   --benchmark-key <published-benchmark-key> \
   --benchmark-version <version-number> \
@@ -87,21 +111,30 @@ combined as an intersection.
 
 - `--example-ids <id> [<id> ...]`: exact immutable benchmark examples.
 - `--unit-ids <id> [<id> ...]`: every selected example for those units.
-- `--classifications <label> [<label> ...]`: examples with those approved
-  classification labels.
-- `--root-causes <label> [<label> ...]`: examples with those approved root-cause
-  labels. Quote values containing spaces, such as `--root-causes 'Open Failure'`.
-- No scope flag: every example in the selected benchmark version.
+- `--label-filter 'path=<json-scalar>'`: examples whose immutable benchmark
+  label at `path` matches the JSON value. Repeat it to accept multiple values
+  for one path. Quote string values, for example
+  `--label-filter 'root_cause="Open Failure"'`.
+- `--slice <slice-key>`: examples in a named slice from the selected evaluation
+  profile. Repeat it to select the union of multiple slices.
+- `--agent-version <version>`: persist the stable agent/package revision used
+  for cross-result grouping when one exists.
+- `--dimension 'key=<json-scalar>'`: persist a project-relevant configuration
+  dimension such as `--dimension 'prompt_revision=7'`. Repeat for additional
+  grouping dimensions; keys must be unique.
+- `--all-examples`: every example in the selected benchmark version. The
+  non-interactive CLI requires this flag or one of the filters above.
 
 For example, run every approved Open Failure example once with the catalog
 default model:
 
 ```bash
 uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
+  --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
   --project-key spirax-pulse \
   --benchmark-key phase-1-benchmark-3fb7f544 \
   --benchmark-version 1 \
-  --root-causes 'Open Failure' \
+  --slice open-failure \
   --ai-model azure:gpt-5.6-luna \
   --ai-reasoning-effort medium \
   --runs-per-example 1 \
@@ -140,20 +173,49 @@ The command prints the exact result file when it completes. For `v1_3`, files
 are written under:
 
 ```text
-eval_results/v1_3/<benchmark-key>/v<version>/<scope>/*.json
+eval_results/v1_3/<benchmark-key>/v<version>/runs/<run-id>/
+  manifest.json
+  attempts/<prefix>/<work-item-id>.<generation>.json
+  invocations/<invocation-id>.<event>.json
+  result.json
 ```
 
-Confirm `run_config` records the intended benchmark version, model, reasoning
-effort, runtime, worker count, and run count before comparing results.
+The run ID deterministically hashes the resolved source-content manifest,
+pipeline, benchmark, profile/graders, model, reasoning, scope, repetitions,
+runtime, worker limit, error policy, and configuration dimensions. Running the
+identical command again resumes that run and does not duplicate completed work.
 
-Result schema version 2 separates the summary into `accuracy`, `reliability`,
-and `performance`. Accuracy includes only runs that completed successfully and
-produced the entire required structured-output contract. Provider, pipeline,
-timeout, cancellation, and receipt-contract failures are reported under
-`reliability` and excluded from accuracy denominators. `performance` records
-wall time, throughput, run-duration statistics, and available stage timings.
-Confidence coverage and High/Low accuracy are emitted for outputs whose agent
-contract declares optional confidence.
+`manifest.json` and immutable attempt generations are the recovery source of
+truth. `result.json` is an atomically rebuilt schema-v3 view. Confirm
+`run_config` records the intended run ID and conditions before comparison.
+
+Result schema version 3 separates the summary into `accuracy`, `reliability`,
+`scoring_coverage`, and `performance`. Accuracy includes only runs with a valid
+configured output contract whose deterministic graders all completed.
+Provider, pipeline, timeout, cancellation, identity, missing, malformed,
+partial-output, and grader failures remain fully recorded but are excluded from
+accuracy denominators. `scoring_coverage` shows how many planned attempts
+reached grading, while `reliability` reports execution and output-contract
+status counts. `performance` records wall time, throughput, run-duration
+statistics, and available stage timings.
+
+`summary.execution_recovery` records logical slots, missing work, total
+execution generations, and selected reruns. `summary.usage`, `summary.retries`,
+and `summary.cost` retain availability explicitly. Current receipts preserve
+model requests, input/output/cache/reasoning tokens, tool calls, and direct
+workflow output attempts when reported. HTTP transport-attempt counts and
+provider-billed cost remain `unavailable` when the backend does not expose
+them; configured limits are never presented as observations.
+
+`run_config.evaluation_profile` records the profile ID, version, and content
+hash. Each result preserves the complete published `benchmark_labels`, even
+when the profile grades only a subset. Per-attempt `fields` record
+applicability, expected and actual values, confidence, grader identity,
+normalization, and correctness.
+
+CLI exit codes are `0` for a fully scored completion, `2` for argument/preflight
+errors, `3` when durable execution completes with terminal unscored work, `4`
+for storage-integrity failure, and `130` for operator interruption.
 
 ## Reliability And Transient Failures
 
@@ -167,8 +229,77 @@ Persisted `run_config.ai_execution_policies` records the effective timeout and
 retry policy for every AI processor. Failed runs also include
 `failure_details`, with the failed stage, pipeline and stage correlation IDs,
 and a bounded exception chain. Use `summary.reliability.failures_by_type` to
-separate `timeout`, `transport_error`, `provider_error`, and pipeline or receipt
-contract failures. Operationally failed runs remain excluded from accuracy.
+separate `timeout`, `transport_error`, `provider_error`, pipeline,
+`receipt_identity_error`, `output_missing`, `output_malformed`,
+`output_partial`, and `grader_error` outcomes. All remain excluded from
+valid-run accuracy.
+
+## Resume And Selective Rerun
+
+Every terminal attempt is committed immediately. After interruption, rerun the
+same explicit command: default `--resume-mode missing` executes only logical
+slots without a terminal generation.
+
+- `--resume-mode missing-or-cancelled` includes stop-on-error cancellations.
+- `--resume-mode failed` creates a new immutable generation only for failed or
+  cancelled slots.
+- `--resume-mode missing-or-failed` recovers all unhealthy/incomplete slots.
+- `--rerun-failure-type provider_error` narrows a failed mode to one category.
+- `--run-id eval_<hash>` fails if resolved conditions do not match that run.
+
+A valid but incorrect answer is completed model work and is never selected by a
+failed rerun. Earlier generations remain immutable; only the latest generation
+represents that logical repetition in result metrics.
+
+Use `--dry-run` for full identity/preflight/work selection without model
+execution. Use the original explicit settings plus `--materialize-only` to
+rebuild `result.json` without executing work.
+
+Inspect local durable state without Azure or provider bootstrap:
+
+```bash
+uv run python -m src.evals.eval_orchestration \
+  --status-run-id eval_<hash>
+```
+
+## Model And Configuration Comparison
+
+Add one or more `--compare-model` flags to an explicit command to execute child
+runs with identical non-model conditions and create a comparison manifest:
+
+```bash
+uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
+  --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
+  --project-key spirax-pulse \
+  --benchmark-key phase-1-benchmark-3fb7f544 \
+  --benchmark-version 1 \
+  --all-examples \
+  --ai-model azure:gpt-5.6-luna \
+  --compare-model azure:gpt-5.6-terra \
+  --compare-model azure:gpt-5.6-sol \
+  --ai-reasoning-effort high \
+  --runs-per-example 3 \
+  --runtime threaded \
+  --max-workers 4 \
+  --error-action continue
+```
+
+Comparisons are written under `v<version>/comparisons/`. Undeclared dimension
+changes, mismatched scope, and mismatched repetition counts fail closed.
+
+Compare existing deterministic results with explicitly allowed differences:
+
+```bash
+uv run python -m src.evals.eval_orchestration \
+  --compare-result <first-result.json> \
+  --compare-result <second-result.json> \
+  --varying-dimension model.id
+```
+
+Declare every allowed difference, such as `model.provider`,
+`model.reasoning_effort`, `pipeline.content_sha256`, or
+`configuration.<key>`. This prevents prompt, evidence, tool, scoring, runtime,
+or harness changes from being presented as model-only comparisons.
 
 ## Fast Diagnosis
 
@@ -176,8 +307,8 @@ contract failures. Operationally failed runs remain excluded from accuracy.
 - `Retrieving published benchmarks...` means `--benchmark-key` was omitted.
 - A `400` mentioning `/v1/responses` means the chosen model requires the
   Responses API but the runtime sent Chat Completions.
-- Interrupting a threaded run can produce worker and tracing shutdown output;
-  that output is secondary to the first pipeline or model error above it.
+- Interrupting a run can produce worker and tracing shutdown output. Completed
+  attempts are already durable; rerun the identical command for missing slots.
 
 Use `uv run python -m src.evals.eval_orchestration --help` to verify the current
 CLI flags if code and this runbook diverge.

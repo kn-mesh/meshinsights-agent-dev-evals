@@ -57,3 +57,25 @@ def test_catalog_requires_api_metadata_for_every_model(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match=r"models\[0\]\.api"):
         load_model_catalog(path)
+
+
+def test_catalog_loads_versioned_optional_pricing(tmp_path: Path) -> None:
+    path = tmp_path / "models.yaml"
+    path.write_text(
+        "default_model: azure:new-model\n"
+        "models:\n"
+        "  - id: azure:new-model\n"
+        "    api: openai_responses\n"
+        "    pricing:\n"
+        "      version: 2026-07\n"
+        "      currency: USD\n"
+        "      input_per_million_tokens: 1.25\n"
+        "      output_per_million_tokens: 5.0\n",
+        encoding="utf-8",
+    )
+
+    pricing = load_model_catalog(path).models[0].pricing
+
+    assert pricing is not None
+    assert pricing.version == "2026-07"
+    assert pricing.input_per_million_tokens == 1.25

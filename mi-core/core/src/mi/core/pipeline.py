@@ -658,6 +658,11 @@ class Pipeline(Generic[PDO, ADO]):
                     raise
 
             finally:
+                execution_telemetry = process_data.get_execution_telemetry()
+                if execution_telemetry is not None:
+                    stage_receipt.set_metadata(
+                        "execution_telemetry", execution_telemetry
+                    )
                 stage_receipt.execution_time_seconds = time.time() - stage_start
                 span.set_attribute(
                     "stage.duration_seconds", stage_receipt.execution_time_seconds

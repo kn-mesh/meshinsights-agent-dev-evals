@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import hashlib
+import json
 from collections.abc import Callable
 from typing import Any, Protocol, cast
 
@@ -86,6 +88,10 @@ select
   bve.unit_id,
   bve.decision_timestamp,
   bve.approved_label_payload,
+  bve.label_schema_version_id,
+  lsv.schema_key as label_schema_key,
+  lsv.version as label_schema_version,
+  lsv.schema as label_schema,
   bve.example_metadata,
   bve.source_snapshot_id,
   bve.raw_snapshot_content_sha256,
@@ -99,6 +105,9 @@ from selected_version sv
 join benchmark_version_examples bve
   on bve.project_id = sv.project_id
  and bve.benchmark_version_id = sv.id
+left join label_schema_versions lsv
+  on lsv.project_id = bve.project_id
+ and lsv.id = bve.label_schema_version_id
 order by bve.example_id
 """
 
@@ -196,26 +205,85 @@ class AzurePostgresBenchmarkRepository:
         )
 
 
-def _build_benchmark_version(rows: list[dict[str, Any]]) -> BenchmarkVersion:
+def _build_benchmark_version(
+    rows: list[dict[str, Any]],
+    *,
+    require_published_schema_hash: bool = False,
+) -> BenchmarkVersion:
     """Normalize PostgreSQL rows into the immutable benchmark domain model."""
     if not rows:
         raise ValueError("Cannot build a benchmark version without rows.")
     first = rows[0]
+    raw_contract_version = first.get("published_contract_schema_version")
+    if raw_contract_version is None:
+        if require_published_schema_hash:
+            raise ValueError(
+                "Published benchmark response is missing its contract schema version."
+            )
+        contract_schema_version = 2
+    else:
+        contract_schema_version = int(raw_contract_version)
+    if contract_schema_version != 2:
+        raise ValueError(
+            f"Unsupported published benchmark contract version "
+            f"{contract_schema_version}; expected 2."
+        )
     eval_fields_raw = first.get("eval_label_fields")
-    eval_fields = (
+    eval_field_hints = (
         [str(field) for field in eval_fields_raw]
         if isinstance(eval_fields_raw, list)
-        else ["classification"]
+        else []
     )
     examples: list[BenchmarkExample] = []
+    label_schemas: dict[str, dict[str, Any]] = {}
     for row in rows:
         label_payload = row.get("approved_label_payload")
         if not isinstance(label_payload, dict):
             raise ValueError("Published approved_label_payload must be an object.")
-        approved_labels = {
-            field: str(label_payload[field])
-            for field in eval_fields
-            if field in label_payload and label_payload[field] is not None
+        schema = row.get("label_schema")
+        if not isinstance(schema, dict):
+            raise ValueError("Published label schema must be an object.")
+        schema_id = str(row.get("label_schema_version_id") or "").strip()
+        if not schema_id:
+            raise ValueError("Published example is missing label schema identity.")
+        derived_schema_sha256 = hashlib.sha256(
+            json.dumps(
+                schema,
+                sort_keys=True,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        published_schema_sha256 = row.get("label_schema_content_sha256")
+        if published_schema_sha256 is None:
+            if require_published_schema_hash:
+                raise ValueError(
+                    "Published benchmark contract is missing a label-schema hash."
+                )
+            schema_sha256 = derived_schema_sha256
+        else:
+            schema_sha256 = str(published_schema_sha256).strip()
+            if schema_sha256 != derived_schema_sha256:
+                raise ValueError(
+                    f"Published label schema hash does not match for {schema_id}."
+                )
+        existing_schema = label_schemas.get(schema_id)
+        if existing_schema is not None and existing_schema != {
+            "schema_version_id": schema_id,
+            "schema_key": row["label_schema_key"],
+            "version": row["label_schema_version"],
+            "schema": schema,
+            "content_sha256": schema_sha256,
+        }:
+            raise ValueError(
+                f"Published label schema {schema_id} is inconsistent across examples."
+            )
+        label_schemas[schema_id] = {
+            "schema_version_id": schema_id,
+            "schema_key": row["label_schema_key"],
+            "version": row["label_schema_version"],
+            "schema": schema,
+            "content_sha256": schema_sha256,
         }
         examples.append(
             BenchmarkExample.model_validate(
@@ -223,7 +291,8 @@ def _build_benchmark_version(rows: list[dict[str, Any]]) -> BenchmarkVersion:
                     "example_id": row["example_id"],
                     "unit_id": row["unit_id"],
                     "decision_timestamp": row["decision_timestamp"],
-                    "approved_labels": approved_labels,
+                    "approved_label_payload": label_payload,
+                    "label_schema_version_id": schema_id,
                     "example_metadata": row.get("example_metadata") or {},
                     "source_snapshot_id": row["source_snapshot_id"],
                     "raw_snapshot_content_sha256": row[
@@ -247,6 +316,9 @@ def _build_benchmark_version(rows: list[dict[str, Any]]) -> BenchmarkVersion:
             "version_number": first["version_number"],
             "published_at": first["published_at"],
             "source_state_sha256": first.get("source_state_sha256"),
+            "published_contract_schema_version": contract_schema_version,
+            "eval_label_field_hints": eval_field_hints,
+            "label_schemas": list(label_schemas.values()),
             "examples": examples,
         }
     )

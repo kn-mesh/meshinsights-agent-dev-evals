@@ -1,72 +1,82 @@
-"""Tests for independent reliability and performance aggregation."""
-
-from __future__ import annotations
+"""Tests for independent accuracy, reliability, coverage, and performance."""
 
 from evaluation import (
-    AttemptStatus,
     EvalAttempt,
+    ExecutionStatus,
     FailureType,
-    LabelEvaluation,
+    FieldEvaluation,
+    OutputContractStatus,
+    ScoringStatus,
     build_confidence_accuracy,
     build_performance_summary,
     build_reliability_summary,
+    build_scoring_coverage,
     metric_counts,
 )
 
 
-def _successful_attempt(
+def _scored_attempt(
     *, correct: bool, duration: float, confidence: str | None = None
 ) -> EvalAttempt:
     actual = "Failure" if correct else "Healthy"
     return EvalAttempt(
-        status=AttemptStatus.SUCCEEDED,
+        execution_status=ExecutionStatus.COMPLETED,
+        output_contract_status=OutputContractStatus.VALID,
+        scoring_status=ScoringStatus.SCORED,
         actual_values={"classification": actual},
         evaluations={
-            "classification": LabelEvaluation(
+            "classification": FieldEvaluation(
                 expected="Failure",
                 actual=actual,
-                is_correct=correct,
+                correct=correct,
+                grader_id="core.exact",
+                grader_version=1,
             )
         },
         confidence_values=(
             {"classification": confidence} if confidence is not None else {}
         ),
+        applicable_fields=("classification",),
+        complete_evaluation_correct=correct,
         duration_seconds=duration,
         stage_durations_seconds={"process": duration / 2},
     )
 
 
-def test_failure_reduces_reliability_without_entering_accuracy() -> None:
-    successful = _successful_attempt(correct=True, duration=2.0)
-    failed = EvalAttempt(
-        status=AttemptStatus.FAILED,
-        error="provider unavailable",
-        failure_type=FailureType.PROVIDER_ERROR,
-        duration_seconds=4.0,
+def _failed_attempt(*, duration: float, failure_type: FailureType) -> EvalAttempt:
+    return EvalAttempt(
+        execution_status=ExecutionStatus.FAILED,
+        output_contract_status=OutputContractStatus.NOT_PRODUCED,
+        scoring_status=ScoringStatus.NOT_SCORED,
+        error=failure_type.value,
+        failure_type=failure_type,
+        duration_seconds=duration,
+        stage_durations_seconds={"process": max(0.0, duration - 1)},
     )
 
+
+def test_failure_reduces_coverage_without_entering_accuracy() -> None:
+    successful = _scored_attempt(correct=True, duration=2.0)
+    failed = _failed_attempt(duration=4.0, failure_type=FailureType.PROVIDER_ERROR)
+
     reliability = build_reliability_summary([successful, failed], planned_runs=2)
+    coverage = build_scoring_coverage([successful, failed], planned_runs=2)
     accuracy = metric_counts(
-        evaluation.is_correct
+        evaluation.correct
         for attempt in (successful, failed)
         for evaluation in attempt.evaluations.values()
     )
 
-    assert reliability["reliability"] == 0.5
+    assert reliability["output_contract_validity_rate"] == 0.5
     assert reliability["failures_by_type"] == {"provider_error": 1}
+    assert coverage["coverage"] == 0.5
     assert accuracy.accuracy == 1.0
     assert accuracy.evaluated_runs == 1
 
 
-def test_performance_reports_success_failure_and_stage_latency() -> None:
-    successful = _successful_attempt(correct=False, duration=2.0)
-    failed = EvalAttempt(
-        status=AttemptStatus.FAILED,
-        error="timeout",
-        failure_type=FailureType.TIMEOUT,
-        duration_seconds=4.0,
-        stage_durations_seconds={"process": 3.0},
-    )
+def test_performance_reports_completed_failed_and_stage_latency() -> None:
+    successful = _scored_attempt(correct=False, duration=2.0)
+    failed = _failed_attempt(duration=4.0, failure_type=FailureType.TIMEOUT)
 
     performance = build_performance_summary(
         [successful, failed],
@@ -86,12 +96,8 @@ def test_performance_reports_success_failure_and_stage_latency() -> None:
 
 
 def test_confidence_accuracy_is_optional_and_reports_coverage() -> None:
-    with_confidence = _successful_attempt(
-        correct=True,
-        duration=1.0,
-        confidence="High",
-    )
-    without_confidence = _successful_attempt(correct=False, duration=1.0)
+    with_confidence = _scored_attempt(correct=True, duration=1.0, confidence="High")
+    without_confidence = _scored_attempt(correct=False, duration=1.0)
 
     confidence = build_confidence_accuracy(
         [with_confidence, without_confidence],

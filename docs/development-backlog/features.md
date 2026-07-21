@@ -47,14 +47,14 @@ selected eval results. Those remain important post-MVP features below.
 - [ ] Codex-guided port of a working Benchmark Studio evidence pipeline
 - [ ] Use-case-neutral published benchmark and frozen-evidence contract
 - [ ] Repeatable first-agent and agent-variant development workflow
-- [ ] Schema-driven evaluation and scoring harness
+- [x] Schema-driven evaluation and scoring harness
 - [ ] Repeated, concurrent, resumable model and configuration evaluation
 - [ ] Complete quality, reliability, performance, token, and cost measurement
 - [ ] Human result exploration with evidence-visualization parity
 - [ ] Codex-readable result exploration and per-example drill-down
 - [ ] Fast compare-diagnose-change-rerun iteration loop
 - [ ] Explicit immutable agent-version promotion
-- [ ] Exact benchmark, agent, configuration, and eval-result linkage
+- [x] Exact benchmark, agent, configuration, and eval-result linkage
 - [ ] Local version/result catalog with intentional retention and deletion
 
 ## MVP Features
@@ -164,8 +164,9 @@ The workflow must support:
 
 ### Schema-Driven Evaluation And Scoring
 
-**Status:** Partial; repeated execution and several classification metrics
-exist, but scoring remains coupled to the current output fields and use case.
+**Status:** Complete for MVP; implemented through published-contract schema v2,
+versioned evaluation profiles, deterministic graders, conditional fields,
+local slices, and result schema v3.
 
 The harness must run any supported agent variant against a selected immutable
 benchmark version and assess its complete structured output contract. It must
@@ -187,8 +188,11 @@ The MVP harness must support:
 
 ### Reproducible Eval Execution And Model Comparison
 
-**Status:** Partial; repeated runs, scoped execution, concurrency, progress,
-failure capture, timing, and local JSON output are present.
+**Status:** Complete for MVP; deterministic content-addressed runs, incremental
+attempt generations, interruption recovery, selective reruns, bounded
+concurrency, schema-v3 materialization, execution telemetry availability,
+optional frozen pricing estimates, and dimension-validated model/configuration
+comparison are implemented.
 
 The primary eval workflow must make it straightforward to compare selected
 models and configurations without losing the exact conditions of a run.
@@ -269,8 +273,8 @@ The feature must support:
 
 ### Immutable Agent Versions And Benchmark Linkage
 
-**Status:** Missing; pipeline filenames currently identify variants but are not
-complete immutable agent versions.
+**Status:** Implemented for MVP; every new eval resolves an exact candidate
+agent version, and useful candidates can be promoted without copying source.
 
 An FDE must be able to explicitly promote a useful working variant into an
 immutable, inspectable agent version. Promotion should be efficient and should

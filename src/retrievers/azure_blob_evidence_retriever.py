@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 import io
 import json
 from datetime import datetime, timezone
@@ -10,6 +11,7 @@ from typing import Any
 import pandas as pd
 from mi.core.pipeline import PipelineMetadata
 from mi.core.retrievers import BaseRetriever, BaseRetrieverConfig
+from mi.core.versioning import VersionAssetRole, VersionContractDeclaration
 
 from src.benchmarks.models import SourceArtifact
 from src.objects.pipeline_metadata import BenchmarkExamplePipelineMetadata
@@ -27,6 +29,34 @@ class AzureBlobBenchmarkEvidenceRetriever(BaseRetriever):
     """Load and verify the exact raw source artifacts frozen at publication."""
 
     config: AzureBlobBenchmarkEvidenceRetrieverConfig
+
+    @classmethod
+    def version_contracts(
+        cls, config: Mapping[str, Any]
+    ) -> Sequence[VersionContractDeclaration]:
+        """Declare immutable Azure evidence inputs without embedding evidence."""
+        _ = config
+        return (
+            VersionContractDeclaration(
+                role=VersionAssetRole.EVIDENCE_RECIPE,
+                logical_name="azure_published_benchmark_evidence",
+                value={
+                    "source": "azure_blob",
+                    "required_metadata": [
+                        "example_id",
+                        "benchmark_key",
+                        "benchmark_version_id",
+                        "benchmark_version_number",
+                        "source_snapshot_id",
+                        "source_snapshot_content_sha256",
+                        "decision_timestamp",
+                        "raw_artifacts",
+                    ],
+                    "artifact_integrity": ["byte_size", "content_sha256"],
+                    "write_access": False,
+                },
+            ),
+        )
 
     def __init__(
         self,

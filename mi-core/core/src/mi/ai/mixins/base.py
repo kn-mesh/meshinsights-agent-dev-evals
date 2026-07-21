@@ -60,8 +60,7 @@ class AIProcessorConfig(BaseProcessorConfig):
         default=None,
         ge=0,
         description=(
-            "Compatibility override applied to both transport_retries and "
-            "tool_retries"
+            "Compatibility override applied to both transport_retries and tool_retries"
         ),
     )
     transport_retries: int = Field(
@@ -290,6 +289,10 @@ class AIProcessorMixin(Generic[PDO, OutputT]):
                 "requests": usage.requests,
                 "input_tokens": usage.input_tokens,
                 "output_tokens": usage.output_tokens,
+                "cached_input_tokens": usage.cached_input_tokens,
+                "reasoning_tokens": usage.reasoning_tokens,
+                "tool_calls": usage.tool_calls,
+                "output_validation_attempts": usage.output_validation_attempts,
             },
         )
 

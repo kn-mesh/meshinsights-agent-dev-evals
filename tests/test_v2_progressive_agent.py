@@ -375,9 +375,11 @@ def test_v2_hydrator_preserves_case_brief_in_final_payload() -> None:
     action_object = V2ProcessToActionHydrator().hydrate(process_object, receipt)
 
     result = action_object.get_pipeline_result()
-    assert result["classification"]["value"] == "Failure"
-    assert result["investigation_case_brief"] == _case_brief().model_dump()
-    assert result["investigation_evidence"][0]["kind"] == "window"
+    assert result["agent_output"]["classification"]["value"] == "Failure"
+    assert result["agent_context"]["investigation_case_brief"] == (
+        _case_brief().model_dump()
+    )
+    assert result["agent_context"]["investigation_evidence"][0]["kind"] == "window"
 
 
 def test_v2_pipeline_config_builds_registered_progressive_processors() -> None:

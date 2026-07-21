@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
+import json
 from typing import Any
 
 from src.benchmarks.postgres_repository import AzurePostgresBenchmarkRepository
@@ -37,6 +39,14 @@ class _Connection:
 
 
 def _row() -> dict[str, Any]:
+    label_schema = {
+        "schema_key": "spirax-steam-trap-label",
+        "version": "v1",
+        "fields": [
+            {"key": "classification", "values": ["Healthy", "Failure"]},
+            {"key": "root_cause", "values": ["Closed Failure"]},
+        ],
+    }
     return {
         "project_key": "spirax-pulse",
         "benchmark_key": "steam-trap-regression",
@@ -54,6 +64,10 @@ def _row() -> dict[str, Any]:
             "root_cause": "Closed Failure",
             "non_eval_note": "ignored",
         },
+        "label_schema_version_id": "schema-v1",
+        "label_schema_key": "spirax-steam-trap-label",
+        "label_schema_version": "v1",
+        "label_schema": label_schema,
         "example_metadata": {"sensor_id": "7"},
         "source_snapshot_id": "snapshot-id",
         "raw_snapshot_content_sha256": "c" * 64,
@@ -81,7 +95,7 @@ def _row() -> dict[str, Any]:
     }
 
 
-def test_repository_loads_only_configured_eval_labels_and_frozen_manifest() -> None:
+def test_repository_loads_full_labels_schema_and_frozen_manifest() -> None:
     connection = _Connection([_row()])
     repository = AzurePostgresBenchmarkRepository(
         database_url="postgresql://unused",
@@ -99,10 +113,21 @@ def test_repository_loads_only_configured_eval_labels_and_frozen_manifest() -> N
         "version_number": 2,
     }
     assert benchmark.version_number == 2
-    assert benchmark.examples[0].approved_labels == {
+    assert benchmark.examples[0].approved_label_payload == {
         "classification": "Failure",
         "root_cause": "Closed Failure",
+        "non_eval_note": "ignored",
     }
+    assert benchmark.examples[0].label_schema_version_id == "schema-v1"
+    expected_hash = hashlib.sha256(
+        json.dumps(
+            _row()["label_schema"],
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    assert benchmark.label_schemas[0].content_sha256 == expected_hash
     assert benchmark.examples[0].source_snapshot_id == "snapshot-id"
     assert benchmark.examples[0].sensor_id == 7
 

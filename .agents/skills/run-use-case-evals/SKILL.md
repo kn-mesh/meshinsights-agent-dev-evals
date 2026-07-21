@@ -22,20 +22,32 @@ in this skill.
    If the user did not name a model and compatibility is not already proven,
    retain the runbook's `<provider:model>` placeholder instead of inserting the
    catalog default.
-3. Prefer the fully explicit command from `EvalRunbook.md`. Supply benchmark
-   key, benchmark version, model, reasoning effort, run count, runtime, worker
-   count, and error action. Avoid the interactive benchmark chooser unless
-   discovery is the requested task.
+3. Prefer the fully explicit command from `EvalRunbook.md`. Supply evaluation
+   profile, benchmark key, benchmark version, model, reasoning effort, run
+   count, runtime, worker count, error action, and an explicit scope. Use
+   `--all-examples` for a full benchmark; absence of filters no longer implies
+   all examples in unattended execution. Include `--agent-version` and
+   repeatable `--dimension KEY=JSON_VALUE` flags whenever those stable
+   comparison identities are known. Avoid interactive profile or benchmark
+   selection unless discovery is the requested task.
 4. Start with the runbook's one-example serial smoke run when pipeline/model
    compatibility has not already been established.
 5. When authorized to execute, monitor the run through completion and report
-   the exact results path. Diagnose the first substantive error; do not mistake
-   successful Blob `206` logs or thread-shutdown noise for the root cause.
-6. Verify the resulting JSON `run_config` matches the requested benchmark,
-   model, reasoning effort, scope, and repetition settings.
+   the deterministic run ID and exact `result.json` path. If interrupted,
+   rerun the identical explicit command with `--resume-mode missing`; completed
+   work is already durable. Diagnose the first substantive error; do not
+   mistake successful Blob `206` logs or thread-shutdown noise for the root
+   cause.
+6. Verify the resulting JSON `run_config` matches the requested evaluation
+   profile identity/hash, benchmark, model, reasoning effort, scope, and
+   repetition settings. Verify `run_config.dimensions` captures agent, pipeline,
+   model, grader-set, and project-declared configuration identities.
 7. Expect persisted results under
-   `eval_results/<pipeline>/<benchmark-key>/v<version>/<scope>/`. Report the
-   exact written file rather than reconstructing its timestamped name.
+   `eval_results/<pipeline>/<benchmark-key>/v<version>/runs/<run-id>/`. Report
+   the exact `result.json` and do not reconstruct identity from display labels.
+8. Use `--compare-model` for multiple models under identical conditions. For
+   existing results, use `--compare-result` plus every allowed
+   `--varying-dimension`; undeclared differences intentionally fail closed.
 
 ## Boundaries
 

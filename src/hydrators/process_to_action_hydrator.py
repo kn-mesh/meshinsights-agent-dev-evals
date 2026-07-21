@@ -34,22 +34,27 @@ class V1_3ProcessToActionHydrator(
         context = source.get_alarm_context()
         return PulseFailureAnalysisActionObject().set_pipeline_result(
             {
-                "example_id": context["example_id"],
-                "benchmark_key": context["benchmark_key"],
-                "benchmark_version_id": context["benchmark_version_id"],
-                "benchmark_version_number": context[
-                    "benchmark_version_number"
-                ],
-                "source_snapshot_id": context["source_snapshot_id"],
-                "unit": context["unit"],
-                "sensor_id": context["sensor_id"],
-                "decision_timestamp": context["decision_timestamp"].isoformat(),
-                "selected_alarm_detected_at": context["selected_alarm"][
-                    "detected_at"
-                ].isoformat(),
-                "steam_trap_type": source.get_steam_trap_type(),
-                "temperature_point_count": len(source.get_temperature_history()),
-                "classification": agent_result["classification"],
-                "root_cause": agent_result["root_cause"],
+                "identity": {
+                    "example_id": context["example_id"],
+                    "benchmark_key": context["benchmark_key"],
+                    "benchmark_version_id": context["benchmark_version_id"],
+                    "benchmark_version_number": context["benchmark_version_number"],
+                    "source_snapshot_id": context["source_snapshot_id"],
+                },
+                "agent_context": {
+                    "unit": context["unit"],
+                    "sensor_id": context["sensor_id"],
+                    "decision_timestamp": context["decision_timestamp"].isoformat(),
+                    "selected_alarm_detected_at": context["selected_alarm"][
+                        "detected_at"
+                    ].isoformat(),
+                    "steam_trap_type": source.get_steam_trap_type(),
+                    "temperature_point_count": len(source.get_temperature_history()),
+                },
+                "agent_output": agent_result,
+                "execution_telemetry": {
+                    "usage": source.get_ai_usage(),
+                    "retry_telemetry": source.get_ai_retry_telemetry(),
+                },
             }
         )

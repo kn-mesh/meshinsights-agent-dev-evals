@@ -99,3 +99,68 @@ class PulseFailureAnalysisProcessObject(ProcessDataObject):
         """Return the stable agent decision artifact when present."""
         value = self.get_artifact("ai_classification")
         return value if isinstance(value, dict) else None
+
+    def get_ai_usage(self) -> dict[str, Any] | None:
+        """Aggregate processor-attached backend usage without guessing omissions."""
+        processors = {
+            key: value
+            for key, value in sorted(self.artifacts.items())
+            if key.endswith("_usage") and isinstance(value, dict)
+        }
+        if not processors:
+            return None
+        totals = {
+            name: sum(
+                int(usage.get(name, 0))
+                for usage in processors.values()
+                if isinstance(usage.get(name), int)
+            )
+            for name in (
+                "requests",
+                "input_tokens",
+                "output_tokens",
+                "cached_input_tokens",
+                "reasoning_tokens",
+                "tool_calls",
+                "output_validation_attempts",
+            )
+        }
+        totals["total_tokens"] = totals["input_tokens"] + totals["output_tokens"]
+        return {
+            "availability": "available",
+            "source": "mi.ai.processor_artifacts",
+            "processors": processors,
+            **totals,
+        }
+
+    def get_ai_retry_telemetry(self) -> dict[str, Any]:
+        """Expose observed request/tool/output activity and explicit gaps."""
+        usage = self.get_ai_usage()
+        if usage is None:
+            return {
+                "availability": "unavailable",
+                "reason": "No mi.ai usage artifact was produced.",
+            }
+        return {
+            "availability": "partial",
+            "observed_model_requests": usage["requests"],
+            "observed_tool_calls": usage["tool_calls"],
+            "observed_output_validation_attempts": usage["output_validation_attempts"],
+            "observed_transport_attempts": None,
+            "reason": (
+                "Model requests, tool calls, and direct-workflow output attempts "
+                "are observed; the backend transport does not yet expose HTTP "
+                "retry-attempt counts."
+            ),
+        }
+
+    def get_execution_telemetry(self) -> dict[str, Any] | None:
+        """Expose bounded observations for the durable process-stage receipt."""
+        usage = self.get_ai_usage()
+        retry_telemetry = self.get_ai_retry_telemetry()
+        if usage is None and retry_telemetry.get("availability") == "unavailable":
+            return None
+        return {
+            "usage": usage,
+            "retry_telemetry": retry_telemetry,
+        }

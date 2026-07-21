@@ -3,13 +3,20 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
+import json
 from pathlib import Path
 import tempfile
 
 import yaml
 from mi.core.pipeline_builder import PipelineBuilder
 
-from src.benchmarks.models import BenchmarkExample, BenchmarkVersion, SourceArtifact
+from src.benchmarks.models import (
+    BenchmarkExample,
+    BenchmarkVersion,
+    PublishedLabelSchema,
+    SourceArtifact,
+)
 from src.pipelines.pipeline_run_from_yaml import (
     _apply_runtime_overrides,
     _load_pipeline_config,
@@ -17,6 +24,14 @@ from src.pipelines.pipeline_run_from_yaml import (
 
 
 def _benchmark() -> tuple[BenchmarkVersion, BenchmarkExample]:
+    schema = {
+        "schema_key": "spirax-steam-trap-label",
+        "version": "v1",
+        "fields": [{"key": "classification", "values": ["Failure"]}],
+    }
+    schema_hash = hashlib.sha256(
+        json.dumps(schema, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
     artifacts = (
         SourceArtifact(
             artifact_kind="telemetry",
@@ -37,7 +52,8 @@ def _benchmark() -> tuple[BenchmarkVersion, BenchmarkExample]:
         example_id="7|2026-03-17T12:00:00",
         unit_id="7",
         decision_timestamp=datetime(2026, 3, 17, 12, 0, tzinfo=timezone.utc),
-        approved_labels={"classification": "Failure"},
+        approved_label_payload={"classification": "Failure"},
+        label_schema_version_id="schema-v1",
         example_metadata={"sensor_id": "7"},
         source_snapshot_id="snapshot-id",
         raw_snapshot_content_sha256="c" * 64,
@@ -54,6 +70,17 @@ def _benchmark() -> tuple[BenchmarkVersion, BenchmarkExample]:
         benchmark_version_id="version-id",
         version_number=3,
         published_at=datetime(2026, 3, 19, tzinfo=timezone.utc),
+        published_contract_schema_version=2,
+        eval_label_field_hints=("classification",),
+        label_schemas=(
+            PublishedLabelSchema(
+                schema_version_id="schema-v1",
+                schema_key="spirax-steam-trap-label",
+                version="v1",
+                schema=schema,
+                content_sha256=schema_hash,
+            ),
+        ),
         examples=(example,),
     )
     return benchmark, example

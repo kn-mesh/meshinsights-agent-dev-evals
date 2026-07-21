@@ -5,10 +5,17 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+import json
 from statistics import mean, median
 from typing import TypeVar
 
-from evaluation.models import AttemptStatus, EvalAttempt
+from evaluation.models import (
+    EvalAttempt,
+    ExecutionStatus,
+    OutputContractStatus,
+    ScoringStatus,
+    JsonScalar,
+)
 
 
 T = TypeVar("T")
@@ -61,7 +68,7 @@ def build_confidence_accuracy(
     *,
     label_name: str,
     confidence_levels: Iterable[str] = ("High", "Low"),
-    expected_values: Iterable[str] = (),
+    expected_values: Iterable[JsonScalar] = (),
 ) -> dict[str, object]:
     """Build optional-confidence coverage and accuracy by expected label value."""
     attempts_list = list(attempts)
@@ -78,24 +85,25 @@ def build_confidence_accuracy(
     ]
     all_counts = group_metric_counts(
         with_confidence,
-        key_fn=lambda attempt: attempt.confidence_values[label_name],
-        correct_fn=lambda attempt: attempt.evaluations[label_name].is_correct,
+        key_fn=lambda attempt: _scalar_key(attempt.confidence_values[label_name]),
+        correct_fn=lambda attempt: attempt.evaluations[label_name].correct,
         expected_keys=levels,
     )
     grouped: dict[str, dict[str, MetricCounts]] = {
-        expected: group_metric_counts(
+        _scalar_key(expected): group_metric_counts(
             (
                 attempt
                 for attempt in with_confidence
                 if attempt.evaluations[label_name].expected == expected
             ),
-            key_fn=lambda attempt: attempt.confidence_values[label_name],
-            correct_fn=lambda attempt: attempt.evaluations[label_name].is_correct,
+            key_fn=lambda attempt: _scalar_key(attempt.confidence_values[label_name]),
+            correct_fn=lambda attempt: attempt.evaluations[label_name].correct,
             expected_keys=levels,
         )
         for expected in sorted(
             set(expected_values)
-            | {attempt.evaluations[label_name].expected for attempt in evaluated}
+            | {attempt.evaluations[label_name].expected for attempt in evaluated},
+            key=_scalar_key,
         )
     }
     return {
@@ -125,10 +133,11 @@ def build_reliability_summary(
     attempts_list = list(attempts)
     if planned_runs < len(attempts_list):
         raise ValueError("planned_runs cannot be smaller than recorded attempts.")
-    successful = sum(attempt.success for attempt in attempts_list)
-    failed = sum(attempt.status is AttemptStatus.FAILED for attempt in attempts_list)
-    cancelled = sum(
-        attempt.status is AttemptStatus.CANCELLED for attempt in attempts_list
+    execution_counts = Counter(
+        attempt.execution_status.value for attempt in attempts_list
+    )
+    output_counts = Counter(
+        attempt.output_contract_status.value for attempt in attempts_list
     )
     failure_counts = Counter(
         attempt.failure_type.value
@@ -138,11 +147,38 @@ def build_reliability_summary(
     return {
         "planned_runs": planned_runs,
         "recorded_runs": len(attempts_list),
-        "successful_runs": successful,
-        "failed_runs": failed,
-        "cancelled_runs": cancelled,
-        "reliability": None if planned_runs == 0 else successful / planned_runs,
+        "execution_status_counts": dict(sorted(execution_counts.items())),
+        "output_contract_status_counts": dict(sorted(output_counts.items())),
+        "output_contract_validity_rate": (
+            None
+            if planned_runs == 0
+            else output_counts[OutputContractStatus.VALID.value] / planned_runs
+        ),
         "failures_by_type": dict(sorted(failure_counts.items())),
+    }
+
+
+def build_scoring_coverage(
+    attempts: Iterable[EvalAttempt],
+    *,
+    planned_runs: int,
+) -> dict[str, object]:
+    attempts_list = list(attempts)
+    status_counts = Counter(attempt.scoring_status.value for attempt in attempts_list)
+    scored = status_counts[ScoringStatus.SCORED.value]
+    valid_with_targets = sum(
+        attempt.output_contract_status is OutputContractStatus.VALID
+        and attempt.scoring_status is not ScoringStatus.NO_APPLICABLE_TARGETS
+        for attempt in attempts_list
+    )
+    return {
+        "status_counts": dict(sorted(status_counts.items())),
+        "scored_runs": scored,
+        "planned_runs": planned_runs,
+        "coverage": None if planned_runs == 0 else scored / planned_runs,
+        "grader_completion_rate": (
+            None if valid_with_targets == 0 else scored / valid_with_targets
+        ),
     }
 
 
@@ -155,8 +191,16 @@ def build_performance_summary(
     if evaluation_wall_time_seconds < 0:
         raise ValueError("evaluation_wall_time_seconds must be non-negative.")
     attempts_list = list(attempts)
-    successful = [attempt for attempt in attempts_list if attempt.success]
-    failed = [attempt for attempt in attempts_list if not attempt.success]
+    successful = [
+        attempt
+        for attempt in attempts_list
+        if attempt.execution_status is ExecutionStatus.COMPLETED
+    ]
+    failed = [
+        attempt
+        for attempt in attempts_list
+        if attempt.execution_status is not ExecutionStatus.COMPLETED
+    ]
     stage_names = sorted(
         {
             stage
@@ -224,3 +268,7 @@ def _percentile(sorted_values: list[float], percentile: float) -> float:
         sorted_values[lower_index]
         + (sorted_values[upper_index] - sorted_values[lower_index]) * fraction
     )
+
+
+def _scalar_key(value: JsonScalar) -> str:
+    return value if isinstance(value, str) else json.dumps(value, sort_keys=True)

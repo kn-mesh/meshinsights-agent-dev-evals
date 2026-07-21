@@ -49,6 +49,7 @@ Use these locations by default:
 |---|---|
 | `data/` | Non-secret local development assets; published benchmarks and eval evidence live in Azure |
 | `pipeline_configs/` | Declarative `.ppln` component wiring |
+| `evaluation_configs/` | Versioned project evaluation profiles, graders, applicability, and slices |
 | `src/retrievers/` | Source-system data acquisition |
 | `src/objects/` | Typed process, action, and metadata contracts |
 | `src/hydrators/` | Stage-boundary normalization, decision handoff, and receipt stamping |

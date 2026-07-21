@@ -80,6 +80,10 @@ select
   bve.unit_id,
   bve.decision_timestamp,
   bve.approved_label_payload,
+  bve.label_schema_version_id,
+  lsv.schema_key as label_schema_key,
+  lsv.version as label_schema_version,
+  lsv.schema as label_schema,
   bve.example_metadata,
   bve.source_snapshot_id,
   bve.raw_snapshot_content_sha256,
@@ -93,6 +97,9 @@ from selected_version sv
 join benchmark_version_examples bve
   on bve.project_id = sv.project_id
  and bve.benchmark_version_id = sv.id
+left join label_schema_versions lsv
+  on lsv.project_id = bve.project_id
+ and lsv.id = bve.label_schema_version_id
 order by bve.example_id
 """
 
@@ -160,7 +167,10 @@ class AzureContainerAppBenchmarkRepository:
                 f"Published benchmark {self.project_key}/{normalized_key} ({suffix}) "
                 "was not found in the hosted Azure deployment."
             )
-        return _build_benchmark_version(rows)
+        return _build_benchmark_version(
+            rows,
+            require_published_schema_hash=True,
+        )
 
     def _query(
         self,
@@ -235,8 +245,7 @@ class AzureContainerAppBenchmarkRepository:
         if state.get("project_key") != self.project_key:
             raise ValueError("Hosted Azure deployment returned the wrong project.")
         versions = state.get("versions")
-        eval_fields = state.get("eval_label_fields")
-        if not isinstance(versions, list) or not isinstance(eval_fields, list):
+        if not isinstance(versions, list):
             raise ValueError("Hosted benchmark state payload was invalid.")
         benchmark_key = parameters.get("benchmark_key")
         if benchmark_key is None:
@@ -265,21 +274,41 @@ class AzureContainerAppBenchmarkRepository:
         ]
         if version_number is None and selected:
             selected = [max(selected, key=lambda item: int(item["version_number"]))]
-        return [
-            {
-                "project_key": self.project_key,
-                "benchmark_key": version["benchmark_key"],
-                "benchmark_name": version["benchmark_name"],
-                "benchmark_version_id": version["id"],
-                "version_number": version["version_number"],
-                "published_at": version["published_at"],
-                "source_state_sha256": version.get("source_state_sha256"),
-                "eval_label_fields": eval_fields,
-                **example,
+        rows: list[dict[str, Any]] = []
+        for version in selected:
+            schemas = {
+                item["schema_version_id"]: item
+                for item in version.get("label_schemas", [])
             }
-            for version in selected
-            for example in version["examples"]
-        ]
+            for example in version["examples"]:
+                schema = schemas.get(str(example.get("label_schema_version_id")))
+                if schema is None:
+                    raise ValueError(
+                        "Hosted benchmark example referenced a missing label schema."
+                    )
+                rows.append(
+                    {
+                        "project_key": self.project_key,
+                        "benchmark_key": version["benchmark_key"],
+                        "benchmark_name": version["benchmark_name"],
+                        "benchmark_version_id": version["id"],
+                        "version_number": version["version_number"],
+                        "published_at": version["published_at"],
+                        "source_state_sha256": version.get("source_state_sha256"),
+                        "published_contract_schema_version": version.get(
+                            "published_contract_schema_version"
+                        ),
+                        "eval_label_fields": version.get(
+                            "eval_label_field_hints", []
+                        ),
+                        **example,
+                        "label_schema_key": schema["schema_key"],
+                        "label_schema_version": schema["version"],
+                        "label_schema": schema["schema"],
+                        "label_schema_content_sha256": schema.get("content_sha256"),
+                    }
+                )
+        return rows
 
 
 def _remote_repository_code() -> str:
@@ -292,7 +321,7 @@ from label_benchmark.db import connect as C
 from label_benchmark.repositories import load_config as G, load_project as P, load_versions as V
 with C() as c:
  c.execute("set transaction read only");p=P(c);g=G(c,p["id"]);v=V(c,p["id"],eval_label_fields=g["eval_label_fields"])
-rows=[{{"project_key":p["project_key"],"eval_label_fields":g["eval_label_fields"],"versions":v}}]
+rows=[{{"project_key":p["project_key"],"versions":v}}]
 payload=json.dumps(rows,default=str).encode()
 encoded = base64.b64encode(zlib.compress(payload)).decode("ascii")
 print("{_PAYLOAD_BEGIN}" + encoded + "{_PAYLOAD_END}")

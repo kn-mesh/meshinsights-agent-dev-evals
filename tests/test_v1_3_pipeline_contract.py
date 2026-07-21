@@ -81,10 +81,16 @@ def test_workflow_decision_flows_to_durable_act_receipt_metadata() -> None:
     assert receipt.act_receipt is not None
     assert receipt.act_receipt.metadata["example_id"] == "trap-1|2026-03-17T12:00:00"
     assert receipt.act_receipt.metadata["source_snapshot_id"] == "snapshot-id"
-    assert receipt.act_receipt.metadata["unit"] == "trap-1"
-    assert receipt.act_receipt.metadata["decision_timestamp"] == ("2026-03-17T12:00:00")
-    assert receipt.act_receipt.metadata["classification"]["value"] == "Failure"
-    assert receipt.act_receipt.metadata["root_cause"]["value"] == "Closed Failure"
+    assert receipt.act_receipt.metadata["agent_context"]["unit"] == "trap-1"
+    assert receipt.act_receipt.metadata["agent_context"]["decision_timestamp"] == (
+        "2026-03-17T12:00:00"
+    )
+    assert receipt.act_receipt.metadata["agent_output"]["classification"]["value"] == (
+        "Failure"
+    )
+    assert receipt.act_receipt.metadata["agent_output"]["root_cause"]["value"] == (
+        "Closed Failure"
+    )
 
 
 def test_temperature_processor_renders_png_evidence() -> None:

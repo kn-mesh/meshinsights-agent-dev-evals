@@ -1,92 +1,112 @@
-"""Strict extraction of required outputs from agent receipt metadata."""
+"""Schema-driven JSON scalar extraction from pipeline receipt metadata."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
+
+from evaluation.models import JsonScalar
+
+
+ScalarType = Literal["string", "integer", "number", "boolean", "null"]
 
 
 @dataclass(frozen=True, slots=True)
-class StructuredOutputSpec:
-    """Describe one required output and its optional confidence field."""
-
+class OutputFieldSpec:
     name: str
-    metadata_key: str
-    value_path: tuple[str, ...] = ("value",)
+    value_path: tuple[str, ...]
+    value_type: ScalarType
     confidence_path: tuple[str, ...] | None = None
-    required: bool = True
-    confidence_values: tuple[str, ...] = ("High", "Low")
+    confidence_values: tuple[JsonScalar, ...] = ()
 
     def __post_init__(self) -> None:
-        if not self.name.strip():
-            raise ValueError("name must not be empty.")
-        if not self.metadata_key.strip():
-            raise ValueError("metadata_key must not be empty.")
+        if not self.name.strip() or not self.value_path:
+            raise ValueError("Output fields require a name and non-empty value path.")
         if self.confidence_path is not None and not self.confidence_values:
-            raise ValueError("confidence_values must not be empty when configured.")
+            raise ValueError("Configured confidence paths require allowed values.")
+
+
+@dataclass(frozen=True, slots=True)
+class OutputFieldObservation:
+    name: str
+    present: bool
+    valid: bool
+    value: JsonScalar = None
+    raw_value: Any = None
+    confidence: JsonScalar = None
+    errors: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
 class StructuredOutputExtraction:
-    """Values, optional confidence, raw output, and contract errors."""
-
-    actual_values: dict[str, str] = field(default_factory=dict)
-    confidence_values: dict[str, str] = field(default_factory=dict)
-    raw_outputs: dict[str, Any] = field(default_factory=dict)
-    errors: tuple[str, ...] = ()
+    observations: dict[str, OutputFieldObservation] = field(default_factory=dict)
 
     @property
-    def valid(self) -> bool:
-        return not self.errors
+    def actual_values(self) -> dict[str, JsonScalar]:
+        return {
+            name: observation.value
+            for name, observation in self.observations.items()
+            if observation.present and observation.valid
+        }
+
+    @property
+    def confidence_values(self) -> dict[str, JsonScalar]:
+        return {
+            name: observation.confidence
+            for name, observation in self.observations.items()
+            if observation.confidence is not None
+        }
 
 
-def extract_structured_outputs(
+def extract_output_fields(
     metadata: Any,
     *,
-    specs: Sequence[StructuredOutputSpec],
+    specs: Sequence[OutputFieldSpec],
 ) -> StructuredOutputExtraction:
-    """Extract outputs and report every required-contract violation."""
-    errors = _validate_specs(specs)
-    if not isinstance(metadata, Mapping):
-        return StructuredOutputExtraction(
-            errors=(*errors, "Stage metadata must be a mapping."),
-        )
-
-    actual_values: dict[str, str] = {}
-    confidence_values: dict[str, str] = {}
-    raw_outputs: dict[str, Any] = {}
+    """Observe every configured output without deciding requiredness."""
+    names = [spec.name for spec in specs]
+    if len(names) != len(set(names)):
+        raise ValueError("Output field names must be unique.")
+    observations: dict[str, OutputFieldObservation] = {}
     for spec in specs:
-        raw_output = metadata.get(spec.metadata_key)
-        if raw_output is not None:
-            raw_outputs[spec.name] = raw_output
-        actual = _read_non_empty_string(raw_output, spec.value_path)
-        if actual is None:
-            if spec.required:
-                errors.append(f"Missing or invalid required output '{spec.name}'.")
-            continue
-        actual_values[spec.name] = actual
-
-        if spec.confidence_path is None:
-            continue
-        confidence = _read_non_empty_string(raw_output, spec.confidence_path)
-        if confidence is None:
-            continue
-        if confidence not in spec.confidence_values:
-            supported = ", ".join(spec.confidence_values)
-            errors.append(
-                f"Output '{spec.name}' has unsupported confidence "
-                f"'{confidence}'; expected one of: {supported}."
+        found, raw_value = read_path(metadata, spec.value_path)
+        if not found:
+            observations[spec.name] = OutputFieldObservation(
+                name=spec.name,
+                present=False,
+                valid=False,
             )
             continue
-        confidence_values[spec.name] = confidence
-
-    return StructuredOutputExtraction(
-        actual_values=actual_values,
-        confidence_values=confidence_values,
-        raw_outputs=raw_outputs,
-        errors=tuple(errors),
-    )
+        errors: list[str] = []
+        if not _matches_scalar_type(raw_value, spec.value_type):
+            errors.append(
+                f"Output '{spec.name}' must be {spec.value_type}; "
+                f"received {type(raw_value).__name__}."
+            )
+        confidence: JsonScalar = None
+        if spec.confidence_path is not None:
+            confidence_found, raw_confidence = read_path(metadata, spec.confidence_path)
+            if confidence_found:
+                if not _is_json_scalar(raw_confidence):
+                    errors.append(f"Output '{spec.name}' confidence must be scalar.")
+                elif raw_confidence not in spec.confidence_values:
+                    errors.append(
+                        f"Output '{spec.name}' has unsupported confidence "
+                        f"{raw_confidence!r}."
+                    )
+                else:
+                    confidence = raw_confidence
+        observations[spec.name] = OutputFieldObservation(
+            name=spec.name,
+            present=True,
+            valid=not errors,
+            value=raw_value if not errors else None,
+            raw_value=raw_value,
+            confidence=confidence,
+            errors=tuple(errors),
+        )
+    return StructuredOutputExtraction(observations=observations)
 
 
 def validate_metadata_identity(
@@ -94,7 +114,6 @@ def validate_metadata_identity(
     *,
     expected: Mapping[str, str | int],
 ) -> tuple[str, ...]:
-    """Return receipt identity mismatches against one planned benchmark example."""
     if not isinstance(metadata, Mapping):
         return ("Stage metadata must be a mapping.",)
     errors: list[str] = []
@@ -108,23 +127,26 @@ def validate_metadata_identity(
     return tuple(errors)
 
 
-def _validate_specs(specs: Sequence[StructuredOutputSpec]) -> list[str]:
-    names: set[str] = set()
-    errors: list[str] = []
-    for spec in specs:
-        if spec.name in names:
-            errors.append(f"Duplicate structured output name: '{spec.name}'.")
-        names.add(spec.name)
-    return errors
-
-
-def _read_non_empty_string(value: Any, path: tuple[str, ...]) -> str | None:
+def read_path(value: Any, path: Sequence[str]) -> tuple[bool, Any]:
     current = value
     for part in path:
-        if not isinstance(current, Mapping):
-            return None
-        current = current.get(part)
-    if not isinstance(current, str):
-        return None
-    normalized = current.strip()
-    return normalized or None
+        if not isinstance(current, Mapping) or part not in current:
+            return False, None
+        current = current[part]
+    return True, current
+
+
+def _is_json_scalar(value: Any) -> bool:
+    return value is None or isinstance(value, (str, int, float, bool))
+
+
+def _matches_scalar_type(value: Any, value_type: ScalarType) -> bool:
+    if value_type == "null":
+        return value is None
+    if value_type == "boolean":
+        return isinstance(value, bool)
+    if value_type == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if value_type == "number":
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    return isinstance(value, str)

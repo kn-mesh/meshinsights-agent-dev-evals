@@ -124,6 +124,31 @@ uv run python -m src.evals.eval_orchestration --help
 See [`EvalRunbook.md`](EvalRunbook.md) for the explicit, reproducible eval
 command shape. Prefer it over the slower interactive benchmark chooser.
 
+## Immutable Agent Versions
+
+Every new eval resolves a content-addressed candidate agent version before the
+first model call. The manifest freezes the resolved pipeline graph, source and
+dirty overlay, prompts, skills, tools, schemas, evidence/action contracts,
+dependency lock, and the model override policy in
+`agent_version_configs/<pipeline>.agent.yaml`.
+
+Resolve or promote explicitly:
+
+```bash
+uv run python -m src.agent_versions.cli --json resolve \
+  --pipeline pipeline_configs/v2.ppln \
+  --dirty-policy capture
+
+uv run python -m src.agent_versions.cli promote \
+  --from-run eval_<run-id> \
+  --alias pulse-v2-investigation-1
+```
+
+Clean promotion uses the Git revision without copying tracked source. Dirty
+promotion must use `--dirty-policy capture` and retains exact changed bytes in
+the local content-addressed store. `agent_versions/` and run-local candidates
+are important local evidence even though they are ignored by Git.
+
 ## AI Model Catalog
 
 The project-owned model catalog is [`models.yaml`](models.yaml). It is the only
@@ -166,8 +191,12 @@ agent-dev-eval-core/
 data/
 eval_results/
   <pipeline>/
+agent_version_configs/
+  v1_3.agent.yaml
+  v2.agent.yaml
+agent_versions/               # local promoted manifests and CAS (gitignored)
 docs/
-  current-dev/
+  development-current/
   product-strategy/
   use_case/
 mi-core/
@@ -175,6 +204,8 @@ mi-core/
   cli/
 pipeline_configs/
   v1_3.ppln
+evaluation_configs/
+  spirax-failure-evaluation.eval.yaml
 src/
   actions/
   hydrators/

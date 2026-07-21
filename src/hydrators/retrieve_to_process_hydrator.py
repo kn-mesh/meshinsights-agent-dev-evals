@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Any
 
 from mi.core.hydrators import BaseHydrator
 from mi.core.objects import RetrieverDataObject
 from mi.core.pipeline_receipt import PipelineReceipt
+from mi.core.versioning import VersionAssetRole, VersionContractDeclaration
 
 from src.objects.process_object import PulseFailureAnalysisProcessObject
 
@@ -16,6 +18,23 @@ class V1_3RetrieveToProcessHydrator(
     BaseHydrator[RetrieverDataObject, PulseFailureAnalysisProcessObject]
 ):
     """Validate and hydrate the v1_3 portable evidence package."""
+
+    @classmethod
+    def version_contracts(
+        cls, config: Mapping[str, Any]
+    ) -> Sequence[VersionContractDeclaration]:
+        _ = config
+        return (
+            VersionContractDeclaration(
+                role=VersionAssetRole.EVIDENCE_RECIPE,
+                logical_name="pulse_evidence_hydration",
+                value={
+                    "decision_timestamp_semantics": "benchmark_example_decision_time",
+                    "required_snapshot_hash": True,
+                    "output": "PulseFailureAnalysisProcessObject",
+                },
+            ),
+        )
 
     def hydrate(
         self,
@@ -45,9 +64,7 @@ class V1_3RetrieveToProcessHydrator(
                     "example_id": payload["example_id"],
                     "benchmark_key": payload["benchmark_key"],
                     "benchmark_version_id": payload["benchmark_version_id"],
-                    "benchmark_version_number": payload[
-                        "benchmark_version_number"
-                    ],
+                    "benchmark_version_number": payload["benchmark_version_number"],
                     "source_snapshot_id": payload["source_snapshot_id"],
                     "unit": payload.get("unit", str(payload["sensor_id"])),
                     "sensor_id": payload["sensor_id"],
@@ -63,9 +80,7 @@ class V1_3RetrieveToProcessHydrator(
         )
 
         if receipt.retrieve_receipt is not None:
-            receipt.retrieve_receipt.set_metadata(
-                "example_id", payload["example_id"]
-            )
+            receipt.retrieve_receipt.set_metadata("example_id", payload["example_id"])
             receipt.retrieve_receipt.set_metadata(
                 "benchmark_key", payload["benchmark_key"]
             )

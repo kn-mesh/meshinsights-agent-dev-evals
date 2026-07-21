@@ -6,6 +6,7 @@ from src.benchmarks.azure_container_app_repository import (
 from src.benchmarks.models import (
     BenchmarkExample,
     BenchmarkVersion,
+    PublishedLabelSchema,
     PublishedBenchmarkVersionSummary,
     SourceArtifact,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "BenchmarkExample",
     "BenchmarkRepository",
     "BenchmarkVersion",
+    "PublishedLabelSchema",
     "PublishedBenchmarkVersionSummary",
     "SourceArtifact",
 ]

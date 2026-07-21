@@ -1,4 +1,4 @@
-"""Tests for structured output contracts and immutable result writing."""
+"""Tests for schema-driven output extraction and immutable result writing."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ import json
 from pathlib import Path
 
 from evaluation import (
-    StructuredOutputSpec,
+    OutputFieldSpec,
     build_results_dir_for_pipeline,
-    extract_structured_outputs,
+    extract_output_fields,
     validate_metadata_identity,
     write_json_exclusive,
 )
@@ -21,28 +21,39 @@ def test_pipeline_results_are_nested_under_one_outer_directory() -> None:
     ) == Path("eval_results/v1_3")
 
 
-def test_confidence_is_optional_when_configured() -> None:
-    extraction = extract_structured_outputs(
-        {"classification": {"value": "Failure"}},
+def test_nested_scalar_and_optional_confidence_are_observed() -> None:
+    extraction = extract_output_fields(
+        {"agent_output": {"classification": {"value": "Failure"}}},
         specs=(
-            StructuredOutputSpec(
+            OutputFieldSpec(
                 name="classification",
-                metadata_key="classification",
-                confidence_path=("confidence",),
+                value_path=("agent_output", "classification", "value"),
+                value_type="string",
+                confidence_path=("agent_output", "classification", "confidence"),
+                confidence_values=("High", "Low"),
             ),
         ),
     )
 
-    assert extraction.valid
+    assert extraction.observations["classification"].valid
     assert extraction.actual_values == {"classification": "Failure"}
     assert extraction.confidence_values == {}
 
 
-def test_missing_required_output_and_identity_mismatch_are_diagnostic() -> None:
-    extraction = extract_structured_outputs(
-        {},
+def test_missing_output_type_error_and_identity_mismatch_are_diagnostic() -> None:
+    extraction = extract_output_fields(
+        {"agent_output": {"score": "not-a-number"}},
         specs=(
-            StructuredOutputSpec(name="classification", metadata_key="classification"),
+            OutputFieldSpec(
+                name="classification",
+                value_path=("agent_output", "classification"),
+                value_type="string",
+            ),
+            OutputFieldSpec(
+                name="score",
+                value_path=("agent_output", "score"),
+                value_type="number",
+            ),
         ),
     )
     identity_errors = validate_metadata_identity(
@@ -50,9 +61,8 @@ def test_missing_required_output_and_identity_mismatch_are_diagnostic() -> None:
         expected={"example_id": "expected"},
     )
 
-    assert extraction.errors == (
-        "Missing or invalid required output 'classification'.",
-    )
+    assert not extraction.observations["classification"].present
+    assert "must be number" in extraction.observations["score"].errors[0]
     assert "expected 'expected', got 'actual'" in identity_errors[0]
 
 

@@ -1,154 +1,221 @@
 ---
 name: agent-eval-builder
-description: Build or update MeshInsights Agent Workbench published-benchmark evaluation orchestration for AI-enabled pipelines in this repo. Use when changing Azure PostgreSQL benchmark loading, immutable Azure Blob evidence, repeated-run execution, result contracts, scoring, or evaluation-results apps. Do not use merely to prepare, execute, or troubleshoot an existing use-case eval command; use run-use-case-evals for that.
+description: Build or update MeshInsights Agent Workbench published-benchmark evaluation orchestration for AI-enabled pipelines in this repo. Use when changing Benchmark Studio published contracts, immutable Azure evidence, evaluation profiles, deterministic graders, slices, repeated-run execution, result schema v3, scoring, or evaluation-results apps. Do not use merely to prepare, execute, or troubleshoot an existing eval command; use run-use-case-evals for that.
 ---
 
 # Agent Eval Builder
 
-Use this skill for Agent Workbench evaluation work tied to published benchmarks
-and AI pipeline receipts in this repository.
+Use this skill for Agent Workbench evaluation work tied to immutable published
+benchmarks and pipeline receipts.
 
-## Terminology And Sources Of Truth
+## Sources Of Truth
 
-Use the terminology established by MeshInsights Benchmark Studio and company AI
-strategy:
+- Benchmark Studio owns published benchmark membership, complete approved label
+  payloads, and frozen label-schema identity.
+- Agent Workbench consumes that truth read-only. It owns versioned evaluation
+  profiles that map agent output fields to selected benchmark labels, choose
+  deterministic graders, define applicability, and define local slices.
+- Benchmark labels and agent outputs need not match one-to-one. Preserve full
+  benchmark labels for inspection; grade only profile-selected targets.
+- Evidence views are derived from immutable raw artifacts. They are not label
+  or benchmark truth.
 
-- A **benchmark** is a customer-owned, versioned set of approved examples used
-  to measure an agent.
-- A **published benchmark version** is immutable evaluation truth in Azure
-  PostgreSQL.
-- A **benchmark example** is a decision about one `unit_id` at one
-  `decision_timestamp`, identified by a stable `example_id`.
-- A **raw source snapshot** is the immutable input captured for an example.
-- **Raw artifacts** are the exact Parquet/NDJSON objects stored in Azure Blob
-  Storage and frozen into benchmark publication with hashes.
-- An **evidence view** is generated from raw inputs. It is not the benchmark and
-  is not the source of label truth.
+Never introduce local benchmark JSON, local label truth, or a write path into
+Benchmark Studio data.
 
-Do not call benchmarks “rubrics.” Do not introduce local benchmark JSON or
-local evidence snapshots into active pipeline/eval execution.
+## Current Contracts
 
-## Current Repository Contracts
+- `src/benchmarks/models.py` defines published benchmark, full label payload,
+  frozen label schema, example, and source-artifact models.
+- `src/benchmarks/postgres_repository.py` and
+  `src/benchmarks/azure_container_app_repository.py` load published-contract
+  schema version 2.
+- `evaluation_configs/*.eval.yaml` contains project-owned evaluation profiles.
+- `src/evals/evaluation_profile.py` validates profiles, predicates, preflight,
+  and local slice membership.
+- `src/evals/scoring.py` validates configured output contracts and runs
+  deterministic graders.
+- `src/evals/eval_orchestration.py` owns repeated execution, generic filtering,
+  aggregation, and result schema version 3.
+- `src/evals/run_specs.py` and `src/evals/run_store.py` own deterministic run
+  identity, source manifests, immutable attempt generations, local locking,
+  resume/rerun selection, and materialization.
+- `src/agent_versions/` and `agent_version_configs/*.agent.yaml` own exact
+  candidate resolution, Git/dirty overlays, model override policy, local CAS,
+  promotion, verification, and the immutable agent reference used by evals.
+- `src/evals/comparisons.py` preflights every comparison child into an immutable
+  manifest, validates declared varying dimensions, and reports paired logical-
+  work-item deltas across deterministic schema-v3 runs.
+- `agent-dev-eval-core/evaluation` owns use-case-neutral attempt states, scalar
+  extraction, grader registry/built-ins, metrics, execution, and immutable JSON
+  writing.
+- `eval_results/<pipeline>/` contains local evaluation evidence.
 
-- `src/benchmarks/models.py` defines `BenchmarkVersion`, `BenchmarkExample`,
-  and `SourceArtifact`.
-- `src/benchmarks/postgres_repository.py` reads published benchmark versions
-  from the Benchmark Studio Azure PostgreSQL schema.
-- `src/storage/azure_blob.py` performs read-only, integrity-checked artifact
-  downloads.
-- `src/retrievers/azure_blob_evidence_retriever.py` decodes the raw Spirax
-  artifacts into the pipeline evidence contract.
-- `src/evals/eval_orchestration.py` owns repeated benchmark evaluation.
-- `agent-dev-eval-core/evaluation` owns use-case-neutral execution, typed
-  attempts, structured-output extraction, accuracy/reliability/performance
-  aggregation, and immutable JSON writing.
-- Root-level `eval_results/<pipeline>/` contains persisted evaluation evidence.
+Hosted published-contract loading must preserve Benchmark Studio's declared
+contract version and label-schema hashes and fail closed when either a hash is
+missing or the canonical schema content does not match it. Direct PostgreSQL
+loading derives the same canonical hash at the trusted database boundary.
 
-Do not reintroduce local rubric models or filesystem label truth. Keep benchmark
-loading, use-case label semantics, and named metric views in `src/evals`; keep
-the standalone evaluation package independent of `src` and Spirax-specific
-models.
-
-## Hosted Inputs
-
-The operator CLI uses `APP_PROJECT_KEY` plus Azure CLI authentication. It runs
-read-only benchmark queries through the deployed Benchmark Studio Container App
-and loads Blob configuration from that hosted environment.
-
-Direct repository or programmatic execution may instead require:
-
-- `DATABASE_URL` for the Benchmark Studio Azure PostgreSQL database;
-- `AZURE_STORAGE_CONNECTION_STRING`;
-- `AZURE_STORAGE_CONTAINER`.
-
-Use read-only identities. Never commit credentials. There is no local database
-or filesystem fallback in the active benchmark/evidence path.
+Keep generic mechanics in `agent-dev-eval-core`; keep profile selection, named
+views, and use-case-specific graders in the root project.
 
 ## Required Evaluation Flow
 
-1. Require an explicit `benchmark_key`.
-2. Resolve an explicit version number or the latest published version for that
-   key and configured project.
-3. Load frozen examples and only the label fields configured in
-   `use_case_configs.eval_label_fields`.
-4. Select work by `example_id`, `unit_id`, or approved classification.
-5. For every attempt, construct `BenchmarkExamplePipelineMetadata` from the
-   frozen example and raw artifact manifest.
-6. Download Blob artifacts and enforce frozen byte size and SHA-256 before
-   decoding them.
-7. Run the pipeline and read actual labels from act-stage receipt metadata.
-8. Compare actual values to `approved_labels` from the published version.
-9. Persist benchmark identity and `source_snapshot_id` in results so every run
-   is reproducible.
+1. Resolve or load an exact candidate agent version and validate requested
+   model/reasoning overrides against its frozen policy.
+2. Require a versioned evaluation profile and explicit benchmark key.
+3. Resolve an explicit published benchmark version or the latest published
+   version for the configured project.
+4. Load every example's complete frozen label payload, label-schema reference,
+   source snapshot, and raw artifact manifest.
+5. Apply generic example/unit/label filters and profile-defined slices.
+6. Preflight label-schema hashes, profile compatibility, paths, predicates,
+   graders, expected targets, and slice membership before model calls.
+7. Construct benchmark metadata and verify Blob byte size and SHA-256 before
+   decoding evidence.
+8. Run the pipeline and validate the generic act-receipt identity fields.
+9. Extract the profile-configured JSON scalar outputs from receipt metadata.
+10. Validate required, optional, and conditional output fields.
+11. Grade only valid outputs with explicit deterministic graders.
+12. Aggregate valid-run accuracy separately from reliability and scoring
+    coverage.
+13. Persist exact agent manifest, benchmark, schema, profile, grader, slice,
+    model, runtime, and attempt identities in result schema v3.
 
-Prefer `RepeatedEvalExecutor` for repeated serial, threaded, and process runs.
-Prefer `StructuredOutputSpec`, `extract_structured_outputs`, and
-`validate_metadata_identity` for final output parsing and receipt validation.
+Preflight must resolve the final structured output schema declared by the
+pipeline. Every configured `receipt_metadata_path` begins at `agent_output`,
+must exist in that schema, and must agree with the configured scalar type.
+Selected benchmark target values must also be type-compatible before execution.
+
+The local coordinator translates the first `SIGINT` or `SIGTERM` into
+cooperative cancellation: stop submitting work, allow active terminal records
+to commit within the bounded grace period, preserve unsubmitted work as
+missing, and record an `interrupted` invocation event. A second signal requests
+immediate interruption.
+
+Invocation audit history must not mutate execution performance: no-op resumes
+and materialization-only invocations contribute zero execution wall time.
 
 ## Receipt Contract
 
-The act receipt must include:
+The act receipt must carry these generic identity fields:
 
 - `example_id`
 - `benchmark_key`
 - `benchmark_version_id`
 - `benchmark_version_number`
 - `source_snapshot_id`
-- `classification`
-- `root_cause`
 
-The retrieve receipt should additionally record the frozen source snapshot
-content hash and evidence row count.
+The agent's structured output lives under `agent_output`. Evaluation profiles
+resolve nested paths inside that payload. Do not require or add flat
+use-case-specific receipt keys such as `classification` or `root_cause`.
 
-## Eval JSON Contract
+The retrieve receipt should preserve frozen source-snapshot hash, evidence row
+counts, and artifact integrity details.
 
-Keep these top-level keys in order:
+Process objects may expose bounded `execution_telemetry`; the pipeline persists
+it on the process receipt in `finally` so usage and retry observations survive
+processor, hydrator, or action failure. Evaluation merges available stage
+telemetry and marks only genuinely absent observations unavailable.
+
+## Attempt And Accuracy Rules
+
+Keep these states orthogonal:
+
+- execution: `completed`, `failed`, `cancelled`;
+- output contract: `valid`, `invalid`, `not_produced`; and
+- scoring: `scored`, `not_scored`, `grader_error`,
+  `no_applicable_targets`.
+
+Only `valid` + `scored` attempts enter accuracy denominators. Missing,
+malformed, partial, identity-mismatched, operationally failed, cancelled, and
+grader-failed attempts remain fully persisted but affect reliability/coverage,
+not valid-run accuracy.
+
+Every ratio must include numerator and denominator counts. Report complete
+evaluation accuracy, per-field accuracy, expected-value and confidence views,
+profile slice views, output-contract validity, scoring coverage, failure types,
+and performance.
+
+## Deterministic Graders And Predicates
+
+Use built-ins from the explicit registry:
+
+- `core.exact@1`
+- `core.normalized_string@1`
+- `core.numeric_tolerance@1`
+
+Normalization must be explicit in profile configuration and recorded in
+results. Register project graders by stable ID/version; evaluation YAML never
+imports arbitrary code.
+
+Use the small declarative predicate language for conditional applicability and
+slices. Never execute Python, templates, or arbitrary expressions from a
+profile. Slices may use immutable benchmark labels, metadata, identity, and
+decision timestamps; do not derive slice membership from model output.
+
+## Result JSON Contract
+
+Keep top-level keys in this order:
 
 1. `summary`
 2. `run_config`
 3. `selected_example_ids`
 4. `results`
 
-`run_config` must include:
+Result schema v3 must preserve:
 
-- project, benchmark key, version ID, version number, and source-state hash;
-- `benchmark_source: azure_postgres`;
-- `evidence_source: azure_blob`;
-- pipeline/model/runtime configuration;
-- `runs_per_example` and completion timestamp.
+- published benchmark and source-state identity;
+- frozen label-schema identities and hashes;
+- evaluation profile ID/version/hash, grader set, and slices;
+- complete benchmark labels for every example;
+- per-attempt execution/contract/scoring states;
+- applicable fields, expected/actual values, grader details, confidence, and
+  correctness;
+- raw/partial agent output and contract errors;
+- structured failure/correlation details; and
+- timing and effective AI execution policies.
 
-Each result must include `example_id`, `unit_id`, `decision_timestamp`,
-`source_snapshot_id`, expected labels, repeated runs, and per-label correctness.
-Write result evidence below `eval_results/<pipeline>/`; never place generated
-results below `src/`.
+Do not rewrite historical schema v2 files and do not add runtime compatibility
+shims that continue producing v2.
 
-Persist effective AI timeout and transport-attempt policies in `run_config`.
-For failed runs, preserve stage and pipeline correlation IDs plus a bounded,
-structured exception chain. Classify connection/network failures separately from
-provider responses, timeouts, pipeline errors, and receipt-contract failures.
-Remember that `transport_retries` is the total number of HTTP attempts,
-including the initial request.
+## Hosted Inputs
+
+The operator CLI uses `APP_PROJECT_KEY` plus Azure CLI authentication. Hosted
+benchmark discovery executes the deployed Benchmark Studio repository contract
+through its Container App and retrieves read-only Blob configuration.
+
+Direct programmatic execution may use `DATABASE_URL`,
+`AZURE_STORAGE_CONNECTION_STRING`, and `AZURE_STORAGE_CONTAINER`. Use
+least-privilege read identities and never commit credentials.
 
 ## Operator Commands
 
-Do not maintain eval command templates in this builder skill. Read the root
-`EvalRunbook.md` and use `$run-use-case-evals` for preparing, executing, or
-troubleshooting real use-case eval runs. Keep this skill focused on changing
-orchestration and result contracts.
+Do not duplicate commands here. Read `EvalRunbook.md` and use
+`$run-use-case-evals` for live run preparation or troubleshooting.
 
 ## Tests
 
-At minimum test:
+At minimum cover:
 
-- exact/latest published-version selection;
-- project and benchmark scoping in PostgreSQL queries;
-- evaluation-label filtering via `eval_label_fields`;
-- example selection and missing IDs;
-- Blob artifact byte-size and checksum enforcement;
-- Parquet/NDJSON decoding and decision-timestamp cutoff enforcement;
-- repeated result scoring and benchmark identity in output;
-- YAML component registration and receipt handoff.
+- exact/latest published-version selection and project scoping;
+- full label payload and frozen label-schema hash loading through both hosted
+  and direct repository adapters;
+- profile validation, stable hashing, invalid paths/predicates/graders, and
+  multi-schema compatibility;
+- exact, normalized-string, numeric-tolerance, and project grader behavior;
+- required, optional, conditional, missing, malformed, and partial outputs;
+- generic label filters and deterministic slice membership, including empty
+  slices;
+- valid-run field/complete accuracy and separate reliability/coverage;
+- provider, transport, timeout, pipeline, identity, output, grader, executor,
+  and cancellation failures;
+- result schema v3 identities and debugging evidence;
+- repeated serial/thread/process equivalence; and
+- deterministic run/work identity, interruption recovery, selective failure
+  generations, idempotent resume, and dimension-safe comparison; and
+- Spirax nested `agent_output` receipt handoff without flat output aliases.
 
-Use injected repositories and Blob clients for deterministic tests. A live
-Azure smoke check is useful when credentials are available, but must not be a
-required unit test.
+Use injected repositories, pipeline receipts, Blob clients, and grader
+registries for deterministic tests. Live Azure smoke checks are useful when
+credentials are available but are not required unit tests.

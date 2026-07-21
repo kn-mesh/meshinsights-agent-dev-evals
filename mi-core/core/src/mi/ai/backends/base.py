@@ -23,6 +23,10 @@ class AIUsage:
     requests: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
+    cached_input_tokens: int = 0
+    reasoning_tokens: int = 0
+    tool_calls: int = 0
+    output_validation_attempts: int = 0
 
 
 @dataclass(frozen=True, slots=True)

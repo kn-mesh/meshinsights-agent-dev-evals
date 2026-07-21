@@ -3,8 +3,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
+from typing import Any
+
 from mi.ai import AIProcessorConfig, AIWorkflowMixin, UserMessage
 from mi.core.processors import BaseProcessor
+from mi.core.versioning import VersionAssetDeclaration, VersionAssetRole
 
 from src.objects.process_object import PulseFailureAnalysisProcessObject
 from src.processors.common.structured_outputs import PulseFailureAnalysisResult
@@ -29,6 +33,27 @@ class V1_3AlarmClassificationAIWorkflowProcessor(
     output_schema = PulseFailureAnalysisResult
 
     config: V1_3AlarmClassificationAIWorkflowProcessorConfig
+
+    @classmethod
+    def version_assets(
+        cls, config: Mapping[str, Any]
+    ) -> Sequence[VersionAssetDeclaration]:
+        """Declare embedded prompt and structured-output identities."""
+        _ = config
+        return (
+            VersionAssetDeclaration(
+                role=VersionAssetRole.PROMPT,
+                logical_name="v1_3_alarm_classification_system_prompt",
+                symbol=f"{cls.__qualname__}._build_system_prompt",
+            ),
+            VersionAssetDeclaration(
+                role=VersionAssetRole.OUTPUT_SCHEMA,
+                logical_name="pulse_failure_analysis_result",
+                path="../common/structured_outputs.py",
+                symbol="PulseFailureAnalysisResult",
+                media_type="text/x-python",
+            ),
+        )
 
     def __init__(
         self,

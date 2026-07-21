@@ -107,6 +107,15 @@ class ProcessDataObject(BaseDataObject):
 
         return self.artifacts.get(key, None)
 
+    def get_execution_telemetry(self) -> dict[str, Any] | None:
+        """Return bounded execution telemetry for durable stage receipts.
+
+        Use-case process objects may override this hook.  The pipeline captures
+        it in the process-stage receipt in ``finally`` so observations survive a
+        processor exception or failure in a later hydrator/action stage.
+        """
+        return None
+
     def list_artifacts(self, prefix: str | None = None) -> list[str]:
         """List stored artifact keys optionally filtered by prefix.
 

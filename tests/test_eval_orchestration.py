@@ -1,107 +1,30 @@
-"""Integration-contract tests for benchmark-driven v1_3 eval orchestration."""
+"""Tests for schema-driven published-benchmark evaluation orchestration."""
 
 from __future__ import annotations
 
-import argparse
-import json
-import logging
 from datetime import datetime, timezone
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
 from mi.core.pipeline_receipt import PipelineReceipt, StageReceipt
+import pytest
+import yaml
 
-from model_catalog import ModelCatalog, ModelDefinition
-from src.benchmarks.models import (
+from model_catalog import ModelDefinition, ModelPricing
+from src.agent_versions import AgentVersionStore, resolve_agent_version
+
+from src.benchmarks import (
     BenchmarkExample,
     BenchmarkVersion,
-    PublishedBenchmarkVersionSummary,
+    PublishedLabelSchema,
     SourceArtifact,
 )
 from src.evals import eval_orchestration
 
 
-def test_default_results_directory_is_at_repository_root() -> None:
-    assert eval_orchestration.BASE_RESULTS_DIR == Path("eval_results")
-
-
-def _benchmark() -> BenchmarkVersion:
-    artifacts = (
-        SourceArtifact(
-            artifact_kind="telemetry",
-            object_key="snapshot/telemetry.parquet",
-            content_type="application/parquet",
-            byte_size=1,
-            content_sha256="a" * 64,
-        ),
-        SourceArtifact(
-            artifact_kind="alarms",
-            object_key="snapshot/alarms.jsonl",
-            content_type="application/x-ndjson",
-            byte_size=1,
-            content_sha256="b" * 64,
-        ),
-    )
-    example = BenchmarkExample(
-        example_id="250000116|2026-03-04T08:01:36",
-        unit_id="250000116",
-        decision_timestamp=datetime(2026, 3, 4, 8, 1, 36, tzinfo=timezone.utc),
-        approved_labels={
-            "classification": "Failure",
-            "root_cause": "Closed Failure",
-        },
-        example_metadata={"sensor_id": "250000116"},
-        source_snapshot_id="snapshot-id",
-        raw_snapshot_content_sha256="c" * 64,
-        raw_source_kind="mongo",
-        raw_captured_at=datetime(2026, 3, 5, tzinfo=timezone.utc),
-        raw_window_start=datetime(2025, 3, 4, tzinfo=timezone.utc),
-        raw_window_end=datetime(2026, 3, 4, 8, 1, 36, tzinfo=timezone.utc),
-        raw_artifacts=artifacts,
-    )
-    return BenchmarkVersion(
-        project_key="spirax-pulse",
-        benchmark_key="steam-trap-regression",
-        benchmark_name="Steam Trap Regression",
-        benchmark_version_id="benchmark-version-id",
-        version_number=4,
-        published_at=datetime(2026, 3, 6, tzinfo=timezone.utc),
-        source_state_sha256="d" * 64,
-        examples=(example,),
-    )
-
-
-def _benchmark_with_all_scopes() -> BenchmarkVersion:
-    benchmark = _benchmark()
-    base = benchmark.examples[0]
-    examples = tuple(
-        base.model_copy(
-            update={
-                "example_id": f"example-{index}",
-                "unit_id": f"unit-{index}",
-                "approved_labels": labels,
-            }
-        )
-        for index, labels in enumerate(
-            (
-                {"classification": "Failure", "root_cause": "Closed Failure"},
-                {"classification": "Failure", "root_cause": "Open Failure"},
-                {"classification": "Failure", "root_cause": "Unknown"},
-                {"classification": "Healthy", "root_cause": "N/A"},
-            ),
-            start=1,
-        )
-    )
-    return benchmark.model_copy(update={"examples": examples})
-
-
-def _empty_scope_args() -> argparse.Namespace:
-    return argparse.Namespace(
-        example_ids=None,
-        unit_ids=None,
-        classifications=None,
-        root_causes=None,
-    )
+PROFILE_PATH = Path("evaluation_configs/spirax-failure-evaluation.eval.yaml")
 
 
 class _Repository:
@@ -115,652 +38,770 @@ class _Repository:
         assert version_number in {None, self.benchmark.version_number}
         return self.benchmark
 
-    def list_published_versions(self) -> tuple[PublishedBenchmarkVersionSummary, ...]:
+    def list_published_versions(self) -> tuple[Any, ...]:
         return ()
 
 
-def _successful_receipt(
+def _schema() -> tuple[dict[str, Any], str]:
+    schema = {
+        "schema_key": "spirax-steam-trap-label",
+        "version": "v1",
+        "fields": [
+            {
+                "key": "classification",
+                "required": True,
+                "values": ["Healthy", "Failure"],
+            },
+            {
+                "key": "root_cause",
+                "required": True,
+                "values": ["Closed Failure", "Open Failure", "Unknown", "N/A"],
+            },
+            {"key": "review_notes", "required": False},
+        ],
+    }
+    digest = hashlib.sha256(
+        json.dumps(schema, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return schema, digest
+
+
+def _example(
     *,
-    include_root_cause: bool = True,
-    include_confidence: bool = True,
+    example_id: str = "250000116|2026-03-04T08:01:36",
+    classification: str = "Failure",
+    root_cause: str = "Closed Failure",
+) -> BenchmarkExample:
+    artifacts = (
+        SourceArtifact(
+            artifact_kind="telemetry",
+            object_key=f"{example_id}/telemetry.parquet",
+            content_type="application/parquet",
+            byte_size=1,
+            content_sha256="a" * 64,
+        ),
+        SourceArtifact(
+            artifact_kind="alarms",
+            object_key=f"{example_id}/alarms.jsonl",
+            content_type="application/x-ndjson",
+            byte_size=1,
+            content_sha256="b" * 64,
+        ),
+    )
+    return BenchmarkExample(
+        example_id=example_id,
+        unit_id=example_id.split("|", 1)[0],
+        decision_timestamp=datetime(2026, 3, 4, 8, 1, 36, tzinfo=timezone.utc),
+        approved_label_payload={
+            "classification": classification,
+            "root_cause": root_cause,
+            "review_notes": "Useful context that is intentionally not graded.",
+        },
+        label_schema_version_id="schema-v1",
+        example_metadata={"sensor_id": example_id.split("|", 1)[0]},
+        source_snapshot_id=f"snapshot-{example_id}",
+        raw_snapshot_content_sha256="c" * 64,
+        raw_source_kind="mongo",
+        raw_captured_at=datetime(2026, 3, 5, tzinfo=timezone.utc),
+        raw_window_start=datetime(2025, 3, 4, tzinfo=timezone.utc),
+        raw_window_end=datetime(2026, 3, 4, 8, 1, 36, tzinfo=timezone.utc),
+        raw_artifacts=artifacts,
+    )
+
+
+def _benchmark(*examples: BenchmarkExample) -> BenchmarkVersion:
+    schema, digest = _schema()
+    items = examples or (_example(),)
+    return BenchmarkVersion(
+        project_key="spirax-pulse",
+        benchmark_key="steam-trap-regression",
+        benchmark_name="Steam Trap Regression",
+        benchmark_version_id="version-id",
+        version_number=4,
+        published_at=datetime(2026, 7, 1, tzinfo=timezone.utc),
+        source_state_sha256="d" * 64,
+        published_contract_schema_version=2,
+        eval_label_field_hints=("classification", "root_cause"),
+        label_schemas=(
+            PublishedLabelSchema(
+                schema_version_id="schema-v1",
+                schema_key="spirax-steam-trap-label",
+                version="v1",
+                schema=schema,
+                content_sha256=digest,
+            ),
+        ),
+        examples=tuple(items),
+    )
+
+
+def _receipt(
+    example: BenchmarkExample,
+    *,
+    classification: str = "Failure",
+    root_cause: str | None = "Closed Failure",
+    confidence: str | None = "High",
 ) -> PipelineReceipt:
-    receipt = PipelineReceipt(
-        pipeline_id="eval-test",
+    classification_payload: dict[str, Any] = {"value": classification}
+    if confidence is not None:
+        classification_payload["confidence"] = confidence
+    agent_output: dict[str, Any] = {"classification": classification_payload}
+    if root_cause is not None:
+        root_payload: dict[str, Any] = {"value": root_cause}
+        if confidence is not None:
+            root_payload["confidence"] = confidence
+        agent_output["root_cause"] = root_payload
+    return PipelineReceipt(
+        pipeline_id="test",
         retrieve_receipt=StageReceipt("retrieve", True, 0.1),
         process_receipt=StageReceipt("process", True, 0.2),
-        act_receipt=StageReceipt("act", True, 0.0),
-        total_execution_time_seconds=0.3,
-    )
-    assert receipt.act_receipt is not None
-    receipt.act_receipt.metadata.update(
-        {
-            "example_id": "250000116|2026-03-04T08:01:36",
-            "benchmark_key": "steam-trap-regression",
-            "benchmark_version_id": "benchmark-version-id",
-            "benchmark_version_number": 4,
-            "source_snapshot_id": "snapshot-id",
-            "classification": {
-                "value": "Failure",
-                "explanation": "The inlet temperature fell first.",
+        act_receipt=StageReceipt(
+            "act",
+            True,
+            0.1,
+            metadata={
+                "example_id": example.example_id,
+                "benchmark_key": "steam-trap-regression",
+                "benchmark_version_id": "version-id",
+                "benchmark_version_number": 4,
+                "source_snapshot_id": example.source_snapshot_id,
+                "agent_output": agent_output,
             },
-        }
+        ),
     )
-    classification = receipt.act_receipt.metadata["classification"]
-    assert isinstance(classification, dict)
-    if include_confidence:
-        classification["confidence"] = "High"
-    if include_root_cause:
-        receipt.act_receipt.metadata["root_cause"] = {
-            "value": "Closed Failure",
-            "explanation": "The temperature delta collapsed.",
-            **({"confidence": "High"} if include_confidence else {}),
-        }
-    return receipt
 
 
-def test_run_eval_scores_published_examples_and_writes_benchmark_identity(
-    monkeypatch: Any, tmp_path: Path
-) -> None:
-    """Evaluate repeated runs against approved labels from Azure PostgreSQL."""
-    benchmark = _benchmark()
-    calls: list[str] = []
+def _failed_receipt(
+    *, stage: str = "process", telemetry: dict[str, Any] | None = None
+) -> PipelineReceipt:
+    failed_stage = StageReceipt(
+        stage,
+        False,
+        0.2,
+        error="provider unavailable",
+        metadata={"execution_telemetry": telemetry} if telemetry is not None else {},
+    )
+    return PipelineReceipt(
+        pipeline_id="test",
+        retrieve_receipt=(
+            failed_stage if stage == "retrieve" else StageReceipt("retrieve", True, 0.1)
+        ),
+        process_receipt=(failed_stage if stage == "process" else None),
+        act_receipt=(failed_stage if stage == "act" else None),
+    )
 
-    def fake_run_pipeline(
-        yaml_path: str | Path,
-        *,
-        benchmark: BenchmarkVersion,
-        example: BenchmarkExample,
-        **kwargs: object,
-    ) -> PipelineReceipt:
-        _ = yaml_path, benchmark, kwargs
-        calls.append(example.example_id)
-        return _successful_receipt()
 
-    monkeypatch.setattr(eval_orchestration, "run_pipeline", fake_run_pipeline)
-
-    output_path = eval_orchestration.run_eval(
+def _run(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    benchmark: BenchmarkVersion,
+    receipts: list[PipelineReceipt],
+    **overrides: Any,
+) -> dict[str, Any]:
+    iterator = iter(receipts)
+    monkeypatch.setattr(
+        eval_orchestration,
+        "run_pipeline",
+        lambda *args, **kwargs: next(iterator),
+    )
+    path = eval_orchestration.run_eval(
         Path("pipeline_configs/v1_3.ppln"),
+        evaluation_profile_path=PROFILE_PATH,
         benchmark_key=benchmark.benchmark_key,
         benchmark_version=benchmark.version_number,
         repository=_Repository(benchmark),
-        output_root=tmp_path / "eval_results",
-        runs_per_example=2,
         runtime="serial",
-        max_workers=1,
-    )
-
-    payload = json.loads(output_path.read_text(encoding="utf-8"))
-    assert calls == [benchmark.examples[0].example_id] * 2
-    assert list(payload) == [
-        "summary",
-        "run_config",
-        "selected_example_ids",
-        "results",
-    ]
-    assert payload["run_config"]["benchmark_source"] == "azure_postgres"
-    assert payload["run_config"]["evidence_source"] == "azure_blob"
-    assert payload["run_config"]["benchmark_version_number"] == 4
-    assert payload["run_config"]["ai_model"] == "azure:gpt-5.6-luna"
-    assert payload["run_config"]["eval_result_schema_version"] == 2
-    assert payload["run_config"]["ai_execution_policies"] == [
-        {
-            "processor": "V1_3AlarmClassificationAIWorkflowProcessor",
-            "model": "azure:gpt-5.6-luna",
-            "reasoning_effort": "medium",
-            "timeout_seconds_per_attempt": 120,
-            "transport_attempts": 3,
-            "output_retries": 0,
-        }
-    ]
-    summary = payload["summary"]
-    accuracy = summary["accuracy"]
-    assert accuracy["accuracy_by_label"]["root_cause"] == 1.0
-    assert accuracy["accuracy_by_classification"] == {"Failure": 1.0}
-    assert accuracy["accuracy_by_failure_root_cause"] == {"Closed Failure": 1.0}
-    classification_confidence = accuracy["classification_accuracy_by_confidence"]
-    assert classification_confidence["confidence_coverage"] == {
-        "outputs_with_confidence": 2,
-        "evaluated_outputs": 2,
-        "coverage": 1.0,
-    }
-    assert classification_confidence["all"] == {
-        "High": {"accuracy": 1.0, "correct_runs": 2, "evaluated_runs": 2},
-        "Low": {"accuracy": None, "correct_runs": 0, "evaluated_runs": 0},
-    }
-    assert classification_confidence["by_classification"] == {
-        "Failure": {
-            "High": {
-                "accuracy": 1.0,
-                "correct_runs": 2,
-                "evaluated_runs": 2,
-            },
-            "Low": {
-                "accuracy": None,
-                "correct_runs": 0,
-                "evaluated_runs": 0,
-            },
-        }
-    }
-    root_cause_confidence = accuracy["root_cause_accuracy_by_confidence"]
-    assert root_cause_confidence["confidence_coverage"] == {
-        "outputs_with_confidence": 2,
-        "evaluated_outputs": 2,
-        "coverage": 1.0,
-    }
-    assert root_cause_confidence["all"] == {
-        "High": {"accuracy": 1.0, "correct_runs": 2, "evaluated_runs": 2},
-        "Low": {"accuracy": None, "correct_runs": 0, "evaluated_runs": 0},
-    }
-    assert root_cause_confidence["by_failure_root_cause"] == {
-        "Closed Failure": {
-            "High": {
-                "accuracy": 1.0,
-                "correct_runs": 2,
-                "evaluated_runs": 2,
-            },
-            "Low": {
-                "accuracy": None,
-                "correct_runs": 0,
-                "evaluated_runs": 0,
-            },
-        }
-    }
-    assert summary["reliability"] == {
-        "planned_runs": 2,
-        "recorded_runs": 2,
-        "successful_runs": 2,
-        "failed_runs": 0,
-        "cancelled_runs": 0,
-        "reliability": 1.0,
-        "failures_by_type": {},
-    }
-    assert summary["performance"]["run_duration_seconds"] == {
-        "count": 2,
-        "minimum": 0.3,
-        "maximum": 0.3,
-        "mean": 0.3,
-        "median": 0.3,
-        "p95": 0.3,
-    }
-    assert payload["results"][0]["source_snapshot_id"] == "snapshot-id"
-    assert (
-        payload["results"][0]["runs"][0]["ai_output"]["classification"]["confidence"]
-        == "High"
-    )
-
-
-def test_failed_eval_attempt_reduces_reliability_but_not_accuracy(
-    monkeypatch: Any, tmp_path: Path
-) -> None:
-    """Separate operational reliability from accuracy on valid agent outputs."""
-    benchmark = _benchmark()
-    call_count = 0
-
-    def fake_run_pipeline(*args: object, **kwargs: object) -> PipelineReceipt:
-        nonlocal call_count
-        _ = args, kwargs
-        call_count += 1
-        if call_count == 2:
-            raise RuntimeError("model request failed")
-        return _successful_receipt()
-
-    monkeypatch.setattr(eval_orchestration, "run_pipeline", fake_run_pipeline)
-
-    output_path = eval_orchestration.run_eval(
-        Path("pipeline_configs/v1_3.ppln"),
-        benchmark_key=benchmark.benchmark_key,
-        repository=_Repository(benchmark),
         output_root=tmp_path,
-        runs_per_example=2,
-        runtime="serial",
-        max_workers=1,
+        **overrides,
+    )
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def test_run_eval_writes_schema_v3_full_labels_and_generic_metrics(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    payload = _run(
+        monkeypatch,
+        tmp_path,
+        benchmark,
+        [_receipt(benchmark.examples[0])],
+        agent_version="spirax-v1.3",
+        configuration_dimensions={"prompt_revision": 7, "feature_set": "base"},
     )
 
-    payload = json.loads(output_path.read_text(encoding="utf-8"))
-    summary = payload["summary"]
-    assert summary["accuracy"]["overall_classification_accuracy"] == 1.0
-    assert summary["accuracy"]["evaluated_runs"] == 1
-    assert summary["reliability"] == {
-        "planned_runs": 2,
-        "recorded_runs": 2,
-        "successful_runs": 1,
-        "failed_runs": 1,
-        "cancelled_runs": 0,
-        "reliability": 0.5,
-        "failures_by_type": {"provider_error": 1},
+    assert list(payload) == ["summary", "run_config", "selected_example_ids", "results"]
+    assert payload["run_config"]["eval_result_schema_version"] == 3
+    assert payload["run_config"]["evaluation_profile"]["profile_id"] == (
+        "spirax-failure-evaluation"
+    )
+    dimensions = payload["run_config"]["dimensions"]
+    assert dimensions["agent"]["agent_version_id"].startswith("av_")
+    assert dimensions["agent"]["manifest_sha256"]
+    assert dimensions["agent"]["legacy_label"] == "spirax-v1.3"
+    assert payload["run_config"]["agent_version"] == {
+        key: value
+        for key, value in dimensions["agent"].items()
+        if key != "legacy_label"
     }
-    assert payload["results"][0]["runs"][1]["label_correctness"] == {}
-    assert payload["results"][0]["runs"][1]["failure_type"] == "provider_error"
-
-
-def test_connection_errors_are_classified_as_transport_failures() -> None:
+    assert payload["run_config"]["benchmark_name"] == "Steam Trap Regression"
+    assert payload["run_config"]["benchmark_source_state_sha256"] == "d" * 64
+    assert payload["run_config"]["selected_example_scope_sha256"]
+    assert dimensions["model"]["id"] == "azure:gpt-5.6-luna"
+    assert dimensions["pipeline"]["content_sha256"]
+    assert dimensions["configuration"] == {
+        "feature_set": "base",
+        "prompt_revision": 7,
+    }
+    assert payload["summary"]["accuracy"]["complete_evaluation"] == {
+        "accuracy": 1.0,
+        "correct_runs": 1,
+        "evaluated_runs": 1,
+    }
+    assert payload["summary"]["accuracy"]["by_field"]["root_cause"]["accuracy"] == 1.0
+    assert payload["summary"]["reliability"]["output_contract_validity_rate"] == 1.0
+    assert payload["summary"]["scoring_coverage"]["coverage"] == 1.0
+    result = payload["results"][0]
+    assert result["benchmark_labels"]["review_notes"].startswith("Useful context")
+    assert set(result["slice_keys"]) == {"expected-failure", "closed-failure"}
+    assert result["runs"][0]["fields"]["classification"]["grader"] == {
+        "id": "core.exact",
+        "version": 1,
+        "config": {},
+    }
     assert (
-        eval_orchestration._classify_failure_message(
-            "Workflow failed: APIConnectionError: Connection error.",
-            default=eval_orchestration.FailureType.PIPELINE_ERROR,
-        )
-        is eval_orchestration.FailureType.TRANSPORT_ERROR
+        result["runs"][0]["agent_version_id"] == dimensions["agent"]["agent_version_id"]
     )
 
 
-def test_failed_receipt_preserves_stage_diagnostics() -> None:
-    stage = StageReceipt(
-        "process",
-        False,
-        51.4,
-        error="Workflow failed: APIConnectionError: Connection error.",
-        correlation_id="stage-correlation",
-        metadata={
-            "error_details": {
-                "exception_chain": [
-                    {
-                        "exception_type": "APIConnectionError",
-                        "message": "Connection error.",
-                        "request_id": "request-123",
-                    }
-                ]
-            }
+def test_failed_execution_is_debuggable_and_excluded_from_accuracy(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    payload = _run(
+        monkeypatch,
+        tmp_path,
+        benchmark,
+        [_receipt(benchmark.examples[0]), _failed_receipt()],
+        runs_per_example=2,
+    )
+
+    assert payload["summary"]["accuracy"]["complete_evaluation"]["accuracy"] == 1.0
+    assert payload["summary"]["accuracy"]["complete_evaluation"]["evaluated_runs"] == 1
+    assert payload["summary"]["scoring_coverage"]["coverage"] == 0.5
+    assert payload["summary"]["reliability"]["failures_by_type"] == {
+        "provider_error": 1
+    }
+    failed = payload["results"][0]["runs"][1]
+    assert failed["execution_status"] == "failed"
+    assert failed["output_contract_status"] == "not_produced"
+    assert failed["failure_details"]["failed_stages"][0]["stage"] == "process"
+
+
+@pytest.mark.parametrize("failed_stage", ["retrieve", "process", "act"])
+def test_failed_execution_preserves_observed_telemetry(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, failed_stage: str
+) -> None:
+    benchmark = _benchmark()
+    telemetry = {
+        "usage": {
+            "requests": 2,
+            "input_tokens": 100,
+            "output_tokens": 20,
+            "total_tokens": 120,
+            "cached_input_tokens": 0,
+            "reasoning_tokens": 0,
+            "tool_calls": 1,
+            "output_validation_attempts": 1,
         },
-    )
-    receipt = PipelineReceipt(
-        pipeline_id="pipeline-run",
-        correlation_id="pipeline-correlation",
-        process_receipt=stage,
-        success=False,
+        "retry_telemetry": {
+            "availability": "partial",
+            "observed_model_requests": 2,
+            "observed_tool_calls": 1,
+            "observed_output_validation_attempts": 1,
+            "observed_transport_attempts": None,
+            "reason": "Transport retries unavailable.",
+        },
+    }
+    payload = _run(
+        monkeypatch,
+        tmp_path,
+        benchmark,
+        [_failed_receipt(stage=failed_stage, telemetry=telemetry)],
     )
 
-    assert eval_orchestration._receipt_failure_details(receipt) == {
-        "pipeline_id": "pipeline-run",
-        "correlation_id": "pipeline-correlation",
-        "failed_stages": [
-            {
-                "stage": "process",
-                "correlation_id": "stage-correlation",
-                "duration_seconds": 51.4,
-                "error": "Workflow failed: APIConnectionError: Connection error.",
-                "error_details": stage.metadata["error_details"],
-            }
+    failed = payload["results"][0]["runs"][0]
+    assert failed["usage"]["requests"] == 2
+    assert failed["retry_telemetry"]["observed_tool_calls"] == 1
+    assert failed["cost"] == {
+        "status": "unavailable",
+        "actual": None,
+        "estimated": None,
+        "unpriced_usage": {},
+        "reason": "No frozen pricing record is configured for this model.",
+    }
+
+
+def test_repeated_scored_outputs_report_nondeterminism(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    payload = _run(
+        monkeypatch,
+        tmp_path,
+        benchmark,
+        [
+            _receipt(benchmark.examples[0]),
+            _receipt(benchmark.examples[0], classification="Healthy"),
         ],
-    }
+        runs_per_example=2,
+    )
+
+    nondeterminism = payload["summary"]["nondeterminism"]
+    assert nondeterminism["examples_with_multiple_scored_repetitions"] == 1
+    assert nondeterminism["unstable_output_examples"] == 1
+    assert nondeterminism["output_agreement_rate"] == 0.0
 
 
-def test_partial_structured_output_is_unreliable_and_excluded_from_accuracy(
-    monkeypatch: Any, tmp_path: Path
+def test_partial_output_is_preserved_and_excluded_from_accuracy(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     benchmark = _benchmark()
-    monkeypatch.setattr(
-        eval_orchestration,
-        "run_pipeline",
-        lambda *args, **kwargs: _successful_receipt(include_root_cause=False),
-    )
+    receipt = _receipt(benchmark.examples[0], root_cause=None)
+    payload = _run(monkeypatch, tmp_path, benchmark, [receipt])
 
-    output_path = eval_orchestration.run_eval(
-        Path("pipeline_configs/v1_3.ppln"),
-        benchmark_key=benchmark.benchmark_key,
-        repository=_Repository(benchmark),
-        output_root=tmp_path,
-        runtime="serial",
-        max_workers=1,
-    )
-
-    payload = json.loads(output_path.read_text(encoding="utf-8"))
-    assert payload["summary"]["accuracy"]["evaluated_runs"] == 0
-    assert payload["summary"]["accuracy"]["overall_classification_accuracy"] is None
-    assert payload["summary"]["reliability"]["reliability"] == 0.0
+    assert payload["summary"]["accuracy"]["complete_evaluation"]["accuracy"] is None
+    assert payload["summary"]["scoring_coverage"]["coverage"] == 0.0
     run = payload["results"][0]["runs"][0]
-    assert run["status"] == "failed"
-    assert run["failure_type"] == "receipt_contract_error"
-    assert run["label_correctness"] == {}
+    assert run["output_contract_status"] == "invalid"
+    assert run["failure_type"] == "output_partial"
+    assert run["actual_outputs"] == {"classification": "Failure"}
+    assert run["agent_output"]["classification"]["value"] == "Failure"
 
 
-def test_missing_optional_confidence_keeps_run_valid_and_reports_coverage(
-    monkeypatch: Any, tmp_path: Path
+def test_conditional_root_cause_is_not_required_or_scored_for_healthy(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    benchmark = _benchmark()
-    monkeypatch.setattr(
-        eval_orchestration,
-        "run_pipeline",
-        lambda *args, **kwargs: _successful_receipt(include_confidence=False),
+    example = _example(classification="Healthy", root_cause="N/A")
+    benchmark = _benchmark(example)
+    receipt = _receipt(example, classification="Healthy", root_cause=None)
+    payload = _run(monkeypatch, tmp_path, benchmark, [receipt])
+
+    run = payload["results"][0]["runs"][0]
+    assert run["output_contract_status"] == "valid"
+    assert run["fields"]["root_cause"]["applicable"] is False
+    assert run["fields"]["root_cause"]["correct"] is None
+    assert (
+        payload["summary"]["accuracy"]["by_field"]["root_cause"]["evaluated_runs"] == 0
     )
 
-    output_path = eval_orchestration.run_eval(
-        Path("pipeline_configs/v1_3.ppln"),
-        benchmark_key=benchmark.benchmark_key,
-        repository=_Repository(benchmark),
-        output_root=tmp_path,
-        runtime="serial",
-        max_workers=1,
+
+def test_generic_label_and_slice_filters_select_examples(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    failure = _example()
+    healthy = _example(
+        example_id="250000117|2026-03-04T08:01:36",
+        classification="Healthy",
+        root_cause="N/A",
+    )
+    benchmark = _benchmark(failure, healthy)
+    payload = _run(
+        monkeypatch,
+        tmp_path,
+        benchmark,
+        [_receipt(healthy, classification="Healthy", root_cause=None)],
+        label_filters={"classification": ["Healthy"]},
+        slice_keys=["healthy"],
     )
 
-    payload = json.loads(output_path.read_text(encoding="utf-8"))
-    assert payload["summary"]["reliability"]["reliability"] == 1.0
-    assert payload["summary"]["accuracy"]["overall_classification_accuracy"] == 1.0
-    confidence = payload["summary"]["accuracy"]["classification_accuracy_by_confidence"]
-    assert confidence["confidence_coverage"] == {
-        "outputs_with_confidence": 0,
-        "evaluated_outputs": 1,
-        "coverage": 0.0,
-    }
-    assert confidence["all"]["High"]["evaluated_runs"] == 0
-    assert payload["results"][0]["runs"][0]["confidence"] == {}
+    assert payload["selected_example_ids"] == [healthy.example_id]
 
 
-def test_results_writer_never_overwrites_existing_evidence(tmp_path: Path) -> None:
-    output_path = tmp_path / "eval.json"
-
-    first = eval_orchestration._write_results_file(output_path, {"run": 1})
-    second = eval_orchestration._write_results_file(output_path, {"run": 2})
-
-    assert first == output_path
-    assert second == tmp_path / "eval_1.json"
-    assert json.loads(first.read_text(encoding="utf-8")) == {"run": 1}
-    assert json.loads(second.read_text(encoding="utf-8")) == {"run": 2}
-
-
-def test_eval_rejects_example_ids_outside_published_version(tmp_path: Path) -> None:
+def test_missing_example_filter_fails_before_execution(tmp_path: Path) -> None:
     benchmark = _benchmark()
-
-    try:
+    with pytest.raises(ValueError, match="absent from the benchmark"):
         eval_orchestration.run_eval(
             Path("pipeline_configs/v1_3.ppln"),
+            evaluation_profile_path=PROFILE_PATH,
             benchmark_key=benchmark.benchmark_key,
             repository=_Repository(benchmark),
-            output_root=tmp_path,
-            example_ids=["missing-example"],
+            example_ids=["missing"],
             runtime="serial",
-            max_workers=1,
+            output_root=tmp_path,
         )
-    except ValueError as error:
-        assert "absent from the benchmark" in str(error)
-    else:
-        raise AssertionError("Expected missing benchmark example to fail.")
 
 
-def test_terminal_chooser_selects_benchmark_then_specific_version(
-    monkeypatch: Any,
+def test_linked_eval_requires_benchmark_source_state(tmp_path: Path) -> None:
+    benchmark = _benchmark().model_copy(update={"source_state_sha256": None})
+    with pytest.raises(ValueError, match="source_state_sha256 is required"):
+        eval_orchestration.run_eval(
+            Path("pipeline_configs/v1_3.ppln"),
+            evaluation_profile_path=PROFILE_PATH,
+            benchmark_key=benchmark.benchmark_key,
+            repository=_Repository(benchmark),
+            runtime="serial",
+            output_root=tmp_path,
+        )
+
+
+def test_eval_can_require_exact_promoted_agent_version(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Select from catalog metadata without loading all frozen examples first."""
-    published_at = datetime(2026, 7, 1, tzinfo=timezone.utc)
-    versions = (
-        PublishedBenchmarkVersionSummary(
-            project_key="spirax-pulse",
+    benchmark = _benchmark()
+    resolved = resolve_agent_version(
+        Path("pipeline_configs/v1_3.ppln"), dirty_policy="capture"
+    )
+    version_store_root = tmp_path / "versions"
+    AgentVersionStore(version_store_root).promote(
+        resolved,
+        repository=Path.cwd(),
+    )
+    payload = _run(
+        monkeypatch,
+        tmp_path / "results",
+        benchmark,
+        [_receipt(benchmark.examples[0])],
+        agent_version_id=resolved.manifest.agent_version_id,
+        require_promoted_agent_version=True,
+        agent_version_store_root=version_store_root,
+    )
+
+    assert (
+        payload["run_config"]["agent_version"]["lifecycle_state_at_run"] == "promoted"
+    )
+
+
+def test_invalid_receipt_path_fails_preflight_before_pipeline_execution(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    profile_payload = yaml.safe_load(PROFILE_PATH.read_text(encoding="utf-8"))
+    profile_payload["output_fields"][0]["actual"]["receipt_metadata_path"] = [
+        "agent_output",
+        "classification_typo",
+        "value",
+    ]
+    profile_path = tmp_path / "invalid.eval.yaml"
+    profile_path.write_text(yaml.safe_dump(profile_payload), encoding="utf-8")
+    monkeypatch.setattr(
+        eval_orchestration,
+        "run_pipeline",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("pipeline executed")
+        ),
+    )
+
+    with pytest.raises(ValueError, match="absent from the pipeline output schema"):
+        eval_orchestration.run_eval(
+            Path("pipeline_configs/v1_3.ppln"),
+            evaluation_profile_path=profile_path,
             benchmark_key="steam-trap-regression",
-            benchmark_name="Steam Trap Regression",
-            benchmark_version_id="steam-v2",
-            version_number=2,
-            published_at=published_at,
-            example_count=12,
-        ),
-        PublishedBenchmarkVersionSummary(
-            project_key="spirax-pulse",
-            benchmark_key="steam-trap-regression",
-            benchmark_name="Steam Trap Regression",
-            benchmark_version_id="steam-v1",
-            version_number=1,
-            published_at=published_at,
-            example_count=8,
-        ),
-        PublishedBenchmarkVersionSummary(
-            project_key="spirax-pulse",
-            benchmark_key="other-benchmark",
-            benchmark_name="Other Benchmark",
-            benchmark_version_id="other-v1",
-            version_number=1,
-            published_at=published_at,
-            example_count=3,
-        ),
+            repository=_Repository(_benchmark()),
+            runtime="serial",
+            output_root=tmp_path,
+        )
+
+
+def test_incompatible_benchmark_target_type_fails_preflight(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    schema, _ = _schema()
+    schema["fields"][0]["values"] = [1]
+    digest = hashlib.sha256(
+        json.dumps(schema, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    base = _benchmark()
+    example = base.examples[0].model_copy(
+        update={
+            "approved_label_payload": {
+                **base.examples[0].approved_label_payload,
+                "classification": 1,
+            }
+        }
     )
-    prompts: list[tuple[str, list[str]]] = []
-
-    def choose(prompt: str, options: list[str]) -> str:
-        prompts.append((prompt, options))
-        if len(prompts) == 1:
-            return next(
-                option for option in options if "steam-trap-regression" in option
-            )
-        return next(option for option in options if option.startswith("v1 "))
-
-    monkeypatch.setattr(eval_orchestration, "prompt_select_option", choose)
-
-    selected = eval_orchestration._choose_published_benchmark_version(versions)
-
-    assert selected.benchmark_version_id == "steam-v1"
-    assert len(prompts) == 2
-    assert prompts[1][1][0].startswith("v2 ")
-
-
-def test_terminal_chooser_rejects_empty_azure_catalog() -> None:
-    try:
-        eval_orchestration._choose_published_benchmark_version(())
-    except ValueError as error:
-        assert "No published benchmark versions" in str(error)
-    else:
-        raise AssertionError("Expected an empty Azure catalog to fail.")
-
-
-def test_terminal_model_chooser_uses_root_catalog(monkeypatch: Any) -> None:
-    catalog = ModelCatalog(
-        default_model="azure:gpt-5.6-luna",
-        models=(
-            ModelDefinition("azure:gpt-5.6-luna", "openai_responses"),
-            ModelDefinition("azure:gpt-5.6-sol", "openai_responses"),
-        ),
-    )
-    monkeypatch.setattr(eval_orchestration.sys.stdin, "isatty", lambda: True)
-    monkeypatch.setattr(
-        eval_orchestration,
-        "prompt_select_option",
-        lambda prompt, options: options[1],
-    )
-
-    selected = eval_orchestration._resolve_cli_model(
-        argparse.Namespace(ai_model=None),
-        catalog=catalog,
-        parser=eval_orchestration._argument_parser(),
-    )
-
-    assert selected == "azure:gpt-5.6-sol"
-
-
-def test_noninteractive_model_selection_uses_catalog_default(monkeypatch: Any) -> None:
-    catalog = ModelCatalog(
-        default_model="azure:gpt-5.6-luna",
-        models=(
-            ModelDefinition("azure:gpt-5.6-luna", "openai_responses"),
-            ModelDefinition("azure:gpt-5.6-sol", "openai_responses"),
-        ),
-    )
-    monkeypatch.setattr(eval_orchestration.sys.stdin, "isatty", lambda: False)
-
-    selected = eval_orchestration._resolve_cli_model(
-        argparse.Namespace(ai_model=None),
-        catalog=catalog,
-        parser=eval_orchestration._argument_parser(),
-    )
-
-    assert selected == "azure:gpt-5.6-luna"
-
-
-def test_terminal_prompts_for_reasoning_effort(monkeypatch: Any) -> None:
-    monkeypatch.setattr(eval_orchestration.sys.stdin, "isatty", lambda: True)
-    monkeypatch.setattr(
-        eval_orchestration,
-        "prompt_select_option",
-        lambda prompt, options: options[2],
-    )
-
-    selected = eval_orchestration._resolve_cli_reasoning_effort(
-        argparse.Namespace(ai_reasoning_effort=None)
-    )
-
-    assert selected == "medium"
-
-
-def test_terminal_prompts_for_runs_per_example(monkeypatch: Any) -> None:
-    monkeypatch.setattr(eval_orchestration.sys.stdin, "isatty", lambda: True)
-    monkeypatch.setattr(
-        eval_orchestration,
-        "prompt_positive_int",
-        lambda prompt, default: 3,
-    )
-
-    selected = eval_orchestration._resolve_cli_runs_per_example(
-        argparse.Namespace(runs_per_example=None),
-        parser=eval_orchestration._argument_parser(),
-    )
-
-    assert selected == 3
-
-
-def test_noninteractive_eval_settings_keep_defaults(monkeypatch: Any) -> None:
-    monkeypatch.setattr(eval_orchestration.sys.stdin, "isatty", lambda: False)
-    parser = eval_orchestration._argument_parser()
-
-    reasoning_effort = eval_orchestration._resolve_cli_reasoning_effort(
-        argparse.Namespace(ai_reasoning_effort=None)
-    )
-    runs_per_example = eval_orchestration._resolve_cli_runs_per_example(
-        argparse.Namespace(runs_per_example=None), parser=parser
-    )
-
-    assert reasoning_effort is None
-    assert runs_per_example == 1
-
-
-def test_explicit_eval_settings_skip_terminal_prompts(monkeypatch: Any) -> None:
-    monkeypatch.setattr(eval_orchestration.sys.stdin, "isatty", lambda: True)
-    monkeypatch.setattr(
-        eval_orchestration,
-        "prompt_select_option",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("prompted")),
+    benchmark = base.model_copy(
+        update={
+            "examples": (example,),
+            "label_schemas": (
+                PublishedLabelSchema(
+                    schema_version_id="schema-v1",
+                    schema_key="spirax-steam-trap-label",
+                    version="v1",
+                    schema=schema,
+                    content_sha256=digest,
+                ),
+            ),
+        }
     )
     monkeypatch.setattr(
         eval_orchestration,
-        "prompt_positive_int",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("prompted")),
-    )
-    parser = eval_orchestration._argument_parser()
-
-    reasoning_effort = eval_orchestration._resolve_cli_reasoning_effort(
-        argparse.Namespace(ai_reasoning_effort="high")
-    )
-    runs_per_example = eval_orchestration._resolve_cli_runs_per_example(
-        argparse.Namespace(runs_per_example=4), parser=parser
+        "run_pipeline",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("pipeline executed")
+        ),
     )
 
-    assert reasoning_effort == "high"
-    assert runs_per_example == 4
+    with pytest.raises(ValueError, match="incompatible with declared output type"):
+        eval_orchestration.run_eval(
+            Path("pipeline_configs/v1_3.ppln"),
+            evaluation_profile_path=PROFILE_PATH,
+            benchmark_key=benchmark.benchmark_key,
+            repository=_Repository(benchmark),
+            runtime="serial",
+            output_root=tmp_path,
+        )
 
 
-def test_terminal_prompts_for_example_scope_categories(monkeypatch: Any) -> None:
-    benchmark = _benchmark_with_all_scopes()
-    parser = eval_orchestration._argument_parser()
-    monkeypatch.setattr(eval_orchestration.sys.stdin, "isatty", lambda: True)
-    expected_by_selection = {
-        "All examples": (None, None, None, None),
-        "Closed failures": (None, None, None, ["Closed Failure"]),
-        "Open failures": (None, None, None, ["Open Failure"]),
-        "Unknown failures": (None, None, None, ["Unknown"]),
-        "Healthy": (None, None, ["Healthy"], None),
+def test_identical_run_resumes_without_duplicating_completed_work(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    calls = 0
+
+    def run_once(*args: Any, **kwargs: Any) -> PipelineReceipt:
+        nonlocal calls
+        calls += 1
+        return _receipt(benchmark.examples[0])
+
+    monkeypatch.setattr(
+        eval_orchestration,
+        "run_pipeline",
+        run_once,
+    )
+    first = eval_orchestration.run_eval(
+        Path("pipeline_configs/v1_3.ppln"),
+        evaluation_profile_path=PROFILE_PATH,
+        benchmark_key=benchmark.benchmark_key,
+        repository=_Repository(benchmark),
+        runtime="serial",
+        output_root=tmp_path,
+    )
+    first_performance = json.loads(first.read_text(encoding="utf-8"))["summary"][
+        "performance"
+    ]
+    second = eval_orchestration.run_eval(
+        Path("pipeline_configs/v1_3.ppln"),
+        evaluation_profile_path=PROFILE_PATH,
+        benchmark_key=benchmark.benchmark_key,
+        repository=_Repository(benchmark),
+        runtime="serial",
+        output_root=tmp_path,
+    )
+
+    assert first == second
+    assert calls == 1
+    payload = json.loads(second.read_text(encoding="utf-8"))
+    assert payload["summary"]["performance"] == first_performance
+    materialized = eval_orchestration.run_eval(
+        Path("pipeline_configs/v1_3.ppln"),
+        evaluation_profile_path=PROFILE_PATH,
+        benchmark_key=benchmark.benchmark_key,
+        repository=_Repository(benchmark),
+        runtime="serial",
+        materialize_only=True,
+        output_root=tmp_path,
+    )
+    materialized_payload = json.loads(materialized.read_text(encoding="utf-8"))
+    assert materialized_payload["summary"]["performance"] == first_performance
+    assert calls == 1
+    recovery = payload["summary"]["execution_recovery"]
+    assert recovery["logical_work_items"] == 1
+    assert recovery["execution_generations"] == 1
+
+
+def test_later_empty_stage_telemetry_does_not_hide_process_observations() -> None:
+    receipt = PipelineReceipt(
+        pipeline_id="test",
+        process_receipt=StageReceipt(
+            "process",
+            True,
+            0.1,
+            metadata={"execution_telemetry": {"usage": {"requests": 1}}},
+        ),
+        act_receipt=StageReceipt(
+            "act", True, 0.1, metadata={"execution_telemetry": {}}
+        ),
+    )
+
+    assert eval_orchestration._receipt_execution_telemetry(receipt) == {
+        "usage": {"requests": 1}
     }
 
-    for selection, expected in expected_by_selection.items():
-        monkeypatch.setattr(
-            eval_orchestration,
-            "prompt_select_option",
-            lambda prompt, options, selected=selection: selected,
-        )
-        resolved = eval_orchestration._resolve_cli_example_scope(
-            _empty_scope_args(), benchmark=benchmark, parser=parser
-        )
-        assert resolved == expected
 
-
-def test_terminal_random_scope_selects_one_benchmark_example(
-    monkeypatch: Any, capsys: Any
+def test_failed_work_can_be_rerun_without_replacing_first_generation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    benchmark = _benchmark_with_all_scopes()
-    monkeypatch.setattr(eval_orchestration.sys.stdin, "isatty", lambda: True)
+    benchmark = _benchmark()
+    receipts = iter([_failed_receipt(), _receipt(benchmark.examples[0])])
     monkeypatch.setattr(
         eval_orchestration,
-        "prompt_select_option",
-        lambda prompt, options: "Single example (random)",
+        "run_pipeline",
+        lambda *args, **kwargs: next(receipts),
     )
-    monkeypatch.setattr(
-        eval_orchestration.random, "choice", lambda examples: examples[1]
+    first = eval_orchestration.run_eval(
+        Path("pipeline_configs/v1_3.ppln"),
+        evaluation_profile_path=PROFILE_PATH,
+        benchmark_key=benchmark.benchmark_key,
+        repository=_Repository(benchmark),
+        runtime="serial",
+        output_root=tmp_path,
     )
+    first_payload = json.loads(first.read_text(encoding="utf-8"))
+    assert first_payload["results"][0]["runs"][0]["execution_generation"] == 1
 
-    resolved = eval_orchestration._resolve_cli_example_scope(
-        _empty_scope_args(),
-        benchmark=benchmark,
-        parser=eval_orchestration._argument_parser(),
+    second = eval_orchestration.run_eval(
+        Path("pipeline_configs/v1_3.ppln"),
+        evaluation_profile_path=PROFILE_PATH,
+        benchmark_key=benchmark.benchmark_key,
+        repository=_Repository(benchmark),
+        runtime="serial",
+        resume_mode="failed",
+        output_root=tmp_path,
     )
+    payload = json.loads(second.read_text(encoding="utf-8"))
+    run = payload["results"][0]["runs"][0]
+    assert first == second
+    assert run["execution_generation"] == 2
+    assert [item["failure_type"] for item in run["execution_history"]] == [
+        "provider_error",
+        None,
+    ]
+    assert payload["summary"]["execution_recovery"] == {
+        "logical_work_items": 1,
+        "recorded_work_items": 1,
+        "missing_work_items": 0,
+        "execution_generations": 2,
+        "rerun_generations": 1,
+    }
 
-    assert resolved == (["example-2"], None, None, None)
-    assert (
-        "Randomly selected example: example-2 (unit unit-2)." in capsys.readouterr().out
+
+def test_interruption_preserves_completed_work_and_resume_runs_only_missing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    first_example = _example()
+    second_example = _example(
+        example_id="250000117|2026-03-04T08:01:36",
+        classification="Healthy",
+        root_cause="N/A",
     )
+    benchmark = _benchmark(first_example, second_example)
+    calls: list[str] = []
 
+    def interrupted(*args: Any, **kwargs: Any) -> PipelineReceipt:
+        example = kwargs["example"]
+        calls.append(example.example_id)
+        if example.example_id == second_example.example_id:
+            raise KeyboardInterrupt()
+        return _receipt(first_example)
 
-def test_explicit_scope_filters_skip_terminal_prompt(monkeypatch: Any) -> None:
-    monkeypatch.setattr(eval_orchestration.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(eval_orchestration, "run_pipeline", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        eval_orchestration.run_eval(
+            Path("pipeline_configs/v1_3.ppln"),
+            evaluation_profile_path=PROFILE_PATH,
+            benchmark_key=benchmark.benchmark_key,
+            repository=_Repository(benchmark),
+            runtime="serial",
+            output_root=tmp_path,
+        )
+
+    invocation_events = list(tmp_path.glob("**/invocations/*.json"))
+    assert any(path.name.endswith(".interrupted.json") for path in invocation_events)
+    assert not any(path.name.endswith(".failed.json") for path in invocation_events)
+
     monkeypatch.setattr(
         eval_orchestration,
-        "prompt_select_option",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("prompted")),
+        "run_pipeline",
+        lambda *args, **kwargs: (
+            calls.append(kwargs["example"].example_id)
+            or _receipt(
+                second_example,
+                classification="Healthy",
+                root_cause=None,
+            )
+        ),
     )
-    args = argparse.Namespace(
-        example_ids=None,
-        unit_ids=["unit-7"],
-        classifications=None,
-        root_causes=None,
+    path = eval_orchestration.run_eval(
+        Path("pipeline_configs/v1_3.ppln"),
+        evaluation_profile_path=PROFILE_PATH,
+        benchmark_key=benchmark.benchmark_key,
+        repository=_Repository(benchmark),
+        runtime="serial",
+        output_root=tmp_path,
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    assert calls == [
+        first_example.example_id,
+        second_example.example_id,
+        second_example.example_id,
+    ]
+    assert payload["summary"]["execution_recovery"]["recorded_work_items"] == 2
+    assert payload["summary"]["execution_recovery"]["execution_generations"] == 2
+
+
+def test_dry_run_resolves_manifest_without_pipeline_execution(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    monkeypatch.setattr(
+        eval_orchestration,
+        "run_pipeline",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("pipeline executed")
+        ),
     )
 
-    resolved = eval_orchestration._resolve_cli_example_scope(
-        args,
-        benchmark=_benchmark(),
-        parser=eval_orchestration._argument_parser(),
+    path = eval_orchestration.run_eval(
+        Path("pipeline_configs/v1_3.ppln"),
+        evaluation_profile_path=PROFILE_PATH,
+        benchmark_key=benchmark.benchmark_key,
+        repository=_Repository(benchmark),
+        runtime="serial",
+        dry_run=True,
+        output_root=tmp_path,
     )
+    manifest = json.loads(path.read_text(encoding="utf-8"))
 
-    assert resolved == (None, ["unit-7"], None, None)
-
-
-def test_root_cause_scope_filters_benchmark_examples() -> None:
-    benchmark = _benchmark_with_all_scopes()
-
-    selected = eval_orchestration._select_examples(
-        benchmark.examples,
-        example_ids=None,
-        unit_ids=None,
-        classifications=None,
-        root_causes=["Open Failure"],
-    )
-
-    assert [example.example_id for example in selected] == ["example-2"]
+    assert path.name == "manifest.json"
+    assert manifest["run_id"].startswith("eval_")
+    assert len(manifest["work_items"]) == 1
 
 
-def test_cli_logging_suppresses_azure_http_diagnostics() -> None:
-    azure_http_logger = logging.getLogger(eval_orchestration._AZURE_HTTP_LOGGER)
-    previous_level = azure_http_logger.level
-    try:
-        eval_orchestration._configure_cli_logging()
-        assert azure_http_logger.level == logging.WARNING
-    finally:
-        azure_http_logger.setLevel(previous_level)
+def test_run_identity_excludes_progress_interval_but_includes_worker_limit(
+    tmp_path: Path,
+) -> None:
+    benchmark = _benchmark()
+
+    def resolve(*, progress: float, workers: int) -> Path:
+        return eval_orchestration.run_eval(
+            Path("pipeline_configs/v1_3.ppln"),
+            evaluation_profile_path=PROFILE_PATH,
+            benchmark_key=benchmark.benchmark_key,
+            repository=_Repository(benchmark),
+            runtime="threaded",
+            max_workers=workers,
+            progress_interval_seconds=progress,
+            dry_run=True,
+            output_root=tmp_path,
+        )
+
+    first = resolve(progress=1.0, workers=1)
+    same = resolve(progress=99.0, workers=1)
+    different = resolve(progress=1.0, workers=2)
+
+    assert first == same
+    assert first.parent.name != different.parent.name
 
 
-def test_cli_outcome_reports_success(tmp_path: Path, capsys: Any) -> None:
+def test_cli_outcome_reports_scoring_coverage(tmp_path: Path, capsys: Any) -> None:
     path = tmp_path / "results.json"
     path.write_text(
         json.dumps(
             {
                 "summary": {
-                    "reliability": {
-                        "planned_runs": 2,
-                        "successful_runs": 2,
-                        "failed_runs": 0,
-                        "cancelled_runs": 0,
-                    }
+                    "reliability": {"planned_runs": 3},
+                    "scoring_coverage": {"scored_runs": 2},
                 }
             }
         ),
@@ -769,80 +810,93 @@ def test_cli_outcome_reports_success(tmp_path: Path, capsys: Any) -> None:
 
     eval_orchestration._print_cli_outcome(path)
 
-    output = capsys.readouterr().out
-    assert "SUCCESS: 2/2 succeeded; 0 failed." in output
-    assert f"Results written to: {path}" in output
+    assert "2/3 attempts scored; 1 not scored" in capsys.readouterr().out
 
 
-def test_cli_outcome_reports_failed_runs(tmp_path: Path, capsys: Any) -> None:
-    path = tmp_path / "results.json"
-    path.write_text(
-        json.dumps(
-            {
-                "summary": {
-                    "reliability": {
-                        "planned_runs": 3,
-                        "successful_runs": 1,
-                        "failed_runs": 2,
-                        "cancelled_runs": 0,
-                    }
-                }
-            }
+def test_configuration_dimensions_require_unique_json_scalars() -> None:
+    parser = eval_orchestration._argument_parser()
+
+    assert eval_orchestration._parse_configuration_dimensions(
+        ["prompt_revision=7", 'feature_set="base"'], parser
+    ) == {"prompt_revision": 7, "feature_set": "base"}
+    with pytest.raises(SystemExit):
+        eval_orchestration._parse_configuration_dimensions(["feature_set={}"], parser)
+
+
+def test_cost_estimate_uses_frozen_model_pricing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        eval_orchestration,
+        "resolve_model_definition",
+        lambda model: ModelDefinition(
+            id=str(model),
+            api="openai_responses",
+            pricing=ModelPricing(
+                version="2026-07",
+                currency="USD",
+                input_per_million_tokens=2.0,
+                output_per_million_tokens=10.0,
+            ),
         ),
-        encoding="utf-8",
     )
 
-    eval_orchestration._print_cli_outcome(path)
+    cost = eval_orchestration._build_cost_observation(
+        ai_model="azure:test",
+        usage={"input_tokens": 1_000_000, "output_tokens": 100_000},
+        provider_cost=None,
+    )
 
-    output = capsys.readouterr().out
-    assert "FAILED: 1/3 succeeded; 2 failed." in output
-    assert f"Results written to: {path}" in output
+    assert cost["status"] == "estimated_complete"
+    assert cost["estimated"]["amount"] == 3.0
+    assert cost["actual"] is None
 
 
-def test_progress_tracker_reports_success_failure_and_slowest_running(
-    monkeypatch: Any,
+def test_progress_tracker_reports_healthy_failure_and_running(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     messages: list[str] = []
-
-    def capture(message: str, *args: object) -> None:
-        messages.append(message % args if args else message)
-
-    monkeypatch.setattr(eval_orchestration.logger, "info", capture)
-    monkeypatch.setattr(eval_orchestration.logger, "error", capture)
+    monkeypatch.setattr(
+        eval_orchestration.logger,
+        "info",
+        lambda message, *args: messages.append(message % args if args else message),
+    )
+    monkeypatch.setattr(
+        eval_orchestration.logger,
+        "error",
+        lambda message, *args: messages.append(message % args if args else message),
+    )
+    benchmark = _benchmark()
+    item = eval_orchestration.RepeatedEvalWorkItem(
+        item_id=benchmark.examples[0].example_id,
+        payload=benchmark.examples[0],
+        attempt_index=1,
+    )
     tracker = eval_orchestration._EvalProgressTracker(
-        total_runs=3,
+        total_runs=2,
         heartbeat_seconds=30.0,
     )
-    first = eval_orchestration.RepeatedEvalWorkItem(
-        item_id="example-a", payload=_benchmark().examples[0], attempt_index=1
-    )
-    second = eval_orchestration.RepeatedEvalWorkItem(
-        item_id="example-b", payload=_benchmark().examples[0], attempt_index=1
-    )
-    tracker.started(first)
-    tracker.started(second)
-    with tracker._lock:
-        tracker._running[(first.item_id, first.attempt_index)] -= 45.0
-        tracker._running[(second.item_id, second.attempt_index)] -= 10.0
+    tracker.started(item)
+    assert "running" in (tracker._heartbeat_message() or "")
 
-    heartbeat = tracker._heartbeat_message()
-    tracker.completed(
-        second,
-        eval_orchestration.EvalAttempt(
-            status=eval_orchestration.AttemptStatus.SUCCEEDED
-        ),
+    receipt = _receipt(benchmark.examples[0])
+    assert receipt.act_receipt is not None
+    scored = eval_orchestration.score_receipt_metadata(
+        metadata=receipt.act_receipt.metadata,
+        expected_identity={
+            "example_id": benchmark.examples[0].example_id,
+            "benchmark_key": benchmark.benchmark_key,
+            "benchmark_version_id": benchmark.benchmark_version_id,
+            "benchmark_version_number": benchmark.version_number,
+            "source_snapshot_id": benchmark.examples[0].source_snapshot_id,
+        },
+        example=benchmark.examples[0],
+        profile=eval_orchestration.load_evaluation_profile(PROFILE_PATH),
+        grader_registry=eval_orchestration.build_project_grader_registry(),
+        duration_seconds=1.0,
+        stage_durations_seconds={},
+        attempt_metadata={"run_index": 1},
     )
-    tracker.completed(
-        first,
-        eval_orchestration.EvalAttempt(
-            status=eval_orchestration.AttemptStatus.FAILED,
-            error="model request failed",
-            failure_type=eval_orchestration.FailureType.PROVIDER_ERROR,
-        ),
-    )
+    tracker.completed(item, scored)
 
-    assert heartbeat is not None
-    assert "0/3 succeeded, 0 failed, 2 running, 1 queued" in heartbeat
-    assert "slowest: example-a run 1 (45s)" in heartbeat
-    assert "SUCCESS: 1/3 | example-b run 1" in messages
-    assert "FAILURE: example-a run 1 | model request failed" in messages
+    assert any("SUCCESS" in message for message in messages)

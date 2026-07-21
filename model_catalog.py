@@ -32,6 +32,33 @@ class ModelDefinition:
 
     id: str
     api: ModelApi
+    pricing: "ModelPricing | None" = None
+
+
+@dataclass(frozen=True, slots=True)
+class ModelPricing:
+    """Versioned project-owned rates used only for labeled cost estimates."""
+
+    version: str
+    currency: str
+    input_per_million_tokens: float | None = None
+    output_per_million_tokens: float | None = None
+    cached_input_per_million_tokens: float | None = None
+    reasoning_per_million_tokens: float | None = None
+    effective_date: str | None = None
+    source: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "version": self.version,
+            "currency": self.currency,
+            "input_per_million_tokens": self.input_per_million_tokens,
+            "output_per_million_tokens": self.output_per_million_tokens,
+            "cached_input_per_million_tokens": (self.cached_input_per_million_tokens),
+            "reasoning_per_million_tokens": self.reasoning_per_million_tokens,
+            "effective_date": self.effective_date,
+            "source": self.source,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,7 +132,54 @@ def _model_definition(value: object, index: int) -> ModelDefinition:
         raise ValueError(
             f"Model catalog '{field}.api' must be one of: {choices}; got {raw_api!r}."
         )
-    return ModelDefinition(id=model_id, api=cast(ModelApi, raw_api))
+    return ModelDefinition(
+        id=model_id,
+        api=cast(ModelApi, raw_api),
+        pricing=_pricing_definition(value.get("pricing"), field=field),
+    )
+
+
+def _pricing_definition(value: object, *, field: str) -> ModelPricing | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError(f"Model catalog '{field}.pricing' must be a mapping.")
+    version = value.get("version")
+    currency = value.get("currency")
+    if not isinstance(version, str) or not version.strip():
+        raise ValueError(f"Model catalog '{field}.pricing.version' is required.")
+    if not isinstance(currency, str) or not currency.strip():
+        raise ValueError(f"Model catalog '{field}.pricing.currency' is required.")
+    rate_names = (
+        "input_per_million_tokens",
+        "output_per_million_tokens",
+        "cached_input_per_million_tokens",
+        "reasoning_per_million_tokens",
+    )
+    rates: dict[str, float | None] = {}
+    for name in rate_names:
+        raw_rate = value.get(name)
+        if raw_rate is None:
+            rates[name] = None
+        elif (
+            isinstance(raw_rate, (int, float))
+            and not isinstance(raw_rate, bool)
+            and raw_rate >= 0
+        ):
+            rates[name] = float(raw_rate)
+        else:
+            raise ValueError(
+                f"Model catalog '{field}.pricing.{name}' must be non-negative."
+            )
+    return ModelPricing(
+        version=version.strip(),
+        currency=currency.strip(),
+        effective_date=(
+            str(value["effective_date"]) if value.get("effective_date") else None
+        ),
+        source=str(value["source"]) if value.get("source") else None,
+        **rates,
+    )
 
 
 def _model_identifier(value: object, field: str) -> str:

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 from mi.ai import (
     AIAgentMixin,
@@ -16,6 +17,7 @@ from mi.ai import (
     ai_tool,
 )
 from mi.core.processors import BaseProcessor
+from mi.core.versioning import VersionAssetDeclaration, VersionAssetRole
 from pydantic import Field
 
 from src.objects.process_object import PulseFailureAnalysisProcessObject
@@ -55,6 +57,56 @@ class V2CapabilityInvestigationAIAgentProcessor(
 
     output_schema = PulseFailureAnalysisResult
     config: V2CapabilityInvestigationAIAgentProcessorConfig
+
+    @classmethod
+    def version_assets(
+        cls, config: Mapping[str, Any]
+    ) -> Sequence[VersionAssetDeclaration]:
+        """Declare prompts, deferred skills, tools, and final output schema."""
+        _ = config
+        declarations: list[VersionAssetDeclaration] = [
+            VersionAssetDeclaration(
+                role=VersionAssetRole.PROMPT,
+                logical_name="v2_investigation_system_prompt",
+                symbol=f"{cls.__qualname__}._build_system_prompt",
+            ),
+            VersionAssetDeclaration(
+                role=VersionAssetRole.OUTPUT_SCHEMA,
+                logical_name="pulse_failure_analysis_result",
+                path="../common/structured_outputs.py",
+                symbol="PulseFailureAnalysisResult",
+                media_type="text/x-python",
+            ),
+        ]
+        for name in (
+            "open-failure-investigation",
+            "closed-vs-shutdown",
+            "modulation-vs-failure",
+            "history-and-sensor-integrity",
+        ):
+            declarations.append(
+                VersionAssetDeclaration(
+                    role=VersionAssetRole.SKILL,
+                    logical_name=name,
+                    path=f"skills/{name}/SKILL.md",
+                    media_type="text/markdown",
+                )
+            )
+        for name in (
+            "inspect_open_failure_onset",
+            "compare_closed_candidate_with_shutdown",
+            "inspect_closed_failure_transition",
+            "inspect_modulation_regime",
+            "compare_current_with_history",
+        ):
+            declarations.append(
+                VersionAssetDeclaration(
+                    role=VersionAssetRole.TOOL_DEFINITION,
+                    logical_name=name,
+                    symbol=f"{cls.__qualname__}._build_skills.<locals>.{name}",
+                )
+            )
+        return tuple(declarations)
 
     def __init__(
         self,

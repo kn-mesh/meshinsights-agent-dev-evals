@@ -35,10 +35,11 @@ Rules:
 2. Read the relevant eval results.
    Start under root-level `eval_results/<pipeline-stem>/`.
    Typical `v1_3` files live under
-   `eval_results/v1_3/<benchmark_key>/v<benchmark-version>/<scope>/*.json`.
+   `eval_results/v1_3/<benchmark_key>/v<benchmark-version>/runs/<run-id>/result.json`.
 3. Identify the main regression or improvement pattern.
    Use the top-level `summary` and then drill into `results`.
-   Look for misses by classification, root cause, confidence band, and repeated failure modes across multiple units.
+   Look for misses by configured field, expected value, confidence band,
+   profile-defined slice, and repeated failure modes across multiple units.
 4. Inspect individual units behind the pattern.
    For the most informative correct and incorrect examples, review each unit's `runs` payload and compare the model explanation to the expected label.
 5. Propose changes before editing anything.
@@ -47,14 +48,24 @@ Rules:
 ## What To Look At
 
 - `summary`
-  Use `summary.accuracy` for class, confidence, and root-cause breakdowns.
-  Review `summary.reliability` separately for provider, pipeline, timeout,
-  cancellation, and receipt-contract failures; failed runs are excluded from
-  accuracy. Use `summary.performance` for throughput and latency distributions.
+  Use `summary.accuracy.complete_evaluation`, `by_field`, and `by_slice` for
+  valid-run accuracy. Review `summary.reliability` and
+  `summary.scoring_coverage` separately for execution, contract, and grader
+  failures; those runs are excluded from accuracy. Use `summary.performance`
+  for throughput and latency distributions, `summary.execution_recovery` for
+  missing/rerun generations, and `summary.usage`, `summary.retries`, and
+  `summary.cost` with their explicit availability states.
 - `run_config`
-  Use this to confirm the pipeline config, published benchmark version, model, reasoning effort, and frozen source snapshot identities used for that run.
-- `results[].runs[]`
-  Use this for unit-level expected vs actual outcomes, confidence, and explanation quality.
+  Use this to confirm the pipeline config, published benchmark version, model,
+  reasoning effort, and frozen source snapshot identities used for that run.
+  Confirm `run_id` and `run_spec_sha256` before treating two materializations as
+  distinct conditions.
+  Use `run_config.dimensions` when grouping multiple result documents by model,
+  agent version, pipeline hash, grader set, or project-declared configuration.
+- `results[].benchmark_labels` and `results[].runs[].fields`
+  Use the full frozen label context plus per-field applicability, expected and
+  actual values, grader identity, confidence, and correctness. Inspect
+  `agent_output`, contract errors, and failure details for unscored attempts.
 
 
 ## Analysis Standards

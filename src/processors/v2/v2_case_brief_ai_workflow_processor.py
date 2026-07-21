@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
+from typing import Any
+
 from mi.ai import AIProcessorConfig, AIWorkflowMixin, UserMessage
 from mi.core.processors import BaseProcessor
+from mi.core.versioning import VersionAssetDeclaration, VersionAssetRole
 
 from src.objects.process_object import PulseFailureAnalysisProcessObject
 from src.processors.v2.structured_outputs import V2InvestigationCaseBrief
@@ -27,6 +31,27 @@ class V2CaseBriefAIWorkflowProcessor(
 
     output_schema = V2InvestigationCaseBrief
     config: V2CaseBriefAIWorkflowProcessorConfig
+
+    @classmethod
+    def version_assets(
+        cls, config: Mapping[str, Any]
+    ) -> Sequence[VersionAssetDeclaration]:
+        """Declare the orientation prompt and structured handoff schema."""
+        _ = config
+        return (
+            VersionAssetDeclaration(
+                role=VersionAssetRole.PROMPT,
+                logical_name="v2_case_brief_system_prompt",
+                symbol=f"{cls.__qualname__}._build_system_prompt",
+            ),
+            VersionAssetDeclaration(
+                role=VersionAssetRole.OUTPUT_SCHEMA,
+                logical_name="v2_investigation_case_brief",
+                path="structured_outputs.py",
+                symbol="V2InvestigationCaseBrief",
+                media_type="text/x-python",
+            ),
+        )
 
     def __init__(
         self, config: V2CaseBriefAIWorkflowProcessorConfig | None = None
