@@ -9,6 +9,7 @@ import shutil
 from typing import Any
 
 from fastapi.testclient import TestClient
+import pytest
 
 from agent_eval_ui import create_app
 from evaluation import (
@@ -340,3 +341,98 @@ def test_project_backend_exposes_optional_correlated_performance(
     assert attempt_without_performance["row"]["example_id"] == "example-a"
     assert attempt_without_performance["performance"]["availability"] == "unavailable"
     assert backend.get_evidence(run_id, "example-a")["verified"] is True
+
+
+@pytest.mark.parametrize(
+    "model_calls",
+    [None, "invalid", {"slowest": None}, {"slowest": "invalid"}],
+)
+def test_project_backend_treats_malformed_performance_as_unavailable(
+    tmp_path: Path, model_calls: Any
+) -> None:
+    run_dir, run_id, execution_id = _schema_v1_run(tmp_path)
+    summary_path = run_dir / "performance" / "summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary["model_calls"] = model_calls
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+    backend = ProjectExplorerBackend(
+        tmp_path,
+        evidence_adapter=_EvidenceAdapter(),  # type: ignore[arg-type]
+    )
+    client = TestClient(create_app(backend=backend))
+
+    response = client.get(f"/api/runs/{run_id}/performance")
+
+    assert response.status_code == 200
+    assert response.json()["availability"] == "unavailable"
+    assert backend.get_attempt(run_id, execution_id)["row"]["example_id"] == "example-a"
+    assert backend.get_run(run_id)["run_id"] == run_id
+
+
+def test_performance_summary_and_links_use_only_latest_generation(
+    tmp_path: Path,
+) -> None:
+    run_dir, run_id, old_execution_id = _schema_v1_run(tmp_path)
+    store = LocalRunStore(run_dir, run_id=run_id)
+    durable = dict(store.read_attempt_records()[0])
+    performance = dict(store.read_performance_records()[0])
+    work_item_id = str(durable["work_item_id"])
+    new_execution_id = f"{work_item_id}.2"
+    durable.pop("record_sha256")
+    durable.update(
+        {
+            "execution_id": new_execution_id,
+            "generation": 2,
+            "invocation_id": "inv_rerun",
+        }
+    )
+    store.commit_attempt(durable)
+    performance.pop("record_sha256")
+    performance.update(
+        {
+            "execution_id": new_execution_id,
+            "generation": 2,
+            "invocation_id": "inv_rerun",
+        }
+    )
+    performance["metrics"] = {
+        **performance["metrics"],
+        "backend": {
+            "model_calls": [
+                {
+                    "sequence": 1,
+                    "duration_seconds": 2.0,
+                    "status": "completed",
+                }
+            ]
+        },
+    }
+    store.commit_performance(performance)
+    store.write_invocation_event(
+        invocation_id="inv_rerun",
+        event="completed",
+        payload={"duration_seconds": 3.0, "selected_work_items": 1},
+    )
+    store.performance_attempt_path(
+        work_item_id=work_item_id, generation=1
+    ).write_text("not-json", encoding="utf-8")
+    store.materialize_result(
+        completed_at_utc="2026-01-01T00:01:00+00:00",
+        latest_invocation_id="inv_rerun",
+    )
+    store.materialize_performance()
+    backend = ProjectExplorerBackend(
+        tmp_path,
+        evidence_adapter=_EvidenceAdapter(),  # type: ignore[arg-type]
+    )
+
+    summary = backend.get_performance(run_id)
+
+    assert summary["availability"] == "available"
+    assert summary["recorded_executions"] == 1
+    assert summary["model_calls"]["slowest"][0]["execution_id"] == new_execution_id
+    assert backend.get_attempt(run_id, new_execution_id)["performance"][
+        "availability"
+    ] == "available"
+    with pytest.raises(FileNotFoundError):
+        backend.get_attempt(run_id, old_execution_id)

@@ -47,8 +47,9 @@ in this skill.
    - use the inspection summary to verify diagnostic review state and counts;
      and
    - inspect `performance/summary.json` only when present. Its latency, retry,
-     and throughput observations are disposable; absence is supported and must
-     not be described as missing durable eval evidence.
+     and throughput observations cover current/latest attempt generations and
+     are disposable; absence or invalid telemetry is supported and must not be
+     described as missing durable eval evidence or a failed eval.
 7. Expect the schema-v1 run bundle under
    `eval_results/<pipeline>/<benchmark-key>/v<version>/runs/<run-id>/`. Report
    the exact `result.json` and do not reconstruct identity from display labels.

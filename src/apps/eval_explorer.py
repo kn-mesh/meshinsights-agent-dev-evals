@@ -96,22 +96,29 @@ class ProjectExplorerBackend:
                 raise ValueError("Performance summary must be a JSON object.")
             if payload.get("schema_version") != 1 or payload.get("run_id") != run_id:
                 raise ValueError("Performance summary identity is invalid.")
-            model_calls = dict(payload.get("model_calls", {}))
+            raw_model_calls = payload.get("model_calls", {})
+            if not isinstance(raw_model_calls, dict):
+                raise ValueError("Performance model_calls must be a JSON object.")
+            model_calls = dict(raw_model_calls)
+            slowest = model_calls.get("slowest", [])
+            if not isinstance(slowest, list):
+                raise ValueError("Performance model_calls.slowest must be a JSON array.")
             correlations = self._execution_correlations(run_dir, run_id=run_id)
             model_calls["slowest"] = [
                 {
                     **item,
                     **correlations.get(str(item.get("execution_id")), {}),
                 }
-                for item in model_calls.get("slowest", [])
+                for item in slowest
                 if isinstance(item, dict)
+                and str(item.get("execution_id")) in correlations
             ]
             return {
                 "availability": "available",
                 **payload,
                 "model_calls": model_calls,
             }
-        except (OSError, ValueError, json.JSONDecodeError) as error:
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as error:
             return {
                 "run_id": run_id,
                 "availability": "unavailable",
@@ -220,13 +227,14 @@ class ProjectExplorerBackend:
             if isinstance(item, dict)
         }
         return {
-            str(record["execution_id"]): {
-                "example_id": record.get("example_id"),
-                "unit_id": examples.get(str(record.get("example_id")), {}).get(
-                    "unit_id"
-                ),
+            str(records[-1]["execution_id"]): {
+                "example_id": records[-1].get("example_id"),
+                "unit_id": examples.get(
+                    str(records[-1].get("example_id")), {}
+                ).get("unit_id"),
             }
-            for record in store.read_attempt_records()
+            for records in store.records_by_work_item().values()
+            if records
         }
 
     @staticmethod
@@ -238,9 +246,22 @@ class ProjectExplorerBackend:
                 "reason": "Performance observations are absent or were deleted.",
             }
         try:
+            durable = [
+                records[-1]
+                for records in store.records_by_work_item().values()
+                if records and records[-1].get("execution_id") == execution_id
+            ]
+            if len(durable) != 1:
+                return {
+                    "availability": "unavailable",
+                    "reason": f"Performance is not current for {execution_id}.",
+                }
+            generation = (
+                str(durable[0]["work_item_id"]), int(durable[0]["generation"])
+            )
             matching = [
                 item
-                for item in store.read_performance_records()
+                for item in store.read_performance_records(generations={generation})
                 if item.get("execution_id") == execution_id
             ]
             if len(matching) != 1:

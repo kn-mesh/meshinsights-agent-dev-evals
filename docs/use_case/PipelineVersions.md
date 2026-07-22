@@ -12,7 +12,7 @@ The current runnable pipeline emits a structured `PulseFailureAnalysisResult` at
   structured AI workflow call.
 - Parent: evolved from the earlier `v1_2` experiment, which is no longer a
   runnable pipeline in this repository.
-- Hypothesis: using the reviewed `UseCase-V2.md` domain guidance directly would
+- Hypothesis: using the reviewed `UseCase.md` domain guidance directly would
   preserve more SME context and avoid brittle prompt-specific rules.
 
 Use `v1_3` as the reference when the prepared evidence can support one model

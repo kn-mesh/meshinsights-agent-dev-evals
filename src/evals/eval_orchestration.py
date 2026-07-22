@@ -44,7 +44,6 @@ from evaluation import (
     metric_counts,
     normalize_filename_token,
     read_path,
-    eval_attempt_from_dict,
     eval_attempt_performance_to_dict,
     eval_attempt_to_dict,
 )
@@ -637,20 +636,27 @@ def run_eval(
         )
         if materialize_only:
             selected = ()
-        store.write_invocation_event(
-            invocation_id=invocation_id,
-            event="started",
-            payload={
-                "resume_mode": resume_mode,
-                "rerun_failure_types": sorted(rerun_failure_types or ()),
-                "selected_work_items": len(selected),
-                "state_counts_before": store.state_counts(),
-                "runtime": runtime,
-                "max_workers": max_workers,
-                "error_action": error_action,
-                "review_capture": review_capture,
-            },
-        )
+        try:
+            store.write_invocation_event(
+                invocation_id=invocation_id,
+                event="started",
+                payload={
+                    "resume_mode": resume_mode,
+                    "rerun_failure_types": sorted(rerun_failure_types or ()),
+                    "selected_work_items": len(selected),
+                    "state_counts_before": store.state_counts(),
+                    "runtime": runtime,
+                    "max_workers": max_workers,
+                    "error_action": error_action,
+                    "review_capture": review_capture,
+                },
+            )
+        except Exception as error:
+            logger.warning(
+                "Disposable performance invocation capture failed for %s: %s",
+                invocation_id,
+                error,
+            )
         examples_by_id = {example.example_id: example for example in examples}
         explicit_work = tuple(
             RepeatedEvalWorkItem(
@@ -702,20 +708,31 @@ def run_eval(
                     "attempt": eval_attempt_to_dict(record.result),
                 }
             )
-            store.commit_performance(
-                {
-                    "schema_version": 1,
-                    "run_id": run_id,
-                    "work_item_id": work_item_id,
-                    "execution_id": execution_id,
-                    "generation": generation,
-                    "invocation_id": invocation_id,
-                    "started_at_utc": started_at.isoformat(timespec="microseconds"),
-                    "completed_at_utc": completed_at.isoformat(timespec="microseconds"),
-                    "executor_duration_seconds": record.duration_seconds,
-                    "metrics": eval_attempt_performance_to_dict(record.result),
-                }
-            )
+            try:
+                store.commit_performance(
+                    {
+                        "schema_version": 1,
+                        "run_id": run_id,
+                        "work_item_id": work_item_id,
+                        "execution_id": execution_id,
+                        "generation": generation,
+                        "invocation_id": invocation_id,
+                        "started_at_utc": started_at.isoformat(
+                            timespec="microseconds"
+                        ),
+                        "completed_at_utc": completed_at.isoformat(
+                            timespec="microseconds"
+                        ),
+                        "executor_duration_seconds": record.duration_seconds,
+                        "metrics": eval_attempt_performance_to_dict(record.result),
+                    }
+                )
+            except Exception as error:
+                logger.warning(
+                    "Disposable performance capture failed for %s: %s",
+                    execution_id,
+                    error,
+                )
             if review_store is not None:
                 source_artifacts = [
                     benchmark_source_reference(
@@ -826,35 +843,56 @@ def run_eval(
             except Exception as review_error:
                 logger.warning("Review capture finalization failed: %s", review_error)
             interrupted = isinstance(error, KeyboardInterrupt)
+            try:
+                store.write_invocation_event(
+                    invocation_id=invocation_id,
+                    event="interrupted" if interrupted else "failed",
+                    payload={
+                        "duration_seconds": time.monotonic() - invocation_started,
+                        "selected_work_items": len(selected),
+                        "error_type": type(error).__name__,
+                        "error": str(error),
+                        "state_counts_after": store.state_counts(),
+                    },
+                )
+            except Exception as performance_error:
+                logger.warning(
+                    "Disposable performance invocation finalization failed for %s: %s",
+                    invocation_id,
+                    performance_error,
+                )
+            raise
+        invocation_duration = time.monotonic() - invocation_started
+        try:
             store.write_invocation_event(
                 invocation_id=invocation_id,
-                event="interrupted" if interrupted else "failed",
+                event="completed",
                 payload={
-                    "duration_seconds": time.monotonic() - invocation_started,
+                    "duration_seconds": invocation_duration,
                     "selected_work_items": len(selected),
-                    "error_type": type(error).__name__,
-                    "error": str(error),
                     "state_counts_after": store.state_counts(),
                 },
             )
-            raise
-        invocation_duration = time.monotonic() - invocation_started
-        store.write_invocation_event(
-            invocation_id=invocation_id,
-            event="completed",
-            payload={
-                "duration_seconds": invocation_duration,
-                "selected_work_items": len(selected),
-                "state_counts_after": store.state_counts(),
-            },
-        )
+        except Exception as error:
+            logger.warning(
+                "Disposable performance invocation finalization failed for %s: %s",
+                invocation_id,
+                error,
+            )
 
         completed_at = datetime.now(timezone.utc)
         result_path = store.materialize_result(
             completed_at_utc=completed_at.isoformat(timespec="seconds"),
             latest_invocation_id=invocation_id,
         )
-        store.materialize_performance()
+        try:
+            store.materialize_performance()
+        except Exception as error:
+            logger.warning(
+                "Disposable performance summary materialization failed for %s: %s",
+                run_id,
+                error,
+            )
         if review_store is not None:
             try:
                 finalize_review_capture()
@@ -1027,62 +1065,6 @@ def _build_resolved_run_spec(
         "configuration_dimensions": configuration_dimensions,
         "source_manifest": source_manifest,
     }
-
-
-def _results_from_store(
-    *,
-    store: LocalRunStore,
-    examples: list[BenchmarkExample],
-    preflight: EvaluationPreflight,
-) -> list[_ExampleEvalResult]:
-    """Restore the latest generation for each logical repetition slot."""
-    histories = store.records_by_work_item()
-    attempts_by_example: dict[str, list[EvalAttempt]] = {}
-    manifest = store.read_manifest()
-    for item in manifest["work_items"]:
-        history = histories.get(item["work_item_id"], ())
-        if not history:
-            continue
-        latest = history[-1]
-        attempt = eval_attempt_from_dict(latest["attempt"])
-        attempt.metadata.update(
-            {
-                "run_index": int(item["repetition_index"]),
-                "work_item_id": item["work_item_id"],
-                "execution_id": latest["execution_id"],
-                "execution_generation": int(latest["generation"]),
-                "invocation_id": latest["invocation_id"],
-                "agent_version_id": latest["agent_version_id"],
-                "agent_version_manifest_sha256": latest[
-                    "agent_version_manifest_sha256"
-                ],
-                "started_at_utc": latest["started_at_utc"],
-                "completed_at_utc": latest["completed_at_utc"],
-                "execution_history": [
-                    {
-                        "execution_id": record["execution_id"],
-                        "generation": int(record["generation"]),
-                        "invocation_id": record["invocation_id"],
-                        "execution_status": record["attempt"]["execution_status"],
-                        "output_contract_status": record["attempt"][
-                            "output_contract_status"
-                        ],
-                        "scoring_status": record["attempt"]["scoring_status"],
-                        "failure_type": record["attempt"].get("failure_type"),
-                    }
-                    for record in history
-                ],
-            }
-        )
-        attempts_by_example.setdefault(item["example_id"], []).append(attempt)
-    return [
-        _ExampleEvalResult(
-            example=example,
-            slice_keys=preflight.example_slices[example.example_id],
-            attempts=tuple(attempts_by_example.get(example.example_id, ())),
-        )
-        for example in examples
-    ]
 
 
 def _path_matches(
@@ -2161,30 +2143,6 @@ def _validate_configuration_dimensions(
             raise ValueError(f"Configuration dimension {key!r} must be a JSON scalar.")
         normalized[key] = value
     return dict(sorted(normalized.items()))
-
-
-def _extract_model_name(ai_model: str | None) -> str:
-    if not ai_model:
-        return "pipeline_default"
-    return ai_model.split(":", 1)[1] if ":" in ai_model else ai_model
-
-
-def _results_filename(
-    *,
-    ai_model: str | None,
-    ai_reasoning_effort: str | None,
-    scope: str,
-    runs_per_example: int,
-    timestamp: str,
-) -> str:
-    parts = (
-        _extract_provider(ai_model),
-        _extract_model_name(ai_model),
-        ai_reasoning_effort,
-        scope,
-    )
-    tokens = [normalize_filename_token(part) for part in parts]
-    return "_".join([*tokens, f"{runs_per_example}runsPerExample", f"{timestamp}.json"])
 
 
 def _ai_execution_policies(

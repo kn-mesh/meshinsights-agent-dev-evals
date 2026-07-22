@@ -242,11 +242,34 @@ class LocalRunStore:
                 raise RunStoreIntegrityError(f"Conflicting performance record: {path}")
         return path
 
-    def read_performance_records(self) -> tuple[dict[str, Any], ...]:
+    def read_performance_records(
+        self,
+        *,
+        generations: set[tuple[str, int]] | None = None,
+    ) -> tuple[dict[str, Any], ...]:
+        """Read performance records, optionally for exact execution generations.
+
+        Supplying generations avoids touching superseded disposable records. This
+        matters because stale performance is neither part of durable integrity nor
+        allowed to prevent materialization of the current run view.
+        """
         records: list[dict[str, Any]] = []
         if not self.performance_attempts_dir.exists():
             return ()
-        for path in sorted(self.performance_attempts_dir.glob("*/*.json")):
+        paths = (
+            sorted(self.performance_attempts_dir.glob("*/*.json"))
+            if generations is None
+            else sorted(
+                self.performance_attempt_path(
+                    work_item_id=work_item_id,
+                    generation=generation,
+                )
+                for work_item_id, generation in generations
+            )
+        )
+        for path in paths:
+            if not path.is_file():
+                continue
             record = _read_json(path)
             unsigned = dict(record)
             expected = unsigned.pop("record_sha256", None)
@@ -355,7 +378,9 @@ class LocalRunStore:
             counts[_record_state(history[-1] if history else None)] += 1
         return counts
 
-    def execution_invocation_wall_time_seconds(self) -> float:
+    def execution_invocation_wall_time_seconds(
+        self, *, invocation_ids: set[str] | None = None
+    ) -> float:
         """Sum terminal invocation time only for invocations that selected work.
 
         Invocation events are operator-history evidence.  A completed no-op resume
@@ -370,6 +395,11 @@ class LocalRunStore:
         for event in terminal_events:
             for path in self.invocations_dir.glob(f"*.{event}.json"):
                 payload = _read_json(path)
+                if (
+                    invocation_ids is not None
+                    and payload.get("invocation_id") not in invocation_ids
+                ):
+                    continue
                 selected = payload.get("selected_work_items")
                 duration = payload.get("duration_seconds")
                 if (
@@ -394,12 +424,6 @@ class LocalRunStore:
             completed_at_utc=completed_at_utc,
             latest_invocation_id=latest_invocation_id,
         )
-        _write_json_atomic(self.result_path, payload)
-        return self.result_path
-
-    def write_result(self, payload: dict[str, Any]) -> Path:
-        """Validate a caller-provided view before replacing the canonical result."""
-        self._validate_result(payload)
         _write_json_atomic(self.result_path, payload)
         return self.result_path
 
@@ -539,18 +563,22 @@ class LocalRunStore:
 
     def materialize_performance(self) -> Path | None:
         """Build a disposable schema-v1 performance summary when traces exist."""
-        performance_records = self.read_performance_records()
-        if not performance_records:
-            return None
-        durable = {
-            (str(item["work_item_id"]), int(item["generation"])): item
-            for item in self.read_attempt_records()
+        latest_durable = {
+            (str(items[-1]["work_item_id"]), int(items[-1]["generation"])): items[-1]
+            for items in self.records_by_work_item().values()
+            if items
         }
+        performance_records = self.read_performance_records(
+            generations=set(latest_durable)
+        )
+        if not performance_records:
+            self.performance_summary_path.unlink(missing_ok=True)
+            return None
         attempts: list[Any] = []
         model_calls: list[dict[str, Any]] = []
         for record in performance_records:
             key = (str(record["work_item_id"]), int(record["generation"]))
-            durable_record = durable.get(key)
+            durable_record = latest_durable.get(key)
             if durable_record is None:
                 continue
             metrics = dict(record.get("metrics", {}))
@@ -589,7 +617,12 @@ class LocalRunStore:
             "summary": build_performance_summary(
                 attempts,
                 evaluation_wall_time_seconds=(
-                    self.execution_invocation_wall_time_seconds()
+                    self.execution_invocation_wall_time_seconds(
+                        invocation_ids={
+                            str(record["invocation_id"])
+                            for record in performance_records
+                        }
+                    )
                 ),
             ),
             "retries": _build_retry_summary(attempts),

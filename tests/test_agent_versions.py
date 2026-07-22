@@ -21,6 +21,7 @@ from src.agent_versions import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+REAL_DIRTY_RUNTIME_PATHS = agent_version_resolver._dirty_runtime_paths
 
 
 def _distinct_resolved_version(
@@ -177,6 +178,33 @@ def test_dirty_agent_version_rejects_corrupt_retained_bytes(tmp_path: Path) -> N
             resolved.manifest,
             repository=repository,
             destination=tmp_path / "corrupt-reconstruction",
+        )
+
+
+def test_unreachable_dirty_runtime_path_is_rejected_in_isolated_repository(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    repository = tmp_path / "repository"
+    subprocess.run(
+        ["git", "clone", "--quiet", "--no-hardlinks", str(ROOT), str(repository)],
+        check=True,
+    )
+    unrelated = repository / "src/hydrators/__init__.py"
+    unrelated.write_text(
+        unrelated.read_text(encoding="utf-8") + "\n# unrelated runtime change\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        agent_version_resolver,
+        "_dirty_runtime_paths",
+        REAL_DIRTY_RUNTIME_PATHS,
+    )
+
+    with pytest.raises(ValueError, match="not reachable from the resolved agent graph"):
+        resolve_agent_version(
+            repository / "pipeline_configs/v1_3.ppln",
+            root=repository,
+            dirty_policy="capture",
         )
 
 

@@ -100,9 +100,11 @@ Rules:
 - `performance/summary.json`
   When present, use its `summary`, `model_calls`, and `retries` sections for
   throughput, stage/API latency, slowest execution IDs, timeout observations,
-  and observed retry telemetry. The whole `performance/` tree is disposable.
-  If it is absent, report performance diagnostics as unavailable and continue
-  analyzing durable quality, reliability, coverage, usage, and cost.
+  and observed retry telemetry. Primary aggregates and links describe only the
+  current/latest durable generation for each logical work item. The whole
+  `performance/` tree is disposable. If it is absent or invalid, report
+  performance diagnostics as unavailable and continue analyzing durable
+  quality, reliability, coverage, usage, and cost.
 - `review/executions/` and `review/objects/`
   Access these only through the inspection CLI. Execution manifests contain
   normalized messages, model/tool activity, raw/parsed output history,

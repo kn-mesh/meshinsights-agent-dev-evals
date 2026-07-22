@@ -240,7 +240,9 @@ workflow output attempts when reported.
 
 `performance/summary.json` contains short-lived wall time, throughput, stage
 timings, retry telemetry, and model/API-call durations, including the exact
-work item and execution for the slowest calls. Adapter-owned HTTP observations
+work item and execution for the slowest calls. Primary aggregates contain only
+the latest durable generation for each logical work item; superseded telemetry
+is not mixed into the current run view. Adapter-owned HTTP observations
 include attempt duration, terminal status, retry category, configured request
 timeout, and available provider/client request IDs. HTTP transport-attempt
 counts remain `unavailable` when the backend does not expose them; configured
@@ -249,7 +251,10 @@ limits are never presented as observations. A
 proof that the provider raised a timeout. The complete `performance/`
 directory may be deleted without invalidating or reducing the durable
 evaluation result. The explorer reports this deletion as performance
-`unavailable` while keeping quality, attempts, and evidence usable.
+`unavailable` while keeping quality, attempts, and evidence usable. Capture,
+materialization, filesystem, or malformed-data failures are likewise nonfatal
+to durable attempts and results and are surfaced as warnings or unavailable
+diagnostics.
 
 `review/` is a disposable, local-only inspection bundle. It is not part of
 `run_id`, attempt integrity, scoring, resume, or `result.json`. Benchmark source

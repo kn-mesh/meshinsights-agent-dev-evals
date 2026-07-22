@@ -105,6 +105,57 @@ def test_review_store_deduplicates_within_run_and_purges_only_review(
     assert json.loads(store.capture_path.read_text())["status"] == "in_progress"
 
 
+@pytest.mark.parametrize(
+    ("statuses", "expected_status"),
+    [
+        (("complete", "complete"), "complete"),
+        (("complete", "failed"), "partial"),
+        (("partial", "failed"), "partial"),
+        (("failed", "failed"), "failed"),
+    ],
+)
+def test_review_capture_summary_truthfully_aggregates_execution_statuses(
+    tmp_path: Path,
+    statuses: tuple[str, ...],
+    expected_status: str,
+) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review")
+    store.initialize(run_spec_sha256="a" * 64)
+    execution_ids: list[str] = []
+    for index, status in enumerate(statuses, start=1):
+        execution_id = f"work_{index}.1"
+        execution_ids.append(execution_id)
+        store.commit_execution(
+            {
+                "run_id": "eval_review",
+                "work_item_id": f"work_{index}",
+                "execution_id": execution_id,
+                "capture_status": status,
+            }
+        )
+
+    capture = store.finalize(expected_execution_ids=execution_ids)
+
+    assert capture["status"] == expected_status
+    assert capture["execution_counts"] == {
+        "complete": statuses.count("complete"),
+        "partial": statuses.count("partial"),
+        "failed": statuses.count("failed"),
+    }
+    if expected_status == "failed":
+        assert capture["review_unavailable_reason"]["code"] == "capture_failed"
+
+
+def test_review_capture_empty_state_is_distinct_from_failure(tmp_path: Path) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review")
+
+    assert store.capture_summary()["status"] == "absent"
+    store.initialize(run_spec_sha256="a" * 64)
+    assert store.capture_summary()["status"] == "in_progress"
+
+
 def test_review_store_accepts_actual_pydantic_ai_urlsafe_binary_serialization(
     tmp_path: Path,
 ) -> None:

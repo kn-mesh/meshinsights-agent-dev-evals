@@ -12,5 +12,5 @@ evidence available at the alarm decision timestamp.
   Storage, verified by byte size and SHA-256 before decoding
 - Evaluation labels: `classification` and `root_cause`
 
-See `UseCase-V2.md`, `PipelineVersions.md`, and `MongoDbSchema.md` in this
+See `UseCase.md`, `PipelineVersions.md`, and `MongoDbSchema.md` in this
 directory for the detailed domain and pipeline context.

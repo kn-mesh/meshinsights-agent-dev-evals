@@ -445,20 +445,6 @@ def _boolean_delta(left: list[Any], right: list[Any]) -> dict[str, Any]:
     }
 
 
-def _numeric_observation_deltas(
-    left: dict[tuple[str, int], dict[str, Any]],
-    right: dict[tuple[str, int], dict[str, Any]],
-    shared: list[tuple[str, int]],
-    key: str,
-) -> dict[str, Any]:
-    pairs = [
-        (left[item].get(key), right[item].get(key))
-        for item in shared
-        if _number(left[item].get(key)) and _number(right[item].get(key))
-    ]
-    return _numeric_delta(pairs)
-
-
 def _nested_numeric_deltas(
     left: dict[tuple[str, int], dict[str, Any]],
     right: dict[tuple[str, int], dict[str, Any]],

@@ -705,6 +705,8 @@ class LocalReviewStore:
                 status = "failed"
             elif not missing and all(item == "complete" for item in statuses):
                 status = "complete"
+            elif all(item == "failed" for item in statuses):
+                status = "failed"
             else:
                 status = "partial"
         elif statuses:

@@ -348,6 +348,46 @@ def test_disposable_performance_can_be_deleted_without_invalidating_results(
     }
 
 
+@pytest.mark.parametrize(
+    ("method_name", "warning_text"),
+    [
+        ("write_invocation_event", "Disposable performance invocation capture failed"),
+        ("commit_performance", "Disposable performance capture failed"),
+        (
+            "materialize_performance",
+            "Disposable performance summary materialization failed",
+        ),
+    ],
+)
+def test_disposable_performance_failure_does_not_fail_durable_eval(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    method_name: str,
+    warning_text: str,
+) -> None:
+    benchmark = _benchmark()
+
+    def fail_performance(*args: Any, **kwargs: Any) -> None:
+        raise OSError("simulated disposable telemetry failure")
+
+    monkeypatch.setattr(LocalRunStore, method_name, fail_performance)
+    payload = _run(
+        monkeypatch,
+        tmp_path,
+        benchmark,
+        [_receipt(benchmark.examples[0])],
+    )
+
+    run_dir = _run_dir(tmp_path)
+    assert payload["summary"]["scoring_coverage"]["scored_runs"] == 1
+    assert load_verified_result(run_dir / "result.json") == payload
+    assert len(LocalRunStore(run_dir, run_id=run_dir.name).read_attempt_records()) == 1
+    assert warning_text in caplog.text
+    if method_name == "commit_performance":
+        assert not (run_dir / "performance" / "summary.json").exists()
+
+
 def test_result_integrity_rejects_any_materialized_content_edit(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -972,6 +1012,9 @@ def test_failed_work_can_be_rerun_without_replacing_first_generation(
         "execution_generations": 2,
         "rerun_generations": 1,
     }
+    performance = _performance(tmp_path)
+    assert performance["recorded_executions"] == 1
+    assert performance["summary"]["run_duration_seconds"]["count"] == 1
 
 
 def test_interruption_preserves_completed_work_and_resume_runs_only_missing(

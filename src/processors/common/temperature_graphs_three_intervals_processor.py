@@ -79,39 +79,6 @@ class TemperatureGraphsThreeIntervalsProcessor(
                 window_days, base64.b64encode(chart_bytes).decode("ascii")
             )
 
-    def render_custom_combined_chart(
-        self,
-        temperature_history: list[dict[str, Any]],
-        *,
-        range_start: datetime,
-        range_end: datetime,
-        alarm_detected_at: datetime,
-    ) -> bytes:
-        """Render one combined raw-plus-delta chart over a caller-provided range."""
-        if range_start > range_end:
-            raise ValueError("Custom temperature chart start must be before the end.")
-        if range_end > alarm_detected_at:
-            raise ValueError(
-                "Custom temperature chart end cannot be after the FDE alarm timestamp."
-            )
-
-        temperature_frame = self._build_temperature_frame(temperature_history)
-        window_frame = self._build_custom_analysis_window(
-            temperature_frame,
-            range_start=range_start,
-            range_end=range_end,
-            alarm_detected_at=alarm_detected_at,
-        )
-        return self._render_combined_chart(
-            window_frame,
-            temperature_chart_title=self._build_custom_temperature_chart_title(
-                range_start=range_start,
-                range_end=range_end,
-                include_post_alarm_point=range_end == alarm_detected_at,
-            ),
-            delta_chart_title="Steam - Condensate Delta (4h avg)",
-        )
-
     def _build_temperature_frame(
         self, temperature_history: list[dict[str, Any]]
     ) -> pd.DataFrame:
@@ -147,32 +114,6 @@ class TemperatureGraphsThreeIntervalsProcessor(
         self._validate_temperature_window(
             window_frame,
             window_label=f"{window_days}-day pre-alarm window",
-        )
-        return self._insert_gap_break_rows(window_frame)
-
-    def _build_custom_analysis_window(
-        self,
-        temperature_frame: pd.DataFrame,
-        *,
-        range_start: datetime,
-        range_end: datetime,
-        alarm_detected_at: datetime,
-    ) -> pd.DataFrame:
-        """Return one caller-selected analysis window for agent-generated charts."""
-        requested_frame = temperature_frame.loc[
-            (temperature_frame["timestamp"] >= range_start)
-            & (temperature_frame["timestamp"] <= range_end),
-            ["timestamp", "steam_temperature", "condensate_temperature"],
-        ].copy()
-        window_frame = self._append_first_post_alarm_frame(
-            requested_frame,
-            temperature_frame=temperature_frame,
-            alarm_detected_at=alarm_detected_at,
-            include_post_alarm_point=range_end == alarm_detected_at,
-        )
-        self._validate_temperature_window(
-            window_frame,
-            window_label="requested analysis window",
         )
         return self._insert_gap_break_rows(window_frame)
 
@@ -435,25 +376,3 @@ class TemperatureGraphsThreeIntervalsProcessor(
     def _build_window_delta_chart_title(self, window_days: int) -> str:
         """Build the title used for one default pre-alarm delta chart."""
         return f"{window_days}-Day Steam - Condensate Delta (4h avg)"
-
-    def _build_custom_temperature_chart_title(
-        self,
-        *,
-        range_start: datetime,
-        range_end: datetime,
-        include_post_alarm_point: bool,
-    ) -> str:
-        """Build the title used for one caller-selected combined chart."""
-        post_alarm_suffix = (
-            " (+ first point after alarm)" if include_post_alarm_point else ""
-        )
-        return (
-            "Combined Temperature Analysis "
-            f"{self._format_chart_timestamp(range_start)} to "
-            f"{self._format_chart_timestamp(range_end)}"
-            f"{post_alarm_suffix}"
-        )
-
-    def _format_chart_timestamp(self, value: datetime) -> str:
-        """Format one chart boundary timestamp for display."""
-        return value.strftime("%Y-%m-%d %H:%M")
