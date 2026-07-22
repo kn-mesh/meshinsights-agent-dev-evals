@@ -69,7 +69,9 @@ def load_bootstrap_spec(path: Path) -> BootstrapSpec:
     except OSError as error:
         raise ValueError(f"Cannot read bootstrap spec {path}: {error}") from error
     except json.JSONDecodeError as error:
-        raise ValueError(f"Bootstrap spec is not valid JSON: {path}: {error}") from error
+        raise ValueError(
+            f"Bootstrap spec is not valid JSON: {path}: {error}"
+        ) from error
     if not isinstance(payload, dict):
         raise ValueError("Bootstrap spec must be a JSON object.")
     return BootstrapSpec.model_validate(payload)
@@ -215,9 +217,7 @@ def _template_checkout(
         if template_ref is not None:
             raise ValueError("--template-ref requires a Git template source.")
         if not explicit_revision or not explicit_revision.strip():
-            raise ValueError(
-                "A non-Git template source requires --template-revision."
-            )
+            raise ValueError("A non-Git template source requires --template-revision.")
         yield (
             local_source.resolve(),
             TemplateProvenance(
@@ -257,9 +257,7 @@ def _is_git_repository(path: Path) -> bool:
 
 def _copy_template(source: Path, destination: Path, *, tracked_only: bool) -> None:
     """Copy safe template files while rejecting symbolic links."""
-    relative_files = (
-        _tracked_files(source) if tracked_only else _ordinary_files(source)
-    )
+    relative_files = _tracked_files(source) if tracked_only else _ordinary_files(source)
     for relative in relative_files:
         if _excluded(relative):
             continue
@@ -366,10 +364,10 @@ def _rewrite_pyproject(path: Path, spec: BootstrapSpec) -> None:
         if not in_project:
             continue
         if re.match(r"^name\s*=", line):
-            lines[index] = f'name = {json.dumps(spec.project.distribution_name)}'
+            lines[index] = f"name = {json.dumps(spec.project.distribution_name)}"
             found_name = True
         elif re.match(r"^description\s*=", line):
-            lines[index] = f'description = {json.dumps(spec.project.description)}'
+            lines[index] = f"description = {json.dumps(spec.project.description)}"
             found_description = True
     if not found_name or not found_description:
         raise ValueError("Template [project] must declare name and description.")
@@ -403,14 +401,14 @@ def _environment_template(spec: BootstrapSpec) -> str:
     lines = [
         "# Generated non-secret project and Benchmark Studio identity",
         f"APP_PROJECT_KEY={studio.project_key}",
-        f"LABEL_BENCHMARK_AZURE_ENVIRONMENT={studio.azure_environment}",
-        f"LABEL_BENCHMARK_AZURE_CONTAINER_APP={studio.application_id}",
+        f"AZURE_POSTGRES_HOST={studio.postgres_host}",
+        f"AZURE_POSTGRES_DATABASE={studio.postgres_database}",
+        "AZURE_POSTGRES_USER=<entra-user-or-group-name>",
+        f"AZURE_STORAGE_ACCOUNT_URL={studio.storage_account_url}",
+        f"AZURE_STORAGE_CONTAINER={studio.storage_container}",
         "",
-        "# Read-only hosted access normally uses the signed-in Azure CLI identity.",
-        "# Direct read-only access may instead provide these values in .env:",
-        "DATABASE_URL=<read-only-postgresql-url>",
-        "AZURE_STORAGE_CONNECTION_STRING=<read-only-storage-connection-string>",
-        "AZURE_STORAGE_CONTAINER=<immutable-source-snapshot-container>",
+        "# DefaultAzureCredential supplies short-lived PostgreSQL and Blob tokens.",
+        "# Use a published-data database reader and Storage Blob Data Reader.",
         "",
         "# Model-provider credentials; populate only those required by models.yaml.",
         "AZURE_OPENAI_ENDPOINT=<azure-openai-endpoint>",
@@ -466,5 +464,7 @@ def _run_git(
         if isinstance(error, subprocess.CalledProcessError):
             detail = str(error.stderr).strip()
         suffix = f": {detail}" if detail else ""
-        raise ValueError(f"Git command failed ({' '.join(arguments)}){suffix}") from error
+        raise ValueError(
+            f"Git command failed ({' '.join(arguments)}){suffix}"
+        ) from error
     return result.stdout

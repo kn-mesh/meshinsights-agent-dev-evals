@@ -98,10 +98,12 @@ def _project_contract(*, label_fields: list[str] | None = None) -> ProjectContra
                 "description": "Pump failure fixture",
             },
             "benchmark_studio": {
-                "azure_environment": "test",
-                "application_id": "label-benchmark",
                 "project_key": "acme-pumps",
-                "access_mode": "hosted_read_only",
+                "access_mode": "direct_read_only",
+                "postgres_host": "benchmark.postgres.database.azure.com",
+                "postgres_database": "benchmark_studio",
+                "storage_account_url": "https://benchmark.blob.core.windows.net",
+                "storage_container": "source-snapshots",
             },
             "benchmarks": {
                 "default": {"key": "pump-failures", "version": "3"},
@@ -227,9 +229,7 @@ def test_benchmark_example_rejects_generic_snapshot_invariant_violations() -> No
     _, example = _published()
     artifact = example.raw_artifacts[0]
     with pytest.raises(ValueError, match="no raw artifacts"):
-        BenchmarkExample.model_validate(
-            {**example.model_dump(), "raw_artifacts": []}
-        )
+        BenchmarkExample.model_validate({**example.model_dump(), "raw_artifacts": []})
     with pytest.raises(ValueError, match="duplicate raw artifact kinds"):
         BenchmarkExample.model_validate(
             {**example.model_dump(), "raw_artifacts": [artifact, artifact]}

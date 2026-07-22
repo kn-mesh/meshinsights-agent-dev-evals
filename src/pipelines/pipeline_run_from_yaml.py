@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import os
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -65,11 +66,18 @@ def load_benchmark_example(
     example_id: str,
     benchmark_version: int | None = None,
     project_key: str | None = None,
+    postgres_host: str | None = None,
+    postgres_database: str | None = None,
+    postgres_user: str | None = None,
 ) -> tuple[BenchmarkVersion, BenchmarkExample]:
-    """Load one exact example from Azure PostgreSQL for pipeline execution."""
-    benchmark = AzurePostgresBenchmarkRepository(
-        project_key=project_key
-    ).load_published_version(
+    """Load one exact example directly from Azure PostgreSQL with Entra."""
+    repository = AzurePostgresBenchmarkRepository(
+        project_key=(project_key or os.getenv("APP_PROJECT_KEY", "")),
+        host=postgres_host,
+        database=postgres_database,
+        user=postgres_user,
+    )
+    benchmark = repository.load_published_version(
         benchmark_key=benchmark_key,
         version_number=benchmark_version,
     )
@@ -222,6 +230,9 @@ def _argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("yaml_path", type=Path)
     parser.add_argument("--project-key")
+    parser.add_argument("--azure-postgres-host")
+    parser.add_argument("--azure-postgres-database")
+    parser.add_argument("--azure-postgres-user")
     parser.add_argument("--benchmark-key", required=True)
     parser.add_argument("--benchmark-version", type=int)
     parser.add_argument("--example-id", required=True)
@@ -241,6 +252,9 @@ def main() -> None:
         benchmark_key=args.benchmark_key,
         benchmark_version=args.benchmark_version,
         example_id=args.example_id,
+        postgres_host=args.azure_postgres_host,
+        postgres_database=args.azure_postgres_database,
+        postgres_user=args.azure_postgres_user,
     )
     receipt = run_pipeline(
         args.yaml_path,

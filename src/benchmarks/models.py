@@ -101,7 +101,7 @@ class BenchmarkExample(BaseModel):
 
 
 class BenchmarkVersion(BaseModel):
-    """A published, immutable benchmark version loaded from Azure PostgreSQL."""
+    """A published, immutable Benchmark Studio version."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 

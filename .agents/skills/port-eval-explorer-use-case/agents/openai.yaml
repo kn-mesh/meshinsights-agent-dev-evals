@@ -1,0 +1,4 @@
+interface:
+  display_name: "Port Eval Explorer Use Case"
+  short_description: "Port Benchmark Studio evidence to eval explorer"
+  default_prompt: "Use $port-eval-explorer-use-case to port this Benchmark Studio use case into the Agent Workbench eval explorer."

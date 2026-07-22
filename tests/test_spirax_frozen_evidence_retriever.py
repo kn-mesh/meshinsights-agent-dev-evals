@@ -115,6 +115,35 @@ def test_retriever_decodes_frozen_parquet_and_alarm_artifacts() -> None:
     assert payload["temperature_history"][0]["steam_temperature"] == 130.0
 
 
+def test_retriever_projects_selected_alarm_with_source_subsecond_precision() -> None:
+    """Reconcile publication precision and censor eventual resolution state."""
+    telemetry, alarms, artifacts = _evidence(
+        alarm_records=[
+            {
+                "kind": "selected_alarm",
+                "alarm": {
+                    "alarm_id": "alarm-1",
+                    "detected_at": "2026-03-17T12:00:00.374000+00:00",
+                    "resolved_at": "2026-03-18T12:00:00.453000+00:00",
+                },
+            }
+        ]
+    )
+    retriever = SpiraxFrozenEvidenceRetriever(
+        evidence_store=_MemoryEvidenceStore({"telemetry": telemetry, "alarms": alarms})
+    )
+
+    payload = retriever.retrieve(metadata=_metadata(artifacts))
+
+    assert payload["selected_alarm"]["source_detected_at"] == datetime(
+        2026, 3, 17, 12, 0, 0, 374000
+    )
+    assert payload["selected_alarm"]["detected_at"] == datetime(
+        2026, 3, 17, 12, 0
+    )
+    assert payload["selected_alarm"]["resolved_at"] is None
+
+
 class _Download:
     def __init__(self, content: bytes) -> None:
         self._content = content
@@ -207,8 +236,8 @@ def test_retriever_rejects_alarm_detected_after_decision_timestamp(
         retriever.retrieve(metadata=_metadata(artifacts))
 
 
-def test_retriever_rejects_historical_alarm_resolution_after_cutoff() -> None:
-    """A pre-cutoff alarm must not leak its post-cutoff resolution state."""
+def test_retriever_censors_historical_alarm_resolution_after_cutoff() -> None:
+    """A pre-cutoff alarm remains visible without its post-cutoff resolution."""
     telemetry, alarms, artifacts = _evidence(
         alarm_records=[
             {
@@ -232,10 +261,12 @@ def test_retriever_rejects_historical_alarm_resolution_after_cutoff() -> None:
         evidence_store=_MemoryEvidenceStore({"telemetry": telemetry, "alarms": alarms})
     )
 
-    with pytest.raises(
-        ValueError, match="historical alarm.*resolved_at.*decision timestamp"
-    ):
-        retriever.retrieve(metadata=_metadata(artifacts))
+    payload = retriever.retrieve(metadata=_metadata(artifacts))
+
+    assert payload["sensor_alarms"][0]["detected_at"] == datetime(
+        2026, 3, 16, 12, 0
+    )
+    assert payload["sensor_alarms"][0]["resolved_at"] is None
 
 
 def test_retriever_rejects_historical_alarm_before_frozen_window() -> None:

@@ -1,7 +1,7 @@
 interface:
   display_name: "Agent-Eval-Builder"
   short_description: "Build published-benchmark eval orchestration"
-  default_prompt: "Use $agent-eval-builder to build or update published-benchmark evaluation orchestration using Azure PostgreSQL benchmark versions, immutable Azure Blob evidence, receipt handoff contracts, and stable eval outputs."
+  default_prompt: "Use $agent-eval-builder to build or update published-benchmark evaluation orchestration using Benchmark Studio's authenticated read-only API, immutable Azure Blob evidence, receipt handoff contracts, and stable eval outputs."
 
 policy:
   allow_implicit_invocation: true

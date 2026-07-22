@@ -70,12 +70,14 @@ The active Spirax operator CLI uses hosted data access as follows:
 | Input | Purpose |
 |---|---|
 | `APP_PROJECT_KEY` | Scopes every benchmark query to the configured Benchmark Studio project |
-| Azure CLI login | Runs read-only benchmark queries through the deployed Container App and retrieves hosted Blob configuration |
+| `AZURE_POSTGRES_HOST`, `AZURE_POSTGRES_DATABASE`, `AZURE_POSTGRES_USER` | Select the hosted publication database and Entra-mapped login without a password |
+| `AZURE_STORAGE_ACCOUNT_URL`, `AZURE_STORAGE_CONTAINER` | Select immutable evidence without a connection string |
+| Azure identity | Supplies short-lived PostgreSQL and Blob tokens through `DefaultAzureCredential` |
 
-Direct repository or programmatic execution may instead use `DATABASE_URL`,
-`AZURE_STORAGE_CONNECTION_STRING`, and `AZURE_STORAGE_CONTAINER`. There is no
-MongoDB, local benchmark JSON, or filesystem snapshot fallback. Keep credentials
-in `.env` or CI secret stores and use read-only access.
+Password-based test injection may use `DATABASE_URL`, but hosted operator
+execution must not depend on database
+passwords, Container App exec, secret extraction, shared keys, or SAS tokens.
+There is no MongoDB, local benchmark JSON, or filesystem snapshot fallback.
 
 ## `.env` And Template Files
 
@@ -222,8 +224,12 @@ If `LOGFIRE_TOKEN` is set, it takes precedence over stored CLI credentials and p
    check for conflicting environment variables that override CLI credentials, especially `LOGFIRE_TOKEN`.
 5. `mi auth` does not detect the right providers:
    add or update an `.env.template` or `.env.example` file.
-6. Azure credential retrieval fails:
-   verify Azure CLI is installed and logged in, or fall back to manual `.env` entry.
+6. Azure identity retrieval fails:
+   verify Azure CLI is installed and logged in for local development, or that
+   the hosted workload identity is configured.
+7. Evidence returns `403`:
+   verify the same principal has container-scoped `Storage Blob Data Reader` on
+   the Benchmark Studio evidence container.
 
 ## Expected Behavior When Using This Skill
 

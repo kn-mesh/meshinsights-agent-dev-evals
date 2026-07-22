@@ -13,6 +13,11 @@ examples. This command evaluates every example once:
 uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
   --project-key spirax-pulse \
+  --azure-postgres-host misprx-lb-dv-pg-qdol4f5j2ozla.postgres.database.azure.com \
+  --azure-postgres-database label_benchmark \
+  --azure-postgres-user kurt.neuens@mesh-systems.com \
+  --azure-storage-account-url https://misprxlbdvqdol4f5j2ozla.blob.core.windows.net \
+  --azure-storage-container source-snapshots \
   --benchmark-key phase-1-benchmark-3fb7f544 \
   --benchmark-version 1 \
   --all-examples \
@@ -152,18 +157,26 @@ If the benchmark key or version is unknown, run the interactive chooser once:
 uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln
 ```
 
-`Retrieving published benchmarks for spirax-pulse from Azure...` launches a
-remote Azure Container App query and can take a while. Record the selected
-benchmark key and version, then use the explicit command for subsequent runs.
-Do not use the interactive form in automation.
+`Retrieving published benchmarks for spirax-pulse from Azure...` uses direct
+Entra-authenticated PostgreSQL. Record the selected benchmark key and version,
+then use the explicit command for subsequent runs. Do not use the interactive
+form in automation.
 
 ## Prerequisites
 
 - Run from the repository root with dependencies installed by `uv`.
 - Set `APP_PROJECT_KEY=spirax-pulse` or pass `--project-key spirax-pulse`.
-- Sign in with Azure CLI. The CLI reads the benchmark through the deployed
-  `label-benchmark` Container App and obtains read-only Blob configuration from
-  the hosted environment.
+- Pass the hosted PostgreSQL host, database, Entra login, Blob account URL, and
+  container. These are non-secret resource identities and may instead be set in
+  `.env`.
+- Sign in with Azure CLI so `DefaultAzureCredential` can obtain short-lived
+  PostgreSQL and Blob tokens. PostgreSQL must have Entra authentication enabled,
+  the login must be mapped to a database role, the local public IP must be
+  allowed by the server firewall, and the identity needs container-scoped
+  `Storage Blob Data Reader` for immutable evidence.
+- Direct PostgreSQL retrieval starts every connection with an explicit
+  read-only transaction. Do not use exported database passwords, storage keys,
+  SAS tokens, or Container App exec.
 - Configure credentials required by the selected model provider.
 - Check `models.yaml` for the model's `api` family. Catalog membership means the
   model is selectable; the runtime adapter must also support that API family.
@@ -235,6 +248,30 @@ normalization, and correctness.
 CLI exit codes are `0` for a fully scored completion, `2` for argument/preflight
 errors, `3` when durable execution completes with terminal unscored work, `4`
 for storage-integrity failure, and `130` for operator interruption.
+
+## Explore Results Locally
+
+Build the local UI once after installing its dependencies, then launch the
+read-only explorer from the repository root:
+
+```bash
+cd www
+pnpm install
+pnpm build
+cd ..
+APP_PROJECT_KEY=spirax-pulse uv run python -m src.apps.eval_explorer
+```
+
+Open `http://127.0.0.1:8765`. Select a retained run to filter attempts and
+inspect expected/actual outputs, grading, model interactions, pipeline/tool
+activity, and raw review data. The Evidence package tab retrieves the exact
+published benchmark version recorded by that run, verifies its immutable Azure
+artifacts, and renders the normalized Spirax charts used by Benchmark Studio.
+If review capture was off or was purged, compact result rows remain available
+and the detailed tabs state that the review is unavailable.
+
+The server deliberately binds only to `127.0.0.1`; this MVP has no remote auth
+or write endpoints. Re-run `pnpm build` after frontend changes.
 
 ## Reliability And Transient Failures
 

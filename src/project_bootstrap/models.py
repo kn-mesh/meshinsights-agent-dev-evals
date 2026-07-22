@@ -27,20 +27,22 @@ class ProjectSpec(StrictModel):
 
     key: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
     name: str = Field(min_length=1)
-    distribution_name: str = Field(
-        pattern=r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
-    )
+    distribution_name: str = Field(pattern=r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$")
     use_case_key: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
     description: str = Field(min_length=1)
 
 
 class BenchmarkStudioSpec(StrictModel):
-    """Non-secret identity of the deployed Benchmark Studio read surface."""
+    """Non-secret Azure identity of the published benchmark data plane."""
 
-    azure_environment: str = Field(min_length=1)
-    application_id: str = Field(min_length=1)
     project_key: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-    access_mode: Literal["hosted_read_only", "direct_read_only"]
+    access_mode: Literal["direct_read_only"]
+    postgres_host: str = Field(pattern=r"^[a-z0-9.-]+\.postgres\.database\.azure\.com$")
+    postgres_database: str = Field(min_length=1)
+    storage_account_url: str = Field(
+        pattern=r"^https://[a-z0-9]+\.blob\.core\.windows\.net$"
+    )
+    storage_container: str = Field(min_length=1)
 
 
 class PublishedBenchmarkSpec(StrictModel):

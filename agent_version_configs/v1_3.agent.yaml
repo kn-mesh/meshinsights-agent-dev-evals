@@ -50,3 +50,6 @@ non_execution_exclusions:
   - src/benchmarks/**
   - src/agent_versions/**
   - src/lifecycle/**
+  - src/apps/**
+  - src/evidence/**
+  - src/storage/hosted_azure_config.py

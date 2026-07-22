@@ -27,9 +27,8 @@ Benchmark Studio data.
 
 - `src/benchmarks/models.py` defines published benchmark, full label payload,
   frozen label schema, example, and source-artifact models.
-- `src/benchmarks/postgres_repository.py` and
-  `src/benchmarks/azure_container_app_repository.py` load published-contract
-  schema version 2.
+- `src/benchmarks/postgres_repository.py` loads published-contract schema
+  version 2 directly from Azure PostgreSQL with Entra authentication.
 - `evaluation_configs/*.eval.yaml` contains project-owned evaluation profiles.
 - `src/evals/evaluation_profile.py` validates profiles, predicates, preflight,
   and local slice membership.
@@ -197,13 +196,16 @@ invalidating scoring, resume, comparisons, or agent-version linkage.
 
 ## Hosted Inputs
 
-The operator CLI uses `APP_PROJECT_KEY` plus Azure CLI authentication. Hosted
-benchmark discovery executes the deployed Benchmark Studio repository contract
-through its Container App and retrieves read-only Blob configuration.
+The local operator CLI defaults to direct Microsoft Entra access. It uses
+`APP_PROJECT_KEY`, `AZURE_POSTGRES_HOST`, `AZURE_POSTGRES_DATABASE`, and
+`AZURE_POSTGRES_USER` to obtain a short-lived Azure PostgreSQL token through
+`DefaultAzureCredential`, immediately sets the transaction read-only, and uses
+`AZURE_STORAGE_ACCOUNT_URL` plus `AZURE_STORAGE_CONTAINER` to read frozen
+evidence with `Storage Blob Data Reader`.
 
-Direct programmatic execution may use `DATABASE_URL`,
-`AZURE_STORAGE_CONNECTION_STRING`, and `AZURE_STORAGE_CONTAINER`. Use
-least-privilege read identities and never commit credentials.
+Password-based programmatic tests may still inject `DATABASE_URL`, but the
+operator path must use Entra for PostgreSQL and Blob. Never restore Container
+App exec, runtime secret discovery, SAS tokens, or shared storage keys.
 
 ## Operator Commands
 
@@ -215,8 +217,8 @@ Do not duplicate commands here. Read `EvalRunbook.md` and use
 At minimum cover:
 
 - exact/latest published-version selection and project scoping;
-- full label payload and frozen label-schema hash loading through both hosted
-  and direct repository adapters;
+- full label payload and frozen label-schema hash loading through the direct
+  repository adapter;
 - profile validation, stable hashing, invalid paths/predicates/graders, and
   multi-schema compatibility;
 - exact, normalized-string, numeric-tolerance, and project grader behavior;

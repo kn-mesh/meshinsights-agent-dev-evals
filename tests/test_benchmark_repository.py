@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 
@@ -22,6 +23,20 @@ class _Rows:
 
     def fetchall(self) -> list[dict[str, Any]]:
         return self._rows
+
+
+class _Token:
+    token = "entra-access-token"
+
+
+class _Credential:
+    def __init__(self) -> None:
+        self.scopes: list[str] = []
+
+    def get_token(self, *scopes: str, **kwargs: Any) -> _Token:
+        _ = kwargs
+        self.scopes.extend(scopes)
+        return _Token()
 
 
 class _Connection:
@@ -136,6 +151,50 @@ def test_repository_loads_full_labels_schema_and_frozen_manifest() -> None:
     assert benchmark.label_schemas[0].content_sha256 == expected_hash
     assert benchmark.examples[0].source_snapshot_id == "snapshot-id"
     assert benchmark.examples[0].unit_id == "7"
+
+
+def test_repository_uses_entra_token_for_hosted_postgres(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    credential = _Credential()
+    connection = Mock()
+    connect = Mock(return_value=connection)
+    monkeypatch.setattr("src.benchmarks.postgres_repository.psycopg.connect", connect)
+    repository = AzurePostgresBenchmarkRepository(
+        project_key="spirax-pulse",
+        host="benchmark.postgres.database.azure.com",
+        database="label_benchmark",
+        user="developer@example.com",
+        credential=credential,
+    )
+
+    assert repository._connect() is connection
+
+    assert credential.scopes == [
+        "https://ossrdbms-aad.database.windows.net/.default"
+    ]
+    assert connect.call_args.kwargs["host"] == (
+        "benchmark.postgres.database.azure.com"
+    )
+    assert connect.call_args.kwargs["dbname"] == "label_benchmark"
+    assert connect.call_args.kwargs["user"] == "developer@example.com"
+    assert connect.call_args.kwargs["password"] == "entra-access-token"
+    assert connect.call_args.kwargs["sslmode"] == "require"
+
+
+def test_repository_rejects_partial_or_non_azure_entra_configuration() -> None:
+    with pytest.raises(ValueError, match="are all required"):
+        AzurePostgresBenchmarkRepository(
+            project_key="spirax-pulse",
+            host="benchmark.postgres.database.azure.com",
+        )
+    with pytest.raises(ValueError, match="Azure PostgreSQL hostname"):
+        AzurePostgresBenchmarkRepository(
+            project_key="spirax-pulse",
+            host="database.example.com",
+            database="label_benchmark",
+            user="developer@example.com",
+        )
 
 
 def test_repository_requests_latest_published_version_when_version_is_omitted() -> None:

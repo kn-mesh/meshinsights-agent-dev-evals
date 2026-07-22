@@ -243,11 +243,13 @@ MVP execution requirements are:
 
 ### Evidence-First Eval Result Inspection
 
-**Status:** Partial; the coding-agent MVP is implemented through local-only,
-run-scoped review capture, bounded summary/filter/drill-down commands,
-comparison-linked execution identities, optional diagnoses, and safe review
-purge. The interactive human explorer and full visualization-parity experience
-remain.
+**Status:** Implemented for MVP; local-only, run-scoped review capture now feeds
+both bounded coding-agent inspection and a locally hosted human explorer. The
+explorer provides run selection, attempt filters, expected/actual outputs,
+grading, model/tool traces, raw review data, and a verified frozen-evidence view
+whose use-case-specific Spirax normalization and charts preserve Benchmark
+Studio semantics. Richer cross-run comparison navigation remains in the
+variant-comparison feature below.
 
 Both a human developer and Codex must be able to start from an eval run, find a
 wrong or unstable example, and understand what the agent actually saw before
@@ -372,6 +374,26 @@ All MVP features should be:
   current implementation rather than duplicating it.
 
 ## Post-MVP Features
+
+### Benchmark Studio Integration API
+
+**Status:** Optional Consideration.
+
+The first-class benchmark retrieval path is direct Microsoft Entra access from
+Agent Workbench to Azure PostgreSQL and Blob Storage. Workbench uses a
+least-privilege published-data reader, forces database transactions read-only,
+uses container-scoped `Storage Blob Data Reader`, and verifies frozen artifact
+size and SHA-256 before decoding evidence. This path requires no database
+password, storage key, SAS URL, client secret, or Benchmark Studio application
+deployment.
+
+A dedicated Benchmark Studio integration API may be considered later if hosted
+multi-consumer access, consumer-specific authorization, centralized policy, or
+network isolation makes direct data-plane access unsuitable. That option would
+need a versioned project-scoped read contract, Entra audience and permission
+validation, caller allowlists, immutable artifact identity, and independent
+Blob data-plane authorization. Do not add or maintain this API until one of
+those requirements is adopted.
 
 ### Selective Cloud Publication Of Eval Results
 

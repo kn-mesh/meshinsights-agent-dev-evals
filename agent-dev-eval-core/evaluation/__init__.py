@@ -60,10 +60,12 @@ from evaluation.review import (
     ReviewStoreError,
     benchmark_source_reference,
 )
+from evaluation.explorer import AttemptQuery, query_attempt_rows
 from evaluation.serialization import eval_attempt_from_dict, eval_attempt_to_dict
 from evaluation.security import is_sensitive_key, is_sensitive_path
 
 __all__ = [
+    "AttemptQuery",
     "DeterministicGrader",
     "CaptureStatus",
     "ErrorActionType",
@@ -112,4 +114,5 @@ __all__ = [
     "read_path",
     "validate_metadata_identity",
     "write_json_exclusive",
+    "query_attempt_rows",
 ]

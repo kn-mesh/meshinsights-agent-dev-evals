@@ -13,28 +13,22 @@
     "description": "Agent development and evaluation for Spirax Pulse steam-trap alarms"
   },
   "benchmark_studio": {
-    "azure_environment": "development",
-    "application_id": "label-benchmark",
     "project_key": "spirax-pulse",
-    "access_mode": "hosted_read_only"
+    "access_mode": "direct_read_only",
+    "postgres_host": "misprx-lb-dv-pg-qdol4f5j2ozla.postgres.database.azure.com",
+    "postgres_database": "label_benchmark",
+    "storage_account_url": "https://misprxlbdvqdol4f5j2ozla.blob.core.windows.net",
+    "storage_container": "source-snapshots"
   },
   "benchmarks": {
     "default": {
-      "key": "steam-trap-regression",
-      "version": "4"
+      "key": "phase-1-benchmark-3fb7f544",
+      "version": "1"
     },
     "published": [
       {
-        "key": "steam-trap-regression",
-        "version": "3",
-        "published_contract_schema_version": 2,
-        "label_fields": ["classification", "root_cause"],
-        "evidence_recipe_id": "spirax-steam-trap-evidence@v2",
-        "source_snapshot_contract": "azure-blob-sha256-v1"
-      },
-      {
-        "key": "steam-trap-regression",
-        "version": "4",
+        "key": "phase-1-benchmark-3fb7f544",
+        "version": "1",
         "published_contract_schema_version": 2,
         "label_fields": ["classification", "root_cause"],
         "evidence_recipe_id": "spirax-steam-trap-evidence@v2",

@@ -8,10 +8,12 @@
     "description": "Agent Workbench project for a customer connected-system use case"
   },
   "benchmark_studio": {
-    "azure_environment": "development",
-    "application_id": "label-benchmark",
     "project_key": "customer-use-case",
-    "access_mode": "hosted_read_only"
+    "access_mode": "direct_read_only",
+    "postgres_host": "customer-benchmarks.postgres.database.azure.com",
+    "postgres_database": "benchmark_studio",
+    "storage_account_url": "https://customerbenchmarks.blob.core.windows.net",
+    "storage_container": "source-snapshots"
   },
   "benchmarks": {
     "default": {

@@ -116,10 +116,10 @@ def _benchmark(*examples: BenchmarkExample) -> BenchmarkVersion:
     items = examples or (_example(),)
     return BenchmarkVersion(
         project_key="spirax-pulse",
-        benchmark_key="steam-trap-regression",
-        benchmark_name="Steam Trap Regression",
+        benchmark_key="phase-1-benchmark-3fb7f544",
+        benchmark_name="Phase 1 Benchmark",
         benchmark_version_id="version-id",
-        version_number=4,
+        version_number=1,
         published_at=datetime(2026, 7, 1, tzinfo=timezone.utc),
         source_state_sha256="d" * 64,
         published_contract_schema_version=2,
@@ -163,9 +163,9 @@ def _receipt(
             0.1,
             metadata={
                 "example_id": example.example_id,
-                "benchmark_key": "steam-trap-regression",
+                "benchmark_key": "phase-1-benchmark-3fb7f544",
                 "benchmark_version_id": "version-id",
-                "benchmark_version_number": 4,
+                "benchmark_version_number": 1,
                 "source_snapshot_id": example.source_snapshot_id,
                 "agent_output": agent_output,
             },
@@ -260,7 +260,7 @@ def test_run_eval_writes_schema_v3_full_labels_and_generic_metrics(
         for key, value in dimensions["agent"].items()
         if key != "legacy_label"
     }
-    assert payload["run_config"]["benchmark_name"] == "Steam Trap Regression"
+    assert payload["run_config"]["benchmark_name"] == "Phase 1 Benchmark"
     assert payload["run_config"]["benchmark_source_state_sha256"] == "d" * 64
     assert payload["run_config"]["selected_example_scope_sha256"]
     assert dimensions["model"]["id"] == "azure:gpt-5.6-luna"
@@ -624,7 +624,7 @@ def test_invalid_receipt_path_fails_preflight_before_pipeline_execution(
         eval_orchestration.run_eval(
             Path("pipeline_configs/v1_3.ppln"),
             evaluation_profile_path=profile_path,
-            benchmark_key="steam-trap-regression",
+            benchmark_key="phase-1-benchmark-3fb7f544",
             repository=_Repository(_benchmark()),
             runtime="serial",
             output_root=tmp_path,
@@ -652,7 +652,7 @@ def test_project_contract_rejects_grading_an_unconfigured_label(
         eval_orchestration.run_eval(
             Path("pipeline_configs/v1_3.ppln"),
             evaluation_profile_path=profile_path,
-            benchmark_key="steam-trap-regression",
+            benchmark_key="phase-1-benchmark-3fb7f544",
             repository=_Repository(_benchmark()),
             runtime="serial",
             output_root=tmp_path,

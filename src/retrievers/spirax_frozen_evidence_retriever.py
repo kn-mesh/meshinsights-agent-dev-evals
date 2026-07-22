@@ -114,14 +114,18 @@ class SpiraxFrozenEvidenceRetriever(BaseRetriever):
 
         selected_alarm = _normalize_alarm(selected_alarm)
         normalized_sensor_alarms = [_normalize_alarm(row) for row in sensor_alarms]
-        _validate_alarm_window(
+        selected_alarm = _project_selected_alarm_at_decision(
             selected_alarm,
-            label="selected alarm",
             window_start=window_start,
             window_end=window_end,
             decision_timestamp=decision_timestamp,
         )
         for index, alarm in enumerate(normalized_sensor_alarms):
+            resolved_at = alarm.get("resolved_at")
+            if isinstance(resolved_at, datetime) and resolved_at > decision_timestamp:
+                # Historical alarms remain valid evidence at the cutoff, but their
+                # eventual post-cutoff resolution state must not reach the agent.
+                alarm["resolved_at"] = None
             _validate_alarm_window(
                 alarm,
                 label=f"historical alarm at index {index}",
@@ -129,11 +133,6 @@ class SpiraxFrozenEvidenceRetriever(BaseRetriever):
                 window_end=window_end,
                 decision_timestamp=decision_timestamp,
             )
-        source_detected_at = selected_alarm.get("detected_at")
-        if not isinstance(source_detected_at, datetime):
-            raise ValueError("Selected alarm is missing detected_at.")
-        selected_alarm["source_detected_at"] = source_detected_at
-        selected_alarm["detected_at"] = decision_timestamp
         lookback_days = max((window_end - window_start).days, 1)
         return {
             "example_id": typed_metadata.example_id,
@@ -257,6 +256,57 @@ def _validate_alarm_window(
             raise ValueError(
                 f"Benchmark {label} {field} is outside the frozen evidence window."
             )
+
+
+def _project_selected_alarm_at_decision(
+    alarm: dict[str, Any],
+    *,
+    window_start: datetime,
+    window_end: datetime,
+    decision_timestamp: datetime,
+) -> dict[str, Any]:
+    """Project a selected alarm onto its published, hindsight-safe decision state."""
+    source_detected_at = alarm.get("detected_at")
+    if not isinstance(source_detected_at, datetime):
+        raise ValueError("Benchmark selected alarm is missing detected_at.")
+    if source_detected_at < window_start:
+        raise ValueError(
+            "Benchmark selected alarm detected_at is outside the frozen evidence "
+            "window."
+        )
+    if source_detected_at > decision_timestamp:
+        same_published_second = (
+            source_detected_at.replace(microsecond=0)
+            == decision_timestamp.replace(microsecond=0)
+        )
+        if not same_published_second:
+            raise ValueError(
+                "Benchmark selected alarm detected_at extends beyond the decision "
+                "timestamp."
+            )
+    elif source_detected_at > window_end:
+        raise ValueError(
+            "Benchmark selected alarm detected_at is outside the frozen evidence "
+            "window."
+        )
+
+    resolved_at = alarm.get("resolved_at")
+    if resolved_at is not None:
+        if not isinstance(resolved_at, datetime):
+            raise ValueError("Benchmark selected alarm is missing resolved_at.")
+        if resolved_at > decision_timestamp:
+            # The immutable artifact may contain eventual resolution state. It is
+            # deliberately censored from the decision-time pipeline payload.
+            alarm["resolved_at"] = None
+        elif resolved_at < window_start or resolved_at > window_end:
+            raise ValueError(
+                "Benchmark selected alarm resolved_at is outside the frozen evidence "
+                "window."
+            )
+
+    alarm["source_detected_at"] = source_detected_at
+    alarm["detected_at"] = decision_timestamp
+    return alarm
 
 
 def _sensor_id(metadata: BenchmarkExamplePipelineMetadata) -> int:

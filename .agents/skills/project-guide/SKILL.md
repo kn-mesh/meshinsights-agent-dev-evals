@@ -57,6 +57,10 @@ Use these locations by default:
 | `src/actions/` | Final side effects or intentionally no-op terminal actions |
 | `src/pipelines/` | Runnable pipeline entry points and runner CLIs |
 | `src/evals/` | Evaluation orchestration and result handling |
+| `agent-dev-eval-core/` | Reusable eval execution, result, review, and explorer-query mechanics |
+| `agent-dev-eval-ui/` | Reusable local explorer API and React shell |
+| `src/evidence/` | Project-owned frozen-evidence normalization and explorer envelope |
+| `www/src/use_case/` | Project-owned evidence schema and visual composition |
 | `src/lifecycle/` | Derived local catalog, references, quarantine, restore, and purge |
 
 Treat example files as starting patterns, not required production behavior.
@@ -68,6 +72,7 @@ Load the narrowest applicable skill before answering in depth or implementing:
 | Question or task | Skill |
 |---|---|
 | Initial port of a Benchmark Studio evidence pipeline into a clean project | `$benchmark-pipeline-port` |
+| Port Benchmark Studio evidence into the local eval explorer | `$port-eval-explorer-use-case` |
 | Pipeline components, YAML, variants, runners, or receipts | `$pipeline-builder` |
 | Structured AI processors, workflows, agents, tools, capabilities, or Agent Skills | `$ai-processor-builder` |
 | Prepare, execute, or troubleshoot a use-case eval command | `$run-use-case-evals` |

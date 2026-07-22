@@ -81,12 +81,18 @@ the target project rather than generalizing them prematurely.
 Do not port:
 
 - Benchmark Studio review, labeling, disagreement, or publication workflow;
-- FastAPI routes, Postgres repositories, React UI, or authorization code;
+- Benchmark Studio FastAPI routes, Postgres repositories, application shell,
+  workflow React UI, or authorization code;
 - live source-system retrieval as the Agent Workbench runtime path;
 - mutable benchmark state or copied benchmark labels;
 - source credentials, connection strings, `.env`, or generated evidence; or
 - AI prompts, tools, and agents unless the user explicitly includes first-agent
   development in the request.
+
+When the target includes the Agent Workbench eval explorer, port the standalone
+reviewer-evidence schema, normalization semantics, and evidence display into the
+project-owned extension points. Use `$port-eval-explorer-use-case` for that UI
+handoff; do not copy the Benchmark Studio application around it.
 
 Source-system code may be read to understand frozen artifacts, but the target
 runtime must retrieve the exact published artifacts from Azure using read-only

@@ -1,0 +1,11 @@
+{
+  "name": "@meshinsights/agent-eval-ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "peerDependencies": {
+    "@tanstack/react-query": ">=5",
+    "react": ">=19",
+    "react-dom": ">=19"
+  }
+}

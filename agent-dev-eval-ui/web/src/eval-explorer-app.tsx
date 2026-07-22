@@ -1,0 +1,242 @@
+import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "./api";
+import type { AttemptRow, EvidenceView, RunEntry, UseCaseAdapter } from "./contracts";
+
+type RunPayload = { runs: RunEntry[]; findings: unknown[] };
+type AttemptsPayload = {
+  rows: AttemptRow[];
+  matched: number;
+  facets: { states: Record<string, number>; fields: string[]; slices: string[] };
+};
+type AttemptPayload = { row: AttemptRow; review: Record<string, unknown> | null };
+
+const states = [
+  "all",
+  "correct",
+  "incorrect",
+  "failed",
+  "invalid",
+  "flaky",
+  "unscored",
+  "review-unavailable",
+];
+
+export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
+  const EvidenceDisplay = adapter.EvidenceDisplay;
+  const initial = new URL(window.location.href).searchParams;
+  const [runId, setRunId] = useState(initial.get("run") ?? "");
+  const [executionId, setExecutionId] = useState(initial.get("execution") ?? "");
+  const [state, setState] = useState(initial.get("state") ?? "all");
+  const [search, setSearch] = useState(initial.get("search") ?? "");
+  const [tab, setTab] = useState(initial.get("tab") ?? "evaluation");
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    for (const [key, value] of Object.entries({ run: runId, execution: executionId, state, search, tab })) {
+      if (value) url.searchParams.set(key, value);
+      else url.searchParams.delete(key);
+    }
+    window.history.replaceState(null, "", url);
+  }, [runId, executionId, state, search, tab]);
+
+  const runs = useQuery({ queryKey: ["runs"], queryFn: () => api<RunPayload>("/runs") });
+  const run = useQuery({
+    queryKey: ["run", runId],
+    queryFn: () => api<Record<string, unknown>>(`/runs/${encodeURIComponent(runId)}`),
+    enabled: Boolean(runId),
+  });
+  const attempts = useQuery({
+    queryKey: ["attempts", runId, state, search],
+    queryFn: () => api<AttemptsPayload>(
+      `/runs/${encodeURIComponent(runId)}/attempts?state=${encodeURIComponent(state)}&search=${encodeURIComponent(search)}&limit=1000`,
+    ),
+    enabled: Boolean(runId),
+  });
+  const detail = useQuery({
+    queryKey: ["attempt", runId, executionId],
+    queryFn: () => api<AttemptPayload>(
+      `/runs/${encodeURIComponent(runId)}/attempts/${encodeURIComponent(executionId)}`,
+    ),
+    enabled: Boolean(runId && executionId),
+  });
+  const evidence = useQuery({
+    queryKey: ["evidence", runId, detail.data?.row.example_id],
+    queryFn: () => api<EvidenceView>(
+      `/runs/${encodeURIComponent(runId)}/examples/${encodeURIComponent(detail.data!.row.example_id)}/evidence`,
+    ),
+    enabled: Boolean(runId && detail.data?.row.example_id && tab === "evidence"),
+    staleTime: Infinity,
+  });
+
+  const selectedRun = useMemo(
+    () => runs.data?.runs.find((item) => item.run_id === runId),
+    [runs.data, runId],
+  );
+  const error = runs.error ?? run.error ?? attempts.error ?? detail.error ?? evidence.error;
+
+  return (
+    <div className="app-shell">
+      <header>
+        <div>
+          <div className="eyebrow">MeshInsights Agent Workbench</div>
+          <h1>Eval Explorer</h1>
+        </div>
+        <select
+          aria-label="Evaluation run"
+          value={runId}
+          onChange={(event) => {
+            setRunId(event.target.value);
+            setExecutionId("");
+          }}
+        >
+          <option value="">Select an evaluation run…</option>
+          {runs.data?.runs.map((item) => (
+            <option key={item.run_id} value={item.run_id}>
+              {item.pipeline_path ?? "pipeline"} · {item.model ?? "model"} · {item.run_id.slice(0, 20)}
+            </option>
+          ))}
+        </select>
+      </header>
+
+      {error ? <div className="error">{error.message}</div> : null}
+      {!runId ? <div className="welcome">Choose a retained schema-v3 run to explore its results and evidence.</div> : null}
+
+      {runId ? (
+        <>
+          <section className="run-bar">
+            <strong>{selectedRun?.benchmark_key} v{selectedRun?.benchmark_version}</strong>
+            <span>{selectedRun?.model}</span>
+            <span>{selectedRun?.reasoning_effort}</span>
+            <span>{selectedRun?.recorded_attempts}/{selectedRun?.planned_attempts} attempts</span>
+            <span>review: {selectedRun?.review_status}</span>
+          </section>
+          <details className="summary-card">
+            <summary>Run metrics and configuration</summary>
+            <Json value={run.data ?? { loading: true }} />
+          </details>
+
+          <main>
+            <aside>
+              <div className="filters">
+                <input
+                  aria-label="Search attempts"
+                  placeholder="Search example, unit, output…"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+                <select aria-label="Attempt state" value={state} onChange={(event) => setState(event.target.value)}>
+                  {states.map((item) => (
+                    <option key={item} value={item}>
+                      {item} ({attempts.data?.facets.states[item] ?? 0})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="attempt-count">{attempts.data?.matched ?? 0} matching attempts</div>
+              <div className="attempt-list">
+                {attempts.data?.rows.map((row) => (
+                  <button
+                    className={row.execution_id === executionId ? "attempt active" : "attempt"}
+                    key={row.execution_id}
+                    onClick={() => setExecutionId(row.execution_id)}
+                  >
+                    <div className="attempt-title">
+                      <span>{row.unit_id}</span>
+                      <Status row={row} />
+                    </div>
+                    <small>{row.example_id} · repetition {row.run_index}</small>
+                    <div className="output-line">
+                      <span>Expected {compact(row.benchmark_labels)}</span>
+                      <span>Actual {compact(row.actual_outputs)}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </aside>
+
+            <article>
+              {!executionId ? <div className="empty">Select an attempt to inspect.</div> : null}
+              {detail.data ? (
+                <>
+                  <div className="detail-heading">
+                    <div>
+                      <div className="eyebrow">{detail.data.row.example_id}</div>
+                      <h2>{detail.data.row.unit_id} · repetition {detail.data.row.run_index}</h2>
+                    </div>
+                    <Status row={detail.data.row} />
+                  </div>
+                  <nav className="tabs">
+                    {[
+                      ["evaluation", "Evaluation"],
+                      ["evidence", "Evidence package"],
+                      ["input", "Agent input"],
+                      ["execution", "Execution & tools"],
+                      ["raw", "Raw"],
+                    ].map(([key, label]) => (
+                      <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{label}</button>
+                    ))}
+                  </nav>
+                  {tab === "evaluation" ? <Evaluation row={detail.data.row} /> : null}
+                  {tab === "evidence" ? (
+                    evidence.isPending ? <div className="empty">Loading and verifying frozen evidence…</div> :
+                    evidence.data ? <EvidenceDisplay evidence={evidence.data} /> : null
+                  ) : null}
+                  {tab === "input" ? <ReviewSection review={detail.data.review} section="model_interactions" /> : null}
+                  {tab === "execution" ? <Execution review={detail.data.review} /> : null}
+                  {tab === "raw" ? <Json value={detail.data} /> : null}
+                </>
+              ) : null}
+            </article>
+          </main>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function Evaluation({ row }: { row: AttemptRow }) {
+  return (
+    <div className="grid-cards">
+      <Card title="Expected output"><Json value={row.benchmark_labels} /></Card>
+      <Card title="Actual output"><Json value={row.actual_outputs} /></Card>
+      <Card title="Field graders"><Json value={row.fields} /></Card>
+      <Card title="Attempt state"><Json value={{ execution: row.execution_status, output_contract: row.output_contract_status, scoring: row.scoring_status, duration_seconds: row.duration_seconds, flaky: row.flaky }} /></Card>
+    </div>
+  );
+}
+
+function Execution({ review }: { review: Record<string, unknown> | null }) {
+  if (!review) return <div className="empty">Detailed review was not captured or has been purged.</div>;
+  return (
+    <div className="stack">
+      <Card title="Model interactions and tool activity"><Json value={review.model_interactions ?? { unavailable: true }} /></Card>
+      <Card title="Pipeline trace"><Json value={review.pipeline ?? { unavailable: true }} /></Card>
+      <Card title="Attempt outcome"><Json value={review.attempt_outcome ?? { unavailable: true }} /></Card>
+    </div>
+  );
+}
+
+function ReviewSection({ review, section }: { review: Record<string, unknown> | null; section: string }) {
+  if (!review) return <div className="empty">Detailed review was not captured or has been purged.</div>;
+  return <Json value={review[section] ?? { unavailable: true }} />;
+}
+
+function Status({ row }: { row: AttemptRow }) {
+  const value = row.execution_status === "failed" ? "failed" : row.complete_evaluation_correct === true ? "correct" : row.complete_evaluation_correct === false ? "incorrect" : row.scoring_status;
+  return <span className={`status ${value}`}>{value}</span>;
+}
+
+function Card({ title, children }: { title: string; children: ReactNode }) {
+  return <section className="card"><h3>{title}</h3>{children}</section>;
+}
+
+function Json({ value }: { value: unknown }) {
+  return <pre>{JSON.stringify(value, null, 2)}</pre>;
+}
+
+function compact(value: unknown) {
+  const text = JSON.stringify(value) ?? String(value);
+  return text.length > 72 ? `${text.slice(0, 69)}…` : text;
+}

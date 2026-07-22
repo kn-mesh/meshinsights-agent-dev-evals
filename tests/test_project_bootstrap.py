@@ -26,10 +26,12 @@ def _spec_payload() -> dict[str, object]:
             "description": "Agent Workbench for Acme pump reliability",
         },
         "benchmark_studio": {
-            "azure_environment": "development",
-            "application_id": "label-benchmark",
             "project_key": "acme-pumps",
-            "access_mode": "hosted_read_only",
+            "access_mode": "direct_read_only",
+            "postgres_host": "acme-benchmarks.postgres.database.azure.com",
+            "postgres_database": "benchmark_studio",
+            "storage_account_url": "https://acmebenchmarks.blob.core.windows.net",
+            "storage_container": "source-snapshots",
         },
         "benchmarks": {
             "default": {"key": "pump-failures", "version": "3"},
@@ -97,7 +99,9 @@ build-backend = "setuptools.build_meta"
 def _git_template(root: Path) -> str:
     """Commit a template fixture and return its exact revision."""
     subprocess.run(["git", "init", "--initial-branch=main"], cwd=root, check=True)
-    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=root, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"], cwd=root, check=True
+    )
     subprocess.run(["git", "config", "user.name", "Test User"], cwd=root, check=True)
     subprocess.run(["git", "add", "."], cwd=root, check=True)
     subprocess.run(["git", "commit", "-m", "template"], cwd=root, check=True)
@@ -162,22 +166,21 @@ def test_non_git_bootstrap_renders_and_validates_safe_project(tmp_path: Path) ->
     assert not (destination / ".ssh").exists()
     assert not (destination / "eval_results/result.json").exists()
     assert (destination / "eval_results/.gitkeep").exists()
-    assert "APP_PROJECT_KEY=acme-pumps" in (
-        destination / ".env.example"
-    ).read_text()
-    assert (destination / "README.md").read_text().startswith(
-        "# Acme Pump Reliability\n"
+    assert "APP_PROJECT_KEY=acme-pumps" in (destination / ".env.example").read_text()
+    assert (
+        (destination / "README.md").read_text().startswith("# Acme Pump Reliability\n")
     )
-    assert "name = \"acme-pump-agent\"" in (
-        destination / "pyproject.toml"
-    ).read_text()
-    assert yaml.safe_load((destination / "models.yaml").read_text())[
-        "default_model"
-    ] == "azure:gpt-test"
+    assert 'name = "acme-pump-agent"' in (destination / "pyproject.toml").read_text()
+    assert (
+        yaml.safe_load((destination / "models.yaml").read_text())["default_model"]
+        == "azure:gpt-test"
+    )
     assert validate_project(destination)["status"] == "valid"
 
 
-def test_git_url_and_ref_record_exact_commit_and_create_new_repo(tmp_path: Path) -> None:
+def test_git_url_and_ref_record_exact_commit_and_create_new_repo(
+    tmp_path: Path,
+) -> None:
     template = tmp_path / "template"
     _write_template(template)
     revision = _git_template(template)
@@ -195,13 +198,16 @@ def test_git_url_and_ref_record_exact_commit_and_create_new_repo(tmp_path: Path)
     assert result["template_revision"] == revision
     assert contract["template"] == {"source": template.as_uri(), "revision": revision}
     assert (destination / ".git").is_dir()
-    assert subprocess.run(
-        ["git", "rev-parse", "--is-inside-work-tree"],
-        cwd=destination,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip() == "true"
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=destination,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        == "true"
+    )
 
 
 def test_non_empty_destination_is_unchanged(tmp_path: Path) -> None:
@@ -244,7 +250,9 @@ def test_validation_rejects_project_identity_drift(tmp_path: Path) -> None:
         validate_project(destination)
 
 
-def test_cli_emits_machine_readable_success(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_emits_machine_readable_success(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     template = tmp_path / "template"
     _write_template(template)
     destination = tmp_path / "project"

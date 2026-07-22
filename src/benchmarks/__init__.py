@@ -1,8 +1,5 @@
-"""Published benchmark contracts and Azure PostgreSQL access."""
+"""Published benchmark contracts and direct read-only Azure access."""
 
-from src.benchmarks.azure_container_app_repository import (
-    AzureContainerAppBenchmarkRepository,
-)
 from src.benchmarks.models import (
     BenchmarkExample,
     BenchmarkVersion,
@@ -17,7 +14,6 @@ from src.benchmarks.postgres_repository import (
 
 __all__ = [
     "AzurePostgresBenchmarkRepository",
-    "AzureContainerAppBenchmarkRepository",
     "BenchmarkExample",
     "BenchmarkRepository",
     "BenchmarkVersion",

@@ -9,6 +9,7 @@ from collections.abc import Callable
 from typing import Any, Protocol, cast
 
 import psycopg
+from azure.identity import DefaultAzureCredential
 from psycopg.rows import dict_row
 
 from src.benchmarks.models import (
@@ -19,6 +20,9 @@ from src.benchmarks.models import (
 
 _SEARCH_PATH_OPTIONS = "-c search_path=app,public"
 _CONNECT_TIMEOUT_SECONDS = 10
+_AZURE_POSTGRES_TOKEN_SCOPE = (
+    "https://ossrdbms-aad.database.windows.net/.default"
+)
 
 _PUBLISHED_BENCHMARK_CATALOG_SQL = """
 select
@@ -135,18 +139,58 @@ class AzurePostgresBenchmarkRepository:
         *,
         database_url: str | None = None,
         project_key: str | None = None,
+        host: str | None = None,
+        database: str | None = None,
+        user: str | None = None,
+        credential: Any | None = None,
         connection_factory: Callable[[], Any] | None = None,
     ) -> None:
         """Resolve required hosted configuration without any local fallback."""
         self._database_url = (database_url or os.getenv("DATABASE_URL", "")).strip()
+        self._host = (host or os.getenv("AZURE_POSTGRES_HOST", "")).strip()
+        self._database = (
+            database or os.getenv("AZURE_POSTGRES_DATABASE", "")
+        ).strip()
+        self._user = (user or os.getenv("AZURE_POSTGRES_USER", "")).strip()
         self.project_key = (project_key or os.getenv("APP_PROJECT_KEY", "")).strip()
-        if not self._database_url and connection_factory is None:
-            raise ValueError("DATABASE_URL is required for benchmark retrieval.")
+        entra_values = (self._host, self._database, self._user)
+        if any(entra_values) and not all(entra_values):
+            raise ValueError(
+                "AZURE_POSTGRES_HOST, AZURE_POSTGRES_DATABASE, and "
+                "AZURE_POSTGRES_USER are all required for Entra retrieval."
+            )
+        if self._host and not self._host.endswith(".postgres.database.azure.com"):
+            raise ValueError(
+                "AZURE_POSTGRES_HOST must be an Azure PostgreSQL hostname."
+            )
+        if not self._host and not self._database_url and connection_factory is None:
+            raise ValueError(
+                "Azure PostgreSQL Entra settings or DATABASE_URL are required "
+                "for benchmark retrieval."
+            )
         if not self.project_key:
             raise ValueError("APP_PROJECT_KEY or project_key is required.")
+        self._credential = credential or (
+            DefaultAzureCredential() if self._host else None
+        )
         self._connection_factory = connection_factory or self._connect
 
     def _connect(self) -> psycopg.Connection[Any]:
+        if self._host:
+            assert self._credential is not None
+            access_token = self._credential.get_token(
+                _AZURE_POSTGRES_TOKEN_SCOPE
+            ).token
+            return psycopg.connect(
+                host=self._host,
+                dbname=self._database,
+                user=self._user,
+                password=access_token,
+                sslmode="require",
+                connect_timeout=_CONNECT_TIMEOUT_SECONDS,
+                row_factory=cast(Any, dict_row),
+                options=_SEARCH_PATH_OPTIONS,
+            )
         return psycopg.connect(
             self._database_url,
             connect_timeout=_CONNECT_TIMEOUT_SECONDS,

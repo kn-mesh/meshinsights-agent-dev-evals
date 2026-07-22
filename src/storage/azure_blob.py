@@ -6,6 +6,7 @@ import hashlib
 import os
 from typing import Any, Protocol
 
+from azure.identity import DefaultAzureCredential
 from azure.core.exceptions import ResourceNotFoundError
 from azure.storage.blob import BlobServiceClient
 
@@ -27,6 +28,8 @@ class AzureBlobEvidenceStore:
         self,
         *,
         connection_string: str | None = None,
+        account_url: str | None = None,
+        credential: Any | None = None,
         container: str | None = None,
         container_client: Any | None = None,
     ) -> None:
@@ -34,18 +37,30 @@ class AzureBlobEvidenceStore:
         if container_client is not None:
             self._container = container_client
             return
+        resolved_account_url = (
+            account_url or os.getenv("AZURE_STORAGE_ACCOUNT_URL", "")
+        ).strip().rstrip("/")
         resolved_connection = (
             connection_string or os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
         ).strip()
         resolved_container = (
             container or os.getenv("AZURE_STORAGE_CONTAINER", "")
         ).strip()
-        if not resolved_connection:
-            raise ValueError(
-                "AZURE_STORAGE_CONNECTION_STRING is required for evidence retrieval."
-            )
         if not resolved_container:
             raise ValueError("AZURE_STORAGE_CONTAINER is required for evidence retrieval.")
+        if resolved_account_url:
+            service = BlobServiceClient(
+                account_url=resolved_account_url,
+                credential=credential or DefaultAzureCredential(),
+                api_version=AZURE_BLOB_SERVICE_API_VERSION,
+            )
+            self._container = service.get_container_client(resolved_container)
+            return
+        if not resolved_connection:
+            raise ValueError(
+                "AZURE_STORAGE_ACCOUNT_URL or AZURE_STORAGE_CONNECTION_STRING is "
+                "required for evidence retrieval."
+            )
         service = BlobServiceClient.from_connection_string(
             resolved_connection,
             api_version=AZURE_BLOB_SERVICE_API_VERSION,

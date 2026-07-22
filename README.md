@@ -13,9 +13,10 @@ The source snapshots were imported from:
 
 The root project uses editable path dependencies for `mi-core` and the CLI, so
 changes under `mi-core/` are immediately available through the root `uv`
-environment. The Spirax v1_3 agent reads published benchmark identity and
-approved labels from Azure PostgreSQL, then downloads the exact immutable raw
-evidence frozen by that benchmark version from Azure Blob Storage.
+environment. The local Spirax operator reads published benchmark identity and
+approved labels directly from Azure PostgreSQL with a short-lived Entra token,
+then downloads the exact immutable raw evidence from Azure Blob Storage using
+container-scoped RBAC.
 
 Use this README as the quick on-ramp. Keep durable use-case context in `docs/use_case/`. For development guidance, ask Codex: the repo skills under `.agents/skills/` provide the project-specific playbooks, and the current codebase remains the source of truth.
 
@@ -34,8 +35,9 @@ source .venv/bin/activate
 # Install project and dev dependencies into .venv
 uv sync
 
-# Create .env from the template and provide Azure PostgreSQL, Blob Storage,
-# model-provider, and optional Logfire credentials.
+# Create .env from the template and provide the non-secret PostgreSQL/Blob
+# resource identities, model-provider, and optional Logfire credentials. Azure
+# CLI supplies short-lived tokens for PostgreSQL and Blob Storage.
 cp .env.example .env
 
 # Configure LLM inference and tracing credentials interactively when useful.
@@ -126,12 +128,22 @@ uv run python -m src.evals.eval_orchestration --help
 # Local-only ephemeral eval review CLI
 uv run python -m src.evals.inspection_cli --help
 
+# Local human eval-results explorer (after building www/)
+APP_PROJECT_KEY=<benchmark-studio-project-key> \
+  uv run python -m src.apps.eval_explorer
+
 # Derived local catalog and recoverable lifecycle operations
 uv run python -m src.lifecycle.cli --help
 ```
 
 See [`EvalRunbook.md`](EvalRunbook.md) for the explicit, reproducible eval
 command shape. Prefer it over the slower interactive benchmark chooser.
+
+The explorer keeps reusable run/attempt/review mechanics in
+`agent-dev-eval-core/` and `agent-dev-eval-ui/`. This project's immutable
+Spirax evidence projection lives in `src/evidence/`, while its evidence charts
+live in `www/src/use_case/`; a new use case replaces those project-owned
+adapters without rebuilding the shell.
 
 ## Current Spirax Reference Variants
 

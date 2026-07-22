@@ -66,7 +66,6 @@ from src.agent_versions import (
     validate_runtime_overrides,
 )
 from src.benchmarks import (
-    AzureContainerAppBenchmarkRepository,
     AzurePostgresBenchmarkRepository,
     BenchmarkExample,
     BenchmarkRepository,
@@ -104,7 +103,6 @@ from src.evals.run_store import (
     utc_now,
 )
 from src.pipelines.pipeline_run_from_yaml import run_pipeline
-from src.storage.hosted_azure_config import load_hosted_blob_configuration
 
 
 logger = logging.getLogger(__name__)
@@ -116,8 +114,6 @@ _QUIET_EXECUTOR_LOGGER.propagate = False
 _QUIET_EXECUTOR_LOGGER.setLevel(logging.CRITICAL)
 
 BASE_RESULTS_DIR = Path("eval_results")
-DEFAULT_AZURE_RESOURCE_GROUP = "rg-misprx-dv"
-DEFAULT_AZURE_CONTAINER_APP = "label-benchmark"
 _INTERRUPTION_GRACE_SECONDS = 30.0
 
 
@@ -342,6 +338,7 @@ def run_eval(
     error_action: ErrorActionType = "continue",
     progress_interval_seconds: float = 30.0,
     repository: BenchmarkRepository | None = None,
+    benchmark_source: str | None = None,
     grader_registry: GraderRegistry | None = None,
     agent_version: str | None = None,
     agent_version_id: str | None = None,
@@ -421,6 +418,11 @@ def run_eval(
     registry = grader_registry or build_project_grader_registry()
     benchmark_repository = repository or AzurePostgresBenchmarkRepository(
         project_key=project_key
+    )
+    resolved_benchmark_source = benchmark_source or (
+        "azure_postgres_entra"
+        if isinstance(benchmark_repository, AzurePostgresBenchmarkRepository)
+        else type(benchmark_repository).__name__
     )
     benchmark = benchmark_repository.load_published_version(
         benchmark_key=benchmark_key,
@@ -562,6 +564,7 @@ def run_eval(
             else None
         ),
         configuration_dimensions=dimensions,
+        benchmark_source=resolved_benchmark_source,
         completed_at=datetime.fromisoformat(manifest_created_at),
     )
     _bind_run_config_to_manifest(
@@ -1891,6 +1894,7 @@ def _build_run_config(
     agent_reference: AgentVersionReference,
     legacy_agent_label: str | None,
     configuration_dimensions: dict[str, JsonScalar],
+    benchmark_source: str,
     completed_at: datetime,
 ) -> dict[str, Any]:
     profile = preflight.profile
@@ -1969,7 +1973,7 @@ def _build_run_config(
             }
             for schema in benchmark.label_schemas
         ],
-        "benchmark_source": "azure_postgres",
+        "benchmark_source": benchmark_source,
         "evidence_source": "azure_blob",
         "evaluation_profile": {
             "profile_id": profile.profile_id,
@@ -2290,18 +2294,11 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("yaml_path", nargs="?", type=Path)
     parser.add_argument("--evaluation-profile", type=Path)
     parser.add_argument("--project-key")
-    parser.add_argument(
-        "--azure-resource-group",
-        default=os.getenv(
-            "LABEL_BENCHMARK_AZURE_RESOURCE_GROUP", DEFAULT_AZURE_RESOURCE_GROUP
-        ),
-    )
-    parser.add_argument(
-        "--azure-container-app",
-        default=os.getenv(
-            "LABEL_BENCHMARK_AZURE_CONTAINER_APP", DEFAULT_AZURE_CONTAINER_APP
-        ),
-    )
+    parser.add_argument("--azure-postgres-host")
+    parser.add_argument("--azure-postgres-database")
+    parser.add_argument("--azure-postgres-user")
+    parser.add_argument("--azure-storage-account-url")
+    parser.add_argument("--azure-storage-container")
     parser.add_argument("--benchmark-key")
     parser.add_argument("--benchmark-version", type=int)
     parser.add_argument("--example-ids", nargs="*")
@@ -2719,11 +2716,13 @@ def main() -> None:
     project_key = (args.project_key or os.getenv("APP_PROJECT_KEY", "")).strip()
     if not project_key:
         parser.error("APP_PROJECT_KEY or --project-key is required.")
-    repository = AzureContainerAppBenchmarkRepository(
+    repository: BenchmarkRepository = AzurePostgresBenchmarkRepository(
         project_key=project_key,
-        resource_group=args.azure_resource_group,
-        container_app=args.azure_container_app,
+        host=args.azure_postgres_host,
+        database=args.azure_postgres_database,
+        user=args.azure_postgres_user,
     )
+    benchmark_source = "azure_postgres_entra"
     benchmark_key, benchmark_version = _resolve_cli_benchmark(
         args,
         repository=repository,
@@ -2745,12 +2744,21 @@ def main() -> None:
     runs_per_example = _resolve_cli_runs_per_example(args, parser=parser)
     runtime = _resolve_cli_runtime(args, parser=parser)
     configuration_dimensions = _parse_configuration_dimensions(args.dimension, parser)
-    blob_connection, blob_container = load_hosted_blob_configuration(
-        resource_group=args.azure_resource_group,
-        container_app=args.azure_container_app,
+    evidence_account_url = (
+        (args.azure_storage_account_url or os.getenv("AZURE_STORAGE_ACCOUNT_URL", ""))
+        .strip()
+        .rstrip("/")
     )
-    os.environ["AZURE_STORAGE_CONNECTION_STRING"] = blob_connection
-    os.environ["AZURE_STORAGE_CONTAINER"] = blob_container
+    evidence_container = (
+        args.azure_storage_container or os.getenv("AZURE_STORAGE_CONTAINER", "")
+    ).strip()
+    if not evidence_account_url.startswith("https://") or not evidence_container:
+        parser.error(
+            "direct Entra access requires AZURE_STORAGE_ACCOUNT_URL and "
+            "AZURE_STORAGE_CONTAINER (or the corresponding CLI flags)."
+        )
+    os.environ["AZURE_STORAGE_ACCOUNT_URL"] = evidence_account_url
+    os.environ["AZURE_STORAGE_CONTAINER"] = evidence_container
     requested_models = [ai_model]
     for requested in args.compare_model:
         try:
@@ -2791,6 +2799,7 @@ def main() -> None:
             dry_run=dry_run,
             materialize_only=materialize_only,
             repository=repository,
+            benchmark_source=benchmark_source,
             review_capture=args.review_capture,
         )
 
