@@ -31,3 +31,7 @@ wheels/
 
 # Local immutable agent-version manifests and content-addressed objects
 /agent_versions/
+
+# Local evaluation evidence and recoverable lifecycle quarantine
+/eval_results/
+/.workbench/

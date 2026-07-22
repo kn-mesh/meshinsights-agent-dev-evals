@@ -382,6 +382,49 @@ candidate agent linkage, comparisons, and `diagnosis/`. Whole-run deletion is a
 separate lifecycle operation. Purge validates one exact run and refuses broad,
 ambiguous, or path-escaping targets.
 
+## Local Catalog And Whole-Entity Deletion
+
+List and verify managed schema-v3 runs, comparisons, and candidate/promoted
+agent versions without contacting Azure:
+
+```bash
+uv run python -m src.lifecycle.cli catalog --json
+uv run python -m src.lifecycle.cli verify --json
+uv run python -m src.lifecycle.cli inspect run eval_<hash> --json
+uv run python -m src.lifecycle.cli inspect version av_<hash> --json
+```
+
+The catalog is derived from immutable local records. Historical standalone
+result JSON is unsupported; `eval_results/` contains only the managed
+`runs/<run-id>/` and `comparisons/` layouts.
+
+Use one flow for runs, comparisons, and promoted versions. Always inspect the
+reference warnings in the preview before confirmation:
+
+```bash
+uv run python -m src.lifecycle.cli delete run eval_<hash> --dry-run --json
+uv run python -m src.lifecycle.cli delete run eval_<hash> --yes --json
+uv run python -m src.lifecycle.cli delete comparison cmp_<hash> --dry-run --json
+uv run python -m src.lifecycle.cli delete version av_<hash> --dry-run --json
+```
+
+Confirmed deletion moves the exact paths into recoverable, Git-ignored local
+quarantine. Restore while the original paths remain absent, or permanently
+purge the quarantine with a second explicit confirmation:
+
+```bash
+uv run python -m src.lifecycle.cli restore del_<operation-id> --dry-run --json
+uv run python -m src.lifecycle.cli restore del_<operation-id> --yes --json
+uv run python -m src.lifecycle.cli purge del_<operation-id> --dry-run --json
+uv run python -m src.lifecycle.cli purge del_<operation-id> --yes --json
+```
+
+Candidate-only versions live inside their eval runs and are removed by deleting
+those runs. Deleting a promoted version includes its global manifest, aliases,
+promotion events, and only CAS objects no retained promoted manifest uses.
+Active runs, corrupt managed records, symlinks, ambiguous IDs, and broad paths
+fail closed. Lifecycle operations never write to Azure or Benchmark Studio.
+
 ## Fast Diagnosis
 
 - Azure Blob status `206` is a successful ranged download.

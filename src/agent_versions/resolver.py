@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import ast
 from collections.abc import Mapping
 import copy
 import fnmatch
 import hashlib
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tomllib
@@ -40,6 +42,7 @@ _DEFAULT_NON_EXECUTION_EXCLUSIONS = (
     "src/agent_versions/**",
     "src/benchmarks/**",
     "src/evals/**",
+    "src/lifecycle/**",
     "src/pipelines/**",
     "src/project_bootstrap/**",
 )
@@ -110,7 +113,9 @@ def resolve_agent_version(
     """Resolve one immutable candidate without executing pipeline components."""
     source_path = pipeline_path.resolve()
     project_root = (root or repository_root(source_path.parent)).resolve()
-    policy_source = (policy_path or default_policy_path(source_path, root=project_root)).resolve()
+    policy_source = (
+        policy_path or default_policy_path(source_path, root=project_root)
+    ).resolve()
     _require_within(project_root, source_path)
     _require_within(project_root, policy_source)
     policy = load_agent_version_policy(policy_source)
@@ -145,8 +150,12 @@ def resolve_agent_version(
     file_roles: dict[Path, list[dict[str, Any]]] = {}
     component_graph: list[dict[str, Any]] = []
     contracts: dict[str, list[dict[str, Any]]] = {}
-    _add_file_role(file_roles, source_path, role="source_pipeline", logical_name=source_path.stem)
-    _add_file_role(file_roles, policy_source, role="model_policy", logical_name=policy_source.stem)
+    _add_file_role(
+        file_roles, source_path, role="source_pipeline", logical_name=source_path.stem
+    )
+    _add_file_role(
+        file_roles, policy_source, role="model_policy", logical_name=policy_source.stem
+    )
 
     for stage_index, (section, locator, list_key) in enumerate(_COMPONENT_LAYOUT):
         values = _at_path(raw_pipeline, locator)
@@ -157,7 +166,9 @@ def resolve_agent_version(
             entries = [(str(values), {})]
         else:
             if not isinstance(values, list):
-                raise ValueError(f"Pipeline section {'.'.join(locator)} must be a list.")
+                raise ValueError(
+                    f"Pipeline section {'.'.join(locator)} must be a list."
+                )
             entries = []
             for raw_entry in values:
                 if not isinstance(raw_entry, dict) or not raw_entry.get(list_key):
@@ -165,7 +176,11 @@ def resolve_agent_version(
                 entries.append(
                     (
                         str(raw_entry[list_key]),
-                        {key: value for key, value in raw_entry.items() if key != list_key},
+                        {
+                            key: value
+                            for key, value in raw_entry.items()
+                            if key != list_key
+                        },
                     )
                 )
         for order, (component_name, raw_config) in enumerate(entries):
@@ -185,7 +200,9 @@ def resolve_agent_version(
                 logical_name=record.import_path,
             )
             declarations: list[dict[str, Any]] = []
-            for declaration in declared_version_assets(component_type, effective_config):
+            for declaration in declared_version_assets(
+                component_type, effective_config
+            ):
                 payload = declaration.model_dump(mode="json")
                 if declaration.path is not None:
                     asset_path = (component_source.parent / declaration.path).resolve()
@@ -198,7 +215,9 @@ def resolve_agent_version(
                         media_type=declaration.media_type,
                         symbol=declaration.symbol,
                     )
-                    payload["resolved_path"] = asset_path.relative_to(project_root).as_posix()
+                    payload["resolved_path"] = asset_path.relative_to(
+                        project_root
+                    ).as_posix()
                 declarations.append(payload)
             component_contracts = declared_version_contracts(
                 component_type, effective_config
@@ -214,10 +233,7 @@ def resolve_agent_version(
                     f"Terminal action {record.import_path} must declare an action policy."
                 )
             schema_type = getattr(component_type, "output_schema", None)
-            if (
-                isinstance(schema_type, type)
-                and issubclass(schema_type, BaseModel)
-            ):
+            if isinstance(schema_type, type) and issubclass(schema_type, BaseModel):
                 normalized_schema = schema_type.model_json_schema()
                 contracts.setdefault("normalized_output_schema", []).append(
                     {
@@ -247,7 +263,9 @@ def resolve_agent_version(
                     "name": component_name,
                     "import_path": record.import_path,
                     "registry_locator_hash": record.hash,
-                    "source_path": component_source.relative_to(project_root).as_posix(),
+                    "source_path": component_source.relative_to(
+                        project_root
+                    ).as_posix(),
                     "effective_config": effective_config,
                     "declarations": declarations,
                 }
@@ -278,27 +296,31 @@ def resolve_agent_version(
     git_identity = _git_identity(project_root)
     deleted_surface_paths: list[str] = []
     if git_identity["git_revision"] is not None:
+        dirty_runtime_paths = _dirty_runtime_paths(project_root)
+        resolved_runtime_paths = _resolved_local_python_dependencies(
+            project_root,
+            file_roles,
+            known_runtime_paths={relative for relative, _ in dirty_runtime_paths},
+        )
         exclusions = (
             *_DEFAULT_NON_EXECUTION_EXCLUSIONS,
             *policy.non_execution_exclusions,
         )
-        for relative, exists in _dirty_runtime_paths(project_root):
+        for relative, exists in dirty_runtime_paths:
             path = (project_root / relative).resolve()
             _reject_sensitive_path(path, project_root)
             if path in file_roles:
                 continue
             if any(fnmatch.fnmatch(relative, pattern) for pattern in exclusions):
                 continue
-            shared_runtime = relative.startswith("mi-core/core/src/mi/")
-            package_support = _supports_resolved_asset(path, file_roles)
-            if exists and (shared_runtime or package_support):
+            if exists and relative in resolved_runtime_paths:
                 _add_file_role(
                     file_roles,
                     path,
                     role="version_surface_guard",
                     logical_name=relative,
                 )
-            elif not exists and (shared_runtime or package_support):
+            elif not exists and relative in resolved_runtime_paths:
                 deleted_surface_paths.append(relative)
             else:
                 raise ValueError(
@@ -315,7 +337,9 @@ def resolve_agent_version(
         content = path.read_bytes()
         digest = hashlib.sha256(content).hexdigest()
         relative = path.relative_to(project_root).as_posix()
-        base_content = _git_file_bytes(project_root, git_identity["git_revision"], relative)
+        base_content = _git_file_bytes(
+            project_root, git_identity["git_revision"], relative
+        )
         changed = base_content != content
         if changed and dirty_policy == "reject":
             raise ValueError(f"Dirty version-surface path is not allowed: {relative}")
@@ -344,7 +368,9 @@ def resolve_agent_version(
                 "content_sha256": digest,
                 "byte_size": len(content),
                 "file_mode": path.stat().st_mode & 0o777,
-                "roles": sorted(file_roles[path], key=lambda item: canonical_sha256(item)),
+                "roles": sorted(
+                    file_roles[path], key=lambda item: canonical_sha256(item)
+                ),
             }
         )
     for relative in sorted(deleted_surface_paths):
@@ -369,7 +395,9 @@ def resolve_agent_version(
     tree_state = (
         "unavailable"
         if git_identity["git_revision"] is None
-        else "dirty" if overlay_entries else "clean"
+        else "dirty"
+        if overlay_entries
+        else "clean"
     )
     resolved_graph_sha256 = canonical_sha256(component_graph)
     model_policy = {
@@ -382,9 +410,10 @@ def resolve_agent_version(
         "component_declarations": contracts.get("evidence_recipe", []),
         "project": policy.contracts.get("evidence_recipe", {}),
     }
-    if not evidence_contract["component_declarations"] or not evidence_contract[
-        "project"
-    ]:
+    if (
+        not evidence_contract["component_declarations"]
+        or not evidence_contract["project"]
+    ):
         raise ValueError(
             "Agent versions require component and project evidence-recipe declarations."
         )
@@ -400,9 +429,7 @@ def resolve_agent_version(
         "evidence_recipe_sha256": evidence_recipe_sha256,
         "component_contracts": contracts,
         "normalized_input_schemas": contracts.get("normalized_input_schema", []),
-        "normalized_output_schemas": contracts.get(
-            "normalized_output_schema", []
-        ),
+        "normalized_output_schemas": contracts.get("normalized_output_schema", []),
     }
     pipeline_document = {
         "path": source_path.relative_to(project_root).as_posix(),
@@ -456,7 +483,9 @@ def _at_path(payload: Mapping[str, Any], path: tuple[str, ...]) -> Any:
     return current
 
 
-def _effective_config(config_type: type[Any] | None, raw: dict[str, Any]) -> dict[str, Any]:
+def _effective_config(
+    config_type: type[Any] | None, raw: dict[str, Any]
+) -> dict[str, Any]:
     if config_type is None:
         return json.loads(json.dumps(raw, default=str))
     value = config_type(**raw)
@@ -504,24 +533,185 @@ def _reject_sensitive_path(path: Path, root: Path) -> None:
         raise ValueError(f"Sensitive path cannot be an agent-version asset: {relative}")
 
 
-def _supports_resolved_asset(
-    path: Path, file_roles: Mapping[Path, list[dict[str, Any]]]
-) -> bool:
-    """Treat registry-scanned siblings and package initializers as support."""
-    if path.suffix == ".py" and any(path.parent == asset.parent for asset in file_roles):
-        return True
-    return path.name == "__init__.py" and any(
-        path.parent in asset.parents for asset in file_roles
+def _resolved_local_python_dependencies(
+    root: Path,
+    source_paths: Mapping[Path, Any],
+    *,
+    known_runtime_paths: set[str] | None = None,
+) -> set[str]:
+    """Resolve local Python imports that can affect the selected agent graph."""
+    project_root = root.resolve()
+    import_roots = tuple(
+        path.resolve()
+        for path in (
+            project_root / "mi-core/core/src",
+            project_root / "agent-dev-eval-core",
+            project_root,
+        )
+        if path.is_dir()
     )
+    known_paths = known_runtime_paths or set()
+    resolved_paths: set[str] = set()
+    queued: list[Path] = [
+        path.resolve()
+        for path in source_paths
+        if path.suffix == ".py" and path.is_file()
+    ]
+    visited: set[Path] = set()
+
+    while queued:
+        source = queued.pop()
+        if source in visited:
+            continue
+        visited.add(source)
+        try:
+            relative = source.relative_to(project_root).as_posix()
+        except ValueError:
+            continue
+        resolved_paths.add(relative)
+        if not source.is_file():
+            continue
+        package_parts = _package_parts(source, import_roots)
+        if package_parts is None:
+            continue
+        try:
+            syntax = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+        except (OSError, SyntaxError, UnicodeError) as error:
+            raise ValueError(
+                f"Could not inspect version-surface imports in {relative}."
+            ) from error
+
+        imported_modules: set[tuple[str, ...]] = set()
+        for node in ast.walk(syntax):
+            if isinstance(node, ast.Import):
+                imported_modules.update(
+                    tuple(alias.name.split(".")) for alias in node.names
+                )
+            elif isinstance(node, ast.ImportFrom):
+                base = _import_from_parts(node, package_parts)
+                if base:
+                    imported_modules.add(base)
+                for alias in node.names:
+                    if alias.name != "*":
+                        imported_modules.add((*base, *alias.name.split(".")))
+            elif (
+                isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and re.fullmatch(
+                    r"(?:src|mi|evaluation)(?:\.[A-Za-z_]\w*)+",
+                    node.value,
+                )
+            ):
+                # Capture local modules named in lazy-import catalogs.
+                imported_modules.add(tuple(node.value.split(".")))
+
+        for imported in imported_modules:
+            for dependency in _resolve_local_module(
+                imported,
+                import_roots=import_roots,
+                project_root=project_root,
+                known_paths=known_paths,
+            ):
+                dependency_relative = dependency.relative_to(project_root).as_posix()
+                resolved_paths.add(dependency_relative)
+                if dependency.is_file() and dependency not in visited:
+                    queued.append(dependency)
+
+    return resolved_paths
+
+
+def _package_parts(
+    path: Path,
+    import_roots: tuple[Path, ...],
+) -> tuple[str, ...] | None:
+    for import_root in import_roots:
+        try:
+            relative = path.relative_to(import_root)
+        except ValueError:
+            continue
+        parts = relative.with_suffix("").parts
+        if not parts:
+            return ()
+        return tuple(parts[:-1])
+    return None
+
+
+def _import_from_parts(
+    node: ast.ImportFrom,
+    package_parts: tuple[str, ...],
+) -> tuple[str, ...]:
+    if node.level == 0:
+        prefix: tuple[str, ...] = ()
+    else:
+        parents = node.level - 1
+        prefix = package_parts[: max(len(package_parts) - parents, 0)]
+    module = tuple(node.module.split(".")) if node.module else ()
+    return (*prefix, *module)
+
+
+def _resolve_local_module(
+    module_parts: tuple[str, ...],
+    *,
+    import_roots: tuple[Path, ...],
+    project_root: Path,
+    known_paths: set[str],
+) -> tuple[Path, ...]:
+    if not module_parts:
+        return ()
+    resolved: list[Path] = []
+    for import_root in import_roots:
+        module_base = import_root.joinpath(*module_parts)
+        candidates = (
+            module_base.with_suffix(".py"),
+            module_base / "__init__.py",
+        )
+        target = next(
+            (
+                candidate
+                for candidate in candidates
+                if candidate.is_file()
+                or _known_project_path(candidate, project_root, known_paths)
+            ),
+            None,
+        )
+        if target is None:
+            continue
+        for parent in target.parents:
+            if parent == import_root:
+                break
+            initializer = parent / "__init__.py"
+            if initializer.is_file() or _known_project_path(
+                initializer, project_root, known_paths
+            ):
+                resolved.append(initializer.resolve())
+        resolved.append(target.resolve())
+        break
+    return tuple(dict.fromkeys(resolved))
+
+
+def _known_project_path(path: Path, root: Path, known_paths: set[str]) -> bool:
+    try:
+        relative = path.resolve().relative_to(root).as_posix()
+    except ValueError:
+        return False
+    return relative in known_paths
 
 
 def _git_identity(root: Path) -> dict[str, str | None]:
     try:
         revision = subprocess.run(
-            ["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True
+            ["git", "rev-parse", "HEAD"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
         ).stdout.strip()
         tree = subprocess.run(
-            ["git", "rev-parse", "HEAD^{tree}"], cwd=root, check=True, capture_output=True, text=True
+            ["git", "rev-parse", "HEAD^{tree}"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
         ).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         return {"git_revision": None, "git_tree": None}

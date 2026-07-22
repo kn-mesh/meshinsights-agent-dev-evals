@@ -125,6 +125,9 @@ uv run python -m src.evals.eval_orchestration --help
 
 # Local-only ephemeral eval review CLI
 uv run python -m src.evals.inspection_cli --help
+
+# Derived local catalog and recoverable lifecycle operations
+uv run python -m src.lifecycle.cli --help
 ```
 
 See [`EvalRunbook.md`](EvalRunbook.md) for the explicit, reproducible eval
@@ -198,6 +201,36 @@ promotion must use `--dirty-policy capture` and retains exact changed bytes in
 the local content-addressed store. `agent_versions/` and run-local candidates
 are important local evidence even though they are ignored by Git.
 
+## Local Version And Result Lifecycle
+
+The lifecycle catalog is rebuilt from managed schema-v3 run manifests,
+run-local candidates, comparisons, promoted manifests, aliases, and promotion
+events. It does not create a mutable catalog database and does not read legacy
+standalone result JSON.
+
+```bash
+uv run python -m src.lifecycle.cli catalog --json
+uv run python -m src.lifecycle.cli verify --json
+
+# Preview, then quarantine one exact entity
+uv run python -m src.lifecycle.cli delete run eval_<run-id> --dry-run --json
+uv run python -m src.lifecycle.cli delete run eval_<run-id> --yes --json
+
+# The same flow applies to promoted versions and comparisons
+uv run python -m src.lifecycle.cli delete version av_<version-id> --dry-run --json
+uv run python -m src.lifecycle.cli delete comparison cmp_<id> --dry-run --json
+
+# Recover or permanently remove a quarantined operation
+uv run python -m src.lifecycle.cli restore del_<operation-id> --yes --json
+uv run python -m src.lifecycle.cli purge del_<operation-id> --yes --json
+```
+
+Deletion previews report exact paths, bytes, and retained references. Confirmed
+deletion first moves data into ignored local quarantine under
+`.workbench/lifecycle/`; permanent removal is a separate confirmed purge.
+Review-only purge remains available through `src.evals.inspection_cli` and does
+not delete the durable run.
+
 ## AI Model Catalog
 
 The project-owned model catalog is [`models.yaml`](models.yaml). It is the only
@@ -250,6 +283,7 @@ agent_version_configs/
   v1_3.agent.yaml
   v2.agent.yaml
 agent_versions/               # local promoted manifests and CAS (gitignored)
+.workbench/lifecycle/         # local quarantine and operation receipts
 docs/
   development-current/
   product-strategy/
@@ -273,6 +307,7 @@ src/
   retrievers/
   pipelines/
   evals/
+  lifecycle/
 ```
 
 ## Notes

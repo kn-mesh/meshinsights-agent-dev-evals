@@ -55,7 +55,7 @@ selected eval results. Those remain important post-MVP features below.
 - [ ] Fast compare-diagnose-change-rerun iteration loop
 - [x] Explicit immutable agent-version promotion
 - [x] Exact benchmark, agent, configuration, and eval-result linkage
-- [ ] Local version/result catalog with intentional retention and deletion
+- [x] Local version/result catalog with intentional retention and deletion
 
 ## Current MVP Implementation Priority
 
@@ -335,8 +335,10 @@ handling.
 
 ### Local Version And Result Lifecycle
 
-**Status:** Partial; eval results are written to structured local paths, but
-there is no complete catalog or referential-integrity workflow.
+**Status:** Complete for MVP through the derived schema-v3 catalog and reference
+graph, uniform deletion previews, recoverable local quarantine, restore and
+permanent purge, active-run/path/integrity safety, and reachability-aware CAS
+cleanup. Historical standalone result JSON has been removed and is unsupported.
 
 During active experimentation, local project data remains the primary record.
 The FDE needs a catalog that can answer which agent versions and eval runs

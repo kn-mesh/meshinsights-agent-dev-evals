@@ -13,6 +13,7 @@ import pytest
 import yaml
 
 from model_catalog import ModelDefinition, ModelPricing
+from evaluation import FieldGrade, GraderRegistry, ScoringStatus
 from src.agent_versions import AgentVersionStore, resolve_agent_version
 
 from src.benchmarks import (
@@ -218,6 +219,20 @@ def _run(
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+class _ExplodingGrader:
+    grader_id = "test.exploding"
+    grader_version = 1
+
+    def grade(
+        self,
+        *,
+        expected: Any,
+        actual: Any,
+        config: Any,
+    ) -> FieldGrade:
+        raise RuntimeError("simulated grader defect")
+
+
 def test_run_eval_writes_schema_v3_full_labels_and_generic_metrics(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -346,6 +361,45 @@ def test_failed_execution_is_debuggable_and_excluded_from_accuracy(
     assert failed["execution_status"] == "failed"
     assert failed["output_contract_status"] == "not_produced"
     assert failed["failure_details"]["failed_stages"][0]["stage"] == "process"
+
+
+def test_grader_exception_becomes_non_scoring_attempt() -> None:
+    benchmark = _benchmark()
+    example = benchmark.examples[0]
+    receipt = _receipt(example)
+    assert receipt.act_receipt is not None
+    profile = eval_orchestration.load_evaluation_profile(PROFILE_PATH)
+    profile_payload = profile.model_dump(mode="json")
+    profile_payload["output_fields"][0]["evaluation"]["grader"] = {
+        "id": "test.exploding",
+        "version": 1,
+        "config": {},
+    }
+    registry = GraderRegistry()
+    registry.register(_ExplodingGrader)
+
+    attempt = eval_orchestration.score_receipt_metadata(
+        metadata=receipt.act_receipt.metadata,
+        expected_identity={
+            "example_id": example.example_id,
+            "benchmark_key": benchmark.benchmark_key,
+            "benchmark_version_id": benchmark.benchmark_version_id,
+            "benchmark_version_number": benchmark.version_number,
+            "source_snapshot_id": example.source_snapshot_id,
+        },
+        example=example,
+        profile=eval_orchestration.EvaluationProfile.model_validate(profile_payload),
+        grader_registry=registry,
+        duration_seconds=1.0,
+        stage_durations_seconds={"process": 0.5},
+        attempt_metadata={"run_index": 1},
+    )
+
+    assert attempt.scoring_status is ScoringStatus.GRADER_ERROR
+    assert not attempt.contributes_to_accuracy
+    assert attempt.evaluations == {}
+    assert attempt.actual_values["classification"] == "Failure"
+    assert attempt.error == "Deterministic grading failed: simulated grader defect"
 
 
 def test_review_capture_can_be_disabled_without_changing_result_contract(

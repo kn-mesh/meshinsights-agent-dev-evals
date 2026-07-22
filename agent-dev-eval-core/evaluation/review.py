@@ -45,6 +45,14 @@ _EMBEDDED_SECRET_VALUE = re.compile(
     r")",
     re.IGNORECASE,
 )
+_INLINE_CONTROL_KEYS = frozenset(
+    {
+        "capture_status",
+        "execution_id",
+        "run_id",
+        "work_item_id",
+    }
+)
 
 
 class ReviewStoreError(RuntimeError):
@@ -262,7 +270,14 @@ class LocalReviewStore:
         if markdown is not None:
             markdown_path = self.diagnosis_dir / f"{diagnosis_id}.md"
             self._assert_within_run(markdown_path)
-            self._write_bytes_create(markdown_path, markdown.encode("utf-8"))
+            safe_markdown = self._redact(markdown, key="diagnosis_markdown")
+            if isinstance(safe_markdown, dict) and safe_markdown.get("redacted"):
+                safe_markdown = f"[REDACTED: {safe_markdown.get('reason', 'secret')}]"
+            if not isinstance(safe_markdown, str):
+                raise ReviewStoreError(
+                    "Diagnosis Markdown redaction produced invalid text."
+                )
+            self._write_bytes_create(markdown_path, safe_markdown.encode("utf-8"))
         return json_path, markdown_path
 
     def verify(self) -> dict[str, Any]:
@@ -395,6 +410,7 @@ class LocalReviewStore:
             )
         if (
             isinstance(value, str)
+            and key not in _INLINE_CONTROL_KEYS
             and len(value.encode("utf-8")) > self.inline_text_bytes
         ):
             return self._store_object(

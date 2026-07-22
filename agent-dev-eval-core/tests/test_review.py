@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from evaluation import LocalReviewStore
+from evaluation import LocalReviewStore, ReviewStoreError
 import evaluation.review as review_module
 
 
@@ -167,3 +167,49 @@ def test_review_store_recovers_a_bundle_staged_by_an_interrupted_process(
     assert preview["file_count"] >= 2
     assert retained.read_text(encoding="utf-8") == "review evidence"
     assert not store.purge_staging_dir.exists()
+
+
+def test_review_store_rejects_tampered_manifest_and_object(tmp_path: Path) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review", inline_text_bytes=0)
+    store.initialize(run_spec_sha256="a" * 64)
+    store.commit_execution(
+        {
+            "run_id": "eval_review",
+            "work_item_id": "work_a",
+            "execution_id": "work_a.1",
+            "capture_status": "complete",
+            "model_interactions": {"prompt": "long prompt stored externally"},
+        }
+    )
+
+    manifest_path = next(store.executions_dir.glob("*/*.json"))
+    original_manifest = manifest_path.read_bytes()
+    manifest = json.loads(original_manifest)
+    manifest["capture_status"] = "partial"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(ReviewStoreError, match="manifest hash"):
+        store.verify()
+
+    manifest_path.write_bytes(original_manifest)
+    object_path = next(store.objects_dir.glob("*/*"))
+    object_path.write_bytes(b"tampered review evidence")
+    with pytest.raises(ReviewStoreError, match="object digest mismatch"):
+        store.verify()
+
+
+def test_diagnosis_markdown_does_not_persist_embedded_credentials(
+    tmp_path: Path,
+) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review")
+
+    _, markdown_path = store.write_diagnosis(
+        {"hypothesis": "provider authentication failed"},
+        markdown="Observed Authorization: Bearer must-not-persist in the trace.",
+    )
+
+    assert markdown_path is not None
+    persisted = markdown_path.read_text(encoding="utf-8")
+    assert "must-not-persist" not in persisted
+    assert "REDACTED" in persisted

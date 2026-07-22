@@ -50,6 +50,9 @@ Benchmark Studio data.
   `agent-dev-eval-core/evaluation/review.py` own local-only, run-scoped,
   disposable model/evidence review, bounded coding-agent queries, optional
   compact diagnoses, integrity verification, and explicit review-only purge.
+- `src/lifecycle/` owns the derived local catalog, reference graph, deletion
+  previews, recoverable quarantine, restore, and permanent purge for managed
+  schema-v3 runs, comparisons, and promoted agent versions.
 - `agent-dev-eval-core/evaluation` owns use-case-neutral attempt states, scalar
   extraction, grader registry/built-ins, metrics, execution, and immutable JSON
   writing.
@@ -182,8 +185,9 @@ Result schema v3 must preserve:
 - structured failure/correlation details; and
 - timing and effective AI execution policies.
 
-Do not rewrite historical schema v2 files and do not add runtime compatibility
-shims that continue producing v2.
+Historical standalone schema-v2 result files are unsupported. Do not add them
+to `eval_results/`, rewrite them, migrate them, or add compatibility shims that
+continue producing or cataloging them.
 
 Detailed prompts, multimodal bytes, tool transcripts, and validation history
 belong in the disposable run-local `review/` subtree, not inline in immutable
@@ -226,6 +230,8 @@ At minimum cover:
 - repeated serial/thread/process equivalence; and
 - deterministic run/work identity, interruption recovery, selective failure
   generations, idempotent resume, and dimension-safe comparison; and
+- derived lifecycle discovery, reference warnings, shared-CAS reachability,
+  quarantine/restore/purge, active-lock rejection, and path/symlink safety; and
 - Spirax nested `agent_output` receipt handoff without flat output aliases.
 
 Use injected repositories, pipeline receipts, Blob clients, and grader

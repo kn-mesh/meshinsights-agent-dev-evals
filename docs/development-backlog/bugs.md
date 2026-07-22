@@ -40,7 +40,7 @@ or content-addressed store.
 
 **Priority:** P1  
 **Area:** immutable agent versions  
-**Status:** Resolved by explicit dirty-path classification
+**Status:** Resolved by resolved import-graph dirty-path classification
 
 Every non-excluded dirty path under broad `src/` and `mi-core` roots is added as
 a `version_surface_guard` asset. Unreachable operator packages such as project
@@ -85,7 +85,7 @@ records fail closed and are never exposed to the pipeline.
 
 **Priority:** P2  
 **Area:** immutable agent versions  
-**Status:** Open
+**Status:** Resolved by strict alias and target-manifest validation
 
 Alias loading follows `agent_version_id` but ignores the alias document's
 recorded alias and `manifest_sha256`. Modifying an alias file can silently point

@@ -57,6 +57,7 @@ Use these locations by default:
 | `src/actions/` | Final side effects or intentionally no-op terminal actions |
 | `src/pipelines/` | Runnable pipeline entry points and runner CLIs |
 | `src/evals/` | Evaluation orchestration and result handling |
+| `src/lifecycle/` | Derived local catalog, references, quarantine, restore, and purge |
 
 Treat example files as starting patterns, not required production behavior.
 
@@ -71,6 +72,7 @@ Load the narrowest applicable skill before answering in depth or implementing:
 | Structured AI processors, workflows, agents, tools, capabilities, or Agent Skills | `$ai-processor-builder` |
 | Prepare, execute, or troubleshoot a use-case eval command | `$run-use-case-evals` |
 | Eval orchestration, benchmark contracts, repeated runs, or result apps | `$agent-eval-builder` |
+| Local run/version catalog, quarantine, restore, or deletion lifecycle | `$agent-eval-builder` |
 | Existing eval regressions, comparisons, or error analysis | `$eval-results-analysis` |
 | `.env`, `mi auth`, provider credentials, runtime overrides, or Logfire | `$external-runtime-setup` |
 
