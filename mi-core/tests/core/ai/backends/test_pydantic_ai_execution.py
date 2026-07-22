@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+from typing import Any
 
 import httpx
 import mi.ai as ai
@@ -38,6 +39,61 @@ class ExampleOutput(BaseModel):
     """Structured output used by the local test model."""
 
     value: int
+
+
+def test_retry_transport_records_observed_http_attempts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = 0
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(
+                429,
+                headers={"x-request-id": "retry-request"},
+                request=request,
+            )
+        return httpx.Response(
+            200,
+            headers={"x-request-id": "success-request"},
+            request=request,
+        )
+
+    monkeypatch.setattr(
+        backend_module, "wait_retry_after", lambda **_kwargs: wait_none()
+    )
+    transport = PydanticAIBackend()._build_retry_transport(
+        2, wrapped=httpx.MockTransport(handler)
+    )
+    context: dict[str, Any] = {"attempts": [], "timeout_seconds": 30.0}
+    token = backend_module._TRANSPORT_OBSERVATION_CONTEXT.set(context)
+    try:
+        response = asyncio.run(
+            transport.handle_async_request(httpx.Request("GET", "https://example.test"))
+        )
+    finally:
+        backend_module._TRANSPORT_OBSERVATION_CONTEXT.reset(token)
+
+    assert response.status_code == 200
+    attempts = context["attempts"]
+    assert isinstance(attempts, list)
+    assert len(attempts) == 2
+    assert attempts[0]["attempt_number"] == 1
+    assert attempts[0]["duration_seconds"] >= 0
+    assert attempts[0]["terminal_status"] == "failed"
+    assert attempts[0]["retry_category"] == "rate_limit"
+    assert attempts[0]["status_code"] == 429
+    assert attempts[0]["configured_request_timeout_seconds"] == 30.0
+    assert attempts[0]["provider_request_id"] == "retry-request"
+    assert attempts[0]["error_type"] == "HTTPStatusError"
+    assert attempts[1]["attempt_number"] == 2
+    assert attempts[1]["duration_seconds"] >= 0
+    assert attempts[1]["terminal_status"] == "succeeded"
+    assert attempts[1]["retry_category"] is None
+    assert attempts[1]["status_code"] == 200
+    assert attempts[1]["provider_request_id"] == "success-request"
 
 
 def test_agent_execution_uses_v2_result_and_retry_apis(
@@ -350,6 +406,19 @@ def test_workflow_retries_output_validation_separately_from_transport(
         True,
     ]
     assert result.review["parsed_output"] == {"value": 42}
+    assert result.performance["schema_version"] == 1
+    assert result.performance["kind"] == "workflow"
+    assert result.performance["duration_seconds"] >= 0
+    assert [call["output_attempt"] for call in result.performance["model_calls"]] == [
+        1,
+        2,
+    ]
+    assert all(
+        call["status"] == "completed"
+        and call["duration_seconds"] >= 0
+        and call["transport_attempts_configured"] == 3
+        for call in result.performance["model_calls"]
+    )
 
 
 def test_workflow_enforces_token_limits_across_output_retries(

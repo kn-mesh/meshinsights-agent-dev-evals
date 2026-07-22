@@ -1,8 +1,7 @@
 # Spirax Pipeline Versions
 
-The current runnable variants make the same decision and emit the same
-structured `PulseFailureAnalysisResult` at
-`act.metadata.agent_output`. They use the shared
+The current runnable pipeline emits a structured `PulseFailureAnalysisResult` at
+`act.metadata.agent_output`. It uses the shared
 `evaluation_configs/spirax-failure-evaluation.eval.yaml` profile.
 
 ## `v1_3.ppln` — One-Shot AI Workflow
@@ -18,22 +17,6 @@ structured `PulseFailureAnalysisResult` at
 
 Use `v1_3` as the reference when the prepared evidence can support one model
 decision without runtime tool selection.
-
-## `v2.ppln` — Progressive Tool-Using Agent
-
-- Pipeline: `pipeline_configs/v2.ppln`
-- Agent policy: `agent_version_configs/v2.agent.yaml`
-- Parent: `v1_3`.
-- Shape: deterministic 30- and 365-day overview charts, a structured case-brief
-  workflow, and a bounded investigation agent that selects a focused date
-  window through the steam-trap analysis skill.
-- Hypothesis: a cheap orientation pass plus one focused, model-selected
-  investigation can provide more relevant evidence than always supplying the
-  same fixed chart windows.
-
-Use `v2` as the reference only when adaptive evidence selection is useful. A
-new use case does not need an agent if a deterministic processor or one-shot
-workflow is sufficient.
 
 ## Adding Another Variant
 

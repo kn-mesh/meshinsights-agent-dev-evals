@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
 from pathlib import Path
 
 import pytest
+from pydantic_ai.messages import ModelRequest, SystemPromptPart, UserPromptPart
 
 from evaluation import LocalReviewStore, ReviewStoreError
 import evaluation.review as review_module
+from mi.ai.backends.pydantic_ai_backend import PydanticAIBackend
+from mi.ai.message import UserMessage
+from mi.ai.review import serialize_messages
 
 
 def _run_dir(tmp_path: Path) -> Path:
@@ -97,7 +102,144 @@ def test_review_store_deduplicates_within_run_and_purges_only_review(
 
     # A later failed-work generation may capture a new ephemeral review bundle.
     store.initialize(run_spec_sha256="a" * 64)
-    assert json.loads(store.capture_path.read_text())["status"] == "complete"
+    assert json.loads(store.capture_path.read_text())["status"] == "in_progress"
+
+
+def test_review_store_accepts_actual_pydantic_ai_urlsafe_binary_serialization(
+    tmp_path: Path,
+) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review")
+    store.initialize(run_spec_sha256="a" * 64)
+    content = bytes(range(256))
+    message = UserMessage().add_image_bytes(content)
+    serialized = serialize_messages(
+        [
+            ModelRequest(
+                parts=[
+                    SystemPromptPart(content="system"),
+                    UserPromptPart(
+                        content=PydanticAIBackend()._build_user_content(message)
+                    ),
+                ]
+            )
+        ]
+    )
+    binary = serialized[0]["parts"][1]["content"][0]
+    assert binary["kind"] == "binary"
+    assert "-" in binary["data"] or "_" in binary["data"]
+
+    store.commit_execution(
+        {
+            "run_id": "eval_review",
+            "work_item_id": "work_a",
+            "execution_id": "work_a.1",
+            "capture_status": "complete",
+            "model_interactions": {"messages": serialized},
+        }
+    )
+    store.finalize(expected_execution_ids=["work_a.1"])
+
+    assert next(store.objects_dir.glob("*/*")).read_bytes() == content
+    assert store.verify()["status"] == "complete"
+
+
+def test_review_commit_rolls_back_objects_when_manifest_publish_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review", inline_text_bytes=0)
+    store.initialize(run_spec_sha256="a" * 64)
+    original = LocalReviewStore._write_bytes_create
+
+    def fail_manifest(path: Path, content: bytes) -> None:
+        if store.executions_dir in path.parents:
+            raise OSError("simulated manifest failure")
+        original(path, content)
+
+    monkeypatch.setattr(
+        LocalReviewStore, "_write_bytes_create", staticmethod(fail_manifest)
+    )
+    with pytest.raises(OSError, match="simulated manifest failure"):
+        store.commit_execution(
+            {
+                "run_id": "eval_review",
+                "work_item_id": "work_a",
+                "execution_id": "work_a.1",
+                "capture_status": "complete",
+                "model_interactions": {"prompt": "externalized"},
+            }
+        )
+
+    assert not tuple(store.executions_dir.glob("*/*.json"))
+    assert not tuple(store.objects_dir.glob("*/*"))
+
+
+def test_review_failure_finalizes_truthfully_and_records_bounded_reason(
+    tmp_path: Path,
+) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review")
+    store.initialize(run_spec_sha256="a" * 64)
+    error = ReviewStoreError("Invalid base64 review artifact.")
+    store.record_failure(execution_id="work_a.1", work_item_id="work_a", error=error)
+    capture = store.finalize(expected_execution_ids=["work_a.1"])
+
+    assert capture["status"] == "failed"
+    assert capture["expected_execution_count"] == 1
+    assert capture["captured_execution_count"] == 0
+    assert capture["missing_execution_ids"] == ["work_a.1"]
+    assert capture["capture_failures"][0]["error_type"] == "ReviewStoreError"
+
+
+def test_review_finalize_reports_partial_when_only_some_executions_commit(
+    tmp_path: Path,
+) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review")
+    store.initialize(run_spec_sha256="a" * 64)
+    store.commit_execution(
+        {
+            "run_id": "eval_review",
+            "work_item_id": "work_a",
+            "execution_id": "work_a.1",
+            "capture_status": "complete",
+        }
+    )
+
+    capture = store.finalize(expected_execution_ids=["work_a.1", "work_b.1"])
+
+    assert capture["status"] == "partial"
+    assert capture["captured_execution_count"] == 1
+    assert capture["missing_execution_ids"] == ["work_b.1"]
+
+
+def test_review_store_rejects_malformed_binary_without_leaving_objects(
+    tmp_path: Path,
+) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review")
+    store.initialize(run_spec_sha256="a" * 64)
+    with pytest.raises(ReviewStoreError, match="Invalid base64"):
+        store.commit_execution(
+            {
+                "run_id": "eval_review",
+                "work_item_id": "work_a",
+                "execution_id": "work_a.1",
+                "capture_status": "complete",
+                "model_interactions": {
+                    "messages": [
+                        {
+                            "kind": "binary",
+                            "data": "not***base64",
+                            "media_type": "image/png",
+                        }
+                    ]
+                },
+            }
+        )
+    assert not tuple(store.objects_dir.glob("*/*"))
+    assert not tuple(store.executions_dir.glob("*/*.json"))
 
 
 def test_review_store_rejects_unconfirmed_mutating_purge(tmp_path: Path) -> None:
@@ -195,6 +337,38 @@ def test_review_store_rejects_tampered_manifest_and_object(tmp_path: Path) -> No
     object_path = next(store.objects_dir.glob("*/*"))
     object_path.write_bytes(b"tampered review evidence")
     with pytest.raises(ReviewStoreError, match="object digest mismatch"):
+        store.verify()
+
+
+def test_review_verify_rejects_orphans_and_capture_count_mismatch(
+    tmp_path: Path,
+) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review")
+    store.initialize(run_spec_sha256="a" * 64)
+    store.commit_execution(
+        {
+            "run_id": "eval_review",
+            "work_item_id": "work_a",
+            "execution_id": "work_a.1",
+            "capture_status": "complete",
+        }
+    )
+    store.finalize(expected_execution_ids=["work_a.1"])
+
+    orphan_content = b"orphan"
+    orphan_digest = hashlib.sha256(orphan_content).hexdigest()
+    orphan = store.objects_dir / orphan_digest[:2] / orphan_digest
+    orphan.parent.mkdir(parents=True, exist_ok=True)
+    orphan.write_bytes(orphan_content)
+    with pytest.raises(ReviewStoreError, match="Orphaned review objects"):
+        store.verify()
+
+    orphan.unlink()
+    capture = json.loads(store.capture_path.read_text())
+    capture["object_count"] = 99
+    store.capture_path.write_text(json.dumps(capture), encoding="utf-8")
+    with pytest.raises(ReviewStoreError, match="object_count"):
         store.verify()
 
 

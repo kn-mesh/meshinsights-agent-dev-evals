@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 import subprocess
@@ -13,12 +14,24 @@ from src.agent_versions import (
     AgentVersionIntegrityError,
     AgentVersionManifest,
     AgentVersionStore,
+    ResolvedAgentVersion,
     resolve_agent_version,
     validate_runtime_overrides,
 )
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _distinct_resolved_version(
+    resolved: ResolvedAgentVersion,
+) -> ResolvedAgentVersion:
+    """Create a second valid identity without depending on another pipeline."""
+    identity = copy.deepcopy(resolved.manifest.identity)
+    identity["source_pipeline"]["display_version"] = "test-distinct"
+    return resolved.model_copy(
+        update={"manifest": AgentVersionManifest.build(identity)}
+    )
 
 
 def test_v1_resolution_is_deterministic_and_complete() -> None:
@@ -40,40 +53,6 @@ def test_v1_resolution_is_deterministic_and_complete() -> None:
     assert not any(
         asset["path"].startswith("src/project_bootstrap/")
         for asset in identity["assets"]
-    )
-
-
-def test_v2_resolution_freezes_skills_tools_prompts_and_schemas() -> None:
-    resolved = resolve_agent_version(
-        ROOT / "pipeline_configs/v2.ppln", dirty_policy="capture"
-    )
-    roles = [
-        role
-        for asset in resolved.manifest.identity["assets"]
-        for role in asset["roles"]
-    ]
-    declarations = [
-        declaration
-        for component in resolved.manifest.identity["components"]
-        for declaration in component["declarations"]
-    ]
-
-    assert {item["logical_name"] for item in roles if item["role"] == "skill"} == {
-        "open-failure-investigation",
-        "closed-vs-shutdown",
-        "modulation-vs-failure",
-        "history-and-sensor-integrity",
-    }
-    assert (
-        len([item for item in declarations if item["role"] == "tool_definition"]) == 5
-    )
-    assert any(item["role"] == "prompt" for item in declarations)
-    assert any(item["role"] == "output_schema" for item in declarations)
-    contracts = resolved.manifest.identity["contracts"]
-    assert len(contracts["normalized_input_schemas"]) == 1
-    assert len(contracts["normalized_output_schemas"]) == 2
-    assert all(
-        item["content_sha256"] for item in contracts["normalized_output_schemas"]
     )
 
 
@@ -154,9 +133,7 @@ def test_alias_conflict_does_not_append_a_promotion_event(tmp_path: Path) -> Non
     first = resolve_agent_version(
         ROOT / "pipeline_configs/v1_3.ppln", dirty_policy="capture"
     )
-    second = resolve_agent_version(
-        ROOT / "pipeline_configs/v2.ppln", dirty_policy="capture"
-    )
+    second = _distinct_resolved_version(first)
     store = AgentVersionStore(tmp_path / "agent_versions")
     store.promote(first, alias="current", repository=ROOT)
 
@@ -207,9 +184,7 @@ def test_alias_load_rejects_tampered_alias_identity(tmp_path: Path) -> None:
     first = resolve_agent_version(
         ROOT / "pipeline_configs/v1_3.ppln", dirty_policy="capture"
     )
-    second = resolve_agent_version(
-        ROOT / "pipeline_configs/v2.ppln", dirty_policy="capture"
-    )
+    second = _distinct_resolved_version(first)
     store = AgentVersionStore(tmp_path / "agent_versions")
     store.promote(first, alias="current", repository=ROOT)
     store.promote(second, repository=ROOT)

@@ -38,11 +38,18 @@ in this skill.
    work is already durable. Diagnose the first substantive error; do not
    mistake successful Blob `206` logs or thread-shutdown noise for the root
    cause.
-6. Verify the resulting JSON `run_config` matches the requested evaluation
-   profile identity/hash, benchmark, model, reasoning effort, scope, and
-   repetition settings. Verify `run_config.dimensions` captures agent, pipeline,
-   model, grader-set, and project-declared configuration identities.
-7. Expect persisted results under
+6. Verify durable and optional artifacts separately:
+   - load and integrity-check `result.json`; confirm `run` matches the requested
+     evaluation profile identity/hash, benchmark, model, reasoning effort,
+     scope, and repetitions;
+   - confirm `run.dimensions` captures agent, pipeline, model, grader-set, and
+     project-declared configuration identities;
+   - use the inspection summary to verify diagnostic review state and counts;
+     and
+   - inspect `performance/summary.json` only when present. Its latency, retry,
+     and throughput observations are disposable; absence is supported and must
+     not be described as missing durable eval evidence.
+7. Expect the schema-v1 run bundle under
    `eval_results/<pipeline>/<benchmark-key>/v<version>/runs/<run-id>/`. Report
    the exact `result.json` and do not reconstruct identity from display labels.
 8. Use `--compare-model` for multiple models under identical conditions. For
@@ -62,3 +69,5 @@ in this skill.
 - Never infer a concrete model for a command-only request. Use a user-selected
   model or one whose catalog API family is known to be supported by the current
   runtime adapter.
+- Never read latency or retry observations from durable `result.json`, and
+  never treat unavailable review or performance data as an eval failure.

@@ -35,7 +35,6 @@ from evaluation import (
     RepeatedEvalWorkItem,
     RuntimeType,
     ScoringStatus,
-    build_performance_summary,
     build_reliability_summary,
     build_run_identity,
     build_work_item_id,
@@ -46,6 +45,7 @@ from evaluation import (
     normalize_filename_token,
     read_path,
     eval_attempt_from_dict,
+    eval_attempt_performance_to_dict,
     eval_attempt_to_dict,
 )
 from mi.core.utils.environment import bootstrap_environment
@@ -573,25 +573,22 @@ def run_eval(
         run_spec_sha256=run_spec_sha256,
         run_spec=run_spec,
         manifest_created_at=manifest_created_at,
-        telemetry_schema_version=1,
     )
     materialization_run_config.pop("completed_at_utc", None)
     store.initialize(
         {
-            "storage_schema_version": 1,
-            "result_schema_version": 3,
-            "telemetry_schema_version": 1,
+            "schema_version": 1,
+            "performance_schema_version": 1,
             "coordinator_scope": "local_single_host",
             "run_id": run_id,
             "run_spec_sha256": run_spec_sha256,
             "run_spec": run_spec,
             "work_items": work_plan,
             "created_at_utc": manifest_created_at,
-            "result_materialization": {
-                "contract_version": 1,
-                "run_config": materialization_run_config,
-                "selected_example_ids": [example.example_id for example in examples],
-                "result_rows": _build_results(
+            "eval_contract": {
+                "schema_version": 1,
+                "run": materialization_run_config,
+                "examples": _build_examples(
                     [
                         _ExampleEvalResult(
                             example=example,
@@ -694,7 +691,7 @@ def run_eval(
             execution_id = f"{work_item_id}.{generation}"
             store.commit_attempt(
                 {
-                    "attempt_record_schema_version": 1,
+                    "schema_version": 1,
                     "run_id": run_id,
                     "work_item_id": work_item_id,
                     "example_id": work_item.item_id,
@@ -702,12 +699,21 @@ def run_eval(
                     "execution_id": execution_id,
                     "generation": generation,
                     "invocation_id": invocation_id,
-                    "agent_version_id": agent_reference.agent_version_id,
-                    "agent_version_manifest_sha256": (agent_reference.manifest_sha256),
+                    "attempt": eval_attempt_to_dict(record.result),
+                }
+            )
+            store.commit_performance(
+                {
+                    "schema_version": 1,
+                    "run_id": run_id,
+                    "work_item_id": work_item_id,
+                    "execution_id": execution_id,
+                    "generation": generation,
+                    "invocation_id": invocation_id,
                     "started_at_utc": started_at.isoformat(timespec="microseconds"),
                     "completed_at_utc": completed_at.isoformat(timespec="microseconds"),
                     "executor_duration_seconds": record.duration_seconds,
-                    "attempt": eval_attempt_to_dict(record.result),
+                    "metrics": eval_attempt_performance_to_dict(record.result),
                 }
             )
             if review_store is not None:
@@ -778,6 +784,26 @@ def run_eval(
                     logger.warning(
                         "Review capture failed for %s: %s", execution_id, error
                     )
+                    try:
+                        review_store.record_failure(
+                            execution_id=execution_id,
+                            work_item_id=work_item_id,
+                            error=error,
+                        )
+                    except Exception as observation_error:
+                        logger.warning(
+                            "Review failure observation failed for %s: %s",
+                            execution_id,
+                            observation_error,
+                        )
+
+        def finalize_review_capture() -> None:
+            if review_store is None:
+                return
+            expected_execution_ids = [
+                str(item["execution_id"]) for item in store.read_attempt_records()
+            ]
+            review_store.finalize(expected_execution_ids=expected_execution_ids)
 
         try:
             with _cooperative_signal_cancellation() as should_cancel:
@@ -795,6 +821,10 @@ def run_eval(
                     should_cancel=should_cancel,
                 )
         except BaseException as error:
+            try:
+                finalize_review_capture()
+            except Exception as review_error:
+                logger.warning("Review capture finalization failed: %s", review_error)
             interrupted = isinstance(error, KeyboardInterrupt)
             store.write_invocation_event(
                 invocation_id=invocation_id,
@@ -824,8 +854,10 @@ def run_eval(
             completed_at_utc=completed_at.isoformat(timespec="seconds"),
             latest_invocation_id=invocation_id,
         )
+        store.materialize_performance()
         if review_store is not None:
             try:
+                finalize_review_capture()
                 materialize_review_index(run_dir)
             except Exception as error:
                 logger.warning("Review index materialization failed: %s", error)
@@ -928,7 +960,7 @@ def _build_resolved_run_spec(
     )
     return {
         "execution_contract_version": 1,
-        "result_schema_version": 3,
+        "eval_schema_version": 1,
         "project_key": benchmark.project_key,
         "benchmark": {
             "name": benchmark.benchmark_name,
@@ -1540,6 +1572,9 @@ def _telemetry_artifacts(
     retry_telemetry = telemetry.get("retry_telemetry")
     if isinstance(retry_telemetry, dict):
         output["retry_telemetry"] = retry_telemetry
+    performance = telemetry.get("performance")
+    if isinstance(performance, dict):
+        output["performance"] = performance
     provider_cost = telemetry.get("cost")
     output["cost"] = _build_cost_observation(
         ai_model=ai_model,
@@ -1639,7 +1674,6 @@ def _build_summary(
     *,
     profile: EvaluationProfile,
     runs_per_example: int,
-    evaluation_wall_time_seconds: float,
 ) -> dict[str, Any]:
     attempts = [attempt for result in results for attempt in result.attempts]
     planned_runs = len(results) * runs_per_example
@@ -1652,10 +1686,6 @@ def _build_summary(
         "scoring_coverage": build_scoring_coverage(
             attempts,
             planned_runs=planned_runs,
-        ),
-        "performance": build_performance_summary(
-            attempts,
-            evaluation_wall_time_seconds=evaluation_wall_time_seconds,
         ),
         "execution_recovery": {
             "logical_work_items": planned_runs,
@@ -1671,7 +1701,6 @@ def _build_summary(
             ),
         },
         "usage": _build_usage_summary(attempts),
-        "retries": _build_retry_summary(attempts),
         "cost": _build_cost_summary(attempts),
         "nondeterminism": _build_nondeterminism_summary(results),
         "total_examples": len(results),
@@ -1817,6 +1846,21 @@ def _build_retry_summary(attempts: list[EvalAttempt]) -> dict[str, Any]:
     for telemetry in observations:
         availability = str(telemetry.get("availability", "unavailable"))
         availability_counts[availability] = availability_counts.get(availability, 0) + 1
+    transport_counts = [
+        int(item["observed_transport_attempts"])
+        for item in observations
+        if isinstance(item.get("observed_transport_attempts"), int)
+    ]
+    retry_categories: dict[str, int] = {}
+    for item in observations:
+        categories = item.get("observed_transport_retry_categories")
+        if not isinstance(categories, dict):
+            continue
+        for category, count in categories.items():
+            if isinstance(count, int):
+                retry_categories[str(category)] = (
+                    retry_categories.get(str(category), 0) + count
+                )
     return {
         "attempts_with_retry_telemetry": len(observations),
         "recorded_attempts": len(attempts),
@@ -1836,7 +1880,10 @@ def _build_retry_summary(attempts: list[EvalAttempt]) -> dict[str, Any]:
             for item in observations
             if isinstance(item.get("observed_output_validation_attempts"), int)
         ),
-        "observed_transport_attempts": None,
+        "observed_transport_attempts": (
+            sum(transport_counts) if transport_counts else None
+        ),
+        "observed_transport_retry_categories": dict(sorted(retry_categories.items())),
     }
 
 
@@ -1953,7 +2000,7 @@ def _build_run_config(
         "configuration": configuration_dimensions,
     }
     return {
-        "eval_result_schema_version": 3,
+        "schema_version": 1,
         "agent_version": agent_reference.model_dump(mode="json"),
         "yaml_path": str(yaml_path),
         "project_key": benchmark.project_key,
@@ -2017,16 +2064,13 @@ def _bind_run_config_to_manifest(
     run_spec_sha256: str,
     run_spec: dict[str, Any],
     manifest_created_at: str,
-    telemetry_schema_version: int,
 ) -> None:
-    """Add the manifest-derived portion of a schema-v3 run configuration."""
+    """Add immutable manifest identity to the schema-v1 run metadata."""
     run_config.update(
         {
             "run_id": run_id,
             "run_spec_sha256": run_spec_sha256,
             "run_created_at_utc": manifest_created_at,
-            "storage_schema_version": 1,
-            "telemetry_schema_version": telemetry_schema_version,
             "agent_version_resolver_contract_version": 1,
             "selected_example_scope_sha256": run_spec["scope"]["content_sha256"],
         }
@@ -2048,104 +2092,17 @@ def _bind_run_config_to_manifest(
             },
             "harness": {
                 "execution_contract_version": run_spec["execution_contract_version"],
-                "result_schema_version": 3,
-                "telemetry_schema_version": telemetry_schema_version,
+                "eval_schema_version": 1,
             },
         }
     )
 
 
-def _build_results(
+def _build_examples(
     results: list[_ExampleEvalResult], *, profile: EvaluationProfile
 ) -> list[dict[str, Any]]:
     output: list[dict[str, Any]] = []
     for result in results:
-        runs: list[dict[str, Any]] = []
-        for attempt in result.attempts:
-            fields: dict[str, Any] = {}
-            for field in profile.output_fields:
-                applicable = field.key in attempt.applicable_fields
-                evaluation = attempt.evaluations.get(field.key)
-                expected: JsonScalar = None
-                expected_found = False
-                if applicable and field.evaluation is not None:
-                    expected_found, expected = read_path(
-                        result.example.approved_label_payload,
-                        field.evaluation.benchmark_label_path,
-                    )
-                fields[field.key] = {
-                    "applicable": applicable,
-                    "graded": field.evaluation is not None,
-                    "expected": expected if expected_found else None,
-                    "actual": attempt.actual_values.get(field.key),
-                    "confidence": attempt.confidence_values.get(field.key),
-                    "correct": evaluation.correct if evaluation is not None else None,
-                    "grader": (
-                        {
-                            "id": evaluation.grader_id,
-                            "version": evaluation.grader_version,
-                            "config": evaluation.grader_config,
-                        }
-                        if evaluation is not None
-                        else None
-                    ),
-                    "normalized_expected": (
-                        evaluation.normalized_expected
-                        if evaluation is not None
-                        else None
-                    ),
-                    "normalized_actual": (
-                        evaluation.normalized_actual if evaluation is not None else None
-                    ),
-                    "details": evaluation.details if evaluation is not None else {},
-                }
-            runs.append(
-                {
-                    "run_index": attempt.metadata.get("run_index"),
-                    "work_item_id": attempt.metadata.get("work_item_id"),
-                    "execution_id": attempt.metadata.get("execution_id"),
-                    "execution_generation": attempt.metadata.get(
-                        "execution_generation"
-                    ),
-                    "invocation_id": attempt.metadata.get("invocation_id"),
-                    "agent_version_id": attempt.metadata.get("agent_version_id"),
-                    "agent_version_manifest_sha256": attempt.metadata.get(
-                        "agent_version_manifest_sha256"
-                    ),
-                    "started_at_utc": attempt.metadata.get("started_at_utc"),
-                    "completed_at_utc": attempt.metadata.get("completed_at_utc"),
-                    "execution_history": attempt.metadata.get("execution_history", []),
-                    "execution_status": attempt.execution_status.value,
-                    "output_contract_status": attempt.output_contract_status.value,
-                    "scoring_status": attempt.scoring_status.value,
-                    "complete_evaluation_correct": (
-                        attempt.complete_evaluation_correct
-                    ),
-                    "fields": fields,
-                    "actual_outputs": attempt.actual_values,
-                    "contract_errors": list(attempt.contract_errors),
-                    "agent_output": attempt.get_artifact("agent_output"),
-                    "output_observations": attempt.get_artifact("output_observations"),
-                    "failure_type": (
-                        attempt.failure_type.value
-                        if attempt.failure_type is not None
-                        else None
-                    ),
-                    "error": attempt.error,
-                    "failure_details": attempt.get_artifact("failure_details"),
-                    "duration_seconds": attempt.duration_seconds,
-                    "stage_durations_seconds": attempt.stage_durations_seconds,
-                    "usage": attempt.get_artifact("usage"),
-                    "retry_telemetry": attempt.get_artifact("retry_telemetry"),
-                    "cost": attempt.get_artifact("cost")
-                    or {
-                        "status": "unavailable",
-                        "actual": None,
-                        "estimated": None,
-                        "reason": "Provider cost telemetry is not available.",
-                    },
-                }
-            )
         output.append(
             {
                 "example_id": result.example.example_id,
@@ -2155,7 +2112,6 @@ def _build_results(
                 "label_schema_version_id": result.example.label_schema_version_id,
                 "benchmark_labels": result.example.approved_label_payload,
                 "slice_keys": list(result.slice_keys),
-                "runs": runs,
                 "metadata": result.example.example_metadata,
             }
         )

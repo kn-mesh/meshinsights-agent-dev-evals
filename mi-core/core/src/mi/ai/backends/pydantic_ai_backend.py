@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import base64
+from contextvars import ContextVar
+from datetime import datetime, timezone
 import functools
 import inspect
 import os
-from typing import Any, TypeVar, get_type_hints
+import time
+from typing import Any, TypeVar, cast, get_type_hints
 
 import httpx
 from pydantic import BaseModel
@@ -29,7 +32,12 @@ from pydantic_ai.retries import (
 )
 from pydantic_ai.tools import Tool as PydanticTool
 from pydantic_ai.usage import RunUsage, UsageLimits
-from tenacity import retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from mi.ai.backends.base import (
     AIBackend,
@@ -53,6 +61,120 @@ from mi.ai.tools import Tool, ToolSet, normalize_tool_output
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
 
+_TRANSPORT_OBSERVATION_CONTEXT: ContextVar[dict[str, Any] | None] = ContextVar(
+    "mi_ai_transport_observation_context", default=None
+)
+
+
+class _ObservedAsyncTenacityTransport(AsyncTenacityTransport):
+    """Record each HTTP transport attempt when this adapter owns the transport."""
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        attempt_number = 0
+
+        @retry(**cast(Any, self.config))
+        async def execute(req: httpx.Request) -> httpx.Response:
+            nonlocal attempt_number
+            attempt_number += 1
+            started = time.monotonic()
+            response: httpx.Response | None = None
+            try:
+                response = await self.wrapped.handle_async_request(req)
+                response.request = req
+                if self.validate_response:
+                    try:
+                        self.validate_response(response)
+                    except Exception:
+                        await response.aclose()
+                        raise
+                self._record_attempt(
+                    request=req,
+                    response=response,
+                    error=None,
+                    attempt_number=attempt_number,
+                    duration_seconds=time.monotonic() - started,
+                )
+                return response
+            except Exception as error:
+                self._record_attempt(
+                    request=req,
+                    response=response,
+                    error=error,
+                    attempt_number=attempt_number,
+                    duration_seconds=time.monotonic() - started,
+                )
+                raise
+
+        return await execute(request)
+
+    @staticmethod
+    def _record_attempt(
+        *,
+        request: httpx.Request,
+        response: httpx.Response | None,
+        error: Exception | None,
+        attempt_number: int,
+        duration_seconds: float,
+    ) -> None:
+        context = _TRANSPORT_OBSERVATION_CONTEXT.get()
+        if context is None:
+            return
+        status_code = response.status_code if response is not None else None
+        response_headers = response.headers if response is not None else {}
+        context["attempts"].append(
+            {
+                "attempt_number": attempt_number,
+                "duration_seconds": duration_seconds,
+                "terminal_status": "succeeded" if error is None else "failed",
+                "retry_category": _transport_retry_category(error, status_code),
+                "status_code": status_code,
+                "configured_request_timeout_seconds": context.get("timeout_seconds"),
+                "provider_request_id": next(
+                    (
+                        response_headers.get(name)
+                        for name in (
+                            "x-request-id",
+                            "apim-request-id",
+                            "request-id",
+                            "x-ms-request-id",
+                        )
+                        if response_headers.get(name)
+                    ),
+                    None,
+                ),
+                "client_request_id": next(
+                    (
+                        request.headers.get(name)
+                        for name in ("x-ms-client-request-id", "x-request-id")
+                        if request.headers.get(name)
+                    ),
+                    None,
+                ),
+                "error_type": type(error).__name__ if error is not None else None,
+                "error": str(error)[:1000] if error is not None else None,
+            }
+        )
+
+
+def _transport_retry_category(
+    error: Exception | None, status_code: int | None
+) -> str | None:
+    if error is None:
+        return None
+    if status_code == 429:
+        return "rate_limit"
+    if status_code is not None and status_code >= 500:
+        return "server_error"
+    if status_code is not None:
+        return "http_status"
+    if isinstance(error, httpx.TimeoutException):
+        return "timeout"
+    if isinstance(error, httpx.ConnectError):
+        return "connection"
+    if isinstance(error, httpx.TransportError):
+        return "transport"
+    return "unknown"
+
 
 class PydanticAIBackend(AIBackend):
     """Executes mi.ai requests via pydantic-ai."""
@@ -66,6 +188,11 @@ class PydanticAIBackend(AIBackend):
     def run_workflow(
         self, request: WorkflowRequest[OutputT]
     ) -> WorkflowResult[OutputT]:
+        operation_started = time.monotonic()
+        operation_started_at = datetime.now(timezone.utc).isoformat(
+            timespec="microseconds"
+        )
+        model_calls: list[dict[str, Any]] = []
         model, settings_id = self._resolve_model(
             request.model.provider,
             request.model.model,
@@ -103,11 +230,54 @@ class PydanticAIBackend(AIBackend):
             response = None
             raw_text = None
             try:
-                response = model_request_sync(
-                    model=model,
-                    messages=[request_message],
-                    model_settings=model_settings,
-                    model_request_parameters=params,
+                call_started = time.monotonic()
+                call_started_at = datetime.now(timezone.utc).isoformat(
+                    timespec="microseconds"
+                )
+                transport_context = {
+                    "attempts": [],
+                    "timeout_seconds": request.timeout,
+                }
+                transport_attempts: list[dict[str, Any]] = []
+                transport_token = _TRANSPORT_OBSERVATION_CONTEXT.set(transport_context)
+                try:
+                    try:
+                        response = model_request_sync(
+                            model=model,
+                            messages=[request_message],
+                            model_settings=model_settings,
+                            model_request_parameters=params,
+                        )
+                    finally:
+                        transport_attempts = list(transport_context["attempts"])
+                        _TRANSPORT_OBSERVATION_CONTEXT.reset(transport_token)
+                except Exception as call_error:
+                    model_calls.append(
+                        self._model_call_performance(
+                            sequence=len(model_calls) + 1,
+                            output_attempt=attempt + 1,
+                            started_at_utc=call_started_at,
+                            duration_seconds=time.monotonic() - call_started,
+                            status="failed",
+                            timeout_seconds=request.timeout,
+                            transport_attempts_configured=request.transport_retries,
+                            transport_attempts=transport_attempts,
+                            error=call_error,
+                        )
+                    )
+                    raise
+                model_calls.append(
+                    self._model_call_performance(
+                        sequence=len(model_calls) + 1,
+                        output_attempt=attempt + 1,
+                        started_at_utc=call_started_at,
+                        duration_seconds=time.monotonic() - call_started,
+                        status="completed",
+                        timeout_seconds=request.timeout,
+                        transport_attempts_configured=request.transport_retries,
+                        transport_attempts=transport_attempts,
+                        response=response,
+                    )
                 )
                 usage = self._combine_usage(
                     usage,
@@ -130,6 +300,12 @@ class PydanticAIBackend(AIBackend):
                 return WorkflowResult(
                     output=output,
                     usage=usage,
+                    performance=self._operation_performance(
+                        kind="workflow",
+                        started_at_utc=operation_started_at,
+                        duration_seconds=time.monotonic() - operation_started,
+                        model_calls=model_calls,
+                    ),
                     review=(
                         {
                             "request": workflow_request_review(request),
@@ -158,15 +334,24 @@ class PydanticAIBackend(AIBackend):
                         }
                     )
                 if attempt >= request.output_retries:
+                    performance = self._operation_performance(
+                        kind="workflow",
+                        started_at_utc=operation_started_at,
+                        duration_seconds=time.monotonic() - operation_started,
+                        model_calls=model_calls,
+                    )
                     if request.capture_review:
-                        raise AIReviewError(
+                        error = AIReviewError(
                             str(exc),
                             review={
                                 "request": workflow_request_review(request),
                                 "validation_attempts": validation_attempts,
                                 "capture_status": "partial",
                             },
-                        ) from exc
+                        )
+                        setattr(error, "performance", performance)
+                        raise error from exc
+                    setattr(exc, "performance", performance)
                     raise
         raise (
             last_exc
@@ -177,6 +362,10 @@ class PydanticAIBackend(AIBackend):
     def run_agent(
         self, request: AgentRequest[OutputT], *, deps: Any | None = None
     ) -> AgentResult[OutputT]:
+        operation_started = time.monotonic()
+        operation_started_at = datetime.now(timezone.utc).isoformat(
+            timespec="microseconds"
+        )
         model, settings_id = self._resolve_model(
             request.model.provider,
             request.model.model,
@@ -223,18 +412,43 @@ class PydanticAIBackend(AIBackend):
             end_strategy="early",
         )
 
+        transport_context = {"attempts": [], "timeout_seconds": request.timeout}
+        transport_attempts: list[dict[str, Any]] = []
+        transport_token = _TRANSPORT_OBSERVATION_CONTEXT.set(transport_context)
         try:
-            result = agent.run_sync(
-                self._build_user_content(request.user_message),
-                deps=deps,
-                usage_limits=self._build_usage_limits(
-                    request.usage_limits,
-                    default_request_limit=request.max_turns,
-                ),
-            )
+            try:
+                result = agent.run_sync(
+                    self._build_user_content(request.user_message),
+                    deps=deps,
+                    usage_limits=self._build_usage_limits(
+                        request.usage_limits,
+                        default_request_limit=request.max_turns,
+                    ),
+                )
+            finally:
+                transport_attempts = list(transport_context["attempts"])
+                _TRANSPORT_OBSERVATION_CONTEXT.reset(transport_token)
         except Exception as error:
+            performance = self._operation_performance(
+                kind="agent",
+                started_at_utc=operation_started_at,
+                duration_seconds=time.monotonic() - operation_started,
+                model_calls=[
+                    self._model_call_performance(
+                        sequence=1,
+                        output_attempt=None,
+                        started_at_utc=operation_started_at,
+                        duration_seconds=time.monotonic() - operation_started,
+                        status="failed",
+                        timeout_seconds=request.timeout,
+                        transport_attempts_configured=request.transport_retries,
+                        transport_attempts=transport_attempts,
+                        error=error,
+                    )
+                ],
+            )
             if request.capture_review:
-                raise AIReviewError(
+                review_error = AIReviewError(
                     str(error),
                     review={
                         "request": agent_request_review(request),
@@ -243,9 +457,13 @@ class PydanticAIBackend(AIBackend):
                         "error_type": type(error).__name__,
                         "error": str(error),
                     },
-                ) from error
+                )
+                setattr(review_error, "performance", performance)
+                raise review_error from error
+            setattr(error, "performance", performance)
             raise
         usage = result.usage
+        duration_seconds = time.monotonic() - operation_started
         return AgentResult(
             output=result.output,
             usage=AIUsage(
@@ -255,6 +473,25 @@ class PydanticAIBackend(AIBackend):
                 cached_input_tokens=getattr(usage, "cache_read_tokens", 0) or 0,
                 reasoning_tokens=self._reasoning_tokens(getattr(usage, "details", {})),
                 tool_calls=getattr(usage, "tool_calls", 0) or 0,
+            ),
+            performance=self._operation_performance(
+                kind="agent",
+                started_at_utc=operation_started_at,
+                duration_seconds=duration_seconds,
+                model_calls=[
+                    self._model_call_performance(
+                        sequence=1,
+                        output_attempt=None,
+                        started_at_utc=operation_started_at,
+                        duration_seconds=duration_seconds,
+                        status="completed",
+                        timeout_seconds=request.timeout,
+                        transport_attempts_configured=request.transport_retries,
+                        transport_attempts=transport_attempts,
+                        response=result,
+                        observed_model_requests=usage.requests,
+                    )
+                ],
             ),
             review=(
                 {
@@ -269,6 +506,60 @@ class PydanticAIBackend(AIBackend):
                 else {}
             ),
         )
+
+    @staticmethod
+    def _operation_performance(
+        *,
+        kind: str,
+        started_at_utc: str,
+        duration_seconds: float,
+        model_calls: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        return {
+            "schema_version": 1,
+            "kind": kind,
+            "started_at_utc": started_at_utc,
+            "duration_seconds": duration_seconds,
+            "model_calls": list(model_calls),
+        }
+
+    @staticmethod
+    def _model_call_performance(
+        *,
+        sequence: int,
+        output_attempt: int | None,
+        started_at_utc: str,
+        duration_seconds: float,
+        status: str,
+        timeout_seconds: float | None,
+        transport_attempts_configured: int,
+        transport_attempts: list[dict[str, Any]] | None = None,
+        response: Any | None = None,
+        error: Exception | None = None,
+        observed_model_requests: int = 1,
+    ) -> dict[str, Any]:
+        return {
+            "sequence": sequence,
+            "output_attempt": output_attempt,
+            "started_at_utc": started_at_utc,
+            "duration_seconds": duration_seconds,
+            "status": status,
+            "timeout_seconds": timeout_seconds,
+            "duration_exceeded_configured_timeout": (
+                timeout_seconds is not None and duration_seconds > timeout_seconds
+            ),
+            "transport_attempts_configured": transport_attempts_configured,
+            "transport_attempts_observed": (
+                len(transport_attempts) if transport_attempts else None
+            ),
+            "transport_attempts": list(transport_attempts or []),
+            "observed_model_requests": observed_model_requests,
+            "provider_response_id": (
+                getattr(response, "response_id", None) if response is not None else None
+            ),
+            "error_type": type(error).__name__ if error is not None else None,
+            "error": str(error) if error is not None else None,
+        }
 
     def _resolve_model(
         self,
@@ -547,7 +838,7 @@ class PydanticAIBackend(AIBackend):
         if attempts < 1:
             raise ValueError("Transport retry attempts must be at least 1")
 
-        return AsyncTenacityTransport(
+        return _ObservedAsyncTenacityTransport(
             config=RetryConfig(
                 retry=retry_if_exception_type(
                     (httpx.TransportError, httpx.HTTPStatusError)

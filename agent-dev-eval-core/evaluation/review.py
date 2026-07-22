@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import shutil
 import tempfile
+import threading
 from typing import Any, Literal
 from urllib.parse import parse_qsl, urlsplit, urlunsplit
 
@@ -19,7 +20,9 @@ from evaluation.identity import canonical_sha256
 from evaluation.security import is_sensitive_key
 
 
-CaptureStatus = Literal["complete", "partial", "failed", "purged"]
+CaptureStatus = Literal["in_progress", "complete", "partial", "failed", "purged"]
+
+_MAX_FAILURE_OBSERVATIONS = 100
 
 _SENSITIVE_QUERY_KEYS = frozenset(
     {
@@ -85,8 +88,10 @@ class LocalReviewStore:
         self.index_path = self.review_dir / "index.json"
         self.executions_dir = self.review_dir / "executions"
         self.objects_dir = self.review_dir / "objects" / "sha256"
+        self.staging_dir = self.review_dir / ".staging"
         self.diagnosis_dir = self.run_dir / "diagnosis"
         self.purge_staging_dir = self.run_dir / ".review.purge-in-progress"
+        self._capture_lock = threading.RLock()
 
     def initialize(self, *, run_spec_sha256: str, mode: str = "full") -> Path:
         """Create or validate the local-only capture descriptor."""
@@ -101,7 +106,7 @@ class LocalReviewStore:
             "publication": "local_only",
             "redaction_policy": "core.secrets-v1",
             "inline_text_bytes": self.inline_text_bytes,
-            "status": "complete",
+            "status": "in_progress",
             "created_at_utc": utc_now(),
             "updated_at_utc": utc_now(),
             "execution_counts": {
@@ -112,6 +117,9 @@ class LocalReviewStore:
             "object_count": 0,
             "logical_bytes": 0,
             "stored_bytes": 0,
+            "expected_execution_ids": [],
+            "capture_failure_count": 0,
+            "capture_failures": [],
         }
         if self.capture_path.exists():
             existing = self._read_json(self.capture_path)
@@ -141,8 +149,16 @@ class LocalReviewStore:
                     raise ReviewStoreError(
                         f"Review capture descriptor conflicts at {key!r}."
                     )
+            existing["status"] = "in_progress"
+            existing["updated_at_utc"] = utc_now()
+            existing.setdefault("expected_execution_ids", [])
+            existing.setdefault("capture_failure_count", 0)
+            existing.setdefault("capture_failures", [])
+            self._atomic_write_json(self.capture_path, existing)
+            self._discard_staging()
             return self.capture_path
         self._atomic_write_json(self.capture_path, payload)
+        self._discard_staging()
         return self.capture_path
 
     def commit_execution(self, manifest: dict[str, Any]) -> Path:
@@ -162,27 +178,143 @@ class LocalReviewStore:
         if status not in {"complete", "partial", "failed"}:
             raise ReviewStoreError(f"Invalid execution capture status: {status}.")
 
-        safe_payload = self._externalize(self._redact(manifest))
-        unsigned = {
-            "review_schema_version": self.schema_version,
-            **safe_payload,
-        }
-        unsigned.pop("manifest_sha256", None)
-        encoded = {**unsigned, "manifest_sha256": canonical_sha256(unsigned)}
         path = (
             self.executions_dir
-            / work_item_id[:2]
+            / self._safe_token(work_item_id)[:2]
             / f"{self._safe_token(execution_id)}.json"
         )
         self._assert_within_review(path)
-        if path.exists():
-            existing = self._read_json(path)
-            if existing != encoded:
-                raise ReviewStoreError(f"Conflicting execution review manifest: {path}")
-        else:
-            self._write_json_create(path, encoded)
-        self._refresh_capture_status()
+        self.staging_dir.mkdir(parents=True, exist_ok=True)
+        transaction = Path(tempfile.mkdtemp(prefix="execution-", dir=self.staging_dir))
+        staged_objects = transaction / "objects" / "sha256"
+        published: list[Path] = []
+        try:
+            safe_payload = self._externalize(
+                self._redact(manifest), object_root=staged_objects
+            )
+            unsigned = {
+                "review_schema_version": self.schema_version,
+                **safe_payload,
+            }
+            unsigned.pop("manifest_sha256", None)
+            encoded = {**unsigned, "manifest_sha256": canonical_sha256(unsigned)}
+            staged_manifest = transaction / "manifest.json"
+            self._write_json_create(staged_manifest, encoded)
+
+            # The manifest is the commit point. Objects are promoted under the same
+            # process lock and rolled back if publishing the manifest fails.
+            with self._capture_lock:
+                if path.exists():
+                    existing = self._read_json(path)
+                    if existing != encoded:
+                        raise ReviewStoreError(
+                            f"Conflicting execution review manifest: {path}"
+                        )
+                else:
+                    try:
+                        for staged in sorted(staged_objects.glob("*/*")):
+                            destination = (
+                                self.objects_dir / staged.parent.name / staged.name
+                            )
+                            self._assert_within_review(destination)
+                            if destination.exists():
+                                if (
+                                    hashlib.sha256(destination.read_bytes()).hexdigest()
+                                    != staged.name
+                                ):
+                                    raise ReviewStoreError(
+                                        f"Review object digest mismatch: {destination}"
+                                    )
+                            else:
+                                destination.parent.mkdir(parents=True, exist_ok=True)
+                                os.replace(staged, destination)
+                                published.append(destination)
+                        self._write_bytes_create(path, staged_manifest.read_bytes())
+                    except BaseException:
+                        for object_path in published:
+                            object_path.unlink(missing_ok=True)
+                        raise
+                self._refresh_capture_progress()
+        finally:
+            shutil.rmtree(transaction, ignore_errors=True)
         return path
+
+    def record_failure(
+        self,
+        *,
+        execution_id: str,
+        work_item_id: str,
+        error: BaseException,
+    ) -> None:
+        """Record a bounded, redacted capture failure without failing the eval."""
+        self._safe_token(execution_id)
+        self._safe_token(work_item_id)
+        observation = self._redact(
+            {
+                "execution_id": execution_id,
+                "work_item_id": work_item_id,
+                "error_type": type(error).__name__,
+                "reason": str(error)[:1000],
+                "observed_at_utc": utc_now(),
+            }
+        )
+        with self._capture_lock:
+            capture = self._read_json(self.capture_path)
+            failures = list(capture.get("capture_failures", []))
+            failures = [
+                item for item in failures if item.get("execution_id") != execution_id
+            ]
+            failures.append(observation)
+            capture["capture_failures"] = failures[-_MAX_FAILURE_OBSERVATIONS:]
+            capture["capture_failure_count"] = max(
+                int(capture.get("capture_failure_count", 0)) + 1,
+                len(capture["capture_failures"]),
+            )
+            capture["status"] = "in_progress"
+            capture["updated_at_utc"] = utc_now()
+            self._atomic_write_json(self.capture_path, capture)
+
+    def finalize(self, *, expected_execution_ids: list[str]) -> dict[str, Any]:
+        """Finalize capture against the durable executions that should be reviewable."""
+        expected = sorted({self._safe_token(item) for item in expected_execution_ids})
+        with self._capture_lock:
+            capture = self._read_json(self.capture_path)
+            capture["expected_execution_ids"] = expected
+            summary = self._derive_capture_summary(
+                capture, expected_execution_ids=expected
+            )
+            if summary.get("status") == "complete":
+                capture.pop("review_unavailable_reason", None)
+            capture.update(summary)
+            capture["updated_at_utc"] = utc_now()
+            self._atomic_write_json(self.capture_path, capture)
+            return capture
+
+    def capture_summary(
+        self, *, expected_execution_ids: list[str] | None = None
+    ) -> dict[str, Any]:
+        """Return a status derived from evidence, never merely a stored status string."""
+        self._validate_run_dir()
+        if not self.capture_path.exists():
+            return {
+                "status": "absent",
+                "mode": "off",
+                "review_unavailable_reason": {"code": "absent"},
+            }
+        capture = self._read_json(self.capture_path)
+        if capture.get("status") == "purged":
+            return {
+                **capture,
+                "review_unavailable_reason": {"code": "purged"},
+            }
+        expected = expected_execution_ids
+        if expected is None:
+            raw_expected = capture.get("expected_execution_ids", [])
+            expected = [str(item) for item in raw_expected if isinstance(item, str)]
+        return {
+            **capture,
+            **self._derive_capture_summary(capture, expected_execution_ids=expected),
+        }
 
     def read_execution(
         self,
@@ -290,9 +422,37 @@ class LocalReviewStore:
         references = list(self._local_references(manifests))
         for reference in references:
             self._read_local_object(reference)
+        referenced_paths = {str(item["relative_path"]) for item in references}
+        object_paths = self._object_paths()
+        stored_paths = {
+            path.relative_to(self.review_dir).as_posix() for path in object_paths
+        }
+        orphaned = sorted(stored_paths - referenced_paths)
+        if orphaned:
+            raise ReviewStoreError(
+                f"Orphaned review objects found: {', '.join(orphaned[:5])}"
+            )
+        if self.staging_dir.exists() and any(self.staging_dir.iterdir()):
+            raise ReviewStoreError("Unfinished review capture staging content exists.")
+        derived = self._derive_capture_summary(
+            capture,
+            expected_execution_ids=[
+                str(item) for item in capture.get("expected_execution_ids", [])
+            ],
+            preserve_in_progress=capture.get("status") == "in_progress",
+        )
+        for key in (
+            "status",
+            "execution_counts",
+            "object_count",
+            "logical_bytes",
+            "stored_bytes",
+        ):
+            if capture.get(key) != derived.get(key):
+                raise ReviewStoreError(f"Capture descriptor mismatch at {key!r}.")
         return {
             "run_id": self.run_id,
-            "status": capture.get("status"),
+            "status": derived.get("status"),
             "execution_manifests": len(manifests),
             "local_references": len(references),
             "unique_local_objects": len(
@@ -371,42 +531,66 @@ class LocalReviewStore:
         if not self.purge_staging_dir.exists():
             return
         if self.purge_staging_dir.is_symlink():
-            raise ReviewStoreError("Review purge staging directory must not be a symlink.")
+            raise ReviewStoreError(
+                "Review purge staging directory must not be a symlink."
+            )
         if self.review_dir.exists():
             raise ReviewStoreError(
                 "Both review and purge staging directories exist; refusing recovery."
             )
         os.replace(self.purge_staging_dir, self.review_dir)
 
-    def _externalize(self, value: Any, *, key: str | None = None) -> Any:
+    def _externalize(
+        self,
+        value: Any,
+        *,
+        key: str | None = None,
+        object_root: Path,
+    ) -> Any:
         if isinstance(value, dict):
             base64_data = value.get("base64_data")
+            is_pydantic_binary = False
             if base64_data is None and value.get("kind") == "binary":
                 base64_data = value.get("data")
+                is_pydantic_binary = True
             media_type = value.get("media_type")
             if isinstance(base64_data, str) and isinstance(media_type, str):
                 try:
-                    content = base64.b64decode(base64_data, validate=True)
+                    content = base64.b64decode(
+                        base64_data,
+                        altchars=b"-_" if is_pydantic_binary else None,
+                        validate=True,
+                    )
                 except (ValueError, binascii.Error) as error:
                     raise ReviewStoreError("Invalid base64 review artifact.") from error
                 return self._store_object(
                     content,
                     media_type=media_type,
                     artifact_kind=str(value.get("kind", key or "binary")),
+                    object_root=object_root,
                 )
             return {
-                str(item_key): self._externalize(item, key=str(item_key))
+                str(item_key): self._externalize(
+                    item, key=str(item_key), object_root=object_root
+                )
                 for item_key, item in value.items()
             }
         if isinstance(value, list):
-            return [self._externalize(item, key=key) for item in value]
+            return [
+                self._externalize(item, key=key, object_root=object_root)
+                for item in value
+            ]
         if isinstance(value, tuple):
-            return [self._externalize(item, key=key) for item in value]
+            return [
+                self._externalize(item, key=key, object_root=object_root)
+                for item in value
+            ]
         if isinstance(value, bytes):
             return self._store_object(
                 value,
                 media_type="application/octet-stream",
                 artifact_kind=key or "binary",
+                object_root=object_root,
             )
         if (
             isinstance(value, str)
@@ -417,6 +601,7 @@ class LocalReviewStore:
                 value.encode("utf-8"),
                 media_type="text/plain; charset=utf-8",
                 artifact_kind=key or "text",
+                object_root=object_root,
             )
         return value
 
@@ -426,9 +611,10 @@ class LocalReviewStore:
         *,
         media_type: str,
         artifact_kind: str,
+        object_root: Path,
     ) -> dict[str, Any]:
         digest = hashlib.sha256(content).hexdigest()
-        path = self.objects_dir / digest[:2] / digest
+        path = object_root / digest[:2] / digest
         self._assert_within_review(path)
         if path.exists():
             if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
@@ -442,7 +628,9 @@ class LocalReviewStore:
             "artifact_kind": artifact_kind,
             "logical_bytes": len(content),
             "stored_bytes": len(content),
-            "relative_path": path.relative_to(self.review_dir).as_posix(),
+            "relative_path": (
+                Path("objects") / "sha256" / digest[:2] / digest
+            ).as_posix(),
             "redaction_status": "checked",
         }
 
@@ -490,37 +678,82 @@ class LocalReviewStore:
         if expected != canonical_sha256(unsigned):
             raise ReviewStoreError(f"Invalid review manifest hash: {path}")
 
-    def _refresh_capture_status(self) -> None:
+    def _refresh_capture_progress(self) -> None:
         if not self.capture_path.exists():
             return
         capture = self._read_json(self.capture_path)
+        capture.update(self._derive_capture_summary(capture, preserve_in_progress=True))
+        capture["updated_at_utc"] = utc_now()
+        self._atomic_write_json(self.capture_path, capture)
+
+    def _derive_capture_summary(
+        self,
+        capture: dict[str, Any],
+        *,
+        expected_execution_ids: list[str] | None = None,
+        preserve_in_progress: bool = False,
+    ) -> dict[str, Any]:
         manifests = self.iter_execution_manifests()
         statuses = [str(item.get("capture_status", "failed")) for item in manifests]
-        object_paths = (
+        manifest_ids = {str(item.get("execution_id", "")) for item in manifests}
+        expected = set(expected_execution_ids or ())
+        missing = sorted(expected - manifest_ids)
+        if preserve_in_progress:
+            status = "in_progress"
+        elif expected:
+            if not manifests:
+                status = "failed"
+            elif not missing and all(item == "complete" for item in statuses):
+                status = "complete"
+            else:
+                status = "partial"
+        elif statuses:
+            status = (
+                "failed"
+                if all(item == "failed" for item in statuses)
+                else "partial"
+                if any(item != "complete" for item in statuses)
+                else "complete"
+            )
+        else:
+            status = (
+                "in_progress" if capture.get("status") == "in_progress" else "failed"
+            )
+        object_paths = self._object_paths()
+        result: dict[str, Any] = {
+            "status": status,
+            "execution_counts": {
+                key: statuses.count(key) for key in ("complete", "partial", "failed")
+            },
+            "expected_execution_count": len(expected),
+            "captured_execution_count": len(manifests),
+            "missing_execution_count": len(missing),
+            "missing_execution_ids": missing[:_MAX_FAILURE_OBSERVATIONS],
+            "object_count": len(object_paths),
+            "logical_bytes": sum(path.stat().st_size for path in object_paths),
+            "stored_bytes": sum(path.stat().st_size for path in object_paths),
+        }
+        if status != "complete":
+            result["review_unavailable_reason"] = {
+                "code": ("capture_failed" if status == "failed" else "capture_partial")
+            }
+        else:
+            result.pop("review_unavailable_reason", None)
+        return result
+
+    def _object_paths(self) -> list[Path]:
+        return (
             [path for path in self.objects_dir.glob("*/*") if path.is_file()]
             if self.objects_dir.exists()
             else []
         )
-        capture.update(
-            {
-                "status": (
-                    "failed"
-                    if statuses and all(item == "failed" for item in statuses)
-                    else "partial"
-                    if any(item != "complete" for item in statuses)
-                    else "complete"
-                ),
-                "updated_at_utc": utc_now(),
-                "execution_counts": {
-                    key: statuses.count(key)
-                    for key in ("complete", "partial", "failed")
-                },
-                "object_count": len(object_paths),
-                "logical_bytes": sum(path.stat().st_size for path in object_paths),
-                "stored_bytes": sum(path.stat().st_size for path in object_paths),
-            }
-        )
-        self._atomic_write_json(self.capture_path, capture)
+
+    def _discard_staging(self) -> None:
+        self._assert_within_review(self.staging_dir)
+        if self.staging_dir.is_symlink():
+            raise ReviewStoreError("Review staging directory must not be a symlink.")
+        if self.staging_dir.exists():
+            shutil.rmtree(self.staging_dir)
 
     def _redact(self, value: Any, *, key: str | None = None) -> Any:
         if isinstance(value, dict):
@@ -545,16 +778,16 @@ class LocalReviewStore:
                 if _EMBEDDED_SECRET_VALUE.search(value):
                     return {"redacted": True, "reason": "embedded_secret"}
                 return value
-            query_keys = {
-                item_key.lower() for item_key, _ in parse_qsl(parsed.query)
-            }
+            query_keys = {item_key.lower() for item_key, _ in parse_qsl(parsed.query)}
             has_embedded_credentials = parsed.username is not None
             has_sensitive_query = bool(query_keys.intersection(_SENSITIVE_QUERY_KEYS))
             is_named_url = bool(
                 key and self._normalized_key(key).endswith(("url", "uri"))
             )
-            if parsed.scheme and parsed.netloc and (
-                has_embedded_credentials or has_sensitive_query or is_named_url
+            if (
+                parsed.scheme
+                and parsed.netloc
+                and (has_embedded_credentials or has_sensitive_query or is_named_url)
             ):
                 hostname = parsed.hostname or ""
                 if ":" in hostname and not hostname.startswith("["):

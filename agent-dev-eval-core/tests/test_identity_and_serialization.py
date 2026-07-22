@@ -12,6 +12,7 @@ from evaluation import (
     build_work_item_id,
     canonical_sha256,
     eval_attempt_from_dict,
+    eval_attempt_performance_to_dict,
     eval_attempt_to_dict,
 )
 
@@ -54,3 +55,41 @@ def test_eval_attempt_round_trip_preserves_typed_state() -> None:
     )
 
     assert eval_attempt_from_dict(eval_attempt_to_dict(attempt)) == attempt
+
+
+def test_eval_and_performance_serialization_have_disjoint_retention_boundaries() -> (
+    None
+):
+    attempt = EvalAttempt(
+        execution_status=ExecutionStatus.COMPLETED,
+        output_contract_status=OutputContractStatus.VALID,
+        scoring_status=ScoringStatus.NO_APPLICABLE_TARGETS,
+        actual_values={"answer": 3},
+        duration_seconds=12.5,
+        stage_durations_seconds={"retrieve": 2.0, "process": 10.5},
+        artifacts={
+            "agent_output": {"answer": 3},
+            "usage": {"input_tokens": 100, "output_tokens": 20},
+            "retry_telemetry": {"observed_model_requests": 2},
+            "performance": {
+                "model_calls": [{"duration_seconds": 9.5, "status": "completed"}]
+            },
+        },
+    )
+
+    durable = eval_attempt_to_dict(attempt)
+    performance = eval_attempt_performance_to_dict(attempt)
+
+    assert "duration_seconds" not in durable
+    assert "stage_durations_seconds" not in durable
+    assert durable["artifacts"] == {
+        "agent_output": {"answer": 3},
+        "usage": {"input_tokens": 100, "output_tokens": 20},
+    }
+    assert performance == {
+        "schema_version": 1,
+        "duration_seconds": 12.5,
+        "stage_durations_seconds": {"retrieve": 2.0, "process": 10.5},
+        "retry_telemetry": {"observed_model_requests": 2},
+        "backend": {"model_calls": [{"duration_seconds": 9.5, "status": "completed"}]},
+    }

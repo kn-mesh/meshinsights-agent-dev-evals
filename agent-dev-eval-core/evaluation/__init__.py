@@ -61,7 +61,11 @@ from evaluation.review import (
     benchmark_source_reference,
 )
 from evaluation.explorer import AttemptQuery, query_attempt_rows
-from evaluation.serialization import eval_attempt_from_dict, eval_attempt_to_dict
+from evaluation.serialization import (
+    eval_attempt_from_dict,
+    eval_attempt_performance_to_dict,
+    eval_attempt_to_dict,
+)
 from evaluation.security import is_sensitive_key, is_sensitive_path
 
 __all__ = [
@@ -104,6 +108,7 @@ __all__ = [
     "canonical_json_bytes",
     "canonical_sha256",
     "eval_attempt_from_dict",
+    "eval_attempt_performance_to_dict",
     "eval_attempt_to_dict",
     "extract_output_fields",
     "group_metric_counts",

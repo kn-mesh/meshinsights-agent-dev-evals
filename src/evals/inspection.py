@@ -9,6 +9,7 @@ from typing import Any
 from evaluation import LocalReviewStore, ReviewStoreError, canonical_sha256
 
 from src.evals.result_integrity import ResultIntegrityError, load_verified_result
+from src.evals.run_store import LocalRunStore
 
 
 def find_run_directory(run_id: str, *, root: Path = Path("eval_results")) -> Path:
@@ -30,15 +31,26 @@ def find_run_directory(run_id: str, *, root: Path = Path("eval_results")) -> Pat
 
 
 def materialize_review_index(run_dir: Path) -> Path:
-    """Join compact schema-v3 rows to retained review execution manifests."""
+    """Join schema-v1 eval rows to retained review execution manifests."""
     store = _store(run_dir)
     result = _verified_result(run_dir)
+    run_store = LocalRunStore(run_dir, run_id=run_dir.name)
+    eval_rows = run_store.evaluation_rows()
+    expected_execution_ids = [
+        str(item["execution_id"]) for item in run_store.read_attempt_records()
+    ]
+    capture = store.capture_summary(expected_execution_ids=expected_execution_ids)
+    failures = {
+        str(item.get("execution_id")): item
+        for item in capture.get("capture_failures", [])
+        if isinstance(item, dict)
+    }
     manifests = {
         str(item["execution_id"]): item for item in store.iter_execution_manifests()
     }
-    unstable_examples = _unstable_examples(result)
+    unstable_examples = _unstable_examples(eval_rows)
     rows: list[dict[str, Any]] = []
-    for example in result.get("results", []):
+    for example in eval_rows:
         if not isinstance(example, dict):
             continue
         for run in example.get("runs", []):
@@ -46,6 +58,13 @@ def materialize_review_index(run_dir: Path) -> Path:
                 continue
             execution_id = str(run.get("execution_id", ""))
             review = manifests.get(execution_id)
+            unavailable_reason = (
+                None
+                if review
+                else _review_unavailable_reason(
+                    capture, failure=failures.get(execution_id)
+                )
+            )
             rows.append(
                 {
                     "example_id": example.get("example_id"),
@@ -63,17 +82,17 @@ def materialize_review_index(run_dir: Path) -> Path:
                     "complete_evaluation_correct": run.get(
                         "complete_evaluation_correct"
                     ),
-                    "fields": run.get("fields", {}),
-                    "actual_outputs": run.get("actual_outputs", {}),
+                    "evaluations": run.get("evaluations", {}),
+                    "agent_output": run.get("agent_output"),
                     "failure_type": run.get("failure_type"),
                     "error": run.get("error"),
-                    "duration_seconds": run.get("duration_seconds"),
                     "usage": run.get("usage"),
                     "cost": run.get("cost"),
                     "flaky": example.get("example_id") in unstable_examples,
                     "review_status": (
                         review.get("capture_status") if review else "unavailable"
                     ),
+                    "review_unavailable_reason": unavailable_reason,
                     "review_sections": (
                         sorted(
                             key
@@ -101,9 +120,7 @@ def materialize_review_index(run_dir: Path) -> Path:
         )
     )
     payload = {
-        "result_schema_version": result.get("run_config", {}).get(
-            "eval_result_schema_version"
-        ),
+        "result_schema_version": result.get("schema_version"),
         "result_sha256": canonical_sha256(result),
         "row_count": len(rows),
         "rows": rows,
@@ -117,15 +134,17 @@ def inspection_summary(run_dir: Path) -> dict[str, Any]:
     result = _verified_result(run_dir)
     index = _ensure_index(run_dir)
     rows = index["rows"]
-    capture = (
-        _read_object(store.capture_path)
-        if store.capture_path.exists()
-        else {"status": "absent", "mode": "off"}
-    )
+    expected_execution_ids = [
+        str(item["execution_id"])
+        for item in LocalRunStore(
+            run_dir.resolve(), run_id=run_dir.resolve().name
+        ).read_attempt_records()
+    ]
+    capture = store.capture_summary(expected_execution_ids=expected_execution_ids)
     return {
         "run_id": store.run_id,
-        "run_config": {
-            key: result.get("run_config", {}).get(key)
+        "run": {
+            key: result.get("run", {}).get(key)
             for key in (
                 "agent_version",
                 "benchmark_key",
@@ -264,13 +283,13 @@ def _store(run_dir: Path) -> LocalReviewStore:
     return LocalReviewStore(run_dir, run_id=run_dir.name)
 
 
-def _unstable_examples(result: dict[str, Any]) -> set[str]:
+def _unstable_examples(rows: list[dict[str, Any]]) -> set[str]:
     unstable: set[str] = set()
-    for example in result.get("results", []):
+    for example in rows:
         if not isinstance(example, dict):
             continue
         outputs = {
-            canonical_sha256(run.get("actual_outputs", {}))
+            canonical_sha256(run.get("agent_output") or {})
             for run in example.get("runs", [])
             if isinstance(run, dict) and run.get("scoring_status") == "scored"
         }
@@ -287,6 +306,27 @@ def _read_object(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ReviewStoreError(f"Inspection JSON must be an object: {path}")
     return payload
+
+
+def _review_unavailable_reason(
+    capture: dict[str, Any], *, failure: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    if failure is not None:
+        return {
+            "code": "capture_failed",
+            "error_type": failure.get("error_type"),
+            "message": failure.get("reason"),
+        }
+    status = str(capture.get("status", "absent"))
+    if status == "purged":
+        return {"code": "purged"}
+    if capture.get("mode") == "off":
+        return {"code": "disabled" if status != "absent" else "absent"}
+    if status == "failed":
+        return {"code": "capture_failed"}
+    if status in {"partial", "in_progress"}:
+        return {"code": "capture_partial"}
+    return {"code": "absent"}
 
 
 def _verified_result(run_dir: Path) -> dict[str, Any]:

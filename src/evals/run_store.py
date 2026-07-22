@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import replace
 from datetime import datetime, timezone
 import fcntl
 import json
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
     from src.evals.evaluation_profile import EvaluationProfile
 
 from evaluation import (
+    build_performance_summary,
     build_run_identity,
     build_work_item_id,
     canonical_json_bytes,
@@ -48,7 +50,7 @@ def new_invocation_id() -> str:
 
 
 class LocalRunStore:
-    """Append-only attempt generations plus a materialized result view."""
+    """Tracked evaluation evidence plus disposable performance observations."""
 
     def __init__(self, run_dir: Path, *, run_id: str) -> None:
         self.run_dir = run_dir
@@ -56,8 +58,11 @@ class LocalRunStore:
         self.manifest_path = run_dir / "manifest.json"
         self.result_path = run_dir / "result.json"
         self.attempts_dir = run_dir / "attempts"
-        self.invocations_dir = run_dir / "invocations"
-        self.lock_path = run_dir / ".coordinator.lock"
+        self.performance_dir = run_dir / "performance"
+        self.performance_attempts_dir = self.performance_dir / "attempts"
+        self.performance_summary_path = self.performance_dir / "summary.json"
+        self.invocations_dir = self.performance_dir / "invocations"
+        self.lock_path = self.performance_dir / ".coordinator.lock"
 
     def initialize(self, manifest: dict[str, Any]) -> dict[str, Any]:
         """Create an immutable manifest or validate the existing identity."""
@@ -107,6 +112,7 @@ class LocalRunStore:
     def coordinator_lock(self, *, invocation_id: str) -> Iterator[None]:
         """Allow one local coordinator for a deterministic run."""
         self.run_dir.mkdir(parents=True, exist_ok=True)
+        self.lock_path.parent.mkdir(parents=True, exist_ok=True)
         with self.lock_path.open("a+", encoding="utf-8") as lock_file:
             try:
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -158,6 +164,8 @@ class LocalRunStore:
 
     def commit_attempt(self, record: dict[str, Any]) -> Path:
         """Exclusively persist one immutable terminal execution generation."""
+        if record.get("schema_version") != 1:
+            raise RunStoreIntegrityError("Attempt record schema must be v1.")
         if record.get("run_id") != self.run_id:
             raise RunStoreIntegrityError("Attempt record has the wrong run id.")
         work_item_id = str(record.get("work_item_id", ""))
@@ -177,13 +185,6 @@ class LocalRunStore:
         expected_execution_id = f"{work_item_id}.{generation}"
         if record.get("execution_id") != expected_execution_id:
             raise RunStoreIntegrityError("Attempt execution identity is invalid.")
-        agent = self.read_manifest()["run_spec"].get("agent", {})
-        if record.get("agent_version_id") != agent.get(
-            "agent_version_id"
-        ) or record.get("agent_version_manifest_sha256") != agent.get(
-            "manifest_sha256"
-        ):
-            raise RunStoreIntegrityError("Attempt agent-version identity is invalid.")
         unsigned = dict(record)
         supplied_hash = unsigned.pop("record_sha256", None)
         actual_hash = canonical_sha256(unsigned)
@@ -205,6 +206,67 @@ class LocalRunStore:
                 )
         return path
 
+    def performance_attempt_path(self, *, work_item_id: str, generation: int) -> Path:
+        if generation < 1:
+            raise ValueError("Performance generation must be at least 1.")
+        return (
+            self.performance_attempts_dir
+            / work_item_id[:2]
+            / f"{work_item_id}.{generation}.json"
+        )
+
+    def commit_performance(self, record: dict[str, Any]) -> Path:
+        """Persist disposable performance evidence for one execution generation."""
+        if record.get("schema_version") != 1:
+            raise RunStoreIntegrityError("Performance record schema must be v1.")
+        if record.get("run_id") != self.run_id:
+            raise RunStoreIntegrityError("Performance record has the wrong run id.")
+        work_item_id = str(record.get("work_item_id", ""))
+        generation = int(record.get("generation", 0))
+        if record.get("execution_id") != f"{work_item_id}.{generation}":
+            raise RunStoreIntegrityError("Performance execution identity is invalid.")
+        unsigned = dict(record)
+        supplied_hash = unsigned.pop("record_sha256", None)
+        actual_hash = canonical_sha256(unsigned)
+        if supplied_hash not in {None, actual_hash}:
+            raise RunStoreIntegrityError("Performance record hash is invalid.")
+        encoded = {**unsigned, "record_sha256": actual_hash}
+        path = self.performance_attempt_path(
+            work_item_id=work_item_id,
+            generation=generation,
+        )
+        try:
+            _write_json_create(path, encoded)
+        except FileExistsError:
+            if canonical_json_bytes(_read_json(path)) != canonical_json_bytes(encoded):
+                raise RunStoreIntegrityError(f"Conflicting performance record: {path}")
+        return path
+
+    def read_performance_records(self) -> tuple[dict[str, Any], ...]:
+        records: list[dict[str, Any]] = []
+        if not self.performance_attempts_dir.exists():
+            return ()
+        for path in sorted(self.performance_attempts_dir.glob("*/*.json")):
+            record = _read_json(path)
+            unsigned = dict(record)
+            expected = unsigned.pop("record_sha256", None)
+            if (
+                record.get("schema_version") != 1
+                or record.get("run_id") != self.run_id
+                or expected != canonical_sha256(unsigned)
+            ):
+                raise RunStoreIntegrityError(f"Invalid performance record: {path}")
+            records.append(record)
+        return tuple(
+            sorted(
+                records,
+                key=lambda item: (
+                    str(item["work_item_id"]),
+                    int(item["generation"]),
+                ),
+            )
+        )
+
     def read_attempt_records(self) -> tuple[dict[str, Any], ...]:
         records: list[dict[str, Any]] = []
         if not self.attempts_dir.exists():
@@ -217,15 +279,8 @@ class LocalRunStore:
             expected = unsigned.pop("record_sha256", None)
             if record.get("run_id") != self.run_id:
                 raise RunStoreIntegrityError(f"Wrong run id in attempt: {path}")
-            agent = manifest["run_spec"].get("agent", {})
-            if record.get("agent_version_id") != agent.get(
-                "agent_version_id"
-            ) or record.get("agent_version_manifest_sha256") != agent.get(
-                "manifest_sha256"
-            ):
-                raise RunStoreIntegrityError(
-                    f"Attempt agent-version identity mismatch: {path}"
-                )
+            if record.get("schema_version") != 1:
+                raise RunStoreIntegrityError(f"Wrong attempt schema: {path}")
             plan_item = planned.get(record.get("work_item_id"))
             if plan_item is None:
                 raise RunStoreIntegrityError(f"Unplanned work item in attempt: {path}")
@@ -334,7 +389,7 @@ class LocalRunStore:
         completed_at_utc: str,
         latest_invocation_id: str,
     ) -> Path:
-        """Build and atomically replace the canonical schema-v3 result view."""
+        """Build and atomically replace the canonical schema-v1 eval summary."""
         payload = self.build_result(
             completed_at_utc=completed_at_utc,
             latest_invocation_id=latest_invocation_id,
@@ -356,9 +411,11 @@ class LocalRunStore:
 
     def _validate_result(self, payload: dict[str, Any]) -> None:
         """Require the canonical view of the manifest and latest attempts."""
-        config = payload.get("run_config")
+        if payload.get("schema_version") != 1:
+            raise RunStoreIntegrityError("Evaluation result schema must be v1.")
+        config = payload.get("run")
         if not isinstance(config, dict):
-            raise RunStoreIntegrityError("Evaluation result is missing run_config.")
+            raise RunStoreIntegrityError("Evaluation result is missing run metadata.")
         completed_at_utc = config.get("completed_at_utc")
         latest_invocation_id = config.get("latest_invocation_id")
         if not isinstance(completed_at_utc, str) or not completed_at_utc:
@@ -384,20 +441,42 @@ class LocalRunStore:
         completed_at_utc: str,
         latest_invocation_id: str,
     ) -> dict[str, Any]:
-        """Rebuild schema-v3 output from immutable run contracts and attempts."""
-        manifest = self.read_manifest()
-        contract = manifest.get("result_materialization")
-        if not isinstance(contract, dict) or contract.get("contract_version") != 1:
-            raise RunStoreIntegrityError(
-                "Run manifest is missing its result materialization contract."
-            )
-        expected_config = dict(contract.get("run_config", {}))
+        """Rebuild the compact schema-v1 summary from tracked eval evidence."""
+        state = self._evaluation_state()
+        expected_config = state["run"]
         expected_config["completed_at_utc"] = completed_at_utc
         expected_config["latest_invocation_id"] = latest_invocation_id
-        if not any(self.invocations_dir.glob(f"{latest_invocation_id}.*.json")):
+
+        # Lazy import avoids the orchestration -> comparison -> integrity cycle.
+        from src.evals.eval_orchestration import _build_summary
+
+        return {
+            "schema_version": 1,
+            "summary": _build_summary(
+                state["summary_rows"],
+                profile=cast("EvaluationProfile", state["profile"]),
+                runs_per_example=int(expected_config["runs_per_example"]),
+            ),
+            "run": expected_config,
+            "artifacts": {
+                "manifest": "manifest.json",
+                "agent_version": "agent-version.json",
+                "attempts": "attempts/",
+            },
+        }
+
+    def evaluation_rows(self) -> list[dict[str, Any]]:
+        """Return an on-demand detailed eval view without persisting duplication."""
+        return list(self._evaluation_state()["rows"])
+
+    def _evaluation_state(self) -> dict[str, Any]:
+        manifest = self.read_manifest()
+        contract = manifest.get("eval_contract")
+        if not isinstance(contract, dict) or contract.get("schema_version") != 1:
             raise RunStoreIntegrityError(
-                "Evaluation result references an unknown invocation."
+                "Run manifest is missing its schema-v1 eval contract."
             )
+        expected_config = dict(contract.get("run", {}))
 
         histories = self.records_by_work_item()
         plans = list(manifest.get("work_items", []))
@@ -407,17 +486,11 @@ class LocalRunStore:
                 "A complete result requires a latest attempt for every planned work item."
             )
 
-        static_rows = contract.get("result_rows")
-        selected = contract.get("selected_example_ids")
+        static_rows = contract.get("examples")
         fields = contract.get("output_fields")
-        if (
-            not isinstance(static_rows, list)
-            or not isinstance(selected, list)
-            or not isinstance(fields, list)
-        ):
-            raise RunStoreIntegrityError(
-                "Result materialization contract is malformed."
-            )
+        if not isinstance(static_rows, list) or not isinstance(fields, list):
+            raise RunStoreIntegrityError("Eval contract is malformed.")
+        selected = [str(row["example_id"]) for row in static_rows]
         rows_by_example = {str(row["example_id"]): dict(row) for row in static_rows}
         attempts_by_example: dict[str, list[Any]] = {}
         for plan in plans:
@@ -433,7 +506,7 @@ class LocalRunStore:
             row = rows_by_example[str(example_id)]
             attempts = attempts_by_example.get(str(example_id), [])
             row["runs"] = [
-                _materialized_attempt(attempt, row=row, field_contracts=fields)
+                _materialized_attempt(attempt, field_contracts=fields)
                 for attempt in attempts
             ]
             expected_rows.append(row)
@@ -457,22 +530,74 @@ class LocalRunStore:
                 SimpleNamespace(key=str(key)) for key in contract.get("slice_keys", [])
             ),
         )
-        # Lazy import avoids the orchestration -> comparison -> integrity cycle.
-        from src.evals.eval_orchestration import _build_summary
-
         return {
-            "summary": _build_summary(
-                summary_rows,
-                profile=cast("EvaluationProfile", summary_profile),
-                runs_per_example=int(expected_config["runs_per_example"]),
+            "run": expected_config,
+            "rows": expected_rows,
+            "summary_rows": summary_rows,
+            "profile": summary_profile,
+        }
+
+    def materialize_performance(self) -> Path | None:
+        """Build a disposable schema-v1 performance summary when traces exist."""
+        performance_records = self.read_performance_records()
+        if not performance_records:
+            return None
+        durable = {
+            (str(item["work_item_id"]), int(item["generation"])): item
+            for item in self.read_attempt_records()
+        }
+        attempts: list[Any] = []
+        model_calls: list[dict[str, Any]] = []
+        for record in performance_records:
+            key = (str(record["work_item_id"]), int(record["generation"]))
+            durable_record = durable.get(key)
+            if durable_record is None:
+                continue
+            metrics = dict(record.get("metrics", {}))
+            attempt = eval_attempt_from_dict(durable_record["attempt"])
+            artifacts = dict(attempt.artifacts)
+            retry = metrics.get("retry_telemetry")
+            if isinstance(retry, dict):
+                artifacts["retry_telemetry"] = retry
+            attempt = replace(
+                attempt,
+                duration_seconds=float(metrics.get("duration_seconds", 0.0)),
+                stage_durations_seconds={
+                    str(name): float(value)
+                    for name, value in dict(
+                        metrics.get("stage_durations_seconds", {})
+                    ).items()
+                },
+                artifacts=artifacts,
+            )
+            attempts.append(attempt)
+            for call in _collect_model_calls(metrics.get("backend")):
+                model_calls.append(
+                    {
+                        "work_item_id": record["work_item_id"],
+                        "execution_id": record["execution_id"],
+                        "generation": record["generation"],
+                        **call,
+                    }
+                )
+
+        from src.evals.eval_orchestration import _build_retry_summary
+
+        payload = {
+            "schema_version": 1,
+            "run_id": self.run_id,
+            "summary": build_performance_summary(
+                attempts,
                 evaluation_wall_time_seconds=(
                     self.execution_invocation_wall_time_seconds()
                 ),
             ),
-            "run_config": expected_config,
-            "selected_example_ids": selected,
-            "results": expected_rows,
+            "retries": _build_retry_summary(attempts),
+            "model_calls": _duration_summary(model_calls),
+            "recorded_executions": len(performance_records),
         }
+        _write_json_atomic(self.performance_summary_path, payload)
+        return self.performance_summary_path
 
 
 def _attempt_metadata(
@@ -486,10 +611,6 @@ def _attempt_metadata(
         "execution_id": latest["execution_id"],
         "execution_generation": int(latest["generation"]),
         "invocation_id": latest["invocation_id"],
-        "agent_version_id": latest["agent_version_id"],
-        "agent_version_manifest_sha256": latest["agent_version_manifest_sha256"],
-        "started_at_utc": latest["started_at_utc"],
-        "completed_at_utc": latest["completed_at_utc"],
         "execution_history": [
             {
                 "execution_id": record["execution_id"],
@@ -508,35 +629,17 @@ def _attempt_metadata(
 def _materialized_attempt(
     attempt: Any,
     *,
-    row: dict[str, Any],
     field_contracts: list[dict[str, Any]],
 ) -> dict[str, Any]:
     fields: dict[str, Any] = {}
     for contract in field_contracts:
         key = str(contract["key"])
         evaluation = attempt.evaluations.get(key)
-        expected = None
-        if key in attempt.applicable_fields and contract.get("graded"):
-            expected = _read_path(
-                row.get("benchmark_labels", {}),
-                contract.get("benchmark_label_path") or (),
-            )
         fields[key] = {
             "applicable": key in attempt.applicable_fields,
             "graded": bool(contract.get("graded")),
-            "expected": expected,
-            "actual": attempt.actual_values.get(key),
             "confidence": attempt.confidence_values.get(key),
             "correct": evaluation.correct if evaluation is not None else None,
-            "grader": (
-                {
-                    "id": evaluation.grader_id,
-                    "version": evaluation.grader_version,
-                    "config": evaluation.grader_config,
-                }
-                if evaluation is not None
-                else None
-            ),
             "normalized_expected": (
                 evaluation.normalized_expected if evaluation is not None else None
             ),
@@ -552,27 +655,17 @@ def _materialized_attempt(
         "execution_id": metadata.get("execution_id"),
         "execution_generation": metadata.get("execution_generation"),
         "invocation_id": metadata.get("invocation_id"),
-        "agent_version_id": metadata.get("agent_version_id"),
-        "agent_version_manifest_sha256": metadata.get("agent_version_manifest_sha256"),
-        "started_at_utc": metadata.get("started_at_utc"),
-        "completed_at_utc": metadata.get("completed_at_utc"),
-        "execution_history": metadata.get("execution_history", []),
         "execution_status": attempt.execution_status.value,
         "output_contract_status": attempt.output_contract_status.value,
         "scoring_status": attempt.scoring_status.value,
         "complete_evaluation_correct": attempt.complete_evaluation_correct,
-        "fields": fields,
-        "actual_outputs": attempt.actual_values,
+        "evaluations": fields,
         "contract_errors": list(attempt.contract_errors),
         "agent_output": attempt.get_artifact("agent_output"),
-        "output_observations": attempt.get_artifact("output_observations"),
         "failure_type": attempt.failure_type.value if attempt.failure_type else None,
         "error": attempt.error,
         "failure_details": attempt.get_artifact("failure_details"),
-        "duration_seconds": attempt.duration_seconds,
-        "stage_durations_seconds": attempt.stage_durations_seconds,
         "usage": attempt.get_artifact("usage"),
-        "retry_telemetry": attempt.get_artifact("retry_telemetry"),
         "cost": attempt.get_artifact("cost")
         or {
             "status": "unavailable",
@@ -583,13 +676,88 @@ def _materialized_attempt(
     }
 
 
-def _read_path(payload: Any, path: Any) -> Any:
-    current = payload
-    for part in path:
-        if not isinstance(current, dict) or part not in current:
+def _collect_model_calls(value: Any) -> list[dict[str, Any]]:
+    output: list[dict[str, Any]] = []
+    if isinstance(value, dict):
+        calls = value.get("model_calls")
+        if isinstance(calls, list):
+            output.extend(item for item in calls if isinstance(item, dict))
+        for item in value.values():
+            output.extend(_collect_model_calls(item))
+    elif isinstance(value, list):
+        for item in value:
+            output.extend(_collect_model_calls(item))
+    return output
+
+
+def _duration_summary(calls: list[dict[str, Any]]) -> dict[str, Any]:
+    durations = sorted(
+        float(item["duration_seconds"])
+        for item in calls
+        if isinstance(item.get("duration_seconds"), (int, float))
+        and not isinstance(item.get("duration_seconds"), bool)
+    )
+    statuses: dict[str, int] = {}
+    duration_exceeded_timeout = 0
+    retry_categories: dict[str, int] = {}
+    for item in calls:
+        status = str(item.get("status", "unknown"))
+        statuses[status] = statuses.get(status, 0) + 1
+        if item.get("duration_exceeded_configured_timeout") is True:
+            duration_exceeded_timeout += 1
+        attempts = item.get("transport_attempts")
+        for attempt in attempts if isinstance(attempts, list) else []:
+            if not isinstance(attempt, dict):
+                continue
+            category = attempt.get("retry_category")
+            if isinstance(category, str):
+                retry_categories[category] = retry_categories.get(category, 0) + 1
+
+    def percentile(fraction: float) -> float | None:
+        if not durations:
             return None
-        current = current[part]
-    return current
+        index = min(len(durations) - 1, int((len(durations) - 1) * fraction + 0.5))
+        return durations[index]
+
+    p95 = percentile(0.95)
+    return {
+        "count": len(calls),
+        "status_counts": dict(sorted(statuses.items())),
+        "duration_exceeded_configured_timeout_count": duration_exceeded_timeout,
+        "transport_retry_categories": dict(sorted(retry_categories.items())),
+        "long_tail_at_or_above_p95_count": (
+            sum(value >= p95 for value in durations) if p95 is not None else 0
+        ),
+        "duration_seconds": {
+            "minimum": durations[0] if durations else None,
+            "median": percentile(0.5),
+            "p95": p95,
+            "maximum": durations[-1] if durations else None,
+        },
+        "slowest": sorted(
+            (
+                {
+                    key: item.get(key)
+                    for key in (
+                        "work_item_id",
+                        "execution_id",
+                        "generation",
+                        "sequence",
+                        "duration_seconds",
+                        "status",
+                        "timeout_seconds",
+                        "duration_exceeded_configured_timeout",
+                        "transport_attempts_observed",
+                        "provider_response_id",
+                        "error_type",
+                    )
+                }
+                for item in calls
+            ),
+            key=lambda item: float(item.get("duration_seconds") or 0.0),
+            reverse=True,
+        )[:10],
+    }
 
 
 def _record_state(record: dict[str, Any] | None) -> str:

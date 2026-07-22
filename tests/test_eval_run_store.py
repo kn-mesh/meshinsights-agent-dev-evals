@@ -17,9 +17,8 @@ def _manifest() -> dict[str, object]:
         run_id=run_id, item_id="example-a", attempt_index=1
     )
     return {
-        "storage_schema_version": 1,
-        "result_schema_version": 3,
-        "telemetry_schema_version": 1,
+        "schema_version": 1,
+        "performance_schema_version": 1,
         "coordinator_scope": "local_single_host",
         "run_id": run_id,
         "run_spec_sha256": digest,
@@ -42,7 +41,7 @@ def _attempt_record(
     work_item_id = work_item["work_item_id"]  # type: ignore[index]
     healthy = status == "completed"
     return {
-        "attempt_record_schema_version": 1,
+        "schema_version": 1,
         "run_id": manifest["run_id"],
         "work_item_id": work_item_id,
         "example_id": "example-a",
@@ -50,9 +49,6 @@ def _attempt_record(
         "execution_id": f"{work_item_id}.1",
         "generation": 1,
         "invocation_id": "inv_a",
-        "started_at_utc": "2026-01-01T00:00:00+00:00",
-        "completed_at_utc": "2026-01-01T00:00:01+00:00",
-        "executor_duration_seconds": 1.0,
         "attempt": {
             "execution_status": "completed" if healthy else "failed",
             "output_contract_status": "valid" if healthy else "not_produced",
@@ -90,7 +86,7 @@ def test_store_rejects_conflicting_immutable_generation(tmp_path: Path) -> None:
     record = _attempt_record(manifest, status="failed")
     store.commit_attempt(record)  # type: ignore[arg-type]
     conflicting = dict(record)
-    conflicting["executor_duration_seconds"] = 2.0
+    conflicting["invocation_id"] = "inv_conflict"
 
     with pytest.raises(RunStoreIntegrityError, match="Conflicting immutable"):
         store.commit_attempt(conflicting)  # type: ignore[arg-type]

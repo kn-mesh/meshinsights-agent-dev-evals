@@ -73,7 +73,7 @@ def _matches(row: dict[str, Any], query: AttemptQuery) -> bool:
         and row.get("review_status") != "unavailable"
     ):
         return False
-    if query.field and query.field not in (row.get("fields") or {}):
+    if query.field and query.field not in (row.get("evaluations") or {}):
         return False
     if query.slice_key and query.slice_key not in (row.get("slice_keys") or []):
         return False
@@ -89,7 +89,7 @@ def _search_text(row: dict[str, Any]) -> str:
         row.get("unit_id"),
         row.get("execution_id"),
         row.get("benchmark_labels"),
-        row.get("actual_outputs"),
+        row.get("agent_output"),
         row.get("failure_type"),
         row.get("error"),
     )
@@ -98,7 +98,7 @@ def _search_text(row: dict[str, Any]) -> str:
 
 def _facets(rows: list[dict[str, Any]]) -> dict[str, Any]:
     fields = sorted(
-        {str(field) for row in rows for field in (row.get("fields") or {}).keys()}
+        {str(field) for row in rows for field in (row.get("evaluations") or {}).keys()}
     )
     slices = sorted({str(key) for row in rows for key in (row.get("slice_keys") or [])})
     return {

@@ -1,4 +1,4 @@
-"""Integrity checks for materialized schema-v3 evaluation results."""
+"""Integrity checks for compact schema-v1 evaluation results."""
 
 from __future__ import annotations
 

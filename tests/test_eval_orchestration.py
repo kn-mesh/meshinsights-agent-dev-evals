@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import base64
 from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import shutil
 from typing import Any
 
 from mi.core.pipeline_receipt import PipelineReceipt, StageReceipt
@@ -24,6 +26,7 @@ from src.benchmarks import (
 )
 from src.evals import eval_orchestration
 from src.evals.result_integrity import ResultIntegrityError, load_verified_result
+from src.evals.run_store import LocalRunStore
 
 
 PROFILE_PATH = Path("evaluation_configs/spirax-failure-evaluation.eval.yaml")
@@ -143,6 +146,7 @@ def _receipt(
     classification: str = "Failure",
     root_cause: str | None = "Closed Failure",
     confidence: str | None = "High",
+    execution_review: dict[str, Any] | None = None,
 ) -> PipelineReceipt:
     classification_payload: dict[str, Any] = {"value": classification}
     if confidence is not None:
@@ -156,7 +160,16 @@ def _receipt(
     return PipelineReceipt(
         pipeline_id="test",
         retrieve_receipt=StageReceipt("retrieve", True, 0.1),
-        process_receipt=StageReceipt("process", True, 0.2),
+        process_receipt=StageReceipt(
+            "process",
+            True,
+            0.2,
+            metadata=(
+                {"execution_review": execution_review}
+                if execution_review is not None
+                else {}
+            ),
+        ),
         act_receipt=StageReceipt(
             "act",
             True,
@@ -219,6 +232,19 @@ def _run(
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _run_dir(root: Path) -> Path:
+    return next(root.glob("**/runs/eval_*"))
+
+
+def _rows(root: Path) -> list[dict[str, Any]]:
+    run_dir = _run_dir(root)
+    return LocalRunStore(run_dir, run_id=run_dir.name).evaluation_rows()
+
+
+def _performance(root: Path) -> dict[str, Any]:
+    return json.loads((_run_dir(root) / "performance" / "summary.json").read_text())
+
+
 class _ExplodingGrader:
     grader_id = "test.exploding"
     grader_version = 1
@@ -233,7 +259,7 @@ class _ExplodingGrader:
         raise RuntimeError("simulated grader defect")
 
 
-def test_run_eval_writes_schema_v3_full_labels_and_generic_metrics(
+def test_run_eval_writes_schema_v1_tracked_results_and_split_performance(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     benchmark = _benchmark()
@@ -246,23 +272,24 @@ def test_run_eval_writes_schema_v3_full_labels_and_generic_metrics(
         configuration_dimensions={"prompt_revision": 7, "feature_set": "base"},
     )
 
-    assert list(payload) == ["summary", "run_config", "selected_example_ids", "results"]
-    assert payload["run_config"]["eval_result_schema_version"] == 3
-    assert payload["run_config"]["evaluation_profile"]["profile_id"] == (
+    assert list(payload) == ["schema_version", "summary", "run", "artifacts"]
+    assert payload["schema_version"] == 1
+    assert payload["run"]["schema_version"] == 1
+    assert payload["run"]["evaluation_profile"]["profile_id"] == (
         "spirax-failure-evaluation"
     )
-    dimensions = payload["run_config"]["dimensions"]
+    dimensions = payload["run"]["dimensions"]
     assert dimensions["agent"]["agent_version_id"].startswith("av_")
     assert dimensions["agent"]["manifest_sha256"]
     assert dimensions["agent"]["legacy_label"] == "spirax-v1.3"
-    assert payload["run_config"]["agent_version"] == {
+    assert payload["run"]["agent_version"] == {
         key: value
         for key, value in dimensions["agent"].items()
         if key != "legacy_label"
     }
-    assert payload["run_config"]["benchmark_name"] == "Phase 1 Benchmark"
-    assert payload["run_config"]["benchmark_source_state_sha256"] == "d" * 64
-    assert payload["run_config"]["selected_example_scope_sha256"]
+    assert payload["run"]["benchmark_name"] == "Phase 1 Benchmark"
+    assert payload["run"]["benchmark_source_state_sha256"] == "d" * 64
+    assert payload["run"]["selected_example_scope_sha256"]
     assert dimensions["model"]["id"] == "azure:gpt-5.6-luna"
     assert dimensions["pipeline"]["content_sha256"]
     assert dimensions["configuration"] == {
@@ -277,18 +304,17 @@ def test_run_eval_writes_schema_v3_full_labels_and_generic_metrics(
     assert payload["summary"]["accuracy"]["by_field"]["root_cause"]["accuracy"] == 1.0
     assert payload["summary"]["reliability"]["output_contract_validity_rate"] == 1.0
     assert payload["summary"]["scoring_coverage"]["coverage"] == 1.0
-    result = payload["results"][0]
+    assert "performance" not in payload["summary"]
+    assert "retries" not in payload["summary"]
+    result = _rows(tmp_path)[0]
     assert result["benchmark_labels"]["review_notes"].startswith("Useful context")
     assert set(result["slice_keys"]) == {"expected-failure", "closed-failure"}
-    assert result["runs"][0]["fields"]["classification"]["grader"] == {
-        "id": "core.exact",
-        "version": 1,
-        "config": {},
-    }
-    assert (
-        result["runs"][0]["agent_version_id"] == dimensions["agent"]["agent_version_id"]
-    )
-    run_dir = next(tmp_path.glob("**/runs/eval_*"))
+    assert result["runs"][0]["evaluations"]["classification"]["correct"] is True
+    assert result["runs"][0]["agent_output"]["classification"]["value"] == "Failure"
+    performance = _performance(tmp_path)
+    assert performance["schema_version"] == 1
+    assert performance["summary"]["stage_duration_seconds"]["process"]["count"] == 1
+    run_dir = _run_dir(tmp_path)
     capture = json.loads((run_dir / "review" / "capture.json").read_text())
     assert capture["publication"] == "local_only"
     assert capture["execution_counts"]["partial"] == 1
@@ -297,6 +323,29 @@ def test_run_eval_writes_schema_v3_full_labels_and_generic_metrics(
         json.loads(review_manifest.read_text())["source_evidence"][0]["write_access"]
         is False
     )
+
+
+def test_disposable_performance_can_be_deleted_without_invalidating_results(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    original = _run(
+        monkeypatch,
+        tmp_path,
+        benchmark,
+        [_receipt(benchmark.examples[0])],
+    )
+    run_dir = _run_dir(tmp_path)
+
+    shutil.rmtree(run_dir / "performance")
+
+    assert load_verified_result(run_dir / "result.json") == original
+    assert LocalRunStore(run_dir, run_id=run_dir.name).evaluation_rows()[0]["runs"][0][
+        "agent_output"
+    ] == {
+        "classification": {"value": "Failure", "confidence": "High"},
+        "root_cause": {"value": "Closed Failure", "confidence": "High"},
+    }
 
 
 def test_result_integrity_rejects_any_materialized_content_edit(
@@ -313,20 +362,12 @@ def test_result_integrity_rejects_any_materialized_content_edit(
     assert load_verified_result(result_path) == original
 
     mutations = (
-        lambda value: value["results"][0]["runs"].clear(),
-        lambda value: value["results"][0]["runs"][0]["fields"]["classification"].update(
-            {"correct": False}
-        ),
+        lambda value: value.update({"schema_version": 2}),
         lambda value: value["summary"]["usage"].update({"attempts_with_usage": 999}),
-        lambda value: value["run_config"]["dimensions"]["model"].update(
+        lambda value: value["run"]["dimensions"]["model"].update(
             {"id": "azure:edited"}
         ),
-        lambda value: value["results"][0]["benchmark_labels"].update(
-            {"classification": "Healthy"}
-        ),
-        lambda value: value["results"][0]["runs"][0].update(
-            {"execution_generation": 99}
-        ),
+        lambda value: value["artifacts"].update({"attempts": "edited/"}),
     )
     for mutate in mutations:
         changed = json.loads(json.dumps(original))
@@ -357,7 +398,7 @@ def test_failed_execution_is_debuggable_and_excluded_from_accuracy(
     assert payload["summary"]["reliability"]["failures_by_type"] == {
         "provider_error": 1
     }
-    failed = payload["results"][0]["runs"][1]
+    failed = _rows(tmp_path)[0]["runs"][1]
     assert failed["execution_status"] == "failed"
     assert failed["output_contract_status"] == "not_produced"
     assert failed["failure_details"]["failed_stages"][0]["stage"] == "process"
@@ -422,9 +463,89 @@ def test_review_capture_can_be_disabled_without_changing_result_contract(
     )
 
     assert payload["summary"]["scoring_coverage"]["scored_runs"] == 1
-    assert payload["run_config"]["run_id"] == captured["run_config"]["run_id"]
+    assert payload["run"]["run_id"] == captured["run"]["run_id"]
     run_dir = next((tmp_path / "off").glob("**/runs/eval_*"))
     assert not (run_dir / "review").exists()
+
+
+def test_run_eval_transactionally_captures_urlsafe_binary_review(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    binary = bytes(range(256))
+    urlsafe = base64.urlsafe_b64encode(binary).decode("ascii")
+    _run(
+        monkeypatch,
+        tmp_path,
+        benchmark,
+        [
+            _receipt(
+                benchmark.examples[0],
+                execution_review={
+                    "processors": {
+                        "classifier": {
+                            "messages": [
+                                {
+                                    "kind": "binary",
+                                    "data": urlsafe,
+                                    "media_type": "image/png",
+                                }
+                            ]
+                        }
+                    }
+                },
+            )
+        ],
+        review_capture="full",
+    )
+    run_dir = _run_dir(tmp_path)
+    capture = json.loads((run_dir / "review" / "capture.json").read_text())
+    assert capture["status"] == "complete"
+    assert capture["expected_execution_count"] == 1
+    assert capture["captured_execution_count"] == 1
+    assert (
+        next((run_dir / "review" / "objects" / "sha256").glob("*/*")).read_bytes()
+        == binary
+    )
+
+
+def test_review_capture_failure_is_nonfatal_and_finalizes_as_failed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    result = _run(
+        monkeypatch,
+        tmp_path,
+        benchmark,
+        [
+            _receipt(
+                benchmark.examples[0],
+                execution_review={
+                    "processors": {
+                        "classifier": {
+                            "messages": [
+                                {
+                                    "kind": "binary",
+                                    "data": "not***base64",
+                                    "media_type": "image/png",
+                                }
+                            ]
+                        }
+                    }
+                },
+            )
+        ],
+        review_capture="full",
+    )
+    run_dir = _run_dir(tmp_path)
+    capture = json.loads((run_dir / "review" / "capture.json").read_text())
+
+    assert result["summary"]["scoring_coverage"]["scored_runs"] == 1
+    assert capture["status"] == "failed"
+    assert capture["captured_execution_count"] == 0
+    assert capture["capture_failure_count"] == 1
+    assert capture["capture_failures"][0]["error_type"] == "ReviewStoreError"
+    assert not tuple((run_dir / "review" / "objects" / "sha256").glob("*/*"))
 
 
 @pytest.mark.parametrize("failed_stage", ["retrieve", "process", "act"])
@@ -451,17 +572,33 @@ def test_failed_execution_preserves_observed_telemetry(
             "observed_transport_attempts": None,
             "reason": "Transport retries unavailable.",
         },
+        "performance": {
+            "schema_version": 1,
+            "processors": {
+                "analysis_performance": {
+                    "schema_version": 1,
+                    "model_calls": [
+                        {
+                            "sequence": 1,
+                            "duration_seconds": 4.25,
+                            "status": "failed",
+                            "timeout_seconds": 30.0,
+                            "duration_exceeded_configured_timeout": False,
+                        }
+                    ],
+                }
+            },
+        },
     }
-    payload = _run(
+    _run(
         monkeypatch,
         tmp_path,
         benchmark,
         [_failed_receipt(stage=failed_stage, telemetry=telemetry)],
     )
 
-    failed = payload["results"][0]["runs"][0]
+    failed = _rows(tmp_path)[0]["runs"][0]
     assert failed["usage"]["requests"] == 2
-    assert failed["retry_telemetry"]["observed_tool_calls"] == 1
     assert failed["cost"] == {
         "status": "unavailable",
         "actual": None,
@@ -469,6 +606,15 @@ def test_failed_execution_preserves_observed_telemetry(
         "unpriced_usage": {},
         "reason": "No frozen pricing record is configured for this model.",
     }
+    slowest = _performance(tmp_path)["model_calls"]["slowest"][0]
+    assert slowest["work_item_id"] == failed["work_item_id"]
+    assert slowest["execution_id"] == failed["execution_id"]
+    assert slowest["generation"] == 1
+    assert slowest["duration_seconds"] == 4.25
+    performance_record = LocalRunStore(
+        _run_dir(tmp_path), run_id=_run_dir(tmp_path).name
+    ).read_performance_records()[0]
+    assert performance_record["metrics"]["retry_telemetry"]["observed_tool_calls"] == 1
 
 
 def test_repeated_scored_outputs_report_nondeterminism(
@@ -501,10 +647,9 @@ def test_partial_output_is_preserved_and_excluded_from_accuracy(
 
     assert payload["summary"]["accuracy"]["complete_evaluation"]["accuracy"] is None
     assert payload["summary"]["scoring_coverage"]["coverage"] == 0.0
-    run = payload["results"][0]["runs"][0]
+    run = _rows(tmp_path)[0]["runs"][0]
     assert run["output_contract_status"] == "invalid"
     assert run["failure_type"] == "output_partial"
-    assert run["actual_outputs"] == {"classification": "Failure"}
     assert run["agent_output"]["classification"]["value"] == "Failure"
 
 
@@ -516,10 +661,10 @@ def test_conditional_root_cause_is_not_required_or_scored_for_healthy(
     receipt = _receipt(example, classification="Healthy", root_cause=None)
     payload = _run(monkeypatch, tmp_path, benchmark, [receipt])
 
-    run = payload["results"][0]["runs"][0]
+    run = _rows(tmp_path)[0]["runs"][0]
     assert run["output_contract_status"] == "valid"
-    assert run["fields"]["root_cause"]["applicable"] is False
-    assert run["fields"]["root_cause"]["correct"] is None
+    assert run["evaluations"]["root_cause"]["applicable"] is False
+    assert run["evaluations"]["root_cause"]["correct"] is None
     assert (
         payload["summary"]["accuracy"]["by_field"]["root_cause"]["evaluated_runs"] == 0
     )
@@ -535,7 +680,7 @@ def test_generic_label_and_slice_filters_select_examples(
         root_cause="N/A",
     )
     benchmark = _benchmark(failure, healthy)
-    payload = _run(
+    _run(
         monkeypatch,
         tmp_path,
         benchmark,
@@ -544,7 +689,7 @@ def test_generic_label_and_slice_filters_select_examples(
         slice_keys=["healthy"],
     )
 
-    assert payload["selected_example_ids"] == [healthy.example_id]
+    assert [row["example_id"] for row in _rows(tmp_path)] == [healthy.example_id]
 
 
 def test_missing_example_filter_fails_before_execution(tmp_path: Path) -> None:
@@ -596,9 +741,7 @@ def test_eval_can_require_exact_promoted_agent_version(
         agent_version_store_root=version_store_root,
     )
 
-    assert (
-        payload["run_config"]["agent_version"]["lifecycle_state_at_run"] == "promoted"
-    )
+    assert payload["run"]["agent_version"]["lifecycle_state_at_run"] == "promoted"
 
 
 def test_invalid_receipt_path_fails_preflight_before_pipeline_execution(
@@ -733,9 +876,7 @@ def test_identical_run_resumes_without_duplicating_completed_work(
         runtime="serial",
         output_root=tmp_path,
     )
-    first_performance = json.loads(first.read_text(encoding="utf-8"))["summary"][
-        "performance"
-    ]
+    first_performance = _performance(tmp_path)
     second = eval_orchestration.run_eval(
         Path("pipeline_configs/v1_3.ppln"),
         evaluation_profile_path=PROFILE_PATH,
@@ -748,8 +889,8 @@ def test_identical_run_resumes_without_duplicating_completed_work(
     assert first == second
     assert calls == 1
     payload = json.loads(second.read_text(encoding="utf-8"))
-    assert payload["summary"]["performance"] == first_performance
-    materialized = eval_orchestration.run_eval(
+    assert _performance(tmp_path) == first_performance
+    eval_orchestration.run_eval(
         Path("pipeline_configs/v1_3.ppln"),
         evaluation_profile_path=PROFILE_PATH,
         benchmark_key=benchmark.benchmark_key,
@@ -758,8 +899,7 @@ def test_identical_run_resumes_without_duplicating_completed_work(
         materialize_only=True,
         output_root=tmp_path,
     )
-    materialized_payload = json.loads(materialized.read_text(encoding="utf-8"))
-    assert materialized_payload["summary"]["performance"] == first_performance
+    assert _performance(tmp_path) == first_performance
     assert calls == 1
     recovery = payload["summary"]["execution_recovery"]
     assert recovery["logical_work_items"] == 1
@@ -803,8 +943,7 @@ def test_failed_work_can_be_rerun_without_replacing_first_generation(
         runtime="serial",
         output_root=tmp_path,
     )
-    first_payload = json.loads(first.read_text(encoding="utf-8"))
-    assert first_payload["results"][0]["runs"][0]["execution_generation"] == 1
+    assert _rows(tmp_path)[0]["runs"][0]["execution_generation"] == 1
 
     second = eval_orchestration.run_eval(
         Path("pipeline_configs/v1_3.ppln"),
@@ -816,10 +955,13 @@ def test_failed_work_can_be_rerun_without_replacing_first_generation(
         output_root=tmp_path,
     )
     payload = json.loads(second.read_text(encoding="utf-8"))
-    run = payload["results"][0]["runs"][0]
+    run = _rows(tmp_path)[0]["runs"][0]
     assert first == second
     assert run["execution_generation"] == 2
-    assert [item["failure_type"] for item in run["execution_history"]] == [
+    records = LocalRunStore(
+        _run_dir(tmp_path), run_id=_run_dir(tmp_path).name
+    ).read_attempt_records()
+    assert [item["attempt"]["failure_type"] for item in records] == [
         "provider_error",
         None,
     ]
@@ -862,7 +1004,7 @@ def test_interruption_preserves_completed_work_and_resume_runs_only_missing(
             output_root=tmp_path,
         )
 
-    invocation_events = list(tmp_path.glob("**/invocations/*.json"))
+    invocation_events = list(tmp_path.glob("**/performance/invocations/*.json"))
     assert any(path.name.endswith(".interrupted.json") for path in invocation_events)
     assert not any(path.name.endswith(".failed.json") for path in invocation_events)
 

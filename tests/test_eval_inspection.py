@@ -49,30 +49,29 @@ def _run_fixture(tmp_path: Path) -> tuple[Path, str, str]:
         for index in (1, 2)
     ]
     manifest = {
+        "schema_version": 1,
+        "performance_schema_version": 1,
         "run_id": run_id,
         "run_spec_sha256": digest,
         "run_spec": run_spec,
-        "result_schema_version": 3,
         "work_items": work_items,
-        "result_materialization": {
-            "contract_version": 1,
-            "run_config": {
-                "eval_result_schema_version": 3,
+        "eval_contract": {
+            "schema_version": 1,
+            "run": {
+                "schema_version": 1,
                 "run_id": run_id,
                 "run_spec_sha256": digest,
                 "benchmark_key": "benchmark",
                 "benchmark_version_number": 1,
                 "runs_per_example": 2,
             },
-            "selected_example_ids": ["example-a"],
-            "result_rows": [
+            "examples": [
                 {
                     "example_id": "example-a",
                     "unit_id": "unit-a",
                     "decision_timestamp": "2026-01-01T00:00:00Z",
                     "benchmark_labels": {"classification": "Healthy"},
                     "slice_keys": ["priority"],
-                    "runs": [],
                 }
             ],
             "output_fields": [
@@ -108,10 +107,14 @@ def _run_fixture(tmp_path: Path) -> tuple[Path, str, str]:
             applicable_fields=("classification",),
             complete_evaluation_correct=correct,
             duration_seconds=float(index),
-            artifacts={"usage": {"input_tokens": 8 + 2 * index}},
+            artifacts={
+                "agent_output": {"classification": actual},
+                "usage": {"input_tokens": 8 + 2 * index},
+            },
         )
         run_store.commit_attempt(
             {
+                "schema_version": 1,
                 "run_id": run_id,
                 "work_item_id": work_item["work_item_id"],
                 "example_id": "example-a",
@@ -119,10 +122,6 @@ def _run_fixture(tmp_path: Path) -> tuple[Path, str, str]:
                 "execution_id": f"{work_item['work_item_id']}.1",
                 "generation": 1,
                 "invocation_id": "inv_test",
-                "agent_version_id": None,
-                "agent_version_manifest_sha256": None,
-                "started_at_utc": "2026-01-01T00:00:00+00:00",
-                "completed_at_utc": "2026-01-01T00:00:01+00:00",
                 "attempt": eval_attempt_to_dict(attempt),
             }
         )
@@ -136,65 +135,6 @@ def _run_fixture(tmp_path: Path) -> tuple[Path, str, str]:
         latest_invocation_id="inv_test",
     )
     return run_dir, run_id, digest
-
-
-def _result(*, run_id: str, run_spec_sha256: str) -> dict[str, object]:
-    work_a = build_work_item_id(run_id=run_id, item_id="example-a", attempt_index=1)
-    work_b = build_work_item_id(run_id=run_id, item_id="example-a", attempt_index=2)
-    runs = [
-        {
-            "run_index": 1,
-            "work_item_id": work_a,
-            "execution_id": f"{work_a}.1",
-            "execution_generation": 1,
-            "execution_status": "completed",
-            "output_contract_status": "valid",
-            "scoring_status": "scored",
-            "complete_evaluation_correct": True,
-            "fields": {"classification": {"correct": True}},
-            "actual_outputs": {"classification": "Healthy"},
-            "duration_seconds": 1.0,
-            "usage": {"input_tokens": 10},
-            "cost": {"status": "unavailable"},
-        },
-        {
-            "run_index": 2,
-            "work_item_id": work_b,
-            "execution_id": f"{work_b}.1",
-            "execution_generation": 1,
-            "execution_status": "completed",
-            "output_contract_status": "valid",
-            "scoring_status": "scored",
-            "complete_evaluation_correct": False,
-            "fields": {"classification": {"correct": False}},
-            "actual_outputs": {"classification": "Failure"},
-            "duration_seconds": 2.0,
-            "usage": {"input_tokens": 12},
-            "cost": {"status": "unavailable"},
-        },
-    ]
-    return {
-        "summary": {"reliability": {"planned_runs": 2}},
-        "run_config": {
-            "eval_result_schema_version": 3,
-            "run_id": run_id,
-            "run_spec_sha256": run_spec_sha256,
-            "benchmark_key": "benchmark",
-            "benchmark_version_number": 1,
-            "runs_per_example": 2,
-        },
-        "selected_example_ids": ["example-a"],
-        "results": [
-            {
-                "example_id": "example-a",
-                "unit_id": "unit-a",
-                "decision_timestamp": "2026-01-01T00:00:00Z",
-                "benchmark_labels": {"classification": "Healthy"},
-                "slice_keys": ["priority"],
-                "runs": runs,
-            }
-        ],
-    }
 
 
 def test_inspection_indexes_filters_and_resolves_one_example(
@@ -260,7 +200,7 @@ def test_inspection_rejects_changed_materialized_result(
     materialize_review_index(run_dir)
 
     changed = json.loads(json.dumps(initial))
-    changed["results"][0]["runs"][0]["complete_evaluation_correct"] = False
+    changed["summary"]["reliability"]["planned_runs"] = 999
     (run_dir / "result.json").write_text(json.dumps(changed), encoding="utf-8")
 
     with pytest.raises(ReviewStoreError, match="canonical materialization"):
@@ -270,8 +210,40 @@ def test_inspection_rejects_changed_materialized_result(
 def test_inspection_rejects_a_result_from_another_run(tmp_path: Path) -> None:
     run_dir, run_id, digest = _run_fixture(tmp_path)
     result = json.loads((run_dir / "result.json").read_text(encoding="utf-8"))
-    result["run_config"]["run_id"] = "eval_other"  # type: ignore[index]
+    result["run"]["run_id"] = "eval_other"  # type: ignore[index]
     (run_dir / "result.json").write_text(json.dumps(result), encoding="utf-8")
 
     with pytest.raises(ReviewStoreError, match="canonical materialization"):
         materialize_review_index(run_dir)
+
+
+def test_inspection_exposes_typed_review_capture_failure_reason(
+    tmp_path: Path,
+) -> None:
+    run_dir, run_id, digest = _run_fixture(tmp_path)
+    store = LocalReviewStore(run_dir, run_id=run_id)
+    store.initialize(run_spec_sha256=digest)
+    records = LocalRunStore(run_dir, run_id=run_id).read_attempt_records()
+    first = records[0]
+    store.record_failure(
+        execution_id=str(first["execution_id"]),
+        work_item_id=str(first["work_item_id"]),
+        error=ReviewStoreError("Invalid base64 review artifact."),
+    )
+    store.finalize(
+        expected_execution_ids=[str(item["execution_id"]) for item in records]
+    )
+
+    materialize_review_index(run_dir)
+    rows = list_inspection_rows(run_dir, filter_name="review-unavailable")["rows"]
+    assert len(rows) == 2
+    failed = next(
+        item for item in rows if item["execution_id"] == first["execution_id"]
+    )
+    assert failed["review_unavailable_reason"] == {
+        "code": "capture_failed",
+        "error_type": "ReviewStoreError",
+        "message": "Invalid base64 review artifact.",
+    }
+    summary = inspection_summary(run_dir)
+    assert summary["review"]["status"] == "failed"

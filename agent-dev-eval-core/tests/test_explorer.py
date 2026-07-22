@@ -20,10 +20,10 @@ def _row(
         "scoring_status": scoring,
         "review_status": review,
         "flaky": execution_id == "flaky",
-        "fields": {"classification": {"correct": correct}},
+        "evaluations": {"classification": {"correct": correct}},
         "slice_keys": ["site:north"],
         "benchmark_labels": {"classification": "failed"},
-        "actual_outputs": {"classification": "failed" if correct else "normal"},
+        "agent_output": {"classification": "failed" if correct else "normal"},
     }
 
 

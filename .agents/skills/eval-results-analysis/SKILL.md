@@ -62,7 +62,9 @@ Rules:
    Exact generated images remain local object references; Benchmark Studio
    source evidence remains a credential-free immutable Azure reference. Review
    artifacts are temporary and may already be purged, which must be reported
-   rather than reconstructed or guessed.
+   rather than reconstructed or guessed. When review is unavailable, report
+   its typed reason (`disabled`, `capture_failed`, `capture_partial`, `purged`,
+   or `absent`) rather than describing the durable eval attempt as failed.
 5. Propose changes before editing anything. Explain the specific prompt,
    pipeline, or data-shaping changes and why they address the observed pattern.
 6. When the user asks to preserve the analysis, write a compact diagnosis JSON
@@ -79,21 +81,28 @@ Rules:
   Use `summary.accuracy.complete_evaluation`, `by_field`, and `by_slice` for
   valid-run accuracy. Review `summary.reliability` and
   `summary.scoring_coverage` separately for execution, contract, and grader
-  failures; those runs are excluded from accuracy. Use `summary.performance`
-  for throughput and latency distributions, `summary.execution_recovery` for
-  missing/rerun generations, and `summary.usage`, `summary.retries`, and
-  `summary.cost` with their explicit availability states.
-- `run_config`
+  failures; those runs are excluded from accuracy. Use
+  `summary.execution_recovery` for missing/rerun generations and
+  `summary.usage` plus `summary.cost` with their explicit availability states.
+- `run` and `run.dimensions`
   Use this to confirm the pipeline config, published benchmark version, model,
   reasoning effort, and frozen source snapshot identities used for that run.
   Confirm `run_id` and `run_spec_sha256` before treating two materializations as
-  distinct conditions.
-  Use `run_config.dimensions` when grouping multiple result documents by model,
-  agent version, pipeline hash, grader set, or project-declared configuration.
-- `results[].benchmark_labels` and `results[].runs[].fields`
-  Use the full frozen label context plus per-field applicability, expected and
-  actual values, grader identity, confidence, and correctness. Inspect
-  `agent_output`, contract errors, and failure details for unscored attempts.
+  distinct conditions. Use `run.dimensions` when grouping multiple result
+  documents by model, agent version, pipeline hash, grader set, or
+  project-declared configuration.
+- Reconstructed attempt rows
+  Use the bounded inspection commands or `LocalRunStore.evaluation_rows()`;
+  rows are not duplicated in `result.json`. Complete frozen benchmark labels
+  come from `manifest.json`, while immutable attempt generations supply
+  `agent_output`, `evaluations`, contract errors, usage, cost, and failure
+  details.
+- `performance/summary.json`
+  When present, use its `summary`, `model_calls`, and `retries` sections for
+  throughput, stage/API latency, slowest execution IDs, timeout observations,
+  and observed retry telemetry. The whole `performance/` tree is disposable.
+  If it is absent, report performance diagnostics as unavailable and continue
+  analyzing durable quality, reliability, coverage, usage, and cost.
 - `review/executions/` and `review/objects/`
   Access these only through the inspection CLI. Execution manifests contain
   normalized messages, model/tool activity, raw/parsed output history,
@@ -120,6 +129,8 @@ Rules:
 - Do not upload review artifacts to Azure or another cloud destination.
 - Do not treat disposable review content as benchmark truth or durable run
   recovery state.
+- Do not treat disposable performance observations as durable result fields or
+  infer unavailable retry counts from configured retry limits.
 - Do not purge a review bundle without explicit user authorization.
 - First present the exact changes you want to make, the evidence behind them, and the expected tradeoffs.
 - If the evidence is mixed, say so clearly instead of forcing a prompt tweak.

@@ -296,6 +296,15 @@ class AIProcessorMixin(Generic[PDO, OutputT]):
             },
         )
 
+    def _attach_performance(
+        self, data_object: PDO, performance: dict[str, Any]
+    ) -> None:
+        """Attach short-lived backend timing observations to the process object."""
+        if performance:
+            data_object.set_artifact(
+                f"{self._get_artifact_key()}_performance", performance
+            )
+
     def _attach_review(self, data_object: PDO, review: dict[str, Any]) -> None:
         """Attach transient review evidence for the pipeline receipt hook."""
         if review:

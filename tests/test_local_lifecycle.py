@@ -63,16 +63,17 @@ def _write_run(
     store = LocalRunStore(run_dir, run_id=run_id)
     store.initialize(
         {
-            "storage_schema_version": 1,
-            "result_schema_version": 3,
+            "schema_version": 1,
+            "performance_schema_version": 1,
             "run_id": run_id,
             "run_spec_sha256": digest,
             "run_spec": run_spec,
             "work_items": [],
             "created_at_utc": "2026-07-22T12:00:00+00:00",
-            "result_materialization": {
-                "contract_version": 1,
-                "run_config": {
+            "eval_contract": {
+                "schema_version": 1,
+                "run": {
+                    "schema_version": 1,
                     "run_id": run_id,
                     "agent_version": run_spec["agent"],
                     "dimensions": {
@@ -83,8 +84,7 @@ def _write_run(
                     },
                     "runs_per_example": 1,
                 },
-                "selected_example_ids": [],
-                "result_rows": [],
+                "examples": [],
                 "output_fields": [],
                 "slice_keys": [],
             },

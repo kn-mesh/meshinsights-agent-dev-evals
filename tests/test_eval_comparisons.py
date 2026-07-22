@@ -50,6 +50,7 @@ def _write_result(path: Path, *, run_id: str, model: str, correct: bool = True) 
         complete_evaluation_correct=correct,
         duration_seconds=1.0 if correct else 2.0,
         artifacts={
+            "agent_output": {"classification": "ok" if correct else "bad"},
             "usage": {"requests": 1 if correct else 2},
             "cost": {
                 "estimated": {
@@ -61,6 +62,7 @@ def _write_result(path: Path, *, run_id: str, model: str, correct: bool = True) 
     )
     store.commit_attempt(
         {
+            "schema_version": 1,
             "run_id": actual_run_id,
             "work_item_id": work_item_id,
             "example_id": "example-a",
@@ -68,17 +70,13 @@ def _write_result(path: Path, *, run_id: str, model: str, correct: bool = True) 
             "execution_id": f"{work_item_id}.1",
             "generation": 1,
             "invocation_id": "inv_test",
-            "agent_version_id": "av_a",
-            "agent_version_manifest_sha256": None,
-            "started_at_utc": "2026-01-01T00:00:00+00:00",
-            "completed_at_utc": "2026-01-01T00:00:01+00:00",
             "attempt": eval_attempt_to_dict(attempt),
         }
     )
     run_config = {
         "run_id": actual_run_id,
         "run_spec_sha256": run_spec_sha256,
-        "eval_result_schema_version": 3,
+        "schema_version": 1,
         "runs_per_example": 1,
         "agent_version": {"agent_version_id": "av_a"},
         "benchmark_key": "benchmark",
@@ -96,16 +94,14 @@ def _write_result(path: Path, *, run_id: str, model: str, correct: bool = True) 
             "configuration": {},
         },
     }
-    manifest["result_materialization"] = {
-        "contract_version": 1,
-        "run_config": run_config,
-        "selected_example_ids": ["example-a"],
-        "result_rows": [
+    manifest["eval_contract"] = {
+        "schema_version": 1,
+        "run": run_config,
+        "examples": [
             {
                 "example_id": "example-a",
                 "benchmark_labels": {"classification": "ok"},
                 "slice_keys": ["priority"],
-                "runs": [],
             }
         ],
         "output_fields": [
@@ -118,11 +114,6 @@ def _write_result(path: Path, *, run_id: str, model: str, correct: bool = True) 
         "slice_keys": ["priority"],
     }
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
-    store.write_invocation_event(
-        invocation_id="inv_test",
-        event="completed",
-        payload={"duration_seconds": 0.0, "selected_work_items": 1},
-    )
     assert manifest["run_id"] == actual_run_id
     return store.materialize_result(
         completed_at_utc="2026-01-01T00:00:01+00:00",
@@ -155,8 +146,8 @@ def test_comparison_persists_aligned_quality_and_reliability(tmp_path: Path) -> 
 
     assert payload["comparison_id"].startswith("cmp_")
     assert [item["run_id"] for item in payload["runs"]] == [
-        json.loads(first.read_text())["run_config"]["run_id"],
-        json.loads(second.read_text())["run_config"]["run_id"],
+        json.loads(first.read_text())["run"]["run_id"],
+        json.loads(second.read_text())["run"]["run_id"],
     ]
     assert payload["paired_complete_correctness"]["agreement_rate"] == 0.0
     delta = payload["paired_deltas"][0]
@@ -164,25 +155,16 @@ def test_comparison_persists_aligned_quality_and_reliability(tmp_path: Path) -> 
     assert delta["complete_evaluation"]["delta_rate"] == -1.0
     assert delta["by_field"]["classification"]["jointly_observed"] == 1
     assert delta["by_slice"]["priority"]["regressed"] == 1
-    assert delta["performance"]["delta_mean"] == 1.0
     assert delta["usage"]["requests"]["delta_total"] == 1.0
     assert delta["cost"]["USD"]["delta_total"] == pytest.approx(0.1)
     assert delta["work_items"]["regressed"] == [
         {
             "example_id": "example-a",
             "run_index": 1,
-            "baseline_work_item_id": json.loads(first.read_text())["results"][0][
-                "runs"
-            ][0]["work_item_id"],
-            "candidate_work_item_id": json.loads(second.read_text())["results"][0][
-                "runs"
-            ][0]["work_item_id"],
-            "baseline_execution_id": json.loads(first.read_text())["results"][0][
-                "runs"
-            ][0]["execution_id"],
-            "candidate_execution_id": json.loads(second.read_text())["results"][0][
-                "runs"
-            ][0]["execution_id"],
+            "baseline_work_item_id": _attempt_row(first)["work_item_id"],
+            "candidate_work_item_id": _attempt_row(second)["work_item_id"],
+            "baseline_execution_id": _attempt_row(first)["execution_id"],
+            "candidate_execution_id": _attempt_row(second)["execution_id"],
         }
     ]
     assert (
@@ -222,10 +204,11 @@ def _write_run_manifest(path: Path, *, run_spec: dict[str, object]) -> Path:
         run_id=run_id, item_id="example-a", attempt_index=1
     )
     payload = {
+        "schema_version": 1,
+        "performance_schema_version": 1,
         "run_id": run_id,
         "run_spec_sha256": digest,
         "run_spec": run_spec,
-        "result_schema_version": 3,
         "work_items": [
             {
                 "example_id": "example-a",
@@ -288,9 +271,9 @@ def test_comparison_rejects_a_result_from_a_different_manifest(tmp_path: Path) -
     first = _write_result(tmp_path / "a.json", run_id="eval_a", model="p:a")
     second = _write_result(tmp_path / "b.json", run_id="eval_b", model="p:b")
     tampered = json.loads(second.read_text(encoding="utf-8"))
-    tampered["run_config"]["run_id"] = json.loads(first.read_text(encoding="utf-8"))[
-        "run_config"
-    ]["run_id"]
+    tampered["run"]["run_id"] = json.loads(first.read_text(encoding="utf-8"))["run"][
+        "run_id"
+    ]
     second.write_text(json.dumps(tampered), encoding="utf-8")
 
     with pytest.raises(ValueError, match="canonical materialization"):
@@ -299,3 +282,8 @@ def test_comparison_rejects_a_result_from_a_different_manifest(tmp_path: Path) -
             varying_dimensions={"model.id"},
             output_dir=tmp_path / "comparisons",
         )
+
+
+def _attempt_row(path: Path) -> dict[str, object]:
+    run_dir = path.parent
+    return LocalRunStore(run_dir, run_id=run_dir.name).evaluation_rows()[0]["runs"][0]

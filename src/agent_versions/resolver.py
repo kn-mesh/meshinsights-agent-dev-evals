@@ -461,7 +461,7 @@ def resolve_agent_version(
         "runtime_contract": {
             "agent_version_contract_version": 1,
             "pipeline_execution_contract_version": 1,
-            "compatible_result_schema_versions": [3],
+            "compatible_result_schema_versions": [1],
             "registry_schema_version": registry.version,
         },
     }

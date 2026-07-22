@@ -59,35 +59,6 @@ class PulseFailureAnalysisProcessObject(ProcessDataObject):
         value = self.get_artifact(f"{self._chart_key_prefix}{window_days}d_base64")
         return value if isinstance(value, str) else None
 
-    def set_investigation_case_brief(
-        self, value: dict[str, Any]
-    ) -> "PulseFailureAnalysisProcessObject":
-        """Store the stable first-pass case brief used by investigative agents."""
-        self.set_artifact("investigation_case_brief", value)
-        return self
-
-    def get_investigation_case_brief(self) -> dict[str, Any] | None:
-        """Return the first-pass case brief when present."""
-        value = self.get_artifact("investigation_case_brief")
-        return value if isinstance(value, dict) else None
-
-    def add_investigation_evidence(
-        self, value: dict[str, Any]
-    ) -> "PulseFailureAnalysisProcessObject":
-        """Record one focused chart request completed by the investigation agent."""
-        existing = self.get_artifact("investigation_evidence")
-        evidence = list(existing) if isinstance(existing, list) else []
-        evidence.append(value)
-        self.set_artifact("investigation_evidence", evidence)
-        return self
-
-    def get_investigation_evidence(self) -> list[dict[str, Any]]:
-        """Return focused evidence records produced during investigation."""
-        value = self.get_artifact("investigation_evidence")
-        if not isinstance(value, list):
-            return []
-        return [item for item in value if isinstance(item, dict)]
-
     def set_ai_result(
         self, value: dict[str, Any]
     ) -> "PulseFailureAnalysisProcessObject":
@@ -141,26 +112,75 @@ class PulseFailureAnalysisProcessObject(ProcessDataObject):
                 "availability": "unavailable",
                 "reason": "No mi.ai usage artifact was produced.",
             }
+        transport_attempts = [
+            attempt
+            for value in self.artifacts.values()
+            for attempt in _transport_attempts(value)
+        ]
+        retry_categories: dict[str, int] = {}
+        for attempt in transport_attempts:
+            category = attempt.get("retry_category")
+            if isinstance(category, str):
+                retry_categories[category] = retry_categories.get(category, 0) + 1
+        transport_observed = len(transport_attempts) if transport_attempts else None
         return {
-            "availability": "partial",
+            "availability": "available" if transport_attempts else "partial",
             "observed_model_requests": usage["requests"],
             "observed_tool_calls": usage["tool_calls"],
             "observed_output_validation_attempts": usage["output_validation_attempts"],
-            "observed_transport_attempts": None,
+            "observed_transport_attempts": transport_observed,
+            "observed_transport_retry_categories": dict(
+                sorted(retry_categories.items())
+            ),
             "reason": (
-                "Model requests, tool calls, and direct-workflow output attempts "
-                "are observed; the backend transport does not yet expose HTTP "
-                "retry-attempt counts."
+                None
+                if transport_attempts
+                else "Model requests, tool calls, and direct-workflow output "
+                "attempts are observed; HTTP attempts are unavailable because "
+                "the active provider path did not expose adapter-owned transport."
             ),
         }
+
+    def get_ai_performance(self) -> dict[str, Any] | None:
+        """Collect processor backend timings for disposable performance logs."""
+        processors = {
+            key: value
+            for key, value in sorted(self.artifacts.items())
+            if key.endswith("_performance") and isinstance(value, dict)
+        }
+        if not processors:
+            return None
+        return {"schema_version": 1, "processors": processors}
 
     def get_execution_telemetry(self) -> dict[str, Any] | None:
         """Expose bounded observations for the durable process-stage receipt."""
         usage = self.get_ai_usage()
         retry_telemetry = self.get_ai_retry_telemetry()
-        if usage is None and retry_telemetry.get("availability") == "unavailable":
+        performance = self.get_ai_performance()
+        if (
+            usage is None
+            and retry_telemetry.get("availability") == "unavailable"
+            and performance is None
+        ):
             return None
-        return {
+        telemetry = {
             "usage": usage,
             "retry_telemetry": retry_telemetry,
         }
+        if performance is not None:
+            telemetry["performance"] = performance
+        return telemetry
+
+
+def _transport_attempts(value: Any) -> list[dict[str, Any]]:
+    attempts: list[dict[str, Any]] = []
+    if isinstance(value, dict):
+        raw = value.get("transport_attempts")
+        if isinstance(raw, list):
+            attempts.extend(item for item in raw if isinstance(item, dict))
+        for item in value.values():
+            attempts.extend(_transport_attempts(item))
+    elif isinstance(value, list):
+        for item in value:
+            attempts.extend(_transport_attempts(item))
+    return attempts

@@ -40,6 +40,7 @@ class AIWorkflowMixin(AIProcessorMixin[PDO, OutputT]):
             )
 
             result = backend.run_workflow(request)
+            self._attach_performance(data_object, result.performance)
 
             if request.capture_review:
                 self._attach_review(data_object, result.review)
@@ -53,6 +54,9 @@ class AIWorkflowMixin(AIProcessorMixin[PDO, OutputT]):
                 )
 
         except Exception as exc:
+            performance = getattr(exc, "performance", None)
+            if isinstance(performance, dict):
+                self._attach_performance(data_object, performance)
             review = getattr(exc, "review", None)
             if isinstance(review, dict) and self._review_capture_enabled(metadata):
                 self._attach_review(data_object, review)

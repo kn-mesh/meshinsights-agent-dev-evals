@@ -43,6 +43,11 @@ the run reproducible.
 uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
   --project-key spirax-pulse \
+  --azure-postgres-host <postgres-host> \
+  --azure-postgres-database <postgres-database> \
+  --azure-postgres-user <entra-login> \
+  --azure-storage-account-url <blob-account-url> \
+  --azure-storage-container <blob-container> \
   --benchmark-key <published-benchmark-key> \
   --benchmark-version <version-number> \
   --all-examples \
@@ -51,7 +56,8 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --runs-per-example <count> \
   --runtime threaded \
   --max-workers <count> \
-  --error-action continue
+  --error-action continue \
+  --review-capture <full|off>
 ```
 
 Replace every angle-bracket placeholder. Choose `--ai-model` from
@@ -108,7 +114,8 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
 ```
 
 Example IDs can contain `|`, so quote them. After the smoke run succeeds,
-remove `--example-ids` and use repeated threaded runs for the full benchmark.
+replace `--example-ids` with `--all-examples` and use repeated threaded runs
+for the full benchmark.
 
 ## Scope Options
 
@@ -123,8 +130,8 @@ combined as an intersection.
   `--label-filter 'root_cause="Open Failure"'`.
 - `--slice <slice-key>`: examples in a named slice from the selected evaluation
   profile. Repeat it to select the union of multiple slices.
-- `--agent-version <version>`: persist the stable agent/package revision used
-  for cross-result grouping when one exists.
+- `--agent-version-id av_<hash>`: require an exact resolved candidate identity.
+  `--agent-version` is only a deprecated display label and is not identity.
 - `--dimension 'key=<json-scalar>'`: persist a project-relevant configuration
   dimension such as `--dimension 'prompt_revision=7'`. Repeat for additional
   grouping dimensions; keys must be unique.
@@ -189,9 +196,13 @@ are written under:
 ```text
 eval_results/v1_3/<benchmark-key>/v<version>/runs/<run-id>/
   manifest.json
+  agent-version.json
   attempts/<prefix>/<work-item-id>.<generation>.json
-  invocations/<invocation-id>.<event>.json
   result.json
+  performance/                     # disposable and ignored by Git
+    attempts/<prefix>/<work-item-id>.<generation>.json
+    invocations/<invocation-id>.<event>.json
+    summary.json
   review/
     capture.json
     index.json
@@ -205,27 +216,40 @@ pipeline, benchmark, profile/graders, model, reasoning, scope, repetitions,
 runtime, worker limit, error policy, and configuration dimensions. Running the
 identical command again resumes that run and does not duplicate completed work.
 
-`manifest.json` and immutable attempt generations are the recovery source of
-truth. `result.json` is an atomically rebuilt schema-v3 view. Confirm
-`run_config` records the intended run ID and conditions before comparison.
+`manifest.json`, `agent-version.json`, immutable attempt generations, and the
+atomically rebuilt `result.json` are durable schema-v1 evaluation evidence.
+They are intended to be retained in Git. Confirm `run` records the intended
+run ID and conditions and use `run.dimensions` for exact comparison identities.
 
-Result schema version 3 separates the summary into `accuracy`, `reliability`,
-`scoring_coverage`, and `performance`. Accuracy includes only runs with a valid
-configured output contract whose deterministic graders all completed.
+Result schema version 1 separates durable evaluation evidence from disposable
+performance diagnostics. Its summary contains `accuracy`, `reliability`,
+`scoring_coverage`, `usage`, `cost`, `nondeterminism`, and
+`execution_recovery`. Accuracy includes only runs with a valid configured
+output contract whose deterministic graders all completed.
 Provider, pipeline, timeout, cancellation, identity, missing, malformed,
 partial-output, and grader failures remain fully recorded but are excluded from
 accuracy denominators. `scoring_coverage` shows how many planned attempts
 reached grading, while `reliability` reports execution and output-contract
-status counts. `performance` records wall time, throughput, run-duration
-statistics, and available stage timings.
+status counts.
 
 `summary.execution_recovery` records logical slots, missing work, total
-execution generations, and selected reruns. `summary.usage`, `summary.retries`,
-and `summary.cost` retain availability explicitly. Current receipts preserve
+execution generations, and selected reruns. `summary.usage` and `summary.cost`
+retain availability explicitly. Current receipts preserve
 model requests, input/output/cache/reasoning tokens, tool calls, and direct
-workflow output attempts when reported. HTTP transport-attempt counts and
-provider-billed cost remain `unavailable` when the backend does not expose
-them; configured limits are never presented as observations.
+workflow output attempts when reported.
+
+`performance/summary.json` contains short-lived wall time, throughput, stage
+timings, retry telemetry, and model/API-call durations, including the exact
+work item and execution for the slowest calls. Adapter-owned HTTP observations
+include attempt duration, terminal status, retry category, configured request
+timeout, and available provider/client request IDs. HTTP transport-attempt
+counts remain `unavailable` when the backend does not expose them; configured
+limits are never presented as observations. A
+`duration_exceeded_configured_timeout` value is a duration-boundary signal, not
+proof that the provider raised a timeout. The complete `performance/`
+directory may be deleted without invalidating or reducing the durable
+evaluation result. The explorer reports this deletion as performance
+`unavailable` while keeping quality, attempts, and evidence usable.
 
 `review/` is a disposable, local-only inspection bundle. It is not part of
 `run_id`, attempt integrity, scoring, resume, or `result.json`. Benchmark source
@@ -239,11 +263,43 @@ Review capture defaults to `full` for executed attempts. Use
 status, comparison-only, and materialize-only operations do not capture new
 review content.
 
-`run_config.evaluation_profile` records the profile ID, version, and content
-hash. Each result preserves the complete published `benchmark_labels`, even
-when the profile grades only a subset. Per-attempt `fields` record
-applicability, expected and actual values, confidence, grader identity,
-normalization, and correctness.
+Capture state is evidence-based: `in_progress` while executions are being
+recorded, then `complete`, `partial`, or `failed` after reconciliation with the
+durable attempt IDs; explicit deletion records `purged`. A capture failure is
+nonfatal to the durable eval result. The inspection CLI and explorer identify
+unavailable detail as `disabled`, `capture_failed`, `capture_partial`,
+`purged`, or `absent`, so missing diagnostics are not confused with a failed
+or low-quality agent output.
+
+`run.evaluation_profile` records the profile ID, version, and content hash.
+`manifest.json` preserves each example's complete published `benchmark_labels`,
+even when the profile grades only a subset. Immutable attempts preserve
+canonical `agent_output`, `evaluations`, usage, cost, contract errors, and
+failure details. Detailed rows are reconstructed on demand through the
+inspection CLI or `LocalRunStore.evaluation_rows()`; they are not repeated in
+`result.json`.
+
+Verify the three evidence classes independently after a run:
+
+```bash
+# Durable run/result integrity and terminal work state
+uv run python -m src.evals.eval_orchestration --status-run-id eval_<hash>
+
+# Disposable review status/counts; this remains useful when detail is absent
+uv run python -m src.evals.inspection_cli summary --run eval_<hash>
+
+# Optional disposable performance observations
+eval_run_dir='eval_results/<pipeline>/<benchmark>/v<version>/runs/eval_<hash>'
+if test -f "$eval_run_dir/performance/summary.json"; then
+  uv run python -m json.tool "$eval_run_dir/performance/summary.json" >/dev/null
+else
+  echo "Performance diagnostics unavailable; durable eval remains valid."
+fi
+```
+
+Absence of `performance/summary.json` means timing and retry diagnosis is
+unavailable; it does not invalidate the durable result. Review capture may
+independently be `in_progress`, `complete`, `partial`, `failed`, or `purged`.
 
 CLI exit codes are `0` for a fully scored completion, `2` for argument/preflight
 errors, `3` when durable execution completes with terminal unscored work, `4`
@@ -267,8 +323,9 @@ inspect expected/actual outputs, grading, model interactions, pipeline/tool
 activity, and raw review data. The Evidence package tab retrieves the exact
 published benchmark version recorded by that run, verifies its immutable Azure
 artifacts, and renders the normalized Spirax charts used by Benchmark Studio.
-If review capture was off or was purged, compact result rows remain available
-and the detailed tabs state that the review is unavailable.
+If review capture was off, failed, partial, purged, or absent, compact result
+rows remain available and the detailed tabs state the specific reason the
+review is unavailable.
 
 The server deliberately binds only to `127.0.0.1`; this MVP has no remote auth
 or write endpoints. Re-run `pnpm build` after frontend changes.
@@ -281,8 +338,11 @@ timeouts, connection failures, rate limits, and retryable server responses.
 The v1_3 pipeline keeps a 120-second timeout per attempt and uses three
 transport attempts.
 
-Persisted `run_config.ai_execution_policies` records the effective timeout and
-retry policy for every AI processor. Failed runs also include
+Persisted `run.ai_execution_policies` records the configured timeout and retry
+policy for every AI processor. Observed request counts, retry availability,
+model/API durations, and timeout overruns belong to optional
+`performance/summary.json`; configured limits are not observations. Failed
+runs also include
 `failure_details`, with the failed stage, pipeline and stage correlation IDs,
 and a bounded exception chain. Use `summary.reliability.failures_by_type` to
 separate `timeout`, `transport_error`, `provider_error`, pipeline,
@@ -421,7 +481,7 @@ ambiguous, or path-escaping targets.
 
 ## Local Catalog And Whole-Entity Deletion
 
-List and verify managed schema-v3 runs, comparisons, and candidate/promoted
+List and verify managed schema-v1 runs, comparisons, and candidate/promoted
 agent versions without contacting Azure:
 
 ```bash

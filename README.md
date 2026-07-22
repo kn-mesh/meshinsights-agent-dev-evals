@@ -145,17 +145,15 @@ Spirax evidence projection lives in `src/evidence/`, while its evidence charts
 live in `www/src/use_case/`; a new use case replaces those project-owned
 adapters without rebuilding the shell.
 
-## Current Spirax Reference Variants
+## Current Spirax Reference Pipeline
 
 - `pipeline_configs/v1_3.ppln` is the one-shot structured AI workflow example.
-- `pipeline_configs/v2.ppln` is the bounded progressive-agent example.
 
-They share the same benchmark-aligned terminal output contract. They are
-examples, not mandatory stages for every use case: keep deterministic logic
-when it works, prefer one workflow call when prepared evidence is sufficient,
-and add an agent only for useful runtime tool selection. See
+It uses the benchmark-aligned terminal output contract. It is an example, not
+a mandatory design for every use case: keep deterministic logic when it works
+and prefer one workflow call when prepared evidence is sufficient. See
 [`docs/use_case/PipelineVersions.md`](docs/use_case/PipelineVersions.md) for the
-short hypotheses and parent relationship.
+short hypothesis and lineage.
 
 ## Initialize A New Use-Case Project
 
@@ -200,22 +198,23 @@ Resolve or promote explicitly:
 
 ```bash
 uv run python -m src.agent_versions.cli --json resolve \
-  --pipeline pipeline_configs/v2.ppln \
+  --pipeline pipeline_configs/v1_3.ppln \
   --dirty-policy capture
 
 uv run python -m src.agent_versions.cli promote \
   --from-run eval_<run-id> \
-  --alias pulse-v2-investigation-1
+  --alias pulse-v1-3-1
 ```
 
 Clean promotion uses the Git revision without copying tracked source. Dirty
 promotion must use `--dirty-policy capture` and retains exact changed bytes in
-the local content-addressed store. `agent_versions/` and run-local candidates
-are important local evidence even though they are ignored by Git.
+the local content-addressed store. Global `agent_versions/` remains local-only;
+run-local candidate manifests and required objects are durable evaluation
+evidence and can be retained with their run in Git.
 
 ## Local Version And Result Lifecycle
 
-The lifecycle catalog is rebuilt from managed schema-v3 run manifests,
+The lifecycle catalog is rebuilt from managed schema-v1 run manifests,
 run-local candidates, comparisons, promoted manifests, aliases, and promotion
 events. It does not create a mutable catalog database and does not read legacy
 standalone result JSON.
@@ -289,11 +288,11 @@ eval_results/
     manifest.json
     attempts/
     result.json
+    performance/               # disposable timings/retries, optional
     review/                    # disposable local prompts/images/traces
     diagnosis/                 # optional compact retained analysis
 agent_version_configs/
   v1_3.agent.yaml
-  v2.agent.yaml
 agent_versions/               # local promoted manifests and CAS (gitignored)
 .workbench/lifecycle/         # local quarantine and operation receipts
 docs/
@@ -305,7 +304,6 @@ mi-core/
   cli/
 pipeline_configs/
   v1_3.ppln
-  v2.ppln
 evaluation_configs/
   spirax-failure-evaluation.eval.yaml
 src/
@@ -315,12 +313,19 @@ src/
   processors/
     common/
     v1_3/
-    v2/
   retrievers/
   pipelines/
   evals/
   lifecycle/
 ```
+
+Schema-v1 keeps three evidence classes separate: `manifest.json`, immutable
+`attempts/`, `agent-version.json`, and compact `result.json` are durable eval
+evidence; `performance/` contains optional short-lived timing and retry
+observations; `review/` contains optional local diagnostic prompts, images, and
+traces. Deleting either disposable tree does not invalidate scoring, resume,
+comparison, or promotion. Use `EvalRunbook.md` for exact execution and
+verification commands.
 
 ## Notes
 

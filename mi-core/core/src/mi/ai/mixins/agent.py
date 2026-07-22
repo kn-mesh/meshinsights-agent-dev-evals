@@ -78,6 +78,7 @@ class AIAgentMixin(AIProcessorMixin[PDO, OutputT]):
                 context=ToolContext(data_object=data_object, metadata=metadata)
             )
             result = backend.run_agent(request, deps=deps)
+            self._attach_performance(data_object, result.performance)
 
             if request.capture_review:
                 self._attach_review(data_object, result.review)
@@ -91,6 +92,9 @@ class AIAgentMixin(AIProcessorMixin[PDO, OutputT]):
                 )
 
         except Exception as exc:
+            performance = getattr(exc, "performance", None)
+            if isinstance(performance, dict):
+                self._attach_performance(data_object, performance)
             review = getattr(exc, "review", None)
             if isinstance(review, dict) and self._review_capture_enabled(metadata):
                 self._attach_review(data_object, review)

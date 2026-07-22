@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from evaluation import build_comparison_identity
+from evaluation import LocalReviewStore, build_comparison_identity
 
 from src.agent_versions.models import AgentVersionManifest
 from src.agent_versions.store import AgentVersionIntegrityError, AgentVersionStore
@@ -206,7 +206,12 @@ class LocalLifecycleCatalog:
                 model = dimensions.get("model", {})
                 agent = config.get("agent_version", configured_agent)
                 records = store.read_attempt_records()
-                review_status = self._review_status(run_dir)
+                review_status = self._review_status(
+                    run_dir,
+                    expected_execution_ids=[
+                        str(item["execution_id"]) for item in records
+                    ],
+                )
                 file_count, byte_count = self._size(run_dir)
                 runs.append(
                     RunCatalogEntry(
@@ -518,9 +523,9 @@ class LocalLifecycleCatalog:
         manifest: dict[str, Any], result: dict[str, Any] | None
     ) -> dict[str, Any]:
         if result is not None:
-            return dict(result.get("run_config", {}))
-        contract = manifest.get("result_materialization", {})
-        return dict(contract.get("run_config", {}))
+            return dict(result.get("run", {}))
+        contract = manifest.get("eval_contract", {})
+        return dict(contract.get("run", {}))
 
     @staticmethod
     def _cas_digests(manifest: AgentVersionManifest) -> set[str]:
@@ -550,14 +555,18 @@ class LocalLifecycleCatalog:
                 raise ValueError(f"Run-local CAS object is corrupt: {path}")
 
     @staticmethod
-    def _review_status(run_dir: Path) -> str:
+    def _review_status(run_dir: Path, *, expected_execution_ids: list[str]) -> str:
         capture = run_dir / "review" / "capture.json"
         if not capture.is_file():
             return "unavailable"
         try:
-            payload = json.loads(capture.read_text(encoding="utf-8"))
-            return str(payload.get("status", "unknown"))
-        except (OSError, json.JSONDecodeError):
+            store = LocalReviewStore(run_dir, run_id=run_dir.name)
+            return str(
+                store.capture_summary(
+                    expected_execution_ids=expected_execution_ids
+                ).get("status", "unknown")
+            )
+        except (OSError, ValueError, RuntimeError, json.JSONDecodeError):
             return "invalid"
 
     @staticmethod

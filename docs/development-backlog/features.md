@@ -195,7 +195,9 @@ The workflow must support:
 
 **Status:** Complete for MVP; implemented through published-contract schema v2,
 versioned evaluation profiles, deterministic graders, conditional fields,
-local slices, and result schema v3.
+local slices, compact durable eval schema v1, and disposable performance
+schema v1. Active skills and operator documentation use the same schema-v1
+field and artifact boundaries, enforced by a repository contract-drift test.
 
 The harness must run any supported agent variant against a selected immutable
 benchmark version and assess its complete structured output contract. It must
@@ -219,9 +221,9 @@ The MVP harness must support:
 
 **Status:** Complete for MVP; deterministic content-addressed runs, incremental
 attempt generations, interruption recovery, selective reruns, bounded
-concurrency, schema-v3 materialization, execution telemetry availability,
-optional frozen pricing estimates, and dimension-validated model/configuration
-comparison are implemented.
+concurrency, compact schema-v1 materialization, split disposable performance
+telemetry, optional frozen pricing estimates, and dimension-validated
+model/configuration comparison are implemented.
 
 The primary eval workflow must make it straightforward to compare selected
 models and configurations without losing the exact conditions of a run.
@@ -248,7 +250,12 @@ both bounded coding-agent inspection and a locally hosted human explorer. The
 explorer provides run selection, attempt filters, expected/actual outputs,
 grading, model/tool traces, raw review data, and a verified frozen-evidence view
 whose use-case-specific Spirax normalization and charts preserve Benchmark
-Studio semantics. Richer cross-run comparison navigation remains in the
+Studio semantics. Review commits are transactional and report evidence-derived
+`in_progress`, `complete`, `partial`, `failed`, or `purged` states with typed
+unavailable reasons. Optional performance views show wall time, throughput,
+stage/model median and p95 latency, observed retry categories, correlated slow
+calls, and per-attempt diagnostics without coupling disposable telemetry to
+durable eval integrity. Richer cross-run comparison navigation remains in the
 variant-comparison feature below.
 
 Both a human developer and Codex must be able to start from an eval run, find a
@@ -337,7 +344,7 @@ handling.
 
 ### Local Version And Result Lifecycle
 
-**Status:** Complete for MVP through the derived schema-v3 catalog and reference
+**Status:** Complete for MVP through the derived schema-v1 catalog and reference
 graph, uniform deletion previews, recoverable local quarantine, restore and
 permanent purge, active-run/path/integrity safety, and reachability-aware CAS
 cleanup. Historical standalone result JSON has been removed and is unsupported.

@@ -1,4 +1,4 @@
-"""Validated preflight manifests and paired schema-v3 evaluation comparisons."""
+"""Validated preflight manifests and paired schema-v1 evaluation comparisons."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from typing import Any
 from evaluation import build_comparison_identity
 
 from src.evals.result_integrity import load_verified_result
+from src.evals.run_store import LocalRunStore
 
 
 def build_comparison_manifest(
@@ -62,15 +63,17 @@ def build_comparison(
     """Compare aligned runs while rejecting undeclared configuration changes."""
     if len(result_paths) < 2:
         raise ValueError("A comparison requires at least two result files.")
-    results = [load_verified_result(path) for path in result_paths]
+    results = [_comparison_input(path) for path in result_paths]
     manifests = [_load_object(path.parent / "manifest.json") for path in result_paths]
-    run_ids = _validated_run_ids(results, config_key="run_config")
+    run_ids = _validated_run_ids(results, config_key="run")
     dimensions = [_manifest_dimensions(item) for item in manifests]
     differing, warnings = _validate_dimensions(dimensions, varying_dimensions)
-    selected = [tuple(item["selected_example_ids"]) for item in results]
+    selected = [
+        tuple(str(row["example_id"]) for row in item["rows"]) for item in results
+    ]
     if len(set(selected)) != 1:
         raise ValueError("Comparison runs must select the same ordered example IDs.")
-    repetitions = [int(item["run_config"]["runs_per_example"]) for item in results]
+    repetitions = [int(item["run"]["runs_per_example"]) for item in results]
     if len(set(repetitions)) != 1:
         raise ValueError("Comparison runs must use the same repetition count.")
 
@@ -200,7 +203,7 @@ def _validated_run_ids(
         for item in payloads
     ]
     if any(not item for item in run_ids):
-        raise ValueError("Only deterministic schema-v3 runs can be compared.")
+        raise ValueError("Only deterministic schema-v1 runs can be compared.")
     if len(set(run_ids)) != len(run_ids):
         raise ValueError("A comparison cannot contain the same run more than once.")
     return run_ids
@@ -243,15 +246,13 @@ def _validate_dimensions(
 def _comparison_row(payload: dict[str, Any], *, path: Path) -> dict[str, Any]:
     summary = payload["summary"]
     return {
-        "run_id": payload["run_config"]["run_id"],
+        "run_id": payload["run"]["run_id"],
         "result_path": str(path),
-        "dimensions": payload["run_config"].get("dimensions", {}),
+        "dimensions": payload["run"].get("dimensions", {}),
         "complete_evaluation": summary["accuracy"]["complete_evaluation"],
         "reliability": summary["reliability"],
         "scoring_coverage": summary["scoring_coverage"],
-        "performance": summary["performance"],
         "usage": summary.get("usage"),
-        "retries": summary.get("retries"),
         "cost": summary.get("cost"),
         "nondeterminism": summary.get("nondeterminism"),
     }
@@ -259,7 +260,7 @@ def _comparison_row(payload: dict[str, Any], *, path: Path) -> dict[str, Any]:
 
 def _work_items(payload: dict[str, Any]) -> dict[tuple[str, int], dict[str, Any]]:
     output: dict[tuple[str, int], dict[str, Any]] = {}
-    for example in payload["results"]:
+    for example in payload["rows"]:
         for run in example["runs"]:
             output[(str(example["example_id"]), int(run["run_index"]))] = {
                 **run,
@@ -303,7 +304,7 @@ def _paired_delta(
         {
             key
             for item in (*left.values(), *right.values())
-            for key in item.get("fields", {})
+            for key in item.get("evaluations", {})
         }
     )
     slices = sorted(
@@ -314,8 +315,8 @@ def _paired_delta(
         }
     )
     return {
-        "baseline_run_id": baseline["run_config"]["run_id"],
-        "candidate_run_id": candidate["run_config"]["run_id"],
+        "baseline_run_id": baseline["run"]["run_id"],
+        "candidate_run_id": candidate["run"]["run_id"],
         "aligned_work_items": len(shared),
         "complete_evaluation": _boolean_delta(
             [left[key].get("complete_evaluation_correct") for key in shared],
@@ -324,11 +325,11 @@ def _paired_delta(
         "by_field": {
             field: _boolean_delta(
                 [
-                    left[key].get("fields", {}).get(field, {}).get("correct")
+                    left[key].get("evaluations", {}).get(field, {}).get("correct")
                     for key in shared
                 ],
                 [
-                    right[key].get("fields", {}).get(field, {}).get("correct")
+                    right[key].get("evaluations", {}).get(field, {}).get("correct")
                     for key in shared
                 ],
             )
@@ -365,9 +366,6 @@ def _paired_delta(
                 [right[key].get("scoring_status") == "scored" for key in shared],
             ),
         },
-        "performance": _numeric_observation_deltas(
-            left, right, shared, "duration_seconds"
-        ),
         "usage": _nested_numeric_deltas(left, right, shared, "usage"),
         "cost": _paired_cost_deltas(left, right, shared),
         "work_items": _paired_work_item_changes(left, right, shared),
@@ -410,16 +408,16 @@ def _paired_work_item_changes(
         if (
             baseline_correct is False
             and candidate_correct is False
-            and _json_key(baseline.get("actual_outputs"))
-            != _json_key(candidate.get("actual_outputs"))
+            and _json_key(baseline.get("agent_output"))
+            != _json_key(candidate.get("agent_output"))
         ):
             output["changed_incorrect"].append(identity)
         if baseline_healthy and not candidate_healthy:
             output["newly_failed"].append(identity)
         if not baseline_healthy and candidate_healthy:
             output["recovered"].append(identity)
-        if _json_key(baseline.get("actual_outputs")) != _json_key(
-            candidate.get("actual_outputs")
+        if _json_key(baseline.get("agent_output")) != _json_key(
+            candidate.get("agent_output")
         ):
             output["output_disagreement"].append(identity)
     return output
@@ -577,6 +575,12 @@ def _load_object(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"Expected a JSON object: {path}")
     return payload
+
+
+def _comparison_input(path: Path) -> dict[str, Any]:
+    result = load_verified_result(path)
+    store = LocalRunStore(path.parent, run_id=path.parent.name)
+    return {**result, "rows": store.evaluation_rows()}
 
 
 def _write_immutable(path: Path, payload: dict[str, Any]) -> Path:

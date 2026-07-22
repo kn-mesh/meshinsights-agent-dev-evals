@@ -1,95 +1,123 @@
 # Development Bugs
 
-This backlog records correctness, security, and reproducibility defects found
-while reviewing the features documented in `docs/development-current/`.
+This backlog records confirmed correctness and operability issues found during the July 2026 review of the schema-v1 evaluation, diagnostic-review, performance-telemetry, and eval-explorer changes. Items are grouped so one implementation task can address closely related failures together.
 
-## Findings
+## P0 — Durable schema-v1 eval bundles are not retained by Git
 
-### Evaluation result integrity does not cover result content
+**Status:** Confirmed
 
-**Priority:** P1  
-**Area:** reproducible eval execution and comparison  
-**Status:** Resolved by the shared durable-store materializer
+**Affected areas:** `.gitignore`, schema-v1 run storage, reproducibility and long-term eval retention
 
-`src/evals/result_integrity.py` binds `result.json` to the adjacent run ID and
-validates identities for rows that are present, but it does not require every
-planned work item, verify semantic run dimensions, or recompute summary values
-from immutable attempt records. Inspection and comparison can consequently
-accept a result after a row, score, summary, or model dimension has been edited.
+The repository describes eval results as durable evidence, but Git currently ignores most of the files required to verify and reconstruct that evidence. A committed `result.json` references `manifest.json`, `agent-version.json`, and per-attempt records, while the ignore rules exclude those referenced artifacts and the agent source objects needed for dirty-worktree candidates.
 
-**Expected:** schema-v3 materialization has one canonical implementation based
-on the immutable manifest and latest attempt generations. Consumers either
-rematerialize that view or verify the complete materialized value against it.
+Consequently, an eval can look complete in the working copy but become unverifiable and non-reproducible in a fresh clone. Copying only the Git-eligible `result.json` causes `load_verified_result` to fail because the manifest is absent. Inputs, outputs, labels, benchmark identity, and the exact dirty candidate source may also be lost.
 
-### Agent-version capture can retain secret-bearing files
+**Evidence**
 
-**Priority:** P1  
-**Area:** immutable agent versions  
-**Status:** Resolved by the shared sensitive-path policy
+- `.gitignore` ignores `eval_results/**/attempts/`, `eval_results/**/objects/`, `agent-version.json`, and `manifest.json` while allowing `result.json`.
+- Schema-v1 `result.json` stores artifact references rather than duplicating the required evidence.
+- Verification of a result-only bundle fails when resolving its missing manifest.
 
-Agent-version path checks reject only a small exact-name set. Common names such
-as `api_key.json`, `client-secret.pem`, `private-key.txt`, and `azureauth.json`
-can enter a dirty overlay or explicitly declared asset and be retained in the
-content-addressed store.
+**Required fix**
 
-**Expected:** all local artifact workflows share a conservative sensitive-path
-policy, and secret-like assets fail closed before their bytes enter a manifest
-or content-addressed store.
+Align source-control retention with the durable schema-v1 contract. Retain the run manifest, agent-version manifest, attempt records, and any content-addressed source objects required to reproduce the evaluated candidate. Continue excluding disposable performance telemetry and mutable diagnostic-review state.
 
-### Unrelated dirty files alter agent-version identity
+**Acceptance criteria**
 
-**Priority:** P1  
-**Area:** immutable agent versions  
-**Status:** Resolved by resolved import-graph dirty-path classification
+- A fresh clone can load and verify every committed durable eval result without relying on ignored local files.
+- The committed bundle contains enough information to reconstruct attempt inputs, outputs, labels, benchmark identity, agent configuration, and token usage.
+- A dirty-worktree candidate retains the exact source objects referenced by its agent-version manifest.
+- An automated test builds or copies only Git-retained files and successfully calls the schema-v1 verifier.
+- Performance telemetry and diagnostic-review artifacts remain excluded from long-term durable evidence.
 
-Every non-excluded dirty path under broad `src/` and `mi-core` roots is added as
-a `version_surface_guard` asset. Unreachable operator packages such as project
-bootstrap can therefore change a pipeline's agent-version ID and be copied into
-its dirty-overlay CAS.
+## P1 — Disposable performance telemetry can fail durable evals and report inconsistent generations
 
-**Expected:** the resolved component/asset graph is the included version
-surface. Every other dirty path is classified as an explicit non-execution
-exclusion or rejected as ambiguous; it is never silently included.
+**Status:** Confirmed
 
-### Direct PostgreSQL loading fabricates publication identity
+**Affected areas:** `src/evals/eval_orchestration.py`, `src/evals/run_store.py`, `src/apps/eval_explorer.py`
 
-**Priority:** P2  
-**Area:** published benchmark consumption  
-**Status:** Resolved by the strict shared v2 adapter
+Three related defects violate the intended boundary between durable eval evidence and disposable performance diagnostics:
 
-The direct PostgreSQL adapter does not select the published-contract schema
-version or published label-schema hash. Its normalizer defaults a missing
-contract version to v2 and derives a missing hash locally, allowing an older or
-incomplete response to look like the immutable v2 contract.
+1. Performance writes are unguarded after durable attempt and result writes. A telemetry serialization or filesystem failure can abort the command even though valid durable evidence was already committed. This can leave committed attempts without a materialized result, or report the overall eval as failed after the durable result succeeded.
+2. Run-level performance summaries aggregate records from all attempt generations, while durable result rows and explorer attempt lookup use only the latest generation. Reruns can therefore double-count superseded work, and slow-call links can point to attempts the explorer cannot open.
+3. The explorer assumes nested performance fields such as `model_calls` are mappings. A malformed optional telemetry file containing `null` or a scalar can raise a `TypeError` and turn disposable-data corruption into a server error.
 
-**Expected:** hosted and direct loaders feed one strict v2 normalizer. The
-trusted database boundary explicitly derives the v2 contract metadata it owns;
-hosted responses must supply it, and contradictory values fail closed.
+**Required fix**
 
-### Alarm evidence can reveal post-decision state
+Treat performance capture and visualization as best-effort diagnostics throughout the write, aggregation, and read paths. Define one generation policy for the primary run summary—preferably latest/current attempts only—and expose historical generations separately if they remain useful.
 
-**Priority:** P1  
-**Area:** frozen benchmark evidence  
-**Status:** Resolved by frozen-window alarm validation
+**Acceptance criteria**
 
-Alarm normalization and selection must remain bounded by the benchmark decision
-timestamp. A selected or historical alarm carrying a later detected or resolved
-timestamp can expose outcome information that would not have been available at
-decision time.
+- Injected failures in attempt-level performance capture do not prevent durable attempt commit.
+- Injected failures in performance materialization do not prevent durable result completion or cause a successful eval to be reported as failed.
+- Performance failures are recorded through an explicit warning or availability status with enough context to diagnose the problem.
+- Primary run aggregates include only the same current attempt generations represented by the durable result.
+- Every attempt or slow-call link shown in the explorer resolves successfully; historical telemetry is either separately labeled and navigable or excluded.
+- Missing, malformed, or type-invalid optional telemetry renders as unavailable without blocking run, attempt, result, review, or evidence views.
+- Tests cover performance write failures, rerun generations, stale telemetry, and malformed nested fields.
 
-**Expected:** every alarm timestamp is validated against both the frozen
-evidence window and the decision timestamp before normalization; post-decision
-records fail closed and are never exposed to the pipeline.
+## P1 — A diagnostic review run with no successful captures is reported as partial
 
-### Agent-version aliases do not verify their recorded target hash
+**Status:** Confirmed
 
-**Priority:** P2  
-**Area:** immutable agent versions  
-**Status:** Resolved by strict alias and target-manifest validation
+**Affected area:** `agent-dev-eval-core/evaluation/review.py`
 
-Alias loading follows `agent_version_id` but ignores the alias document's
-recorded alias and `manifest_sha256`. Modifying an alias file can silently point
-it at another valid stored manifest.
+Review summary status is derived with an overly broad fallback: whenever review manifests exist but are not all complete, the run is classified as `partial`. If every review capture failed, the summary still reports `partial`, which implies that some usable review evidence exists when none does.
 
-**Expected:** alias documents are strictly validated and their target ID and
-full manifest hash must agree with the loaded immutable manifest.
+**Evidence**
+
+A review store containing one failed manifest and no complete or partial captures produces a summary equivalent to:
+
+```json
+{
+  "status": "partial",
+  "execution_counts": {
+    "complete": 0,
+    "partial": 0,
+    "failed": 1
+  }
+}
+```
+
+**Required fix**
+
+Make the aggregate status truthful about capture outcomes. Use `complete` only when all expected captures completed, `partial` when at least one usable capture exists but the set is incomplete, and `failed` (or the established equivalent such as `capture_failed`) when none succeeded.
+
+**Acceptance criteria**
+
+- All-complete manifests summarize as `complete`.
+- Mixed successful and failed/incomplete manifests summarize as `partial`.
+- All-failed manifests summarize as `failed` or the canonical failure status.
+- Empty/not-started review state remains distinguishable from capture failure.
+- Unit tests assert the exact aggregate status for all-complete, mixed, all-failed, and empty cases.
+
+## P1 — Agent-version resolution and the test suite depend on unrelated live worktree changes
+
+**Status:** Confirmed
+
+**Affected area:** `src/agent_versions/resolver.py` and agent/eval tests
+
+The agent-version resolver scans the repository's live dirty paths and rejects changes outside its allowed candidate-source set. This fail-closed behavior can be appropriate when publishing a real candidate, but the tests use the same ambient Git state. An unrelated local edit can therefore invalidate broad portions of the suite without exercising the behavior under test.
+
+During review, a full test run produced 32 failures—7 agent-version tests and 25 eval-orchestration tests—all terminating at the same dirty-runtime guard because of an unrelated modified runtime file. This makes test results dependent on developer workspace state and obscures real regressions.
+
+**Required fix**
+
+Make resolver tests hermetic by using an isolated repository fixture or an injected Git-state boundary. Preserve fail-closed validation for real candidate publication. For local eval operation, document or implement an explicit, auditable way to distinguish intended candidate changes from unrelated runtime changes without silently weakening provenance checks.
+
+**Acceptance criteria**
+
+- Agent-version and eval-orchestration tests pass or fail identically regardless of unrelated changes in the developer's surrounding worktree.
+- Tests that verify dirty-source capture and forbidden-path rejection still exercise real Git semantics in an isolated fixture.
+- Production candidate resolution remains fail-closed for untracked or modified source that could alter evaluated behavior.
+- Any operator override is explicit, recorded in provenance, and cannot silently omit behavior-affecting source.
+
+## Related cleanup candidates — verify before removal
+
+These are not confirmed correctness bugs. They appear unused or stale and should be validated against external consumers before deletion:
+
+- `src/evals/eval_orchestration.py`: `_results_from_store`, `_extract_model_name`, and `_results_filename`.
+- `src/evals/comparisons.py`: `_numeric_observation_deltas`.
+- `src/evals/run_store.py`: public `LocalRunStore.write_result`; confirm no external callers before removal.
+- `src/processors/common/temperature_graphs_three_intervals_processor.py`: the v2-only custom-chart path, including `render_custom_combined_chart`, `_build_custom_analysis_window`, `_build_custom_temperature_chart_title`, and potentially `_format_chart_timestamp`.
+- `docs/use_case/PROJECT_CONTEXT.md` and `docs/use_case/PipelineVersions.md`: stale references to the deleted `UseCase-V2.md` document.

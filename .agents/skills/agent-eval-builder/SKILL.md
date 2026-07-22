@@ -1,6 +1,6 @@
 ---
 name: agent-eval-builder
-description: Build or update MeshInsights Agent Workbench published-benchmark evaluation orchestration for AI-enabled pipelines in this repo. Use when changing Benchmark Studio published contracts, immutable Azure evidence, evaluation profiles, deterministic graders, slices, repeated-run execution, result schema v3, scoring, or evaluation-results apps. Do not use merely to prepare, execute, or troubleshoot an existing eval command; use run-use-case-evals for that.
+description: Build or update MeshInsights Agent Workbench published-benchmark evaluation orchestration for AI-enabled pipelines in this repo. Use when changing Benchmark Studio published contracts, immutable Azure evidence, evaluation profiles, deterministic graders, slices, repeated-run execution, tracked eval schema v1, disposable performance schema v1, scoring, or evaluation-results apps. Do not use merely to prepare, execute, or troubleshoot an existing eval command; use run-use-case-evals for that.
 ---
 
 # Agent Eval Builder
@@ -35,7 +35,8 @@ Benchmark Studio data.
 - `src/evals/scoring.py` validates configured output contracts and runs
   deterministic graders.
 - `src/evals/eval_orchestration.py` owns repeated execution, generic filtering,
-  aggregation, and result schema version 3.
+  aggregation, tracked eval schema version 1, and disposable performance schema
+  version 1.
 - `src/evals/run_specs.py` and `src/evals/run_store.py` own deterministic run
   identity, source manifests, immutable attempt generations, local locking,
   resume/rerun selection, and materialization.
@@ -44,14 +45,14 @@ Benchmark Studio data.
   promotion, verification, and the immutable agent reference used by evals.
 - `src/evals/comparisons.py` preflights every comparison child into an immutable
   manifest, validates declared varying dimensions, and reports paired logical-
-  work-item deltas across deterministic schema-v3 runs.
+  work-item deltas across deterministic schema-v1 runs.
 - `src/evals/inspection.py`, `src/evals/inspection_cli.py`, and
   `agent-dev-eval-core/evaluation/review.py` own local-only, run-scoped,
   disposable model/evidence review, bounded coding-agent queries, optional
   compact diagnoses, integrity verification, and explicit review-only purge.
 - `src/lifecycle/` owns the derived local catalog, reference graph, deletion
   previews, recoverable quarantine, restore, and permanent purge for managed
-  schema-v3 runs, comparisons, and promoted agent versions.
+  schema-v1 runs, comparisons, and promoted agent versions.
 - `agent-dev-eval-core/evaluation` owns use-case-neutral attempt states, scalar
   extraction, grader registry/built-ins, metrics, execution, and immutable JSON
   writing.
@@ -88,7 +89,9 @@ views, and use-case-specific graders in the root project.
 12. Aggregate valid-run accuracy separately from reliability and scoring
     coverage.
 13. Persist exact agent manifest, benchmark, schema, profile, grader, slice,
-    model, runtime, and attempt identities in result schema v3.
+    model, runtime, outputs, grades, usage, and attempt identities in tracked
+    eval schema v1. Persist durations, retries, and backend-call timing only in
+    disposable performance schema v1.
 
 Preflight must resolve the final structured output schema declared by the
 pipeline. Every configured `receipt_metadata_path` begins at `agent_output`,
@@ -162,16 +165,17 @@ slices. Never execute Python, templates, or arbitrary expressions from a
 profile. Slices may use immutable benchmark labels, metadata, identity, and
 decision timestamps; do not derive slice membership from model output.
 
-## Result JSON Contract
+## Tracked Eval And Disposable Performance Contracts
 
-Keep top-level keys in this order:
+Keep `result.json` compact with top-level keys in this order:
 
-1. `summary`
-2. `run_config`
-3. `selected_example_ids`
-4. `results`
+1. `schema_version`
+2. `summary`
+3. `run`
+4. `artifacts`
 
-Result schema v3 must preserve:
+Tracked eval schema v1 must preserve across `manifest.json`, immutable
+`attempts/`, `agent-version.json`, and compact `result.json`:
 
 - published benchmark and source-state identity;
 - frozen label-schema identities and hashes;
@@ -182,17 +186,39 @@ Result schema v3 must preserve:
   correctness;
 - raw/partial agent output and contract errors;
 - structured failure/correlation details; and
-- timing and effective AI execution policies.
+- effective AI execution policies and token/cost observations.
 
-Historical standalone schema-v2 result files are unsupported. Do not add them
-to `eval_results/`, rewrite them, migrate them, or add compatibility shims that
-continue producing or cataloging them.
+Do not persist duplicated per-example rows in `result.json`. Complete benchmark
+labels live once in the manifest eval contract; canonical agent output, grades,
+usage, and failures live once in immutable attempt generations. Detailed rows
+are reconstructed on demand through `LocalRunStore.evaluation_rows()`.
+
+Performance schema v1 lives under ignored `<run-dir>/performance/`. It owns
+invocation events, attempt/stage durations, retry observations, backend-call
+durations, configured-timeout duration-boundary observations, and its aggregate
+summary. Record HTTP attempt counts and retry categories only when the active
+adapter observed them; never convert configured retry limits into observations
+or label aggregate duration as a confirmed provider timeout. Performance is
+not part of tracked eval integrity and may be deleted without affecting
+scoring, resume, comparisons, inspection, lifecycle, or promotion. Explorer
+APIs and views must represent missing performance as unavailable. Do not add
+readers, writers, migrations, or compatibility paths for any older eval schema.
 
 Detailed prompts, multimodal bytes, tool transcripts, and validation history
 belong in the disposable run-local `review/` subtree, not inline in immutable
-attempt records or schema-v3 `result.json`. Review capture never writes to
+attempt records or schema-v1 `result.json`. Review capture never writes to
 Azure, is excluded from scientific run identity, and may be purged without
 invalidating scoring, resume, comparisons, or agent-version linkage.
+
+Treat each execution review as a transaction. Normalize only explicitly
+supported binary encodings, stage and hash the complete manifest/object set,
+publish the manifest as the commit point, and remove staged or newly promoted
+objects on failure. Capture begins `in_progress` and is finalized against the
+durable execution IDs as `complete`, `partial`, or `failed`; purge produces
+`purged`. Persist bounded redacted failure observations, verify orphan/missing
+objects plus manifest/count mismatches, and derive lifecycle/explorer status
+from evidence rather than trusting the descriptor string. Review failure must
+remain nonfatal to durable attempt, scoring, and performance persistence.
 
 ## Hosted Inputs
 
@@ -212,6 +238,10 @@ App exec, runtime secret discovery, SAS tokens, or shared storage keys.
 Do not duplicate commands here. Read `EvalRunbook.md` and use
 `$run-use-case-evals` for live run preparation or troubleshooting.
 
+When a schema-v1 contract changes, update the run and analysis skills plus
+operator documentation in the same change. Keep the repository contract-drift
+test passing so removed result fields cannot reappear in active instructions.
+
 ## Tests
 
 At minimum cover:
@@ -228,7 +258,10 @@ At minimum cover:
 - valid-run field/complete accuracy and separate reliability/coverage;
 - provider, transport, timeout, pipeline, identity, output, grader, executor,
   and cancellation failures;
-- result schema v3 identities and debugging evidence;
+- tracked eval schema v1 identities, compactness, and durable evidence;
+- disposable performance schema v1 separation and backend-call timing;
+- URL-safe Pydantic AI binary capture, malformed-artifact rollback, CAS
+  deduplication, truthful capture finalization, and orphan/count integrity;
 - repeated serial/thread/process equivalence; and
 - deterministic run/work identity, interruption recovery, selective failure
   generations, idempotent resume, and dimension-safe comparison; and

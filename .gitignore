@@ -33,6 +33,17 @@ wheels/
 # Local immutable agent-version manifests and content-addressed objects
 /agent_versions/
 
-# Local evaluation evidence and recoverable lifecycle quarantine
-/eval_results/
+# Track durable eval manifests, outputs, scores, usage, and summaries. Ignore only
+# short-lived operational diagnostics and heavy local review payloads.
+/eval_results/**/performance/
+/eval_results/**/review/
+/eval_results/**/attempts/
+/eval_results/**/objects/
+/eval_results/**/agent-version.json
+/eval_results/**/manifest.json
+/eval_results/**/.coordinator.lock
+/eval_results/**/.DS_Store
+
+
+# Recoverable lifecycle quarantine remains machine-local.
 /.workbench/

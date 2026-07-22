@@ -43,7 +43,12 @@ def field_evaluation_from_dict(payload: dict[str, Any]) -> FieldEvaluation:
 
 
 def eval_attempt_to_dict(value: EvalAttempt) -> dict[str, Any]:
-    """Convert one typed terminal attempt to JSON-compatible evidence."""
+    """Convert one attempt to durable, performance-free evaluation evidence."""
+    durable_artifacts = {
+        key: item
+        for key, item in value.artifacts.items()
+        if key not in {"performance", "retry_telemetry"}
+    }
     return {
         "execution_status": value.execution_status.value,
         "output_contract_status": value.output_contract_status.value,
@@ -59,10 +64,19 @@ def eval_attempt_to_dict(value: EvalAttempt) -> dict[str, Any]:
         "complete_evaluation_correct": value.complete_evaluation_correct,
         "error": value.error,
         "failure_type": value.failure_type.value if value.failure_type else None,
+        "artifacts": durable_artifacts,
+        "metadata": value.metadata,
+    }
+
+
+def eval_attempt_performance_to_dict(value: EvalAttempt) -> dict[str, Any]:
+    """Convert one attempt to disposable schema-v1 performance evidence."""
+    return {
+        "schema_version": 1,
         "duration_seconds": value.duration_seconds,
         "stage_durations_seconds": value.stage_durations_seconds,
-        "artifacts": value.artifacts,
-        "metadata": value.metadata,
+        "retry_telemetry": value.artifacts.get("retry_telemetry"),
+        "backend": value.artifacts.get("performance"),
     }
 
 

@@ -2,7 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
-import type { AttemptRow, EvidenceView, RunEntry, UseCaseAdapter } from "./contracts";
+import type {
+  AttemptPerformancePayload,
+  AttemptRow,
+  DurationStats,
+  EvidenceView,
+  PerformancePayload,
+  RunEntry,
+  UseCaseAdapter,
+} from "./contracts";
 
 type RunPayload = { runs: RunEntry[]; findings: unknown[] };
 type AttemptsPayload = {
@@ -10,7 +18,11 @@ type AttemptsPayload = {
   matched: number;
   facets: { states: Record<string, number>; fields: string[]; slices: string[] };
 };
-type AttemptPayload = { row: AttemptRow; review: Record<string, unknown> | null };
+type AttemptPayload = {
+  row: AttemptRow;
+  review: Record<string, unknown> | null;
+  performance: AttemptPerformancePayload;
+};
 
 const states = [
   "all",
@@ -47,6 +59,13 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
     queryFn: () => api<Record<string, unknown>>(`/runs/${encodeURIComponent(runId)}`),
     enabled: Boolean(runId),
   });
+  const performance = useQuery({
+    queryKey: ["performance", runId],
+    queryFn: () => api<PerformancePayload>(
+      `/runs/${encodeURIComponent(runId)}/performance`,
+    ),
+    enabled: Boolean(runId),
+  });
   const attempts = useQuery({
     queryKey: ["attempts", runId, state, search],
     queryFn: () => api<AttemptsPayload>(
@@ -74,7 +93,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
     () => runs.data?.runs.find((item) => item.run_id === runId),
     [runs.data, runId],
   );
-  const error = runs.error ?? run.error ?? attempts.error ?? detail.error ?? evidence.error;
+  const error = runs.error ?? run.error ?? performance.error ?? attempts.error ?? detail.error ?? evidence.error;
 
   return (
     <div className="app-shell">
@@ -101,7 +120,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
       </header>
 
       {error ? <div className="error">{error.message}</div> : null}
-      {!runId ? <div className="welcome">Choose a retained schema-v3 run to explore its results and evidence.</div> : null}
+      {!runId ? <div className="welcome">Choose a retained schema-v1 run to explore its results and evidence.</div> : null}
 
       {runId ? (
         <>
@@ -116,6 +135,13 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
             <summary>Run metrics and configuration</summary>
             <Json value={run.data ?? { loading: true }} />
           </details>
+          <PerformancePanel
+            performance={performance.data}
+            onSelectExecution={(value) => {
+              setExecutionId(value);
+              setTab("performance");
+            }}
+          />
 
           <main>
             <aside>
@@ -149,7 +175,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                     <small>{row.example_id} · repetition {row.run_index}</small>
                     <div className="output-line">
                       <span>Expected {compact(row.benchmark_labels)}</span>
-                      <span>Actual {compact(row.actual_outputs)}</span>
+                      <span>Actual {compact(row.agent_output)}</span>
                     </div>
                   </button>
                 ))}
@@ -170,6 +196,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                   <nav className="tabs">
                     {[
                       ["evaluation", "Evaluation"],
+                      ["performance", "Performance"],
                       ["evidence", "Evidence package"],
                       ["input", "Agent input"],
                       ["execution", "Execution & tools"],
@@ -179,12 +206,13 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                     ))}
                   </nav>
                   {tab === "evaluation" ? <Evaluation row={detail.data.row} /> : null}
+                  {tab === "performance" ? <AttemptPerformance performance={detail.data.performance} /> : null}
                   {tab === "evidence" ? (
                     evidence.isPending ? <div className="empty">Loading and verifying frozen evidence…</div> :
                     evidence.data ? <EvidenceDisplay evidence={evidence.data} /> : null
                   ) : null}
-                  {tab === "input" ? <ReviewSection review={detail.data.review} section="model_interactions" /> : null}
-                  {tab === "execution" ? <Execution review={detail.data.review} /> : null}
+                  {tab === "input" ? <ReviewSection review={detail.data.review} row={detail.data.row} section="model_interactions" /> : null}
+                  {tab === "execution" ? <Execution review={detail.data.review} row={detail.data.row} /> : null}
                   {tab === "raw" ? <Json value={detail.data} /> : null}
                 </>
               ) : null}
@@ -196,19 +224,116 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
   );
 }
 
-function Evaluation({ row }: { row: AttemptRow }) {
+export function PerformancePanel({
+  performance,
+  onSelectExecution,
+}: {
+  performance: PerformancePayload | undefined;
+  onSelectExecution: (executionId: string) => void;
+}) {
+  if (!performance) {
+    return <section className="performance-panel"><div className="empty compact-empty">Loading performance observations…</div></section>;
+  }
+  if (performance.availability !== "available") {
+    return (
+      <section className="performance-panel">
+        <div className="performance-heading"><h2>Performance</h2><span className="status">unavailable</span></div>
+        <p className="muted">{performance.reason ?? "Performance observations are unavailable."} Durable quality and evidence remain usable.</p>
+      </section>
+    );
+  }
+  const stages = performance.summary?.stage_duration_seconds ?? {};
+  const modelDuration = performance.model_calls?.duration_seconds;
+  const retries = performance.retries;
   return (
-    <div className="grid-cards">
-      <Card title="Expected output"><Json value={row.benchmark_labels} /></Card>
-      <Card title="Actual output"><Json value={row.actual_outputs} /></Card>
-      <Card title="Field graders"><Json value={row.fields} /></Card>
-      <Card title="Attempt state"><Json value={{ execution: row.execution_status, output_contract: row.output_contract_status, scoring: row.scoring_status, duration_seconds: row.duration_seconds, flaky: row.flaky }} /></Card>
+    <section className="performance-panel">
+      <div className="performance-heading">
+        <div><div className="eyebrow">Disposable observations</div><h2>Performance</h2></div>
+        <span className="status correct">available</span>
+      </div>
+      <div className="metric-grid">
+        <Metric label="Wall time" value={formatSeconds(performance.summary?.evaluation_wall_time_seconds)} />
+        <Metric label="Throughput" value={formatRate(performance.summary?.throughput_runs_per_minute)} />
+        <Metric label="Executions" value={String(performance.recorded_executions ?? "—")} />
+        <Metric label="Model calls" value={String(performance.model_calls?.count ?? "—")} />
+      </div>
+      <div className="performance-columns">
+        <div>
+          <h3>Median / p95 latency</h3>
+          <div className="latency-table">
+            {Object.entries(stages).map(([name, stats]) => <LatencyRow key={name} name={name} stats={stats} />)}
+            {modelDuration ? <LatencyRow name="model API" stats={modelDuration} /> : null}
+          </div>
+          <p className="muted">
+            Duration boundary: {formatCount(performance.model_calls?.duration_exceeded_configured_timeout_count)}. This does not by itself prove a provider timeout. Long tail at or above p95: {formatCount(performance.model_calls?.long_tail_at_or_above_p95_count)}.
+          </p>
+        </div>
+        <div>
+          <h3>Retry observations</h3>
+          <dl className="observation-list">
+            <dt>Model requests</dt><dd>{retries?.observed_model_requests ?? "unavailable"}</dd>
+            <dt>HTTP attempts</dt><dd>{retries?.observed_transport_attempts ?? "unavailable"}</dd>
+            <dt>Retry categories</dt><dd>{retries?.observed_transport_attempts == null ? "unavailable" : compact(retries.observed_transport_retry_categories ?? {})}</dd>
+          </dl>
+          {retries?.observed_transport_attempts == null ? <p className="muted">The active provider path did not expose adapter-owned HTTP attempts. Configured retry limits are not shown as observations.</p> : null}
+        </div>
+      </div>
+      <div>
+        <h3>Slowest model calls</h3>
+        <div className="slow-call-list">
+          {performance.model_calls?.slowest?.map((call, index) => (
+            <button
+              key={`${call.execution_id ?? "unknown"}-${index}`}
+              disabled={!call.execution_id}
+              onClick={() => call.execution_id && onSelectExecution(call.execution_id)}
+            >
+              <span><strong>{call.unit_id ?? call.example_id ?? call.work_item_id ?? "unknown"}</strong><small>{call.execution_id ?? "execution unavailable"}</small></span>
+              <span>{formatSeconds(call.duration_seconds)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return <div className="metric"><small>{label}</small><strong>{value}</strong></div>;
+}
+
+function LatencyRow({ name, stats }: { name: string; stats: DurationStats }) {
+  return <div><span>{name}</span><span>{formatSeconds(stats.median)} / {formatSeconds(stats.p95)}</span></div>;
+}
+
+export function AttemptPerformance({ performance }: { performance: AttemptPerformancePayload }) {
+  if (performance.availability !== "available") {
+    return <div className="empty">Attempt performance unavailable: {performance.reason ?? "no observation was retained"}. Durable evaluation and evidence remain available.</div>;
+  }
+  return (
+    <div className="stack">
+      <div className="metric-grid">
+        <Metric label="Executor duration" value={formatSeconds(performance.executor_duration_seconds)} />
+        <Metric label="Started" value={performance.started_at_utc ?? "—"} />
+        <Metric label="Completed" value={performance.completed_at_utc ?? "—"} />
+      </div>
+      <Card title="Attempt timing, retries, and model calls"><Json value={performance.metrics ?? { unavailable: true }} /></Card>
     </div>
   );
 }
 
-function Execution({ review }: { review: Record<string, unknown> | null }) {
-  if (!review) return <div className="empty">Detailed review was not captured or has been purged.</div>;
+function Evaluation({ row }: { row: AttemptRow }) {
+  return (
+    <div className="grid-cards">
+      <Card title="Expected output"><Json value={row.benchmark_labels} /></Card>
+      <Card title="Actual output"><Json value={row.agent_output} /></Card>
+      <Card title="Field evaluations"><Json value={row.evaluations} /></Card>
+      <Card title="Attempt state"><Json value={{ execution: row.execution_status, output_contract: row.output_contract_status, scoring: row.scoring_status, flaky: row.flaky }} /></Card>
+    </div>
+  );
+}
+
+function Execution({ review, row }: { review: Record<string, unknown> | null; row: AttemptRow }) {
+  if (!review) return <ReviewUnavailable row={row} />;
   return (
     <div className="stack">
       <Card title="Model interactions and tool activity"><Json value={review.model_interactions ?? { unavailable: true }} /></Card>
@@ -218,9 +343,19 @@ function Execution({ review }: { review: Record<string, unknown> | null }) {
   );
 }
 
-function ReviewSection({ review, section }: { review: Record<string, unknown> | null; section: string }) {
-  if (!review) return <div className="empty">Detailed review was not captured or has been purged.</div>;
+function ReviewSection({ review, row, section }: { review: Record<string, unknown> | null; row: AttemptRow; section: string }) {
+  if (!review) return <ReviewUnavailable row={row} />;
   return <Json value={review[section] ?? { unavailable: true }} />;
+}
+
+function ReviewUnavailable({ row }: { row: AttemptRow }) {
+  const reason = row.review_unavailable_reason;
+  return (
+    <div className="empty">
+      Detailed review unavailable ({reason?.code ?? "absent"})
+      {reason?.message ? `: ${reason.message}` : "."}
+    </div>
+  );
 }
 
 function Status({ row }: { row: AttemptRow }) {
@@ -239,4 +374,16 @@ function Json({ value }: { value: unknown }) {
 function compact(value: unknown) {
   const text = JSON.stringify(value) ?? String(value);
   return text.length > 72 ? `${text.slice(0, 69)}…` : text;
+}
+
+function formatSeconds(value: number | null | undefined) {
+  return value == null ? "unavailable" : `${value.toFixed(value >= 10 ? 1 : 2)} s`;
+}
+
+function formatRate(value: number | null | undefined) {
+  return value == null ? "unavailable" : `${value.toFixed(2)} runs/min`;
+}
+
+function formatCount(value: number | null | undefined) {
+  return value == null ? "unavailable" : String(value);
 }
