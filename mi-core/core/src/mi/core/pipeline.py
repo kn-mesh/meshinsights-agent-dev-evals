@@ -663,6 +663,9 @@ class Pipeline(Generic[PDO, ADO]):
                     stage_receipt.set_metadata(
                         "execution_telemetry", execution_telemetry
                     )
+                execution_review = process_data.get_execution_review()
+                if execution_review is not None:
+                    stage_receipt.set_metadata("execution_review", execution_review)
                 stage_receipt.execution_time_seconds = time.time() - stage_start
                 span.set_attribute(
                     "stage.duration_seconds", stage_receipt.execution_time_seconds

@@ -46,6 +46,10 @@ Benchmark Studio data.
 - `src/evals/comparisons.py` preflights every comparison child into an immutable
   manifest, validates declared varying dimensions, and reports paired logical-
   work-item deltas across deterministic schema-v3 runs.
+- `src/evals/inspection.py`, `src/evals/inspection_cli.py`, and
+  `agent-dev-eval-core/evaluation/review.py` own local-only, run-scoped,
+  disposable model/evidence review, bounded coding-agent queries, optional
+  compact diagnoses, integrity verification, and explicit review-only purge.
 - `agent-dev-eval-core/evaluation` owns use-case-neutral attempt states, scalar
   extraction, grader registry/built-ins, metrics, execution, and immutable JSON
   writing.
@@ -70,7 +74,9 @@ views, and use-case-specific graders in the root project.
    source snapshot, and raw artifact manifest.
 5. Apply generic example/unit/label filters and profile-defined slices.
 6. Preflight label-schema hashes, profile compatibility, paths, predicates,
-   graders, expected targets, and slice membership before model calls.
+   graders, expected targets, slice membership, and the pipeline's project,
+   published-schema, evidence-recipe, snapshot-contract, and required-artifact
+   declarations before model calls.
 7. Construct benchmark metadata and verify Blob byte size and SHA-256 before
    decoding evidence.
 8. Run the pipeline and validate the generic act-receipt identity fields.
@@ -178,6 +184,12 @@ Result schema v3 must preserve:
 
 Do not rewrite historical schema v2 files and do not add runtime compatibility
 shims that continue producing v2.
+
+Detailed prompts, multimodal bytes, tool transcripts, and validation history
+belong in the disposable run-local `review/` subtree, not inline in immutable
+attempt records or schema-v3 `result.json`. Review capture never writes to
+Azure, is excluded from scientific run identity, and may be purged without
+invalidating scoring, resume, comparisons, or agent-version linkage.
 
 ## Hosted Inputs
 

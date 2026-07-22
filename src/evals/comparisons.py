@@ -10,6 +10,8 @@ from typing import Any
 
 from evaluation import build_comparison_identity
 
+from src.evals.result_integrity import load_verified_result
+
 
 def build_comparison_manifest(
     manifest_paths: list[Path],
@@ -60,11 +62,10 @@ def build_comparison(
     """Compare aligned runs while rejecting undeclared configuration changes."""
     if len(result_paths) < 2:
         raise ValueError("A comparison requires at least two result files.")
-    results = [_load_object(path) for path in result_paths]
+    results = [load_verified_result(path) for path in result_paths]
+    manifests = [_load_object(path.parent / "manifest.json") for path in result_paths]
     run_ids = _validated_run_ids(results, config_key="run_config")
-    dimensions = [
-        _flatten(item["run_config"].get("dimensions", {})) for item in results
-    ]
+    dimensions = [_manifest_dimensions(item) for item in manifests]
     differing, warnings = _validate_dimensions(dimensions, varying_dimensions)
     selected = [tuple(item["selected_example_ids"]) for item in results]
     if len(set(selected)) != 1:
@@ -157,7 +158,9 @@ def _manifest_dimensions(payload: dict[str, Any]) -> dict[str, Any]:
         "agent": spec.get("agent"),
         "model": {
             **(spec.get("model") or {}),
-            "execution_policies": execution.get("ai_execution_policies"),
+            "execution_policies": _execution_policies_without_model(
+                execution.get("ai_execution_policies")
+            ),
         },
         "scoring": spec.get("scoring"),
         "execution": {
@@ -169,6 +172,22 @@ def _manifest_dimensions(payload: dict[str, Any]) -> dict[str, Any]:
         "source": spec.get("source_manifest"),
     }
     return _flatten(semantic)
+
+
+def _execution_policies_without_model(value: Any) -> Any:
+    """Keep retry/timeout policy dimensions without duplicating model identity."""
+    if not isinstance(value, list):
+        return value
+    return [
+        {
+            key: item_value
+            for key, item_value in item.items()
+            if key not in {"model", "reasoning_effort"}
+        }
+        if isinstance(item, dict)
+        else item
+        for item in value
+    ]
 
 
 def _validated_run_ids(
@@ -351,7 +370,59 @@ def _paired_delta(
         ),
         "usage": _nested_numeric_deltas(left, right, shared, "usage"),
         "cost": _paired_cost_deltas(left, right, shared),
+        "work_items": _paired_work_item_changes(left, right, shared),
     }
+
+
+def _paired_work_item_changes(
+    left: dict[tuple[str, int], dict[str, Any]],
+    right: dict[tuple[str, int], dict[str, Any]],
+    shared: list[tuple[str, int]],
+) -> dict[str, list[dict[str, Any]]]:
+    """List exact aligned identities behind paired aggregate changes."""
+    output: dict[str, list[dict[str, Any]]] = {
+        "improved": [],
+        "regressed": [],
+        "changed_incorrect": [],
+        "newly_failed": [],
+        "recovered": [],
+        "output_disagreement": [],
+    }
+    for example_id, run_index in shared:
+        baseline = left[(example_id, run_index)]
+        candidate = right[(example_id, run_index)]
+        baseline_correct = baseline.get("complete_evaluation_correct")
+        candidate_correct = candidate.get("complete_evaluation_correct")
+        baseline_healthy = baseline.get("execution_status") == "completed"
+        candidate_healthy = candidate.get("execution_status") == "completed"
+        identity = {
+            "example_id": example_id,
+            "run_index": run_index,
+            "baseline_work_item_id": baseline.get("work_item_id"),
+            "candidate_work_item_id": candidate.get("work_item_id"),
+            "baseline_execution_id": baseline.get("execution_id"),
+            "candidate_execution_id": candidate.get("execution_id"),
+        }
+        if baseline_correct is False and candidate_correct is True:
+            output["improved"].append(identity)
+        if baseline_correct is True and candidate_correct is False:
+            output["regressed"].append(identity)
+        if (
+            baseline_correct is False
+            and candidate_correct is False
+            and _json_key(baseline.get("actual_outputs"))
+            != _json_key(candidate.get("actual_outputs"))
+        ):
+            output["changed_incorrect"].append(identity)
+        if baseline_healthy and not candidate_healthy:
+            output["newly_failed"].append(identity)
+        if not baseline_healthy and candidate_healthy:
+            output["recovered"].append(identity)
+        if _json_key(baseline.get("actual_outputs")) != _json_key(
+            candidate.get("actual_outputs")
+        ):
+            output["output_disagreement"].append(identity)
+    return output
 
 
 def _boolean_delta(left: list[Any], right: list[Any]) -> dict[str, Any]:

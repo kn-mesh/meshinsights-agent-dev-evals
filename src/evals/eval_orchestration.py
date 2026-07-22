@@ -28,6 +28,7 @@ from evaluation import (
     FailureType,
     GraderRegistry,
     JsonScalar,
+    LocalReviewStore,
     OutputContractStatus,
     RepeatedEvalExecutor,
     RepeatedEvalExecutorConfig,
@@ -39,6 +40,7 @@ from evaluation import (
     build_run_identity,
     build_work_item_id,
     build_results_dir_for_pipeline,
+    benchmark_source_reference,
     build_scoring_coverage,
     metric_counts,
     normalize_filename_token,
@@ -71,6 +73,11 @@ from src.benchmarks import (
     BenchmarkVersion,
     PublishedBenchmarkVersionSummary,
 )
+from src.benchmarks.compatibility import (
+    find_configured_published_benchmark,
+    load_project_contract,
+    preflight_pipeline_benchmark_contract,
+)
 from src.evals.cli_support import (
     normalize_ai_reasoning_effort,
     prompt_positive_int,
@@ -86,6 +93,7 @@ from src.evals.evaluation_profile import (
     slice_memberships,
 )
 from src.evals.graders import build_project_grader_registry
+from src.evals.inspection import materialize_review_index
 from src.evals.scoring import score_receipt_metadata
 from src.evals.run_specs import build_source_manifest, repository_root
 from src.evals.run_store import (
@@ -203,6 +211,7 @@ class _PipelineArgs:
     grader_registry: GraderRegistry
     ai_model: str | None
     ai_reasoning_effort: str | None
+    review_capture: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -346,6 +355,7 @@ def run_eval(
     materialize_only: bool = False,
     output_root: Path | None = None,
     agent_version_store_root: Path | None = None,
+    review_capture: str = "full",
 ) -> Path:
     """Run repeated evals against one immutable published benchmark version."""
     if runs_per_example < 1:
@@ -360,6 +370,8 @@ def run_eval(
         raise ValueError("progress_interval_seconds must be greater than 0.")
     if dry_run and materialize_only:
         raise ValueError("dry_run and materialize_only cannot be combined.")
+    if review_capture not in {"full", "off"}:
+        raise ValueError("review_capture must be 'full' or 'off'.")
     if rerun_failure_types and resume_mode not in {"failed", "missing-or-failed"}:
         raise ValueError(
             "rerun_failure_types requires resume_mode 'failed' or 'missing-or-failed'."
@@ -428,6 +440,17 @@ def run_eval(
     )
     if not examples:
         raise ValueError("No benchmark examples match the provided filters.")
+    project_contract = load_project_contract(yaml_path)
+    configured_benchmark = find_configured_published_benchmark(
+        project_contract, benchmark
+    )
+    preflight_pipeline_benchmark_contract(
+        pipeline_config=yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {},
+        benchmark=benchmark,
+        examples=examples,
+        start_path=yaml_path,
+        project_contract=project_contract,
+    )
     preflight = preflight_evaluation(
         profile=profile,
         profile_path=evaluation_profile_path,
@@ -435,6 +458,7 @@ def run_eval(
         examples=examples,
         grader_registry=registry,
         agent_output_schema=_resolve_agent_output_schema(yaml_path),
+        allowed_benchmark_label_fields=set(configured_benchmark.label_fields),
     )
 
     pipeline_args = _PipelineArgs(
@@ -444,6 +468,7 @@ def run_eval(
         grader_registry=registry,
         ai_model=ai_model,
         ai_reasoning_effort=ai_reasoning_effort,
+        review_capture=review_capture == "full",
     )
     scope = _scope_token(
         example_ids=example_ids,
@@ -513,7 +538,42 @@ def run_eval(
         / run_id
     )
     store = LocalRunStore(run_dir, run_id=run_id)
-    manifest = store.initialize(
+    manifest_created_at = (
+        str(store.read_manifest()["created_at_utc"])
+        if store.manifest_path.exists()
+        else utc_now()
+    )
+    materialization_run_config = _build_run_config(
+        yaml_path=yaml_path,
+        benchmark=benchmark,
+        preflight=preflight,
+        scope=scope,
+        runs_per_example=runs_per_example,
+        runtime=runtime,
+        max_workers=max_workers,
+        error_action=error_action,
+        progress_interval_seconds=progress_interval_seconds,
+        ai_model=ai_model,
+        ai_reasoning_effort=ai_reasoning_effort,
+        agent_reference=agent_reference,
+        legacy_agent_label=(
+            agent_version
+            if agent_version and not agent_version.startswith("av_")
+            else None
+        ),
+        configuration_dimensions=dimensions,
+        completed_at=datetime.fromisoformat(manifest_created_at),
+    )
+    _bind_run_config_to_manifest(
+        materialization_run_config,
+        run_id=run_id,
+        run_spec_sha256=run_spec_sha256,
+        run_spec=run_spec,
+        manifest_created_at=manifest_created_at,
+        telemetry_schema_version=1,
+    )
+    materialization_run_config.pop("completed_at_utc", None)
+    store.initialize(
         {
             "storage_schema_version": 1,
             "result_schema_version": 3,
@@ -523,7 +583,36 @@ def run_eval(
             "run_spec_sha256": run_spec_sha256,
             "run_spec": run_spec,
             "work_items": work_plan,
-            "created_at_utc": utc_now(),
+            "created_at_utc": manifest_created_at,
+            "result_materialization": {
+                "contract_version": 1,
+                "run_config": materialization_run_config,
+                "selected_example_ids": [example.example_id for example in examples],
+                "result_rows": _build_results(
+                    [
+                        _ExampleEvalResult(
+                            example=example,
+                            slice_keys=preflight.example_slices[example.example_id],
+                            attempts=(),
+                        )
+                        for example in examples
+                    ],
+                    profile=profile,
+                ),
+                "output_fields": [
+                    {
+                        "key": field.key,
+                        "graded": field.evaluation is not None,
+                        "benchmark_label_path": (
+                            list(field.evaluation.benchmark_label_path)
+                            if field.evaluation is not None
+                            else None
+                        ),
+                    }
+                    for field in profile.output_fields
+                ],
+                "slice_keys": [item.key for item in profile.slices],
+            },
         }
     )
     promoted_store.persist_candidate(resolved_agent, run_dir)
@@ -559,6 +648,7 @@ def run_eval(
                 "runtime": runtime,
                 "max_workers": max_workers,
                 "error_action": error_action,
+                "review_capture": review_capture,
             },
         )
         examples_by_id = {example.example_id: example for example in examples}
@@ -578,6 +668,16 @@ def run_eval(
             item["work_item_id"]: store.next_generation(item["work_item_id"])
             for item in selected
         }
+        review_store = (
+            LocalReviewStore(run_dir, run_id=run_id)
+            if review_capture == "full" and selected
+            else None
+        )
+        if review_store is not None:
+            review_store.initialize(
+                run_spec_sha256=run_spec_sha256,
+                mode="full",
+            )
 
         def commit_terminal(record: Any) -> None:
             work_item = record.work_item
@@ -587,6 +687,8 @@ def run_eval(
             started_at = completed_at - timedelta(
                 seconds=max(0.0, float(record.duration_seconds))
             )
+            review_payload = record.result.metadata.pop("_ephemeral_review", None)
+            execution_id = f"{work_item_id}.{generation}"
             store.commit_attempt(
                 {
                     "attempt_record_schema_version": 1,
@@ -594,7 +696,7 @@ def run_eval(
                     "work_item_id": work_item_id,
                     "example_id": work_item.item_id,
                     "repetition_index": work_item.attempt_index,
-                    "execution_id": f"{work_item_id}.{generation}",
+                    "execution_id": execution_id,
                     "generation": generation,
                     "invocation_id": invocation_id,
                     "agent_version_id": agent_reference.agent_version_id,
@@ -605,6 +707,74 @@ def run_eval(
                     "attempt": eval_attempt_to_dict(record.result),
                 }
             )
+            if review_store is not None:
+                source_artifacts = [
+                    benchmark_source_reference(
+                        artifact_kind=artifact.artifact_kind,
+                        object_key=artifact.object_key,
+                        content_type=artifact.content_type,
+                        byte_size=artifact.byte_size,
+                        content_sha256=artifact.content_sha256,
+                        source_snapshot_id=work_item.payload.source_snapshot_id,
+                    )
+                    for artifact in work_item.payload.raw_artifacts
+                ]
+                body = review_payload if isinstance(review_payload, dict) else {}
+                try:
+                    review_store.commit_execution(
+                        {
+                            "run_id": run_id,
+                            "work_item_id": work_item_id,
+                            "execution_id": execution_id,
+                            "example_id": work_item.item_id,
+                            "repetition_index": work_item.attempt_index,
+                            "generation": generation,
+                            "invocation_id": invocation_id,
+                            "agent_version_id": agent_reference.agent_version_id,
+                            "benchmark": {
+                                "key": benchmark.benchmark_key,
+                                "version_id": benchmark.benchmark_version_id,
+                                "version_number": benchmark.version_number,
+                                "source_snapshot_id": (
+                                    work_item.payload.source_snapshot_id
+                                ),
+                            },
+                            "capture_status": body.get(
+                                "capture_status",
+                                "complete" if body else "failed",
+                            ),
+                            "capture_errors": body.get(
+                                "capture_errors",
+                                []
+                                if body
+                                else ["Pipeline returned no execution review."],
+                            ),
+                            "source_evidence": source_artifacts,
+                            "pipeline": body.get("pipeline", {}),
+                            "model_interactions": body.get("model_interactions", {}),
+                            "attempt_outcome": {
+                                "execution_status": (
+                                    record.result.execution_status.value
+                                ),
+                                "output_contract_status": (
+                                    record.result.output_contract_status.value
+                                ),
+                                "scoring_status": record.result.scoring_status.value,
+                                "complete_evaluation_correct": (
+                                    record.result.complete_evaluation_correct
+                                ),
+                                "failure_type": (
+                                    record.result.failure_type.value
+                                    if record.result.failure_type is not None
+                                    else None
+                                ),
+                            },
+                        }
+                    )
+                except Exception as error:
+                    logger.warning(
+                        "Review capture failed for %s: %s", execution_id, error
+                    )
 
         try:
             with _cooperative_signal_cancellation() as should_cancel:
@@ -646,81 +816,17 @@ def run_eval(
             },
         )
 
-        results = _results_from_store(
-            store=store,
-            examples=examples,
-            preflight=preflight,
-        )
         completed_at = datetime.now(timezone.utc)
-        run_config = _build_run_config(
-            yaml_path=yaml_path,
-            benchmark=benchmark,
-            preflight=preflight,
-            scope=scope,
-            runs_per_example=runs_per_example,
-            runtime=runtime,
-            max_workers=max_workers,
-            error_action=error_action,
-            progress_interval_seconds=progress_interval_seconds,
-            ai_model=ai_model,
-            ai_reasoning_effort=ai_reasoning_effort,
-            agent_reference=agent_reference,
-            legacy_agent_label=(
-                agent_version
-                if agent_version and not agent_version.startswith("av_")
-                else None
-            ),
-            configuration_dimensions=dimensions,
-            completed_at=completed_at,
+        result_path = store.materialize_result(
+            completed_at_utc=completed_at.isoformat(timespec="seconds"),
+            latest_invocation_id=invocation_id,
         )
-        run_config.update(
-            {
-                "run_id": run_id,
-                "run_spec_sha256": run_spec_sha256,
-                "run_created_at_utc": manifest["created_at_utc"],
-                "latest_invocation_id": invocation_id,
-                "storage_schema_version": manifest["storage_schema_version"],
-                "telemetry_schema_version": manifest["telemetry_schema_version"],
-                "agent_version_resolver_contract_version": 1,
-                "selected_example_scope_sha256": run_spec["scope"]["content_sha256"],
-            }
-        )
-        run_config["dimensions"].update(
-            {
-                "source": {
-                    "content_manifest_sha256": run_spec["source_manifest"][
-                        "content_sha256"
-                    ],
-                    "git_revision": run_spec["source_manifest"]["git_revision"],
-                    "tree_state": run_spec["source_manifest"]["source_tree_state"],
-                },
-                "evidence": {
-                    "benchmark_source_state_sha256": (benchmark.source_state_sha256),
-                    "source": "azure_blob",
-                },
-                "harness": {
-                    "execution_contract_version": run_spec[
-                        "execution_contract_version"
-                    ],
-                    "result_schema_version": 3,
-                    "telemetry_schema_version": manifest["telemetry_schema_version"],
-                },
-            }
-        )
-        payload = {
-            "summary": _build_summary(
-                results,
-                profile=profile,
-                runs_per_example=runs_per_example,
-                evaluation_wall_time_seconds=(
-                    store.execution_invocation_wall_time_seconds()
-                ),
-            ),
-            "run_config": run_config,
-            "selected_example_ids": [example.example_id for example in examples],
-            "results": _build_results(results, profile=profile),
-        }
-        return store.write_result(payload)
+        if review_store is not None:
+            try:
+                materialize_review_index(run_dir)
+            except Exception as error:
+                logger.warning("Review index materialization failed: %s", error)
+        return result_path
 
 
 def _select_examples(
@@ -1050,6 +1156,7 @@ def _run_work_item(
             ai_model=pipeline_args.ai_model,
             ai_reasoning_effort=pipeline_args.ai_reasoning_effort,
             pipeline_log_level="CRITICAL",
+            review_capture=pipeline_args.review_capture,
         )
         duration_seconds = _receipt_duration(receipt, started_at=started_at)
         stage_durations = _stage_durations(receipt)
@@ -1111,6 +1218,8 @@ def _run_work_item(
             "reason": "Observed backend retry events were not present on the receipt.",
         },
     )
+    if pipeline_args.review_capture:
+        attempt.metadata["_ephemeral_review"] = _receipt_review_payload(receipt)
     attempt.artifacts.setdefault(
         "cost",
         _build_cost_observation(
@@ -1315,6 +1424,105 @@ def _receipt_execution_telemetry(receipt: Any) -> dict[str, Any] | None:
                 {key: value for key, value in telemetry.items() if value is not None}
             )
     return merged or None
+
+
+def _receipt_review_payload(receipt: Any) -> dict[str, Any]:
+    """Build a transient, JSON-safe pipeline and model review payload."""
+    process = receipt.get_stage_receipt("process")
+    interactions = (
+        process.metadata.get("execution_review")
+        if process is not None and isinstance(process.metadata, dict)
+        else None
+    )
+    processor_reviews = (
+        interactions.get("processors", {}) if isinstance(interactions, dict) else {}
+    )
+    partial_processors = [
+        key
+        for key, value in processor_reviews.items()
+        if isinstance(value, dict) and value.get("capture_status") == "partial"
+    ]
+    stages: list[dict[str, Any]] = []
+    for stage_name in ("retrieve", "process", "act"):
+        stage = receipt.get_stage_receipt(stage_name)
+        if stage is None:
+            continue
+        selected_metadata: dict[str, Any] = {}
+        if stage_name == "retrieve":
+            for key in (
+                "example_id",
+                "benchmark_key",
+                "benchmark_version_id",
+                "benchmark_version_number",
+                "source_snapshot_id",
+                "source_snapshot_content_sha256",
+                "artifact_integrity",
+                "row_counts",
+            ):
+                if key in stage.metadata:
+                    selected_metadata[key] = stage.metadata[key]
+        elif stage_name == "act":
+            for key in (
+                "example_id",
+                "benchmark_key",
+                "benchmark_version_id",
+                "benchmark_version_number",
+                "source_snapshot_id",
+                "agent_output",
+            ):
+                if key in stage.metadata:
+                    selected_metadata[key] = stage.metadata[key]
+        stages.append(
+            {
+                "stage": stage_name,
+                "success": stage.success,
+                "correlation_id": stage.correlation_id,
+                "duration_seconds": stage.execution_time_seconds,
+                "error": stage.error,
+                "metadata": _review_json_value(selected_metadata),
+            }
+        )
+    return {
+        "capture_status": (
+            "partial"
+            if not isinstance(interactions, dict) or partial_processors
+            else "complete"
+        ),
+        "capture_errors": (
+            [
+                "Partial model interaction capture: "
+                + ", ".join(sorted(partial_processors))
+            ]
+            if partial_processors
+            else []
+            if isinstance(interactions, dict)
+            else ["No mi.ai model interaction was exposed on the process receipt."]
+        ),
+        "pipeline": {
+            "pipeline_id": getattr(receipt, "pipeline_id", None),
+            "correlation_id": getattr(receipt, "correlation_id", None),
+            "success": getattr(receipt, "success", None),
+            "stages": stages,
+        },
+        "model_interactions": _review_json_value(interactions or {}),
+    }
+
+
+def _review_json_value(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool, bytes)):
+        return value
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json")
+    if isinstance(value, dict):
+        return {str(key): _review_json_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_review_json_value(item) for item in value]
+    return {
+        "unavailable": True,
+        "reason": f"Unsupported review value type: {type(value).__name__}",
+    }
 
 
 def _telemetry_artifacts(
@@ -1798,6 +2006,51 @@ def _build_run_config(
     }
 
 
+def _bind_run_config_to_manifest(
+    run_config: dict[str, Any],
+    *,
+    run_id: str,
+    run_spec_sha256: str,
+    run_spec: dict[str, Any],
+    manifest_created_at: str,
+    telemetry_schema_version: int,
+) -> None:
+    """Add the manifest-derived portion of a schema-v3 run configuration."""
+    run_config.update(
+        {
+            "run_id": run_id,
+            "run_spec_sha256": run_spec_sha256,
+            "run_created_at_utc": manifest_created_at,
+            "storage_schema_version": 1,
+            "telemetry_schema_version": telemetry_schema_version,
+            "agent_version_resolver_contract_version": 1,
+            "selected_example_scope_sha256": run_spec["scope"]["content_sha256"],
+        }
+    )
+    run_config["dimensions"].update(
+        {
+            "source": {
+                "content_manifest_sha256": run_spec["source_manifest"][
+                    "content_sha256"
+                ],
+                "git_revision": run_spec["source_manifest"]["git_revision"],
+                "tree_state": run_spec["source_manifest"]["source_tree_state"],
+            },
+            "evidence": {
+                "benchmark_source_state_sha256": run_spec["benchmark"][
+                    "source_state_sha256"
+                ],
+                "source": "azure_blob",
+            },
+            "harness": {
+                "execution_contract_version": run_spec["execution_contract_version"],
+                "result_schema_version": 3,
+                "telemetry_schema_version": telemetry_schema_version,
+            },
+        }
+    )
+
+
 def _build_results(
     results: list[_ExampleEvalResult], *, profile: EvaluationProfile
 ) -> list[dict[str, Any]]:
@@ -2073,6 +2326,12 @@ def _argument_parser() -> argparse.ArgumentParser:
         "--error-action", choices=["stop", "continue"], default="continue"
     )
     parser.add_argument("--progress-interval-seconds", type=float, default=30.0)
+    parser.add_argument(
+        "--review-capture",
+        choices=["full", "off"],
+        default="full",
+        help="Capture a disposable local review bundle for executed attempts.",
+    )
     parser.add_argument("--ai-model")
     parser.add_argument(
         "--compare-model",
@@ -2532,6 +2791,7 @@ def main() -> None:
             dry_run=dry_run,
             materialize_only=materialize_only,
             repository=repository,
+            review_capture=args.review_capture,
         )
 
     comparison_manifest: Path | None = None

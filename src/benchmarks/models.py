@@ -78,29 +78,26 @@ class BenchmarkExample(BaseModel):
 
     @model_validator(mode="after")
     def validate_raw_artifacts(self) -> Self:
-        """Require the two raw Spirax artifacts frozen by benchmark publication."""
+        """Require an unambiguous, non-empty frozen artifact manifest."""
         artifact_kinds = [artifact.artifact_kind for artifact in self.raw_artifacts]
+        if not artifact_kinds:
+            raise ValueError("Benchmark example contains no raw artifacts.")
         if len(artifact_kinds) != len(set(artifact_kinds)):
             raise ValueError("Benchmark example contains duplicate raw artifact kinds.")
-        kinds = set(artifact_kinds)
-        missing = {"telemetry", "alarms"} - kinds
-        if missing:
+        if (
+            self.raw_window_start is not None
+            and self.raw_window_end is not None
+            and self.raw_window_start > self.raw_window_end
+        ):
+            raise ValueError("Benchmark evidence window start is after its end.")
+        if (
+            self.raw_window_end is not None
+            and self.raw_window_end > self.decision_timestamp
+        ):
             raise ValueError(
-                "Benchmark example is missing raw artifacts: "
-                + ", ".join(sorted(missing))
+                "Benchmark evidence window extends beyond the decision timestamp."
             )
         return self
-
-    @property
-    def sensor_id(self) -> int:
-        """Resolve the numeric Pulse sensor identity from frozen example metadata."""
-        raw = self.example_metadata.get("sensor_id", self.unit_id)
-        try:
-            return int(str(raw).strip())
-        except ValueError as error:
-            raise ValueError(
-                f"Benchmark example {self.example_id} has a non-numeric sensor_id."
-            ) from error
 
 
 class BenchmarkVersion(BaseModel):

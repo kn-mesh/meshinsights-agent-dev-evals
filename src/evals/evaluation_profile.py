@@ -160,6 +160,7 @@ def preflight_evaluation(
     examples: list[BenchmarkExample],
     grader_registry: GraderRegistry,
     agent_output_schema: dict[str, Any],
+    allowed_benchmark_label_fields: set[str] | None = None,
 ) -> EvaluationPreflight:
     allowed_schema_keys = set(profile.benchmark_compatibility.schema_keys)
     schemas = {schema.schema_version_id: schema for schema in benchmark.label_schemas}
@@ -188,6 +189,16 @@ def preflight_evaluation(
     for field in profile.output_fields:
         if field.evaluation is None:
             continue
+        benchmark_path = field.evaluation.benchmark_label_path
+        if (
+            allowed_benchmark_label_fields is not None
+            and benchmark_path[0] not in allowed_benchmark_label_fields
+        ):
+            raise ValueError(
+                f"Evaluation profile field {field.key!r} grades benchmark label "
+                f"{benchmark_path[0]!r}, which is not enabled by "
+                "workbench.project.json."
+            )
         grader = field.evaluation.grader
         resolved = grader_registry.resolve(grader.id, grader.version)
         _validate_grader_config(resolved, field.actual.type, grader.config)

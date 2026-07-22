@@ -1,4 +1,4 @@
-"""Retrieve immutable benchmark evidence from Azure Blob Storage."""
+"""Decode Spirax evidence from immutable Azure benchmark artifacts."""
 
 from __future__ import annotations
 
@@ -18,17 +18,17 @@ from src.objects.pipeline_metadata import BenchmarkExamplePipelineMetadata
 from src.storage.azure_blob import AzureBlobEvidenceStore, EvidenceStore
 
 
-class AzureBlobBenchmarkEvidenceRetrieverConfig(BaseRetrieverConfig):
-    """Configure read-only retrieval of benchmark-frozen source evidence."""
+class SpiraxFrozenEvidenceRetrieverConfig(BaseRetrieverConfig):
+    """Configure the Spirax frozen-artifact decoder."""
 
     name: str = "azure_blob"
     scope: str = "pulse_alarm_temperature_history"
 
 
-class AzureBlobBenchmarkEvidenceRetriever(BaseRetriever):
-    """Load and verify the exact raw source artifacts frozen at publication."""
+class SpiraxFrozenEvidenceRetriever(BaseRetriever):
+    """Load, verify, and decode the Spirax telemetry/alarm evidence contract."""
 
-    config: AzureBlobBenchmarkEvidenceRetrieverConfig
+    config: SpiraxFrozenEvidenceRetrieverConfig
 
     @classmethod
     def version_contracts(
@@ -60,12 +60,12 @@ class AzureBlobBenchmarkEvidenceRetriever(BaseRetriever):
 
     def __init__(
         self,
-        config: AzureBlobBenchmarkEvidenceRetrieverConfig | None = None,
+        config: SpiraxFrozenEvidenceRetrieverConfig | None = None,
         *,
         evidence_store: EvidenceStore | None = None,
     ) -> None:
         """Initialize the retriever with an optional injected store for tests."""
-        resolved = config or AzureBlobBenchmarkEvidenceRetrieverConfig()
+        resolved = config or SpiraxFrozenEvidenceRetrieverConfig()
         super().__init__(resolved)
         self.config = resolved
         self._evidence_store = evidence_store
@@ -93,21 +93,6 @@ class AzureBlobBenchmarkEvidenceRetriever(BaseRetriever):
             raise ValueError("Benchmark evidence does not contain a selected alarm.")
 
         decision_timestamp = _naive_utc(typed_metadata.decision_timestamp)
-        for row in telemetry:
-            timestamp = row.get("timestamp")
-            if not isinstance(timestamp, datetime):
-                raise ValueError("Benchmark telemetry timestamp must be a datetime.")
-            if timestamp > decision_timestamp:
-                raise ValueError(
-                    "Benchmark telemetry extends beyond the decision timestamp."
-                )
-
-        selected_alarm = _normalize_alarm(selected_alarm)
-        source_detected_at = selected_alarm.get("detected_at")
-        if not isinstance(source_detected_at, datetime):
-            raise ValueError("Selected alarm is missing detected_at.")
-        selected_alarm["source_detected_at"] = source_detected_at
-        selected_alarm["detected_at"] = decision_timestamp
         window_start = _optional_naive_utc(typed_metadata.raw_window_start)
         window_end = _optional_naive_utc(typed_metadata.raw_window_end)
         if window_start is None or window_end is None:
@@ -118,6 +103,37 @@ class AzureBlobBenchmarkEvidenceRetriever(BaseRetriever):
             raise ValueError(
                 "Benchmark evidence window extends beyond the decision timestamp."
             )
+        for row in telemetry:
+            timestamp = row.get("timestamp")
+            if not isinstance(timestamp, datetime):
+                raise ValueError("Benchmark telemetry timestamp must be a datetime.")
+            if timestamp > decision_timestamp:
+                raise ValueError(
+                    "Benchmark telemetry extends beyond the decision timestamp."
+                )
+
+        selected_alarm = _normalize_alarm(selected_alarm)
+        normalized_sensor_alarms = [_normalize_alarm(row) for row in sensor_alarms]
+        _validate_alarm_window(
+            selected_alarm,
+            label="selected alarm",
+            window_start=window_start,
+            window_end=window_end,
+            decision_timestamp=decision_timestamp,
+        )
+        for index, alarm in enumerate(normalized_sensor_alarms):
+            _validate_alarm_window(
+                alarm,
+                label=f"historical alarm at index {index}",
+                window_start=window_start,
+                window_end=window_end,
+                decision_timestamp=decision_timestamp,
+            )
+        source_detected_at = selected_alarm.get("detected_at")
+        if not isinstance(source_detected_at, datetime):
+            raise ValueError("Selected alarm is missing detected_at.")
+        selected_alarm["source_detected_at"] = source_detected_at
+        selected_alarm["detected_at"] = decision_timestamp
         lookback_days = max((window_end - window_start).days, 1)
         return {
             "example_id": typed_metadata.example_id,
@@ -130,14 +146,12 @@ class AzureBlobBenchmarkEvidenceRetriever(BaseRetriever):
             ),
             "source_kind": typed_metadata.source_kind,
             "known_gaps": list(typed_metadata.raw_known_gaps),
-            "sensor_id": typed_metadata.sensor_id,
+            "sensor_id": _sensor_id(typed_metadata),
             "unit": typed_metadata.unit,
             "decision_timestamp": decision_timestamp,
-            "steam_trap_type": typed_metadata.example_metadata.get(
-                "steam_trap_type"
-            ),
+            "steam_trap_type": typed_metadata.example_metadata.get("steam_trap_type"),
             "selected_alarm": selected_alarm,
-            "sensor_alarms": [_normalize_alarm(row) for row in sensor_alarms],
+            "sensor_alarms": normalized_sensor_alarms,
             "window_start": window_start,
             "window_end": window_end,
             "lookback_days": lookback_days,
@@ -209,9 +223,7 @@ def _normalize_alarm(value: dict[str, Any]) -> dict[str, Any]:
             value.get("resolved_at", value.get("resolvedOn"))
         ),
         "alert_type": value.get("alert_type", value.get("alertType")),
-        "analyst_status": value.get(
-            "analyst_status", value.get("analystStatus")
-        ),
+        "analyst_status": value.get("analyst_status", value.get("analystStatus")),
         "alarm_type": value.get(
             "alarm_type", alarm_data.get("type", value.get("type"))
         ),
@@ -220,6 +232,42 @@ def _normalize_alarm(value: dict[str, Any]) -> dict[str, Any]:
             "alarm_description", alarm_data.get("description")
         ),
     }
+
+
+def _validate_alarm_window(
+    alarm: Mapping[str, Any],
+    *,
+    label: str,
+    window_start: datetime,
+    window_end: datetime,
+    decision_timestamp: datetime,
+) -> None:
+    """Reject alarm timestamps that can reveal evidence outside the frozen window."""
+    for field in ("detected_at", "resolved_at"):
+        timestamp = alarm.get(field)
+        if timestamp is None and field == "resolved_at":
+            continue
+        if not isinstance(timestamp, datetime):
+            raise ValueError(f"Benchmark {label} is missing {field}.")
+        if timestamp > decision_timestamp:
+            raise ValueError(
+                f"Benchmark {label} {field} extends beyond the decision timestamp."
+            )
+        if timestamp < window_start or timestamp > window_end:
+            raise ValueError(
+                f"Benchmark {label} {field} is outside the frozen evidence window."
+            )
+
+
+def _sensor_id(metadata: BenchmarkExamplePipelineMetadata) -> int:
+    """Resolve the Pulse sensor identity inside the use-case adapter boundary."""
+    raw = metadata.example_metadata.get("sensor_id", metadata.unit)
+    try:
+        return int(str(raw).strip())
+    except ValueError as error:
+        raise ValueError(
+            f"Benchmark example {metadata.example_id} has a non-numeric sensor_id."
+        ) from error
 
 
 def _parse_datetime(value: Any) -> datetime:

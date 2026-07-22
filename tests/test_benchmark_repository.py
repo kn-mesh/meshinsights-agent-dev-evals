@@ -7,7 +7,13 @@ import hashlib
 import json
 from typing import Any
 
-from src.benchmarks.postgres_repository import AzurePostgresBenchmarkRepository
+import pytest
+
+from src.benchmarks.postgres_repository import (
+    AzurePostgresBenchmarkRepository,
+    _build_benchmark_version,
+    _normalize_trusted_postgres_rows,
+)
 
 
 class _Rows:
@@ -129,7 +135,7 @@ def test_repository_loads_full_labels_schema_and_frozen_manifest() -> None:
     ).hexdigest()
     assert benchmark.label_schemas[0].content_sha256 == expected_hash
     assert benchmark.examples[0].source_snapshot_id == "snapshot-id"
-    assert benchmark.examples[0].sensor_id == 7
+    assert benchmark.examples[0].unit_id == "7"
 
 
 def test_repository_requests_latest_published_version_when_version_is_omitted() -> None:
@@ -151,6 +157,81 @@ def test_repository_requests_latest_published_version_when_version_is_omitted() 
         "version_number": None,
     }
     assert benchmark.version_number == 2
+
+
+@pytest.mark.parametrize(
+    ("missing_key", "message"),
+    [
+        ("published_contract_schema_version", "contract schema version"),
+        ("label_schema_content_sha256", "label-schema hash"),
+    ],
+)
+def test_strict_v2_adapter_rejects_missing_publication_identity(
+    missing_key: str, message: str
+) -> None:
+    rows = _normalize_trusted_postgres_rows([_row()])
+    rows[0].pop(missing_key)
+
+    with pytest.raises(ValueError, match=message):
+        _build_benchmark_version(rows)
+
+
+def test_strict_v2_adapter_rejects_inconsistent_version_fields() -> None:
+    rows = _normalize_trusted_postgres_rows([_row(), _row()])
+    rows[1]["published_contract_schema_version"] = 3
+
+    with pytest.raises(ValueError, match="inconsistent across examples"):
+        _build_benchmark_version(rows)
+
+
+def test_repository_loads_non_spirax_units_and_artifact_kinds() -> None:
+    """Keep the read-only repository boundary independent of Pulse evidence."""
+    row = _row()
+    schema = {
+        "schema_key": "pump-decision-label",
+        "version": "v1",
+        "fields": [{"key": "classification", "values": ["normal", "fault"]}],
+    }
+    row.update(
+        {
+            "project_key": "acme-pumps",
+            "benchmark_key": "pump-failures",
+            "benchmark_name": "Pump Failures",
+            "example_id": "pump-A|2026-03-17T12:00:00Z",
+            "unit_id": "pump-A",
+            "approved_label_payload": {"classification": "fault"},
+            "label_schema_key": "pump-decision-label",
+            "label_schema": schema,
+            "eval_label_fields": ["classification"],
+            "example_metadata": {"site": "north"},
+            "raw_source_kind": "historian",
+            "raw_artifacts": [
+                {
+                    "artifact_kind": "vibration-spectrum",
+                    "object_key": "snapshot/vibration.arrow",
+                    "content_type": "application/vnd.apache.arrow.file",
+                    "byte_size": 42,
+                    "content_sha256": "e" * 64,
+                }
+            ],
+        }
+    )
+    repository = AzurePostgresBenchmarkRepository(
+        database_url="postgresql://unused",
+        project_key="acme-pumps",
+        connection_factory=lambda: _Connection([row]),
+    )
+
+    benchmark = repository.load_published_version(
+        benchmark_key="pump-failures", version_number=2
+    )
+
+    example = benchmark.examples[0]
+    assert example.unit_id == "pump-A"
+    assert example.example_metadata == {"site": "north"}
+    assert [artifact.artifact_kind for artifact in example.raw_artifacts] == [
+        "vibration-spectrum"
+    ]
 
 
 def test_repository_lists_published_versions_for_configured_project() -> None:

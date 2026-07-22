@@ -57,6 +57,7 @@ class WorkflowRequest(Generic[OutputT]):
     timeout: float | None = None
     provider_options: dict[str, Any] = field(default_factory=dict)
     backend_options: dict[str, Any] = field(default_factory=dict)
+    capture_review: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +66,7 @@ class WorkflowResult(Generic[OutputT]):
 
     output: OutputT
     usage: AIUsage
+    review: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,6 +91,7 @@ class AgentRequest(Generic[OutputT]):
     timeout: float | None = None
     provider_options: dict[str, Any] = field(default_factory=dict)
     backend_options: dict[str, Any] = field(default_factory=dict)
+    capture_review: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +100,7 @@ class AgentResult(Generic[OutputT]):
 
     output: OutputT
     usage: AIUsage
+    review: dict[str, Any] = field(default_factory=dict)
 
 
 class AIBackend(ABC):

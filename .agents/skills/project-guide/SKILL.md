@@ -66,6 +66,7 @@ Load the narrowest applicable skill before answering in depth or implementing:
 
 | Question or task | Skill |
 |---|---|
+| Initial port of a Benchmark Studio evidence pipeline into a clean project | `$benchmark-pipeline-port` |
 | Pipeline components, YAML, variants, runners, or receipts | `$pipeline-builder` |
 | Structured AI processors, workflows, agents, tools, capabilities, or Agent Skills | `$ai-processor-builder` |
 | Prepare, execute, or troubleshoot a use-case eval command | `$run-use-case-evals` |
@@ -83,9 +84,12 @@ When turning the template into a consumer project, recommend and, when asked, pe
 2. Update `pyproject.toml` with the real project identity and dependencies.
 3. Rewrite `README.md` around the real application, boundaries, entry points, supported variants, and navigation.
 4. Configure the published benchmark repository and immutable evidence source.
-5. Replace example metadata, objects, retrievers, hydrators, processors, and actions under `src/`.
-6. Replace example `.ppln` files with project-specific pipeline variants.
-7. Add eval and operator tooling after the output contract is stable enough to compare.
+5. Declare pipeline compatibility with the generated `workbench.project.json`;
+   keep benchmark/runtime metadata generic and put artifact requirements and
+   decoding in the use-case retriever.
+6. Replace example metadata, objects, retrievers, hydrators, processors, and actions under `src/`.
+7. Replace example `.ppln` files with project-specific pipeline variants.
+8. Add eval and operator tooling after the output contract is stable enough to compare.
 
 Keep application prompts, business rules, source-system joins, domain labels, and operational guidance in the consumer project. Keep framework mechanics generic in `mi-core/`.
 
@@ -102,6 +106,11 @@ Use this default progression unless evidence or the user's scope supports skippi
 7. Eval loop and operator tooling after outputs stabilize.
 
 Prefer workflow over agent when one structured model call is enough. Compare variants with eval evidence rather than intuition.
+
+For the first measurable agent or a new comparable variant, use the **Build The
+First Agent Or Next Variant** workflow in `$pipeline-builder`. It connects the
+existing pipeline, AI processor, one-example runner, eval, and immutable
+candidate-version capabilities without adding another subsystem.
 
 ## Answer Developer Questions
 

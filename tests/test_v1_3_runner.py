@@ -110,7 +110,7 @@ def test_runtime_overrides_are_ephemeral_and_benchmark_scoped() -> None:
     assert workflow["reasoning_effort"] == "high"
     assert runtime["logger"]["level"] == "CRITICAL"
     assert runtime["retrieve"]["retrievers"] == [
-        {"retriever": "AzureBlobBenchmarkEvidenceRetriever"}
+        {"retriever": "SpiraxFrozenEvidenceRetriever"}
     ]
     assert [
         processor["processor"] for processor in runtime["process"]["processors"]

@@ -67,6 +67,7 @@ class AIAgentMixin(AIProcessorMixin[PDO, OutputT]):
                 timeout=self._get_timeout(),
                 provider_options=self._get_provider_options(),
                 backend_options=self._get_backend_options(),
+                capture_review=self._review_capture_enabled(metadata),
             )
 
             self.logger.info(
@@ -78,6 +79,9 @@ class AIAgentMixin(AIProcessorMixin[PDO, OutputT]):
             )
             result = backend.run_agent(request, deps=deps)
 
+            if request.capture_review:
+                self._attach_review(data_object, result.review)
+
             if self._should_attach_response():
                 self._attach_response(data_object, result.output)
             if self._should_attach_usage():
@@ -87,6 +91,9 @@ class AIAgentMixin(AIProcessorMixin[PDO, OutputT]):
                 )
 
         except Exception as exc:
+            review = getattr(exc, "review", None)
+            if isinstance(review, dict) and self._review_capture_enabled(metadata):
+                self._attach_review(data_object, review)
             raise self._normalize_error(exc, "Agent") from exc
 
     def _get_max_turns(self) -> int:
@@ -105,9 +112,7 @@ class AIAgentMixin(AIProcessorMixin[PDO, OutputT]):
         _ = data_object
         return []
 
-    def _build_toolsets(
-        self, data_object: PDO
-    ) -> Sequence[ToolSet | ToolSetBuilder]:
+    def _build_toolsets(self, data_object: PDO) -> Sequence[ToolSet | ToolSetBuilder]:
         """Build reusable toolsets available to the agent."""
         _ = data_object
         return []

@@ -1,11 +1,11 @@
 """Retriever exports for benchmark-frozen evidence packages."""
 
-from src.retrievers.azure_blob_evidence_retriever import (
-    AzureBlobBenchmarkEvidenceRetriever,
-    AzureBlobBenchmarkEvidenceRetrieverConfig,
+from src.retrievers.spirax_frozen_evidence_retriever import (
+    SpiraxFrozenEvidenceRetriever,
+    SpiraxFrozenEvidenceRetrieverConfig,
 )
 
 __all__ = [
-    "AzureBlobBenchmarkEvidenceRetriever",
-    "AzureBlobBenchmarkEvidenceRetrieverConfig",
+    "SpiraxFrozenEvidenceRetriever",
+    "SpiraxFrozenEvidenceRetrieverConfig",
 ]

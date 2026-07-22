@@ -13,7 +13,7 @@ import sys
 import tomllib
 from typing import Any
 
-from evaluation import canonical_sha256
+from evaluation import canonical_sha256, is_sensitive_path
 from mi.core.registry import (
     PipelineSchemaBuilder,
     RegistryScanner,
@@ -36,8 +36,12 @@ from src.agent_versions.models import (
 from src.evals.run_specs import repository_root
 
 
-_SECRET_PARTS = frozenset(
-    {".env", "credentials", "credential", "secrets", "secret", "id_rsa"}
+_DEFAULT_NON_EXECUTION_EXCLUSIONS = (
+    "src/agent_versions/**",
+    "src/benchmarks/**",
+    "src/evals/**",
+    "src/pipelines/**",
+    "src/project_bootstrap/**",
 )
 _COMPONENT_LAYOUT = (
     ("metadata_types", ("metadata_class",), None),
@@ -132,6 +136,9 @@ def resolve_agent_version(
     # The benchmark-aware runner converts this source-only shorthand into the
     # regular runtime ``metadata`` entry before invoking PipelineBuilder.
     validation_pipeline.pop("metadata_class", None)
+    # Compatibility metadata is hashed as part of the source pipeline but is
+    # consumed by the benchmark-aware preflight rather than PipelineBuilder.
+    validation_pipeline.pop("benchmark_contract", None)
     schema_builder.model.model_validate(validation_pipeline)
     registry_index = build_registry_index(registry)
 
@@ -271,20 +278,33 @@ def resolve_agent_version(
     git_identity = _git_identity(project_root)
     deleted_surface_paths: list[str] = []
     if git_identity["git_revision"] is not None:
-        for relative, exists in _dirty_runtime_paths(
-            project_root,
-            exclusions=policy.non_execution_exclusions,
-        ):
+        exclusions = (
+            *_DEFAULT_NON_EXECUTION_EXCLUSIONS,
+            *policy.non_execution_exclusions,
+        )
+        for relative, exists in _dirty_runtime_paths(project_root):
             path = (project_root / relative).resolve()
-            if exists:
+            _reject_sensitive_path(path, project_root)
+            if path in file_roles:
+                continue
+            if any(fnmatch.fnmatch(relative, pattern) for pattern in exclusions):
+                continue
+            shared_runtime = relative.startswith("mi-core/core/src/mi/")
+            package_support = _supports_resolved_asset(path, file_roles)
+            if exists and (shared_runtime or package_support):
                 _add_file_role(
                     file_roles,
                     path,
                     role="version_surface_guard",
                     logical_name=relative,
                 )
-            else:
+            elif not exists and (shared_runtime or package_support):
                 deleted_surface_paths.append(relative)
+            else:
+                raise ValueError(
+                    "Dirty runtime path is not reachable from the resolved agent "
+                    f"graph and is not an approved non-execution exclusion: {relative}"
+                )
     blobs: dict[str, bytes] = {}
     asset_entries: list[dict[str, Any]] = []
     overlay_entries: list[dict[str, Any]] = []
@@ -480,11 +500,19 @@ def _require_within(root: Path, path: Path) -> None:
 
 def _reject_sensitive_path(path: Path, root: Path) -> None:
     relative = path.relative_to(root)
-    lowered = {part.lower() for part in relative.parts}
-    if lowered.intersection(_SECRET_PARTS) or any(
-        part.lower().startswith(".env") for part in relative.parts
-    ):
+    if is_sensitive_path(relative):
         raise ValueError(f"Sensitive path cannot be an agent-version asset: {relative}")
+
+
+def _supports_resolved_asset(
+    path: Path, file_roles: Mapping[Path, list[dict[str, Any]]]
+) -> bool:
+    """Treat registry-scanned siblings and package initializers as support."""
+    if path.suffix == ".py" and any(path.parent == asset.parent for asset in file_roles):
+        return True
+    return path.name == "__init__.py" and any(
+        path.parent in asset.parents for asset in file_roles
+    )
 
 
 def _git_identity(root: Path) -> dict[str, str | None]:
@@ -509,9 +537,7 @@ def _git_file_bytes(root: Path, revision: str | None, relative: str) -> bytes | 
     return result.stdout if result.returncode == 0 else None
 
 
-def _dirty_runtime_paths(
-    root: Path, *, exclusions: tuple[str, ...]
-) -> tuple[tuple[str, bool], ...]:
+def _dirty_runtime_paths(root: Path) -> tuple[tuple[str, bool], ...]:
     """Return changed runtime-surface paths and whether each currently exists."""
     pathspecs = (
         "src",
@@ -536,8 +562,6 @@ def _dirty_runtime_paths(
     }
     selected = []
     for relative in sorted(names):
-        if any(fnmatch.fnmatch(relative, pattern) for pattern in exclusions):
-            continue
         selected.append((relative, (root / relative).is_file()))
     return tuple(selected)
 

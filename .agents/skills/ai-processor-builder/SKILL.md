@@ -20,7 +20,11 @@ Rules:
 - When this skill describes a stable artifact or downstream handoff pattern, read that as the preferred agent-facing default unless the repo has a deliberate local alternative.
 - Do not add an AI processor when compute-only logic already solves the use case reliably enough.
 
-Use `$external-runtime-setup` when the task also depends on provider auth, tracing, or runtime AI overrides. Use `$agent-eval-builder` when the processor output must remain compatible with eval orchestration.
+Use the **Build The First Agent Or Next Variant** workflow in
+`$pipeline-builder` when this processor is part of a new measurable pipeline
+variant. Use `$external-runtime-setup` when the task also depends on provider
+auth, tracing, or runtime AI overrides. Use `$agent-eval-builder` when the
+processor output must remain compatible with eval orchestration.
 
 ## Repository-local mi-core
 

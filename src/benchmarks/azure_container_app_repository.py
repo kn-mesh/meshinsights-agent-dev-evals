@@ -169,7 +169,6 @@ class AzureContainerAppBenchmarkRepository:
             )
         return _build_benchmark_version(
             rows,
-            require_published_schema_hash=True,
         )
 
     def _query(

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-07-21T00:00:00Z",
+  "template": {
+    "source": "https://github.com/Mesh-Systems-Eng/mesh.insights.templates.git",
+    "revision": "6ba259c958a4f073e52575370eaec4d4866c2e00"
+  },
+  "project": {
+    "key": "spirax-pulse-agent-workbench",
+    "name": "Spirax Pulse Agent Workbench",
+    "distribution_name": "mesh.insights.template",
+    "use_case_key": "steam-trap-failure-analysis",
+    "description": "Agent development and evaluation for Spirax Pulse steam-trap alarms"
+  },
+  "benchmark_studio": {
+    "azure_environment": "development",
+    "application_id": "label-benchmark",
+    "project_key": "spirax-pulse",
+    "access_mode": "hosted_read_only"
+  },
+  "benchmarks": {
+    "default": {
+      "key": "steam-trap-regression",
+      "version": "4"
+    },
+    "published": [
+      {
+        "key": "steam-trap-regression",
+        "version": "3",
+        "published_contract_schema_version": 2,
+        "label_fields": ["classification", "root_cause"],
+        "evidence_recipe_id": "spirax-steam-trap-evidence@v2",
+        "source_snapshot_contract": "azure-blob-sha256-v1"
+      },
+      {
+        "key": "steam-trap-regression",
+        "version": "4",
+        "published_contract_schema_version": 2,
+        "label_fields": ["classification", "root_cause"],
+        "evidence_recipe_id": "spirax-steam-trap-evidence@v2",
+        "source_snapshot_contract": "azure-blob-sha256-v1"
+      }
+    ]
+  },
+  "model_catalog": {
+    "default_model": "azure:gpt-5.6-luna",
+    "models": [
+      {"id": "anthropic:claude-haiku-4-5", "api": "anthropic_messages"},
+      {"id": "anthropic:claude-sonnet-4-5", "api": "anthropic_messages"},
+      {"id": "anthropic:claude-sonnet-4-6", "api": "anthropic_messages"},
+      {"id": "anthropic:claude-opus-4-5", "api": "anthropic_messages"},
+      {"id": "anthropic:claude-opus-4-6", "api": "anthropic_messages"},
+      {"id": "google:gemini-3.1-flash-lite-preview", "api": "google_generate_content"},
+      {"id": "google:gemini-3.5-flash", "api": "google_generate_content"},
+      {"id": "google:gemini-3.6-flash", "api": "google_generate_content"},
+      {"id": "google:gemini-3.1-flash-lite", "api": "google_generate_content"},
+      {"id": "openrouter:google/gemini-3.5-flash", "api": "openai_chat_completions"},
+      {"id": "azure:claude-haiku-4-5", "api": "anthropic_messages"},
+      {"id": "azure:claude-sonnet-4-5", "api": "anthropic_messages"},
+      {"id": "azure:claude-sonnet-4-6", "api": "anthropic_messages"},
+      {"id": "azure:claude-opus-4-5", "api": "anthropic_messages"},
+      {"id": "azure:claude-opus-4-6", "api": "anthropic_messages"},
+      {"id": "azure:gpt-5.6-luna", "api": "openai_responses"},
+      {"id": "azure:gpt-5.6-terra", "api": "openai_responses"},
+      {"id": "azure:gpt-5.6-sol", "api": "openai_responses"}
+    ]
+  },
+  "paths": {
+    "use_case_context": "docs/use_case",
+    "pipeline_configs": "pipeline_configs",
+    "evaluation_configs": "evaluation_configs",
+    "agent_version_configs": "agent_version_configs",
+    "eval_results": "eval_results",
+    "promoted_agent_versions": "agent_versions",
+    "model_catalog": "models.yaml"
+  }
+}

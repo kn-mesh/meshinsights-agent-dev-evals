@@ -182,7 +182,9 @@ class AzurePostgresBenchmarkRepository:
                 f"Published benchmark {self.project_key}/{normalized_key} ({suffix}) "
                 "was not found."
             )
-        return _build_benchmark_version([dict(row) for row in rows])
+        return _build_benchmark_version(
+            _normalize_trusted_postgres_rows([dict(row) for row in rows])
+        )
 
     def list_published_versions(
         self,
@@ -207,27 +209,39 @@ class AzurePostgresBenchmarkRepository:
 
 def _build_benchmark_version(
     rows: list[dict[str, Any]],
-    *,
-    require_published_schema_hash: bool = False,
 ) -> BenchmarkVersion:
-    """Normalize PostgreSQL rows into the immutable benchmark domain model."""
+    """Strictly normalize published-contract-v2 rows from any read adapter."""
     if not rows:
         raise ValueError("Cannot build a benchmark version without rows.")
     first = rows[0]
     raw_contract_version = first.get("published_contract_schema_version")
     if raw_contract_version is None:
-        if require_published_schema_hash:
-            raise ValueError(
-                "Published benchmark response is missing its contract schema version."
-            )
-        contract_schema_version = 2
-    else:
-        contract_schema_version = int(raw_contract_version)
+        raise ValueError(
+            "Published benchmark response is missing its contract schema version."
+        )
+    contract_schema_version = int(raw_contract_version)
     if contract_schema_version != 2:
         raise ValueError(
             f"Unsupported published benchmark contract version "
             f"{contract_schema_version}; expected 2."
         )
+    version_fields = (
+        "project_key",
+        "benchmark_key",
+        "benchmark_name",
+        "benchmark_version_id",
+        "version_number",
+        "published_at",
+        "source_state_sha256",
+        "published_contract_schema_version",
+        "eval_label_fields",
+    )
+    for row in rows[1:]:
+        for key in version_fields:
+            if row.get(key) != first.get(key):
+                raise ValueError(
+                    f"Published benchmark field {key!r} is inconsistent across examples."
+                )
     eval_fields_raw = first.get("eval_label_fields")
     eval_field_hints = (
         [str(field) for field in eval_fields_raw]
@@ -256,17 +270,14 @@ def _build_benchmark_version(
         ).hexdigest()
         published_schema_sha256 = row.get("label_schema_content_sha256")
         if published_schema_sha256 is None:
-            if require_published_schema_hash:
-                raise ValueError(
-                    "Published benchmark contract is missing a label-schema hash."
-                )
-            schema_sha256 = derived_schema_sha256
-        else:
-            schema_sha256 = str(published_schema_sha256).strip()
-            if schema_sha256 != derived_schema_sha256:
-                raise ValueError(
-                    f"Published label schema hash does not match for {schema_id}."
-                )
+            raise ValueError(
+                "Published benchmark contract is missing a label-schema hash."
+            )
+        schema_sha256 = str(published_schema_sha256).strip()
+        if schema_sha256 != derived_schema_sha256:
+            raise ValueError(
+                f"Published label schema hash does not match for {schema_id}."
+            )
         existing_schema = label_schemas.get(schema_id)
         if existing_schema is not None and existing_schema != {
             "schema_version_id": schema_id,
@@ -322,3 +333,26 @@ def _build_benchmark_version(
             "examples": examples,
         }
     )
+
+
+def _normalize_trusted_postgres_rows(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Adapt trusted database rows to the same strict v2 response contract."""
+    normalized: list[dict[str, Any]] = []
+    for raw in rows:
+        row = dict(raw)
+        schema = row.get("label_schema")
+        if not isinstance(schema, dict):
+            raise ValueError("Published label schema must be an object.")
+        row["published_contract_schema_version"] = 2
+        row["label_schema_content_sha256"] = hashlib.sha256(
+            json.dumps(
+                schema,
+                sort_keys=True,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        normalized.append(row)
+    return normalized

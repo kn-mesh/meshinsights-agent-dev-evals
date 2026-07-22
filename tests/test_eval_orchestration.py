@@ -22,6 +22,7 @@ from src.benchmarks import (
     SourceArtifact,
 )
 from src.evals import eval_orchestration
+from src.evals.result_integrity import ResultIntegrityError, load_verified_result
 
 
 PROFILE_PATH = Path("evaluation_configs/spirax-failure-evaluation.eval.yaml")
@@ -272,6 +273,55 @@ def test_run_eval_writes_schema_v3_full_labels_and_generic_metrics(
     assert (
         result["runs"][0]["agent_version_id"] == dimensions["agent"]["agent_version_id"]
     )
+    run_dir = next(tmp_path.glob("**/runs/eval_*"))
+    capture = json.loads((run_dir / "review" / "capture.json").read_text())
+    assert capture["publication"] == "local_only"
+    assert capture["execution_counts"]["partial"] == 1
+    review_manifest = next((run_dir / "review" / "executions").glob("*/*.json"))
+    assert (
+        json.loads(review_manifest.read_text())["source_evidence"][0]["write_access"]
+        is False
+    )
+
+
+def test_result_integrity_rejects_any_materialized_content_edit(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    original = _run(
+        monkeypatch,
+        tmp_path,
+        benchmark,
+        [_receipt(benchmark.examples[0])],
+    )
+    result_path = next(tmp_path.glob("**/runs/eval_*/result.json"))
+    assert load_verified_result(result_path) == original
+
+    mutations = (
+        lambda value: value["results"][0]["runs"].clear(),
+        lambda value: value["results"][0]["runs"][0]["fields"]["classification"].update(
+            {"correct": False}
+        ),
+        lambda value: value["summary"]["usage"].update({"attempts_with_usage": 999}),
+        lambda value: value["run_config"]["dimensions"]["model"].update(
+            {"id": "azure:edited"}
+        ),
+        lambda value: value["results"][0]["benchmark_labels"].update(
+            {"classification": "Healthy"}
+        ),
+        lambda value: value["results"][0]["runs"][0].update(
+            {"execution_generation": 99}
+        ),
+    )
+    for mutate in mutations:
+        changed = json.loads(json.dumps(original))
+        mutate(changed)
+        result_path.write_text(json.dumps(changed), encoding="utf-8")
+        with pytest.raises(ResultIntegrityError, match="verification"):
+            load_verified_result(result_path)
+
+    result_path.write_text(json.dumps(original), encoding="utf-8")
+    assert load_verified_result(result_path) == original
 
 
 def test_failed_execution_is_debuggable_and_excluded_from_accuracy(
@@ -296,6 +346,31 @@ def test_failed_execution_is_debuggable_and_excluded_from_accuracy(
     assert failed["execution_status"] == "failed"
     assert failed["output_contract_status"] == "not_produced"
     assert failed["failure_details"]["failed_stages"][0]["stage"] == "process"
+
+
+def test_review_capture_can_be_disabled_without_changing_result_contract(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    captured = _run(
+        monkeypatch,
+        tmp_path / "captured",
+        benchmark,
+        [_receipt(benchmark.examples[0])],
+        review_capture="full",
+    )
+    payload = _run(
+        monkeypatch,
+        tmp_path / "off",
+        benchmark,
+        [_receipt(benchmark.examples[0])],
+        review_capture="off",
+    )
+
+    assert payload["summary"]["scoring_coverage"]["scored_runs"] == 1
+    assert payload["run_config"]["run_id"] == captured["run_config"]["run_id"]
+    run_dir = next((tmp_path / "off").glob("**/runs/eval_*"))
+    assert not (run_dir / "review").exists()
 
 
 @pytest.mark.parametrize("failed_stage", ["retrieve", "process", "act"])
@@ -492,6 +567,34 @@ def test_invalid_receipt_path_fails_preflight_before_pipeline_execution(
     )
 
     with pytest.raises(ValueError, match="absent from the pipeline output schema"):
+        eval_orchestration.run_eval(
+            Path("pipeline_configs/v1_3.ppln"),
+            evaluation_profile_path=profile_path,
+            benchmark_key="steam-trap-regression",
+            repository=_Repository(_benchmark()),
+            runtime="serial",
+            output_root=tmp_path,
+        )
+
+
+def test_project_contract_rejects_grading_an_unconfigured_label(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    profile_payload = yaml.safe_load(PROFILE_PATH.read_text(encoding="utf-8"))
+    profile_payload["output_fields"][0]["evaluation"]["benchmark_label_path"] = [
+        "review_notes"
+    ]
+    profile_path = tmp_path / "unconfigured-label.eval.yaml"
+    profile_path.write_text(yaml.safe_dump(profile_payload), encoding="utf-8")
+    monkeypatch.setattr(
+        eval_orchestration,
+        "run_pipeline",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("pipeline executed")
+        ),
+    )
+
+    with pytest.raises(ValueError, match="not enabled by workbench.project.json"):
         eval_orchestration.run_eval(
             Path("pipeline_configs/v1_3.ppln"),
             evaluation_profile_path=profile_path,

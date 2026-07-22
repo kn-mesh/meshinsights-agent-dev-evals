@@ -3,6 +3,12 @@ version: 2.0.0
 
 metadata_class: BenchmarkExamplePipelineMetadata
 
+benchmark_contract:
+  published_contract_schema_version: 2
+  evidence_recipe_id: spirax-steam-trap-evidence@v2
+  source_snapshot_contract: azure-blob-sha256-v1
+  required_artifact_kinds: [telemetry, alarms]
+
 objects:
   process: PulseFailureAnalysisProcessObject
   action: PulseFailureAnalysisActionObject
@@ -10,7 +16,7 @@ objects:
 retrieve:
   hydrator: V1_3RetrieveToProcessHydrator
   retrievers:
-    - retriever: AzureBlobBenchmarkEvidenceRetriever
+    - retriever: SpiraxFrozenEvidenceRetriever
 
 process:
   hydrator: V2ProcessToActionHydrator

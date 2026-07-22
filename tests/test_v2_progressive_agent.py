@@ -385,11 +385,11 @@ def test_v2_hydrator_preserves_case_brief_in_final_payload() -> None:
 def test_v2_pipeline_config_builds_registered_progressive_processors() -> None:
     source_path = Path("pipeline_configs/v2.ppln")
     config = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+    config.pop("benchmark_contract")
     config["metadata"] = {
         "metadata": config.pop("metadata_class"),
         "unit": "trap-1",
         "example_id": "1|2026-03-17T12:00:00",
-        "sensor_id": 1,
         "decision_timestamp": "2026-03-17T12:00:00",
         "benchmark_key": "steam-trap-regression",
         "benchmark_version_id": "version-id",

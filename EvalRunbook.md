@@ -21,7 +21,8 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --runs-per-example 1 \
   --runtime threaded \
   --max-workers 4 \
-  --error-action continue
+  --error-action continue \
+  --review-capture full
 ```
 
 This is a full 70-example model run and therefore incurs model usage. Use the
@@ -178,6 +179,12 @@ eval_results/v1_3/<benchmark-key>/v<version>/runs/<run-id>/
   attempts/<prefix>/<work-item-id>.<generation>.json
   invocations/<invocation-id>.<event>.json
   result.json
+  review/
+    capture.json
+    index.json
+    executions/<prefix>/<execution-id>.json
+    objects/sha256/<prefix>/<content-hash>
+  diagnosis/                       # optional compact retained review notes
 ```
 
 The run ID deterministically hashes the resolved source-content manifest,
@@ -206,6 +213,18 @@ model requests, input/output/cache/reasoning tokens, tool calls, and direct
 workflow output attempts when reported. HTTP transport-attempt counts and
 provider-billed cost remain `unavailable` when the backend does not expose
 them; configured limits are never presented as observations.
+
+`review/` is a disposable, local-only inspection bundle. It is not part of
+`run_id`, attempt integrity, scoring, resume, or `result.json`. Benchmark source
+evidence remains in immutable Azure storage and is represented locally by a
+credential-free identity/hash reference. Exact generated images, long prompts,
+model transcripts, tool activity, and validation history are content-addressed
+and de-duplicated only within the run. No review artifact is uploaded to Azure.
+
+Review capture defaults to `full` for executed attempts. Use
+`--review-capture off` when detailed local review is not needed. Dry-run,
+status, comparison-only, and materialize-only operations do not capture new
+review content.
 
 `run_config.evaluation_profile` records the profile ID, version, and content
 hash. Each result preserves the complete published `benchmark_labels`, even
@@ -300,6 +319,68 @@ Declare every allowed difference, such as `model.provider`,
 `model.reasoning_effort`, `pipeline.content_sha256`, or
 `configuration.<key>`. This prevents prompt, evidence, tool, scoring, runtime,
 or harness changes from being presented as model-only comparisons.
+
+Comparison results include the aligned example, work-item, and execution IDs
+behind improvements, regressions, changed incorrect outputs, new failures, and
+recoveries. Use those execution IDs for paired review drill-down.
+
+## Ephemeral Coding-Agent Review
+
+Use progressive disclosure instead of loading an entire result and every
+binary artifact into context:
+
+```bash
+# Bounded run summary and review size/status
+uv run python -m src.evals.inspection_cli summary --run eval_<hash>
+
+# Select compact rows
+uv run python -m src.evals.inspection_cli list \
+  --run eval_<hash> \
+  --filter incorrect \
+  --limit 20
+
+# Drill into one example or exact execution; large text resolves only on request
+uv run python -m src.evals.inspection_cli example \
+  --run eval_<hash> \
+  --example '<example-id>'
+
+uv run python -m src.evals.inspection_cli execution \
+  --run eval_<hash> \
+  --execution '<work-item-id>.<generation>' \
+  --section model_interactions \
+  --resolve-text
+
+# Verify hashes and inspect local storage cost
+uv run python -m src.evals.inspection_cli verify --run eval_<hash>
+uv run python -m src.evals.inspection_cli size --run eval_<hash>
+```
+
+Optionally retain a compact coding-agent diagnosis from a JSON object, with an
+additional Markdown note when useful:
+
+```bash
+uv run python -m src.evals.inspection_cli diagnose \
+  --run eval_<hash> \
+  --input diagnosis.json \
+  --markdown diagnosis.md
+```
+
+After review, preview and explicitly purge only the disposable review bundle:
+
+```bash
+uv run python -m src.evals.inspection_cli purge \
+  --run eval_<hash> \
+  --dry-run
+
+uv run python -m src.evals.inspection_cli purge \
+  --run eval_<hash> \
+  --yes
+```
+
+Review-only purge retains `manifest.json`, immutable attempts, `result.json`,
+candidate agent linkage, comparisons, and `diagnosis/`. Whole-run deletion is a
+separate lifecycle operation. Purge validates one exact run and refuses broad,
+ambiguous, or path-escaping targets.
 
 ## Fast Diagnosis
 

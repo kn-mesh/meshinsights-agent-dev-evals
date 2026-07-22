@@ -19,6 +19,7 @@ from src.benchmarks import (
     BenchmarkExample,
     BenchmarkVersion,
 )
+from src.benchmarks.compatibility import preflight_pipeline_benchmark_contract
 
 
 def run_pipeline(
@@ -29,6 +30,7 @@ def run_pipeline(
     ai_model: str | None = None,
     ai_reasoning_effort: str | None = None,
     pipeline_log_level: str | None = None,
+    review_capture: bool = False,
 ) -> PipelineReceipt:
     """Run the exact raw inputs frozen for one published benchmark example."""
     ai_model = resolve_model(ai_model)
@@ -39,6 +41,12 @@ def run_pipeline(
         )
     source_path = Path(yaml_path).resolve()
     config = _load_pipeline_config(source_path)
+    preflight_pipeline_benchmark_contract(
+        pipeline_config=config,
+        benchmark=benchmark,
+        examples=(example,),
+        start_path=source_path,
+    )
     runtime_config = _apply_runtime_overrides(
         config,
         benchmark=benchmark,
@@ -46,6 +54,7 @@ def run_pipeline(
         ai_model=ai_model,
         ai_reasoning_effort=ai_reasoning_effort,
         pipeline_log_level=pipeline_log_level,
+        review_capture=review_capture,
     )
     return _execute_runtime_config(source_path, runtime_config)
 
@@ -83,9 +92,11 @@ def _apply_runtime_overrides(
     ai_model: str | None,
     ai_reasoning_effort: str | None,
     pipeline_log_level: str | None = None,
+    review_capture: bool = False,
 ) -> dict[str, Any]:
     """Build an ephemeral benchmark runtime config without mutating source YAML."""
     runtime = copy.deepcopy(pipeline_config)
+    runtime.pop("benchmark_contract", None)
     if pipeline_log_level is not None:
         logger_config = runtime.setdefault("logger", {})
         if not isinstance(logger_config, dict):
@@ -98,7 +109,6 @@ def _apply_runtime_overrides(
         "metadata": metadata_class,
         "unit": example.unit_id,
         "example_id": example.example_id,
-        "sensor_id": example.sensor_id,
         "decision_timestamp": example.decision_timestamp.isoformat(),
         "benchmark_key": benchmark.benchmark_key,
         "benchmark_version_id": benchmark.benchmark_version_id,
@@ -122,6 +132,7 @@ def _apply_runtime_overrides(
             artifact.model_dump(mode="json") for artifact in example.raw_artifacts
         ],
         "example_metadata": example.example_metadata,
+        "review_capture": review_capture,
     }
 
     normalized_model = _normalize_override(ai_model)

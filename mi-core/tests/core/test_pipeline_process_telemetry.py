@@ -34,9 +34,17 @@ def test_process_stage_retains_telemetry_when_processor_fails() -> None:
 
     process_object = _TelemetryProcessObject()
     process_object.normalized_data["input"] = True
+    process_object.set_artifact(
+        "processor_model_review", {"request": {"system_prompt": "inspect"}}
+    )
     pipeline._stage_process(process_object)
 
     receipt = pipeline.receipt.process_receipt
     assert receipt is not None
     assert receipt.success is False
     assert receipt.metadata["execution_telemetry"] == {"usage": {"requests": 1}}
+    assert receipt.metadata["execution_review"] == {
+        "processors": {
+            "processor_model_review": {"request": {"system_prompt": "inspect"}}
+        }
+    }

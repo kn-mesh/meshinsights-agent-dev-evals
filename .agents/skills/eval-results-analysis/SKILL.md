@@ -32,18 +32,46 @@ Rules:
 
 1. Confirm scope from the user.
    The user will usually tell you which pipeline versions, runs, or prompt revisions matter. Focus on those runs first instead of diffing every eval folder in the repo.
-2. Read the relevant eval results.
-   Start under root-level `eval_results/<pipeline-stem>/`.
-   Typical `v1_3` files live under
-   `eval_results/v1_3/<benchmark_key>/v<benchmark-version>/runs/<run-id>/result.json`.
-3. Identify the main regression or improvement pattern.
-   Use the top-level `summary` and then drill into `results`.
-   Look for misses by configured field, expected value, confidence band,
-   profile-defined slice, and repeated failure modes across multiple units.
-4. Inspect individual units behind the pattern.
-   For the most informative correct and incorrect examples, review each unit's `runs` payload and compare the model explanation to the expected label.
-5. Propose changes before editing anything.
-   Explain the specific prompt, pipeline, or data-shaping changes you want to make and why those changes should address the observed failure pattern.
+2. Start with the bounded inspection summary instead of loading a complete
+   result or review tree:
+
+   ```bash
+   uv run python -m src.evals.inspection_cli summary --run <run-id>
+   ```
+
+3. Identify the main regression or improvement pattern with compact filters:
+
+   ```bash
+   uv run python -m src.evals.inspection_cli list \
+     --run <run-id> --filter incorrect --limit 20
+   ```
+
+   Supported filters include `incorrect`, `invalid`, `failed`, `flaky`,
+   `unscored`, and `review-unavailable`.
+4. Inspect only the representative units behind the pattern:
+
+   ```bash
+   uv run python -m src.evals.inspection_cli example \
+     --run <run-id> --example '<example-id>'
+
+   uv run python -m src.evals.inspection_cli execution \
+     --run <run-id> --execution '<execution-id>' \
+     --section model_interactions --resolve-text
+   ```
+
+   Exact generated images remain local object references; Benchmark Studio
+   source evidence remains a credential-free immutable Azure reference. Review
+   artifacts are temporary and may already be purged, which must be reported
+   rather than reconstructed or guessed.
+5. Propose changes before editing anything. Explain the specific prompt,
+   pipeline, or data-shaping changes and why they address the observed pattern.
+6. When the user asks to preserve the analysis, write a compact diagnosis JSON
+   with the reviewed run/execution identities and evidence-based hypothesis via
+   `src.evals.inspection_cli diagnose`.
+7. Never purge automatically. After explicit user authorization, preview
+   `src.evals.inspection_cli purge --dry-run` and use `--yes` only for the exact
+   reviewed run. Review-only purge retains compact durable results and optional
+   diagnoses.
 
 ## What To Look At
 
@@ -66,6 +94,11 @@ Rules:
   Use the full frozen label context plus per-field applicability, expected and
   actual values, grader identity, confidence, and correctness. Inspect
   `agent_output`, contract errors, and failure details for unscored attempts.
+- `review/executions/` and `review/objects/`
+  Access these only through the inspection CLI. Execution manifests contain
+  normalized messages, model/tool activity, raw/parsed output history,
+  pipeline-stage context, and typed artifact references. Do not recursively
+  load the object store or print binary objects as base64.
 
 
 ## Analysis Standards
@@ -84,6 +117,10 @@ Rules:
 
 - Do not run evals unless the user explicitly gives permission.
 - Do not directly edit prompts unless the user explicitly asks for that change.
+- Do not upload review artifacts to Azure or another cloud destination.
+- Do not treat disposable review content as benchmark truth or durable run
+  recovery state.
+- Do not purge a review bundle without explicit user authorization.
 - First present the exact changes you want to make, the evidence behind them, and the expected tradeoffs.
 - If the evidence is mixed, say so clearly instead of forcing a prompt tweak.
 

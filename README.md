@@ -110,6 +110,9 @@ Use `uv sync` after pulling branch changes that touch `pyproject.toml` or `uv.lo
 ## Common Entry Points
 
 ```bash
+# Initialize or validate a new use-case Agent Workbench repository
+uv run python -m src.project_bootstrap.cli --help
+
 # YAML pipeline runner CLI
 uv run python -m src.pipelines.pipeline_run_from_yaml --help
 uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1_3.ppln \
@@ -119,10 +122,56 @@ uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1_3.ppln
 
 # Eval orchestration CLI
 uv run python -m src.evals.eval_orchestration --help
+
+# Local-only ephemeral eval review CLI
+uv run python -m src.evals.inspection_cli --help
 ```
 
 See [`EvalRunbook.md`](EvalRunbook.md) for the explicit, reproducible eval
 command shape. Prefer it over the slower interactive benchmark chooser.
+
+## Current Spirax Reference Variants
+
+- `pipeline_configs/v1_3.ppln` is the one-shot structured AI workflow example.
+- `pipeline_configs/v2.ppln` is the bounded progressive-agent example.
+
+They share the same benchmark-aligned terminal output contract. They are
+examples, not mandatory stages for every use case: keep deterministic logic
+when it works, prefer one workflow call when prepared evidence is sufficient,
+and add an agent only for useful runtime tool selection. See
+[`docs/use_case/PipelineVersions.md`](docs/use_case/PipelineVersions.md) for the
+short hypotheses and parent relationship.
+
+## Initialize A New Use-Case Project
+
+Use the bootstrap CLI to create a separate repository from an exact standard
+template revision. Start by copying and reviewing
+[`bootstrap_configs/example.project.json`](bootstrap_configs/example.project.json).
+The specification records project identity, the read-only Benchmark Studio
+surface, published benchmark contracts, label/evidence identities, and the
+project model catalog. It must not contain credentials.
+
+```bash
+uv run python -m src.project_bootstrap.cli --json init ../customer-agent-workbench \
+  --spec bootstrap_configs/customer.project.json \
+  --template-source https://github.com/Mesh-Systems-Eng/mesh.insights.templates.git \
+  --template-ref <branch-tag-or-commit>
+
+uv run python -m src.project_bootstrap.cli --json validate \
+  ../customer-agent-workbench
+```
+
+For offline development, `--template-source` may point to a local Git checkout.
+A non-Git local directory requires an explicit `--template-revision` value.
+Initialization refuses to overlay a non-empty destination and excludes source
+Git state, `.env`, credentials, virtual environments, caches, local eval
+results, and promoted agent-version data.
+
+After initialization, enter the new repository, run `uv sync`, then configure
+credentials with `uv run mi auth` or a local `.env`. The generated
+`.env.example` contains placeholders only. Populate
+`docs/use_case/PROJECT_CONTEXT.md` before using the separate Codex-guided
+pipeline-port workflow.
 
 ## Immutable Agent Versions
 
@@ -166,6 +215,7 @@ Use `$project-guide` for repository orientation, architecture, customization, li
 
 | Need | Skill |
 |---|---|
+| Port the initial Benchmark Studio evidence pipeline | `$benchmark-pipeline-port` |
 | Build or evolve a staged pipeline | `$pipeline-builder` |
 | Build an `mi.ai` workflow, agent, toolset, capability, or skill | `$ai-processor-builder` |
 | Prepare, run, or troubleshoot a use-case eval | `$run-use-case-evals` |
@@ -190,7 +240,12 @@ agent-dev-eval-core/
   tests/
 data/
 eval_results/
-  <pipeline>/
+  <pipeline>/<benchmark>/v<version>/runs/<run-id>/
+    manifest.json
+    attempts/
+    result.json
+    review/                    # disposable local prompts/images/traces
+    diagnosis/                 # optional compact retained analysis
 agent_version_configs/
   v1_3.agent.yaml
   v2.agent.yaml
@@ -204,6 +259,7 @@ mi-core/
   cli/
 pipeline_configs/
   v1_3.ppln
+  v2.ppln
 evaluation_configs/
   spirax-failure-evaluation.eval.yaml
 src/
@@ -212,8 +268,8 @@ src/
   objects/
   processors/
     common/
-    v1/
     v1_3/
+    v2/
   retrievers/
   pipelines/
   evals/

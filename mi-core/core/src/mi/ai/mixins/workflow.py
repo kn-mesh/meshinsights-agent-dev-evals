@@ -32,6 +32,7 @@ class AIWorkflowMixin(AIProcessorMixin[PDO, OutputT]):
                 timeout=self._get_timeout(),
                 provider_options=self._get_provider_options(),
                 backend_options=self._get_backend_options(),
+                capture_review=self._review_capture_enabled(metadata),
             )
 
             self.logger.info(
@@ -39,6 +40,9 @@ class AIWorkflowMixin(AIProcessorMixin[PDO, OutputT]):
             )
 
             result = backend.run_workflow(request)
+
+            if request.capture_review:
+                self._attach_review(data_object, result.review)
 
             if self._should_attach_response():
                 self._attach_response(data_object, result.output)
@@ -49,4 +53,7 @@ class AIWorkflowMixin(AIProcessorMixin[PDO, OutputT]):
                 )
 
         except Exception as exc:
+            review = getattr(exc, "review", None)
+            if isinstance(review, dict) and self._review_capture_enabled(metadata):
+                self._attach_review(data_object, review)
             raise self._normalize_error(exc, "Workflow") from exc

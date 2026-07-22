@@ -296,6 +296,18 @@ class AIProcessorMixin(Generic[PDO, OutputT]):
             },
         )
 
+    def _attach_review(self, data_object: PDO, review: dict[str, Any]) -> None:
+        """Attach transient review evidence for the pipeline receipt hook."""
+        if review:
+            data_object.set_artifact(f"{self._get_artifact_key()}_review", review)
+
+    @staticmethod
+    def _review_capture_enabled(metadata: "PipelineMetadata | None") -> bool:
+        if metadata is None:
+            return False
+        value = getattr(metadata, "review_capture", False)
+        return value is True
+
     def _should_attach_usage(self) -> bool:
         config = getattr(self, "config", None)
         if config is None:

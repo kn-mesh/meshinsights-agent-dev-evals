@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from src.agent_versions import (
+    AgentVersionIntegrityError,
     AgentVersionManifest,
     AgentVersionStore,
     resolve_agent_version,
@@ -36,6 +37,10 @@ def test_v1_resolution_is_deterministic_and_complete() -> None:
     assert identity["contracts"]["evidence_recipe_sha256"]
     assert identity["model_policy"]["default_model"] == "azure:gpt-5.6-luna"
     assert len(identity["components"]) == 10
+    assert not any(
+        asset["path"].startswith("src/project_bootstrap/")
+        for asset in identity["assets"]
+    )
 
 
 def test_v2_resolution_freezes_skills_tools_prompts_and_schemas() -> None:
@@ -145,3 +150,20 @@ def test_candidate_promotion_is_idempotent_and_reconstructable(
     assert (reconstructed / "pipeline_configs/v1_3.ppln").read_bytes() == (
         (ROOT / "pipeline_configs/v1_3.ppln").read_bytes()
     )
+
+
+def test_alias_conflict_does_not_append_a_promotion_event(tmp_path: Path) -> None:
+    first = resolve_agent_version(
+        ROOT / "pipeline_configs/v1_3.ppln", dirty_policy="capture"
+    )
+    second = resolve_agent_version(
+        ROOT / "pipeline_configs/v2.ppln", dirty_policy="capture"
+    )
+    store = AgentVersionStore(tmp_path / "agent_versions")
+    store.promote(first, alias="current", repository=ROOT)
+
+    with pytest.raises(AgentVersionIntegrityError, match="Conflicting immutable"):
+        store.promote(second, alias="current", repository=ROOT)
+
+    assert len(tuple(store.promotions.glob("*.json"))) == 1
+    assert store.load("current") == first.manifest

@@ -12,7 +12,6 @@ class BenchmarkExamplePipelineMetadata(PipelineMetadata):
     """Carry the exact published benchmark example and raw artifact manifest."""
 
     example_id: str
-    sensor_id: int
     decision_timestamp: datetime
     benchmark_key: str
     benchmark_version_id: str
@@ -26,3 +25,4 @@ class BenchmarkExamplePipelineMetadata(PipelineMetadata):
     raw_known_gaps: list[Any]
     raw_artifacts: list[dict[str, Any]]
     example_metadata: dict[str, Any]
+    review_capture: bool = False

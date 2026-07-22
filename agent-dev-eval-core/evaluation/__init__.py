@@ -54,10 +54,18 @@ from evaluation.result_writer import (
     normalize_filename_token,
     write_json_exclusive,
 )
+from evaluation.review import (
+    CaptureStatus,
+    LocalReviewStore,
+    ReviewStoreError,
+    benchmark_source_reference,
+)
 from evaluation.serialization import eval_attempt_from_dict, eval_attempt_to_dict
+from evaluation.security import is_sensitive_key, is_sensitive_path
 
 __all__ = [
     "DeterministicGrader",
+    "CaptureStatus",
     "ErrorActionType",
     "EvaluationInterruptedError",
     "EvalAttempt",
@@ -68,6 +76,7 @@ __all__ = [
     "FieldGrade",
     "GraderRegistry",
     "JsonScalar",
+    "LocalReviewStore",
     "MetricCounts",
     "OutputContractStatus",
     "OutputFieldObservation",
@@ -77,9 +86,11 @@ __all__ = [
     "RepeatedEvalRecord",
     "RepeatedEvalWorkItem",
     "RuntimeType",
+    "ReviewStoreError",
     "ScoringStatus",
     "StructuredOutputExtraction",
     "build_confidence_accuracy",
+    "benchmark_source_reference",
     "build_comparison_identity",
     "build_default_grader_registry",
     "build_performance_summary",
@@ -94,6 +105,8 @@ __all__ = [
     "eval_attempt_to_dict",
     "extract_output_fields",
     "group_metric_counts",
+    "is_sensitive_key",
+    "is_sensitive_path",
     "metric_counts",
     "normalize_filename_token",
     "read_path",

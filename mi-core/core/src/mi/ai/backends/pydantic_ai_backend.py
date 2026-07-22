@@ -43,6 +43,12 @@ from mi.ai.backends.base import (
 from mi.ai.capabilities import AICapability
 from mi.ai.message import ImageContent, TextContent, UserMessage
 from mi.ai.model_config import ReasoningEffort, ReasoningSpec
+from mi.ai.review import (
+    AIReviewError,
+    agent_request_review,
+    serialize_messages,
+    workflow_request_review,
+)
 from mi.ai.tools import Tool, ToolSet, normalize_tool_output
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
@@ -86,22 +92,20 @@ class PydanticAIBackend(AIBackend):
 
         last_exc: ValueError | None = None
         usage = AIUsage()
+        request_message = ModelRequest(
+            parts=[
+                SystemPromptPart(content=request.system_prompt),
+                UserPromptPart(content=self._build_user_content(request.user_message)),
+            ]
+        )
+        validation_attempts: list[dict[str, Any]] = []
         for attempt in range(request.output_retries + 1):
+            response = None
+            raw_text = None
             try:
                 response = model_request_sync(
                     model=model,
-                    messages=[
-                        ModelRequest(
-                            parts=[
-                                SystemPromptPart(content=request.system_prompt),
-                                UserPromptPart(
-                                    content=self._build_user_content(
-                                        request.user_message
-                                    )
-                                ),
-                            ]
-                        )
-                    ],
+                    messages=[request_message],
                     model_settings=model_settings,
                     model_request_parameters=params,
                 )
@@ -114,10 +118,55 @@ class PydanticAIBackend(AIBackend):
                 if raw_text is None:
                     raise ValueError("Missing text output in model response.")
                 output = request.output_schema.model_validate_json(raw_text)
-                return WorkflowResult(output=output, usage=usage)
+                if request.capture_review:
+                    validation_attempts.append(
+                        {
+                            "attempt": attempt + 1,
+                            "valid": True,
+                            "raw_text": raw_text,
+                            "messages": serialize_messages([request_message, response]),
+                        }
+                    )
+                return WorkflowResult(
+                    output=output,
+                    usage=usage,
+                    review=(
+                        {
+                            "request": workflow_request_review(request),
+                            "validation_attempts": validation_attempts,
+                            "parsed_output": output.model_dump(mode="json"),
+                        }
+                        if request.capture_review
+                        else {}
+                    ),
+                )
             except ValueError as exc:
                 last_exc = exc
+                if request.capture_review:
+                    validation_attempts.append(
+                        {
+                            "attempt": attempt + 1,
+                            "valid": False,
+                            "error_type": type(exc).__name__,
+                            "error": str(exc),
+                            "raw_text": raw_text,
+                            "messages": (
+                                serialize_messages([request_message, response])
+                                if response is not None
+                                else serialize_messages([request_message])
+                            ),
+                        }
+                    )
                 if attempt >= request.output_retries:
+                    if request.capture_review:
+                        raise AIReviewError(
+                            str(exc),
+                            review={
+                                "request": workflow_request_review(request),
+                                "validation_attempts": validation_attempts,
+                                "capture_status": "partial",
+                            },
+                        ) from exc
                     raise
         raise (
             last_exc
@@ -174,14 +223,28 @@ class PydanticAIBackend(AIBackend):
             end_strategy="early",
         )
 
-        result = agent.run_sync(
-            self._build_user_content(request.user_message),
-            deps=deps,
-            usage_limits=self._build_usage_limits(
-                request.usage_limits,
-                default_request_limit=request.max_turns,
-            ),
-        )
+        try:
+            result = agent.run_sync(
+                self._build_user_content(request.user_message),
+                deps=deps,
+                usage_limits=self._build_usage_limits(
+                    request.usage_limits,
+                    default_request_limit=request.max_turns,
+                ),
+            )
+        except Exception as error:
+            if request.capture_review:
+                raise AIReviewError(
+                    str(error),
+                    review={
+                        "request": agent_request_review(request),
+                        "messages": [],
+                        "capture_status": "partial",
+                        "error_type": type(error).__name__,
+                        "error": str(error),
+                    },
+                ) from error
+            raise
         usage = result.usage
         return AgentResult(
             output=result.output,
@@ -192,6 +255,18 @@ class PydanticAIBackend(AIBackend):
                 cached_input_tokens=getattr(usage, "cache_read_tokens", 0) or 0,
                 reasoning_tokens=self._reasoning_tokens(getattr(usage, "details", {})),
                 tool_calls=getattr(usage, "tool_calls", 0) or 0,
+            ),
+            review=(
+                {
+                    "request": agent_request_review(request),
+                    "messages": serialize_messages(result.all_messages()),
+                    "parsed_output": result.output.model_dump(mode="json"),
+                    "provider": {
+                        "response_id": getattr(result, "response_id", None),
+                    },
+                }
+                if request.capture_review
+                else {}
             ),
         )
 

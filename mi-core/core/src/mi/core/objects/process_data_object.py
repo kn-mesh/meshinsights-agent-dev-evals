@@ -116,6 +116,15 @@ class ProcessDataObject(BaseDataObject):
         """
         return None
 
+    def get_execution_review(self) -> dict[str, Any] | None:
+        """Return transient AI review artifacts for an in-memory receipt."""
+        processors = {
+            key: value
+            for key, value in sorted(self.artifacts.items())
+            if key.endswith("_review") and isinstance(value, dict)
+        }
+        return {"processors": processors} if processors else None
+
     def list_artifacts(self, prefix: str | None = None) -> list[str]:
         """List stored artifact keys optionally filtered by prefix.
 

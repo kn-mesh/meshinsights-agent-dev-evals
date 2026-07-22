@@ -60,6 +60,20 @@ class AgentVersionStore:
         )
         for digest, content in resolved.blobs.items():
             _write_blob(self.objects, digest, content)
+        alias_path: Path | None = None
+        alias_created = False
+        if alias is not None:
+            normalized = _alias_token(alias)
+            alias_path = self.aliases / f"{normalized}.json"
+            alias_created = _write_create_or_validate(
+                alias_path,
+                {
+                    "schema_version": 1,
+                    "alias": alias,
+                    "agent_version_id": resolved.manifest.agent_version_id,
+                    "manifest_sha256": resolved.manifest.manifest_sha256,
+                },
+            )
         promotion_id = f"prm_{uuid.uuid4().hex}"
         event = {
             "schema_version": 1,
@@ -71,18 +85,12 @@ class AgentVersionStore:
             "alias": alias,
             "notes": notes,
         }
-        _write_exclusive(self.promotions / f"{promotion_id}.json", event)
-        if alias is not None:
-            normalized = _alias_token(alias)
-            _write_create_or_validate(
-                self.aliases / f"{normalized}.json",
-                {
-                    "schema_version": 1,
-                    "alias": alias,
-                    "agent_version_id": resolved.manifest.agent_version_id,
-                    "manifest_sha256": resolved.manifest.manifest_sha256,
-                },
-            )
+        try:
+            _write_exclusive(self.promotions / f"{promotion_id}.json", event)
+        except BaseException:
+            if alias_created and alias_path is not None:
+                alias_path.unlink(missing_ok=True)
+            raise
         return manifest_path
 
     def load(self, agent_version_id: str) -> AgentVersionManifest:
@@ -280,13 +288,15 @@ def _write_exclusive(path: Path, payload: dict[str, Any]) -> None:
         os.fsync(handle.fileno())
 
 
-def _write_create_or_validate(path: Path, payload: dict[str, Any]) -> None:
+def _write_create_or_validate(path: Path, payload: dict[str, Any]) -> bool:
     try:
         _write_exclusive(path, payload)
     except FileExistsError:
         existing = json.loads(path.read_text(encoding="utf-8"))
         if canonical_json_bytes(existing) != canonical_json_bytes(payload):
             raise AgentVersionIntegrityError(f"Conflicting immutable file: {path}")
+        return False
+    return True
 
 
 def _alias_token(value: str) -> str:

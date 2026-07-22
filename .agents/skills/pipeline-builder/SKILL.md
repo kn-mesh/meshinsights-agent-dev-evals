@@ -20,6 +20,8 @@ Rules:
 - When this skill describes a build order or recommended architecture, interpret that as the default agent path rather than a universal requirement that every repo already follows it.
 
 Use these narrower skills when the task enters a specialized area:
+- `$benchmark-pipeline-port` when the task starts from a working Benchmark
+  Studio evidence pipeline and a clean Agent Workbench project.
 - `$ai-processor-builder` for workflow or agent processor implementation details.
 - `$agent-eval-builder` for eval orchestration and eval JSON contracts.
 
@@ -158,6 +160,10 @@ Turn the visualization prototype into the real runnable pipeline shape for the r
 ### YAML rules
 
 - Keep YAML focused on class wiring and constructor arguments.
+- For benchmark-backed pipelines, declare `benchmark_contract` with the
+  published schema version, evidence-recipe ID, source-snapshot contract ID,
+  and required artifact kinds. The benchmark-aware runner validates and strips
+  this block before calling `PipelineBuilder`.
 - Let `PipelineBuilder.from_yaml(...)` resolve relative `file_path` keys.
 - Require an explicit benchmark key and resolve the requested or latest published version from the benchmark repository.
 - Keep benchmark identity and raw artifact manifests in runtime metadata rather than YAML secrets or local files.
@@ -167,6 +173,12 @@ Minimal shape:
 ```yaml
 name: your_use_case
 version: 1.0.0
+
+benchmark_contract:
+  published_contract_schema_version: 2
+  evidence_recipe_id: your-evidence-recipe@v1
+  source_snapshot_contract: azure-blob-sha256-v1
+  required_artifact_kinds: [your-artifact-kind]
 
 objects:
   process: YourProcessObject
@@ -227,6 +239,32 @@ Primary goals:
 - persist JSON results for comparison over time.
 
 Do not build eval orchestration before the pipeline can already run successfully and write the relevant final output to the receipt.
+
+## Build The First Agent Or Next Variant
+
+Use this short workflow after the ported control pipeline is sound:
+
+1. Preserve the working parent `.ppln`; add the candidate at a new pipeline
+   path.
+2. Define the benchmark-aligned structured output and its evaluation-profile
+   receipt paths before writing prompts or tools.
+3. Choose the simplest useful shape: deterministic logic first, one-shot AI
+   workflow when prepared evidence is sufficient, and a tool-using agent only
+   when the model must choose a bounded investigation at runtime.
+4. Reuse retrieval, evidence preparation, objects, hydrators, and actions unless
+   the variant hypothesis requires changing them. Use `$ai-processor-builder`
+   for AI implementation details.
+5. Verify the result flows from a stable process artifact through the action
+   payload into act-stage receipt metadata.
+6. Run focused tests and one exact published benchmark example, then use
+   `$run-use-case-evals` for a one-example serial eval.
+7. Report the changed and held-constant dimensions, pipeline path, candidate
+   `agent_version_id`, smoke `run_id`, and wider-eval command. Do not silently
+   run a broad eval, make another variant change, or promote the candidate.
+
+Record the short hypothesis in the project's existing pipeline-version notes.
+Do not add a parallel variant manifest, generator, catalog, or identity; the
+existing agent-version and eval identities preserve exact comparison points.
 
 ## Adding New Artifacts Or Processors
 

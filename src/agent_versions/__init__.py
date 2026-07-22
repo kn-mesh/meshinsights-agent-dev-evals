@@ -11,13 +11,14 @@ from src.agent_versions.resolver import (
     resolve_agent_version,
     validate_runtime_overrides,
 )
-from src.agent_versions.store import AgentVersionStore
+from src.agent_versions.store import AgentVersionIntegrityError, AgentVersionStore
 
 __all__ = [
     "AgentVersionManifest",
     "AgentVersionPolicy",
     "AgentVersionReference",
     "AgentVersionStore",
+    "AgentVersionIntegrityError",
     "ResolvedAgentVersion",
     "default_policy_path",
     "resolve_agent_version",

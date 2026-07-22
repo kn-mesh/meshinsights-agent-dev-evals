@@ -1,0 +1,4 @@
+interface:
+  display_name: "Benchmark Pipeline Port"
+  short_description: "Port Benchmark Studio evidence pipelines"
+  default_prompt: "Use $benchmark-pipeline-port to port a Benchmark Studio evidence pipeline into this Agent Workbench project."

@@ -65,6 +65,7 @@ def test_agent_execution_uses_v2_result_and_retry_apis(
             tool_retries=2,
             output_retries=4,
             max_turns=3,
+            capture_review=True,
         )
     )
 
@@ -72,6 +73,9 @@ def test_agent_execution_uses_v2_result_and_retry_apis(
     assert result.usage.requests == 1
     assert result.usage.input_tokens > 0
     assert result.usage.output_tokens > 0
+    assert result.review["request"]["kind"] == "agent"
+    assert result.review["messages"]
+    assert result.review["parsed_output"] == {"value": 42}
 
 
 def test_usage_limits_map_all_supported_fields() -> None:
@@ -329,6 +333,7 @@ def test_workflow_retries_output_validation_separately_from_transport(
             reasoning_effort=ReasoningEffort.MEDIUM,
             transport_retries=3,
             output_retries=1,
+            capture_review=True,
         )
     )
 
@@ -340,6 +345,11 @@ def test_workflow_retries_output_validation_separately_from_transport(
         output_tokens=6,
         output_validation_attempts=2,
     )
+    assert [attempt["valid"] for attempt in result.review["validation_attempts"]] == [
+        False,
+        True,
+    ]
+    assert result.review["parsed_output"] == {"value": 42}
 
 
 def test_workflow_enforces_token_limits_across_output_retries(

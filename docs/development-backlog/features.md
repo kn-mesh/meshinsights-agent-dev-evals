@@ -43,25 +43,40 @@ selected eval results. Those remain important post-MVP features below.
 
 ## MVP Readiness Checklist
 
-- [ ] Repeatable project bootstrap from the Agent Workbench template
-- [ ] Codex-guided port of a working Benchmark Studio evidence pipeline
-- [ ] Use-case-neutral published benchmark and frozen-evidence contract
-- [ ] Repeatable first-agent and agent-variant development workflow
+- [x] Repeatable project bootstrap from the Agent Workbench template
+- [x] Codex-guided port of a working Benchmark Studio evidence pipeline
+- [x] Use-case-neutral published benchmark and frozen-evidence contract
+- [x] Repeatable first-agent and agent-variant development workflow
 - [x] Schema-driven evaluation and scoring harness
-- [ ] Repeated, concurrent, resumable model and configuration evaluation
-- [ ] Complete quality, reliability, performance, token, and cost measurement
+- [x] Repeated, concurrent, resumable model and configuration evaluation
+- [x] Complete quality, reliability, performance, token, and cost measurement
 - [ ] Human result exploration with evidence-visualization parity
-- [ ] Codex-readable result exploration and per-example drill-down
+- [x] Codex-readable result exploration and per-example drill-down
 - [ ] Fast compare-diagnose-change-rerun iteration loop
-- [ ] Explicit immutable agent-version promotion
+- [x] Explicit immutable agent-version promotion
 - [x] Exact benchmark, agent, configuration, and eval-result linkage
 - [ ] Local version/result catalog with intentional retention and deletion
+
+## Current MVP Implementation Priority
+
+**Next:** Human result exploration with evidence-visualization parity.
+
+The FDE/Codex path from project bootstrap through pipeline port, first agent,
+evaluation, Codex inspection, and immutable versioning is complete for MVP.
+The next gap is the interactive human experience for filtering results and
+drilling into the same evidence views used during benchmark review.
+
+Keep the human explorer focused on the existing result and review-artifact
+contracts. Do not create a second evaluation or evidence representation.
 
 ## MVP Features
 
 ### Repeatable Project Bootstrap
 
-**Status:** Missing; define before the next use-case project is initialized.
+**Status:** Complete for MVP; a strict non-secret specification, safe local/Git
+template materialization, exact revision provenance, deterministic project
+configuration, independent validation, and optional Git initialization are
+implemented.
 
 Create a repeatable flow for starting one repository per customer use case from
 the Agent Workbench template. The bootstrap should establish a known project
@@ -90,8 +105,14 @@ policy, environment discovery, credential bootstrap, and compatibility checks.
 
 ### Codex-Guided Pipeline Port From Benchmark Studio
 
-**Status:** Missing as a repeatable workflow; a working Spirax pipeline is
-already present in this repository.
+**Priority:** Completed MVP feature.
+
+**Status:** Complete for MVP through the `benchmark-pipeline-port` repository
+skill, routing from `project-guide` and `pipeline-builder`, and the existing
+tested Spirax reference port. The workflow assumes a clean bootstrapped target,
+records the working source repository state, ports only the use-case evidence
+behavior needed downstream, verifies representative evidence and visualization
+semantics, and adds no port-specific runtime subsystem.
 
 An FDE will give Codex the path to the relevant Benchmark Studio repository,
 which contains a working pipeline used to build evidence packages. Codex must
@@ -118,8 +139,13 @@ Codex-operated workflow with validation and clear provenance is sufficient.
 
 ### Published Benchmark And Frozen-Evidence Consumption
 
-**Status:** Foundation present for the current Spirax contracts; generalization
-and initialization integration remain.
+**Priority:** Completed MVP feature.
+
+**Status:** Complete for MVP. Shared benchmark and runtime metadata are
+use-case-neutral, use-case pipelines declare their artifact and compatibility
+requirements, standalone and eval execution share fail-closed preflight, and
+Azure evidence remains content-verified before use. See
+`docs/development-current/published-benchmark-and-frozen-evidence-consumption.md`.
 
 Standalone pipeline runs and eval orchestration must consume the same named,
 published benchmark version and immutable evidence contract. The benchmark is
@@ -142,9 +168,12 @@ The complete feature must:
 
 ### First-Agent And Variant Development Workflow
 
-**Status:** Foundation present through the current YAML pipelines, structured
-outputs, workflows, agent processors, tools, and skills; the workflow is not
-yet a use-case-neutral MVP path.
+**Status:** Complete for MVP through the existing pipeline and AI processor
+skills, one-example runner, eval harness, inspection tools, and immutable
+candidate versions. `pipeline-builder` now provides the concise FDE/Codex
+workflow, and the Spirax `v1_3` and `v2` references demonstrate the supported
+workflow and agent shapes without adding another subsystem. See
+`docs/development-current/first-agent-and-variant-development-workflow.md`.
 
 An FDE and Codex need a clear progression from the ported control pipeline to a
 first measurable agent and then to multiple comparable variants. Each variant
@@ -214,8 +243,11 @@ MVP execution requirements are:
 
 ### Evidence-First Eval Result Inspection
 
-**Status:** Missing as an integrated experience; local structured result files
-and pipeline-generated evidence images provide foundations.
+**Status:** Partial; the coding-agent MVP is implemented through local-only,
+run-scoped review capture, bounded summary/filter/drill-down commands,
+comparison-linked execution identities, optional diagnoses, and safe review
+purge. The interactive human explorer and full visualization-parity experience
+remain.
 
 Both a human developer and Codex must be able to start from an eval run, find a
 wrong or unstable example, and understand what the agent actually saw before
