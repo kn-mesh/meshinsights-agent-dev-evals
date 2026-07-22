@@ -1108,6 +1108,13 @@ def test_dry_run_resolves_manifest_without_pipeline_execution(
     assert path.name == "manifest.json"
     assert manifest["run_id"].startswith("eval_")
     assert len(manifest["work_items"]) == 1
+    retained_example = manifest["eval_contract"]["examples"][0]
+    assert retained_example["source_snapshot_id"] == benchmark.examples[0].source_snapshot_id
+    assert retained_example["raw_snapshot_content_sha256"] == "c" * 64
+    assert [item["artifact_kind"] for item in retained_example["raw_artifacts"]] == [
+        "telemetry",
+        "alarms",
+    ]
 
 
 def test_run_identity_excludes_progress_interval_but_includes_worker_limit(

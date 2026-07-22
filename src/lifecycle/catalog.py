@@ -561,11 +561,10 @@ class LocalLifecycleCatalog:
             return "unavailable"
         try:
             store = LocalReviewStore(run_dir, run_id=run_dir.name)
-            return str(
-                store.capture_summary(
-                    expected_execution_ids=expected_execution_ids
-                ).get("status", "unknown")
-            )
+            state = store.review_state(expected_execution_ids=expected_execution_ids)
+            if state.get("integrity", {}).get("status") != "valid":
+                return "invalid"
+            return str(state.get("capture", {}).get("status", "unknown"))
         except (OSError, ValueError, RuntimeError, json.JSONDecodeError):
             return "invalid"
 

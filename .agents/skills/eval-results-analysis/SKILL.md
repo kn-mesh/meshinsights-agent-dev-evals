@@ -64,6 +64,9 @@ Rules:
    rather than reconstructed or guessed. When review is unavailable, report
    its typed reason (`disabled`, `capture_failed`, `capture_partial`, `purged`,
    or `absent`) rather than describing the durable eval attempt as failed.
+   Report review integrity separately when the summary marks the bundle
+   `invalid`; the disposable inspection index refreshes automatically when
+   capture, attempt generations, manifests, objects, or staging changes.
 5. Propose changes before editing anything. Explain the specific prompt,
    pipeline, or data-shaping changes and why they address the observed pattern.
 6. When the user asks to preserve the analysis, write a compact diagnosis JSON
@@ -98,6 +101,12 @@ Rules:
   details. Attempts are local and Git-ignored by default, so report detailed
   analysis as unavailable when they were removed after initial analysis; use
   the retained compact result only for aggregate conclusions in that case.
+- Retained frozen evidence
+  Load charts through the run manifest's selected-example source snapshot and
+  complete raw artifact hash/size contract. Do not re-query the current
+  publication catalog to reconstruct historical evidence. If a legacy run
+  predates that retained contract, report evidence as unavailable and rerun it
+  rather than weakening integrity.
 - `performance/summary.json`
   When present, use its `summary`, `model_calls`, and `retries` sections for
   throughput, stage/API latency, slowest execution IDs, timeout observations,

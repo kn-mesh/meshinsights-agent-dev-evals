@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import io
 import json
 from pathlib import Path
 import shutil
 from typing import Any
 
 from fastapi.testclient import TestClient
+import pandas as pd
 import pytest
 
 from agent_eval_ui import create_app
@@ -22,10 +24,14 @@ from evaluation import (
     build_work_item_id,
     eval_attempt_to_dict,
 )
-from src.apps.eval_explorer import ProjectExplorerBackend
+from src.apps.eval_explorer import (
+    ProjectExplorerBackend,
+    _azure_evidence_adapter,
+    build_app,
+)
 from src.benchmarks.models import BenchmarkExample, SourceArtifact
 from src.evals.run_store import LocalRunStore
-from src.evidence.spirax import build_spirax_evidence_view
+from src.evidence.spirax import SpiraxEvidenceAdapter, build_spirax_evidence_view
 
 
 class _Backend:
@@ -158,8 +164,51 @@ def test_spirax_projection_preserves_reviewer_evidence_semantics() -> None:
 
 
 class _EvidenceAdapter:
+    def __init__(self) -> None:
+        self.identity: dict[str, Any] | None = None
+
     def build_view(self, **identity: Any) -> dict[str, Any]:
-        return {"verified": True, **identity}
+        self.identity = identity
+        return {
+            "verified": True,
+            "benchmark_key": identity["benchmark_key"],
+            "benchmark_version_id": identity["benchmark_version_id"],
+            "version_number": identity["version_number"],
+            "example_id": identity["example"].example_id,
+        }
+
+
+class _FrozenEvidenceStore:
+    def read_verified(self, artifact: SourceArtifact) -> bytes:
+        if artifact.artifact_kind == "telemetry":
+            stream = io.BytesIO()
+            pd.DataFrame(
+                [
+                    {
+                        "timestamp": "2025-12-31T23:30:00Z",
+                        "steam_temperature": 120.0,
+                        "condensate_temperature": 100.0,
+                        "front_mic": 0.2,
+                    }
+                ]
+            ).to_parquet(stream, index=False)
+            return stream.getvalue()
+        if artifact.artifact_kind == "alarms":
+            return (
+                json.dumps(
+                    {
+                        "kind": "selected_alarm",
+                        "alarm": {
+                            "_id": "alarm-a",
+                            "sensorIdDec": "unit-a",
+                            "detectedAt": "2025-12-31T23:45:00Z",
+                            "alarmData": {"type": "FDE"},
+                        },
+                    }
+                )
+                + "\n"
+            ).encode()
+        raise AssertionError(f"Unexpected artifact: {artifact.artifact_kind}")
 
 
 def _schema_v1_run(project_root: Path) -> tuple[Path, str, str]:
@@ -198,6 +247,7 @@ def _schema_v1_run(project_root: Path) -> tuple[Path, str, str]:
                 "run_id": run_id,
                 "run_spec_sha256": digest,
                 "benchmark_key": "benchmark",
+                "benchmark_version_id": "benchmark-version-1",
                 "benchmark_version_number": 1,
                 "runs_per_example": 1,
             },
@@ -206,8 +256,33 @@ def _schema_v1_run(project_root: Path) -> tuple[Path, str, str]:
                     "example_id": "example-a",
                     "unit_id": "unit-a",
                     "decision_timestamp": "2026-01-01T00:00:00Z",
+                    "source_snapshot_id": "snapshot-a",
+                    "raw_snapshot_content_sha256": "a" * 64,
+                    "raw_source_kind": "source-snapshot",
+                    "raw_captured_at": "2026-01-01T00:00:00Z",
+                    "raw_window_start": "2025-01-01T00:00:00Z",
+                    "raw_window_end": "2026-01-01T00:00:00Z",
+                    "raw_known_gaps": [],
+                    "raw_artifacts": [
+                        {
+                            "artifact_kind": "telemetry",
+                            "object_key": "snapshot-a/telemetry.parquet",
+                            "content_type": "application/parquet",
+                            "byte_size": 1,
+                            "content_sha256": "b" * 64,
+                        },
+                        {
+                            "artifact_kind": "alarms",
+                            "object_key": "snapshot-a/alarms.jsonl",
+                            "content_type": "application/x-ndjson",
+                            "byte_size": 1,
+                            "content_sha256": "c" * 64,
+                        },
+                    ],
+                    "label_schema_version_id": "schema-v1",
                     "benchmark_labels": {"classification": "Healthy"},
                     "slice_keys": [],
+                    "metadata": {"sensor_id": "7"},
                 }
             ],
             "output_fields": [
@@ -311,9 +386,10 @@ def test_project_backend_exposes_optional_correlated_performance(
     tmp_path: Path,
 ) -> None:
     run_dir, run_id, execution_id = _schema_v1_run(tmp_path)
+    evidence_adapter = _EvidenceAdapter()
     backend = ProjectExplorerBackend(
         tmp_path,
-        evidence_adapter=_EvidenceAdapter(),  # type: ignore[arg-type]
+        evidence_adapter=evidence_adapter,  # type: ignore[arg-type]
     )
     client = TestClient(create_app(backend=backend))
 
@@ -329,7 +405,22 @@ def test_project_backend_exposes_optional_correlated_performance(
     attempt = backend.get_attempt(run_id, execution_id)
     assert attempt["performance"]["availability"] == "available"
     assert attempt["performance"]["metrics"]["duration_seconds"] == 12.0
-    assert backend.get_evidence(run_id, "example-a")["verified"] is True
+    evidence = backend.get_evidence(run_id, "example-a")
+    assert evidence == {
+        "verified": True,
+        "benchmark_key": "benchmark",
+        "benchmark_version_id": "benchmark-version-1",
+        "version_number": 1,
+        "example_id": "example-a",
+    }
+    assert evidence_adapter.identity is not None
+    retained_example = evidence_adapter.identity["example"]
+    assert isinstance(retained_example, BenchmarkExample)
+    assert retained_example.source_snapshot_id == "snapshot-a"
+    assert [item.artifact_kind for item in retained_example.raw_artifacts] == [
+        "telemetry",
+        "alarms",
+    ]
 
     shutil.rmtree(run_dir / "performance")
 
@@ -341,6 +432,120 @@ def test_project_backend_exposes_optional_correlated_performance(
     assert attempt_without_performance["row"]["example_id"] == "example-a"
     assert attempt_without_performance["performance"]["availability"] == "unavailable"
     assert backend.get_evidence(run_id, "example-a")["verified"] is True
+
+
+def test_project_backend_rejects_evidence_outside_retained_run_scope(
+    tmp_path: Path,
+) -> None:
+    _, run_id, _ = _schema_v1_run(tmp_path)
+    backend = ProjectExplorerBackend(
+        tmp_path,
+        evidence_adapter=_EvidenceAdapter(),  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(FileNotFoundError, match="retained example"):
+        backend.get_evidence(run_id, "example-not-in-run")
+
+
+def test_project_backend_decodes_evidence_from_retained_manifest(
+    tmp_path: Path,
+) -> None:
+    _, run_id, _ = _schema_v1_run(tmp_path)
+    backend = ProjectExplorerBackend(
+        tmp_path,
+        evidence_adapter=SpiraxEvidenceAdapter(
+            evidence_store=_FrozenEvidenceStore()
+        ),
+    )
+
+    evidence = backend.get_evidence(run_id, "example-a")
+
+    assert evidence["example"]["example_id"] == "example-a"
+    assert evidence["metadata"]["source_snapshot_id"] == "snapshot-a"
+    assert evidence["evidence"]["telemetry"][0]["temperature_delta"] == 20.0
+    assert evidence["evidence"]["selected_alarm"]["alarm_id"] == "alarm-a"
+
+
+def test_project_backend_reuses_default_evidence_adapter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, run_id, _ = _schema_v1_run(tmp_path)
+    evidence_adapter = _EvidenceAdapter()
+    creations: list[Path] = []
+
+    def create(project_root: Path) -> _EvidenceAdapter:
+        creations.append(project_root)
+        return evidence_adapter
+
+    monkeypatch.setattr("src.apps.eval_explorer._azure_evidence_adapter", create)
+    backend = ProjectExplorerBackend(tmp_path)
+
+    backend.get_evidence(run_id, "example-a")
+    backend.get_evidence(run_id, "example-a")
+
+    assert creations == [tmp_path.resolve()]
+
+
+def test_project_backend_rejects_legacy_manifest_without_frozen_evidence(
+    tmp_path: Path,
+) -> None:
+    run_dir, run_id, _ = _schema_v1_run(tmp_path)
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    manifest["eval_contract"]["examples"][0].pop("raw_artifacts")
+    (run_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    backend = ProjectExplorerBackend(
+        tmp_path,
+        evidence_adapter=_EvidenceAdapter(),  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(ValueError, match="predates retained frozen-evidence"):
+        backend.get_evidence(run_id, "example-a")
+
+
+def test_build_app_bootstraps_dotenv_before_serving(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(
+        "src.apps.eval_explorer.bootstrap_environment",
+        lambda: calls.append("bootstrapped"),
+    )
+
+    app = build_app(project_root=tmp_path)
+
+    assert app.title == "Agent Workbench Eval Explorer"
+    assert calls == ["bootstrapped"]
+
+
+def test_default_evidence_adapter_uses_project_blob_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "workbench.project.json").write_text(
+        json.dumps(
+            {
+                "benchmark_studio": {
+                    "storage_account_url": "https://evidence.blob.core.windows.net",
+                    "storage_container": "source-snapshots",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    observed: dict[str, Any] = {}
+
+    class _Store:
+        def __init__(self, **kwargs: Any) -> None:
+            observed.update(kwargs)
+
+    monkeypatch.setattr("src.apps.eval_explorer.AzureBlobEvidenceStore", _Store)
+
+    adapter = _azure_evidence_adapter(tmp_path)
+
+    assert isinstance(adapter, SpiraxEvidenceAdapter)
+    assert observed == {
+        "account_url": "https://evidence.blob.core.windows.net",
+        "container": "source-snapshots",
+    }
 
 
 def test_project_backend_pages_and_resolves_attempts_beyond_ten_thousand(

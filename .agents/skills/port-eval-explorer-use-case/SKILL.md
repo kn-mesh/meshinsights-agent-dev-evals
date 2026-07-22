@@ -41,9 +41,11 @@ or domain-specific layout, keep it in the project.
 
 ## 3. Port The Evidence Path
 
-1. Load the exact benchmark key and immutable version recorded by the eval run.
-2. Retrieve only its published frozen artifacts through `EvidenceStore`; preserve
-   hash/size verification and the decision timestamp cutoff.
+1. Load the exact benchmark identity and selected example's complete frozen
+   source-snapshot contract from the retained eval-run manifest.
+2. Retrieve only those retained frozen artifacts through `EvidenceStore`;
+   preserve hash/size verification and the decision timestamp cutoff. Do not
+   re-query the current publication catalog to recover a historical run.
 3. Recreate Benchmark Studio's normalization and derived fields in
    `src/evidence/`. Never query a live source system or infer data from labels.
 4. Return a versioned, JSON-serializable envelope containing provenance,

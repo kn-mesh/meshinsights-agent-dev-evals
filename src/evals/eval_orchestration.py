@@ -2091,6 +2091,26 @@ def _build_examples(
                 "unit_id": result.example.unit_id,
                 "decision_timestamp": result.example.decision_timestamp.isoformat(),
                 "source_snapshot_id": result.example.source_snapshot_id,
+                "raw_snapshot_content_sha256": (
+                    result.example.raw_snapshot_content_sha256
+                ),
+                "raw_source_kind": result.example.raw_source_kind,
+                "raw_captured_at": result.example.raw_captured_at.isoformat(),
+                "raw_window_start": (
+                    result.example.raw_window_start.isoformat()
+                    if result.example.raw_window_start is not None
+                    else None
+                ),
+                "raw_window_end": (
+                    result.example.raw_window_end.isoformat()
+                    if result.example.raw_window_end is not None
+                    else None
+                ),
+                "raw_known_gaps": list(result.example.raw_known_gaps),
+                "raw_artifacts": [
+                    artifact.model_dump(mode="json")
+                    for artifact in result.example.raw_artifacts
+                ],
                 "label_schema_version_id": result.example.label_schema_version_id,
                 "benchmark_labels": result.example.approved_label_payload,
                 "slice_keys": list(result.slice_keys),

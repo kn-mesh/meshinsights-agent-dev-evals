@@ -5,7 +5,8 @@ steam-trap alarm and, when applicable, identify its root cause using only the
 evidence available at the alarm decision timestamp.
 
 - Benchmark Studio project: `spirax-pulse`
-- Published benchmark: `phase-1-benchmark-3fb7f544` version `1`
+- Configured benchmark contract: see `workbench.project.json`; verify current
+  publication through the live catalog before running an eval
 - Unit identity: numeric Pulse sensor ID, carried generically as `unit_id`
 - Evidence recipe: `spirax-steam-trap-evidence@v2`
 - Frozen artifacts: telemetry Parquet and alarm NDJSON objects in Azure Blob

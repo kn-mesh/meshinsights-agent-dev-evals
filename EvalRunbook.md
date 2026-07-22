@@ -3,11 +3,14 @@
 Use this runbook to execute the `v1_3` pipeline against an immutable published
 benchmark version for the `spirax-pulse` project.
 
-## Current Full Benchmark Command
+## Full Benchmark Command Template
 
-As verified from the published Azure catalog on July 17, 2026, the only
-available benchmark is `phase-1-benchmark-3fb7f544`, version `1`, containing 70
-examples. This command evaluates every example once:
+The hosted Benchmark Studio catalog is mutable operational state. Do not copy a
+benchmark key from this runbook, `workbench.project.json`, a retained result, or
+a previous terminal session and assume that it is still published. First use
+the discovery workflow below to confirm the exact key and version available in
+the current environment, then substitute them into this command. This command
+evaluates every example in that selected version once:
 
 ```bash
 uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
@@ -18,8 +21,8 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --azure-postgres-user kurt.neuens@mesh-systems.com \
   --azure-storage-account-url https://misprxlbdvqdol4f5j2ozla.blob.core.windows.net \
   --azure-storage-container source-snapshots \
-  --benchmark-key phase-1-benchmark-3fb7f544 \
-  --benchmark-version 1 \
+  --benchmark-key <published-benchmark-key> \
+  --benchmark-version <version-number> \
   --all-examples \
   --ai-model azure:gpt-5.6-luna \
   --ai-reasoning-effort medium \
@@ -139,14 +142,14 @@ combined as an intersection.
   non-interactive CLI requires this flag or one of the filters above.
 
 For example, run every approved Open Failure example once with the catalog
-default model:
+default model after substituting a key and version confirmed by discovery:
 
 ```bash
 uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
   --project-key spirax-pulse \
-  --benchmark-key phase-1-benchmark-3fb7f544 \
-  --benchmark-version 1 \
+  --benchmark-key <published-benchmark-key> \
+  --benchmark-version <version-number> \
   --slice open-failure \
   --ai-model azure:gpt-5.6-luna \
   --ai-reasoning-effort medium \
@@ -156,9 +159,10 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --error-action continue
 ```
 
-## One-Time Benchmark Discovery
+## Benchmark Discovery And Availability
 
-If the benchmark key or version is unknown, run the interactive chooser once:
+Before a new live run, or whenever the environment or catalog may have changed,
+run the interactive chooser:
 
 ```bash
 uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln
@@ -166,8 +170,22 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln
 
 `Retrieving published benchmarks for spirax-pulse from Azure...` uses direct
 Entra-authenticated PostgreSQL. Record the selected benchmark key and version,
-then use the explicit command for subsequent runs. Do not use the interactive
-form in automation.
+then use the explicit command for subsequent runs in the same environment.
+Repeat discovery after publication changes or when an explicit command reports
+that its benchmark is unavailable. Do not use the interactive form in
+automation; resolve and validate the key/version before starting unattended
+work.
+
+`workbench.project.json` is the project-owned compatibility allow-list, not a
+live catalog cache. A configured benchmark identity or a retained run proves
+what the project supports or historically evaluated; neither proves that the
+version is currently retrievable from Benchmark Studio. A runnable selection
+must be both currently published and present in that compatibility allow-list;
+if there is no intersection, stop and resolve the catalog/configuration mismatch
+rather than editing compatibility metadata merely to make the run start. Do not
+put claims such as "the only available benchmark" in durable documentation. If
+a temporary catalog snapshot is useful for an incident or handoff, record the
+environment and verification timestamp outside the reusable command templates.
 
 ## Prerequisites
 
@@ -222,7 +240,10 @@ runs. Immutable attempt generations are detailed local evidence and are ignored
 by Git by default; retain them through initial analysis and any resume,
 rematerialization, or per-attempt inspection work. Confirm `run` records the
 intended run ID and conditions and use `run.dimensions` for exact comparison
-identities.
+identities. The manifest also retains every selected example's complete frozen
+source-snapshot window, known gaps, and raw artifact object key, byte size, and
+SHA-256 contract so historical evidence inspection does not depend on the
+current publication catalog.
 
 Result schema version 1 separates durable evaluation evidence from disposable
 performance diagnostics. Its summary contains `accuracy`, `reliability`,
@@ -270,6 +291,14 @@ Review capture defaults to `full` for executed attempts. Use
 `--review-capture off` when detailed local review is not needed. Dry-run,
 status, comparison-only, and materialize-only operations do not capture new
 review content.
+
+Each execution capture is journaled before local objects are promoted. Startup
+recovers interrupted transactions, retaining objects only when the exact
+committed execution manifest exists. The derived schema-v2 `review/index.json`
+fingerprints result, attempt-generation, capture, manifest, object, and staging
+state and is rebuilt automatically when any input changes. Capture status and
+bundle integrity are reported separately; an integrity-invalid review bundle
+does not invalidate the durable eval result.
 
 Capture state is evidence-based: `in_progress` while executions are being
 recorded, then `complete`, `partial`, or `failed` after reconciliation with the
@@ -328,9 +357,11 @@ APP_PROJECT_KEY=spirax-pulse uv run python -m src.apps.eval_explorer
 
 Open `http://127.0.0.1:8765`. Select a retained run to filter attempts and
 inspect expected/actual outputs, grading, model interactions, pipeline/tool
-activity, and raw review data. The Evidence package tab retrieves the exact
-published benchmark version recorded by that run, verifies its immutable Azure
-artifacts, and renders the normalized Spirax charts used by Benchmark Studio.
+activity, and raw review data. The Evidence package tab reads the selected
+example's frozen-artifact contract from the retained run manifest, verifies the
+exact immutable Azure objects, and renders the normalized Spirax charts used by
+Benchmark Studio. A legacy run without that retained artifact contract fails
+closed and must be rerun with the current writer.
 If review capture was off, failed, partial, purged, or absent, compact result
 rows remain available and the detailed tabs state the specific reason the
 review is unavailable.
@@ -395,8 +426,8 @@ runs with identical non-model conditions and create a comparison manifest:
 uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
   --project-key spirax-pulse \
-  --benchmark-key phase-1-benchmark-3fb7f544 \
-  --benchmark-version 1 \
+  --benchmark-key <published-benchmark-key> \
+  --benchmark-version <version-number> \
   --all-examples \
   --ai-model azure:gpt-5.6-luna \
   --compare-model azure:gpt-5.6-terra \

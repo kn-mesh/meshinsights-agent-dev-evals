@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -28,6 +29,7 @@ from src.evals.inspection import (
     materialize_review_index,
 )
 from src.evals.run_store import LocalRunStore
+from src.lifecycle.catalog import LocalLifecycleCatalog
 
 
 def _run_fixture(tmp_path: Path) -> tuple[Path, str, str]:
@@ -247,3 +249,107 @@ def test_inspection_exposes_typed_review_capture_failure_reason(
     }
     summary = inspection_summary(run_dir)
     assert summary["review"]["status"] == "failed"
+
+
+def test_inspection_refreshes_index_when_capture_state_changes(
+    tmp_path: Path,
+) -> None:
+    run_dir, run_id, digest = _run_fixture(tmp_path)
+    store = LocalReviewStore(run_dir, run_id=run_id)
+    store.initialize(run_spec_sha256=digest)
+    materialize_review_index(run_dir)
+    initial = store.read_index()
+    assert initial["review_index_schema_version"] == 2
+
+    records = LocalRunStore(run_dir, run_id=run_id).read_attempt_records()
+    first = records[0]
+    store.record_failure(
+        execution_id=str(first["execution_id"]),
+        work_item_id=str(first["work_item_id"]),
+        error=ReviewStoreError("capture broke after initial indexing"),
+    )
+    store.finalize(
+        expected_execution_ids=[str(item["execution_id"]) for item in records]
+    )
+
+    rows = list_inspection_rows(run_dir, filter_name="review-unavailable")["rows"]
+    refreshed = store.read_index()
+    failed = next(
+        item for item in rows if item["execution_id"] == first["execution_id"]
+    )
+    assert refreshed["review_state_sha256"] != initial["review_state_sha256"]
+    assert failed["review_unavailable_reason"] == {
+        "code": "capture_failed",
+        "error_type": "ReviewStoreError",
+        "message": "capture broke after initial indexing",
+    }
+
+
+def test_inspection_replaces_old_disposable_index_schema(tmp_path: Path) -> None:
+    run_dir, run_id, digest = _run_fixture(tmp_path)
+    store = LocalReviewStore(run_dir, run_id=run_id)
+    store.initialize(run_spec_sha256=digest)
+    materialize_review_index(run_dir)
+    stale = store.read_index()
+    stale["review_index_schema_version"] = 1
+    store.index_path.write_text(json.dumps(stale), encoding="utf-8")
+
+    list_inspection_rows(run_dir)
+
+    assert store.read_index()["review_index_schema_version"] == 2
+
+
+def test_inspection_refreshes_index_for_manifest_commit_and_review_purge(
+    tmp_path: Path,
+) -> None:
+    run_dir, run_id, digest = _run_fixture(tmp_path)
+    store = LocalReviewStore(run_dir, run_id=run_id)
+    store.initialize(run_spec_sha256=digest)
+    materialize_review_index(run_dir)
+    initial_sha256 = store.read_index()["review_state_sha256"]
+    first = LocalRunStore(run_dir, run_id=run_id).read_attempt_records()[0]
+    store.commit_execution(
+        {
+            "run_id": run_id,
+            "work_item_id": first["work_item_id"],
+            "execution_id": first["execution_id"],
+            "capture_status": "complete",
+        }
+    )
+
+    rows = list_inspection_rows(run_dir)["rows"]
+
+    committed = next(
+        item for item in rows if item["execution_id"] == first["execution_id"]
+    )
+    assert committed["review_status"] == "complete"
+    assert store.read_index()["review_state_sha256"] != initial_sha256
+
+    store.purge(dry_run=False, confirmed=True)
+    purged_rows = list_inspection_rows(run_dir)["rows"]
+
+    assert all(
+        item["review_unavailable_reason"] == {"code": "purged"} for item in purged_rows
+    )
+
+
+def test_lifecycle_marks_review_with_orphaned_objects_invalid(tmp_path: Path) -> None:
+    run_dir, run_id, digest = _run_fixture(tmp_path)
+    store = LocalReviewStore(run_dir, run_id=run_id)
+    store.initialize(run_spec_sha256=digest)
+    orphan_content = b"orphaned"
+    digest_value = hashlib.sha256(orphan_content).hexdigest()
+    orphan = store.objects_dir / digest_value[:2] / digest_value
+    orphan.parent.mkdir(parents=True, exist_ok=True)
+    orphan.write_bytes(orphan_content)
+    execution_ids = [
+        str(item["execution_id"])
+        for item in LocalRunStore(run_dir, run_id=run_id).read_attempt_records()
+    ]
+
+    assert (
+        LocalLifecycleCatalog._review_status(
+            run_dir, expected_execution_ids=execution_ids
+        )
+        == "invalid"
+    )

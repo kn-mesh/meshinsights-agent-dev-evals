@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from src.benchmarks.models import BenchmarkExample, BenchmarkVersion
+from src.benchmarks.models import BenchmarkExample
 from src.objects.pipeline_metadata import BenchmarkExamplePipelineMetadata
 from src.retrievers.spirax_frozen_evidence_retriever import (
     SpiraxFrozenEvidenceRetriever,
@@ -18,32 +18,26 @@ EVIDENCE_RECIPE_ID = "spirax-steam-trap-evidence@v2"
 
 
 class SpiraxEvidenceAdapter:
-    """Build the human review view from one exact published source snapshot."""
+    """Build the human review view from retained immutable run evidence."""
 
-    def __init__(self, *, repository: Any, evidence_store: EvidenceStore) -> None:
-        self._repository = repository
+    def __init__(self, *, evidence_store: EvidenceStore) -> None:
         self._evidence_store = evidence_store
-        self._versions: dict[tuple[str, int], BenchmarkVersion] = {}
 
     def build_view(
-        self, *, benchmark_key: str, version_number: int, example_id: str
+        self,
+        *,
+        benchmark_key: str,
+        benchmark_version_id: str,
+        version_number: int,
+        example: BenchmarkExample,
     ) -> dict[str, Any]:
-        key = (benchmark_key, version_number)
-        benchmark = self._versions.get(key)
-        if benchmark is None:
-            benchmark = self._repository.load_published_version(
-                benchmark_key=benchmark_key,
-                version_number=version_number,
-            )
-            self._versions[key] = benchmark
-        example = benchmark.get_example(example_id)
         metadata = BenchmarkExamplePipelineMetadata(
             unit=example.unit_id,
             example_id=example.example_id,
             decision_timestamp=example.decision_timestamp,
-            benchmark_key=benchmark.benchmark_key,
-            benchmark_version_id=benchmark.benchmark_version_id,
-            benchmark_version_number=benchmark.version_number,
+            benchmark_key=benchmark_key,
+            benchmark_version_id=benchmark_version_id,
+            benchmark_version_number=version_number,
             source_snapshot_id=example.source_snapshot_id,
             source_snapshot_content_sha256=example.raw_snapshot_content_sha256,
             source_kind=example.raw_source_kind,

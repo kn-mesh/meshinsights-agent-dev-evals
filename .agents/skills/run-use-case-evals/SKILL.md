@@ -31,30 +31,44 @@ in this skill.
    comparison identities are known. Do not use the deprecated
    `--agent-version` display label as exact identity. Avoid interactive profile
    or benchmark selection unless discovery is the requested task.
-4. Start with the runbook's one-example serial smoke run when pipeline/model
+4. Treat hosted benchmark availability as mutable operational state. Before a
+   live run, confirm the exact key and version through the runbook's discovery
+   workflow or a current catalog result from the same environment. A value in
+   `workbench.project.json`, durable documentation, or a retained result proves
+   compatibility or historical identity, not current publication. Require the
+   selected live identity to be present in the project compatibility allow-list;
+   stop on a catalog/configuration mismatch. For a command-only request without
+   a current catalog result, retain the benchmark placeholders and tell the user
+   to resolve them; never present a concrete key as "currently available" based
+   only on repository contents.
+5. Start with the runbook's one-example serial smoke run when pipeline/model
    compatibility has not already been established.
-5. When authorized to execute, monitor the run through completion and report
+6. When authorized to execute, monitor the run through completion and report
    the deterministic run ID and exact `result.json` path. If interrupted,
    rerun the identical explicit command with `--resume-mode missing`; completed
    work is already durable. Diagnose the first substantive error; do not
    mistake successful Blob `206` logs or thread-shutdown noise for the root
    cause.
-6. Verify durable and optional artifacts separately:
+7. Verify durable and optional artifacts separately:
    - load and integrity-check `result.json`; confirm `run` matches the requested
      evaluation profile identity/hash, benchmark, model, reasoning effort,
      scope, and repetitions;
+   - confirm the retained manifest contains each selected example's frozen
+     source-snapshot window, known gaps, and complete raw artifact hashes;
    - confirm `run.dimensions` captures agent, pipeline, model, grader-set, and
      project-declared configuration identities;
-   - use the inspection summary to verify diagnostic review state and counts;
+   - use the inspection summary to verify diagnostic review capture state,
+     integrity, and counts; its disposable index refreshes from current attempt,
+     capture, manifest, object, and staging evidence;
      and
    - inspect `performance/summary.json` only when present. Its latency, retry,
      and throughput observations cover current/latest attempt generations and
      are disposable; absence or invalid telemetry is supported and must not be
      described as missing durable eval evidence or a failed eval.
-7. Expect the schema-v1 run bundle under
+8. Expect the schema-v1 run bundle under
    `eval_results/<pipeline>/<benchmark-key>/v<version>/runs/<run-id>/`. Report
    the exact `result.json` and do not reconstruct identity from display labels.
-8. Use `--compare-model` for multiple models under identical conditions. For
+9. Use `--compare-model` for multiple models under identical conditions. For
    existing results, use `--compare-result` plus every allowed
    `--varying-dimension`; undeclared differences intentionally fail closed.
 
@@ -66,8 +80,10 @@ in this skill.
   files.
 - Use `$external-runtime-setup` for provider credentials or telemetry setup.
 - Never print secrets or commit `.env` values.
-- Never infer a benchmark key for a real run. Discover it interactively or
-  obtain it from the user or a prior result.
+- Never infer a benchmark key for a real run. Discover it in the current
+  environment or obtain an exact identity from the user. A prior result may be
+  used to reproduce historical conditions only after current availability is
+  verified.
 - Never infer a concrete model for a command-only request. Use a user-selected
   model or one whose catalog API family is known to be supported by the current
   runtime adapter.

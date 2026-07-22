@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
 import threading
 import webbrowser
@@ -12,9 +11,10 @@ from typing import Any
 
 from agent_eval_ui import create_app
 from evaluation import AttemptQuery, query_attempt_rows
+from mi.core import bootstrap_environment
 import uvicorn
 
-from src.benchmarks import AzurePostgresBenchmarkRepository
+from src.benchmarks.models import BenchmarkExample
 from src.evals.inspection import (
     all_inspection_rows,
     find_run_directory,
@@ -174,17 +174,49 @@ class ProjectExplorerBackend:
         }
 
     def get_evidence(self, run_id: str, example_id: str) -> dict[str, Any]:
-        result = load_verified_result(self._run_dir(run_id) / "result.json")
-        config = result.get("run", {})
+        run_dir = self._run_dir(run_id)
+        store = LocalRunStore(run_dir, run_id=run_id)
+        manifest = store.read_manifest()
+        contract = manifest.get("eval_contract")
+        if not isinstance(contract, dict) or contract.get("schema_version") != 1:
+            raise ValueError("Run manifest is missing its schema-v1 eval contract.")
+        config = contract.get("run")
+        if not isinstance(config, dict):
+            raise ValueError("Run manifest is missing retained run identity.")
         benchmark_key = str(config.get("benchmark_key") or "")
+        benchmark_version_id = str(config.get("benchmark_version_id") or "")
         version = int(config.get("benchmark_version_number") or 0)
-        if not benchmark_key or version < 1:
+        if not benchmark_key or not benchmark_version_id or version < 1:
             raise ValueError("Run is missing exact benchmark identity.")
-        adapter = self._evidence_adapter or _azure_evidence_adapter()
-        return adapter.build_view(
+
+        raw_examples = contract.get("examples")
+        if not isinstance(raw_examples, list):
+            raise ValueError("Run manifest is missing retained examples.")
+        matches = [
+            item
+            for item in raw_examples
+            if isinstance(item, dict) and item.get("example_id") == example_id
+        ]
+        if len(matches) != 1:
+            raise FileNotFoundError(
+                f"Expected one retained example {example_id}; found {len(matches)}."
+            )
+        try:
+            example = _retained_benchmark_example(matches[0])
+        except (TypeError, ValueError) as error:
+            raise ValueError(
+                "This run predates retained frozen-evidence manifests and cannot "
+                "render evidence without weakening integrity. Re-run the evaluation "
+                "with the current schema-v1 writer."
+            ) from error
+
+        if self._evidence_adapter is None:
+            self._evidence_adapter = _azure_evidence_adapter(self.project_root)
+        return self._evidence_adapter.build_view(
             benchmark_key=benchmark_key,
+            benchmark_version_id=benchmark_version_id,
             version_number=version,
-            example_id=example_id,
+            example=example,
         )
 
     def list_comparisons(self) -> dict[str, Any]:
@@ -278,18 +310,57 @@ class ProjectExplorerBackend:
             }
 
 
-def _azure_evidence_adapter() -> SpiraxEvidenceAdapter:
-    project_key = os.getenv("APP_PROJECT_KEY", "").strip()
-    if not project_key:
-        raise ValueError("APP_PROJECT_KEY is required to render evidence.")
-    repository = AzurePostgresBenchmarkRepository(project_key=project_key)
+def _azure_evidence_adapter(project_root: Path) -> SpiraxEvidenceAdapter:
+    """Use project-owned non-secret Blob identity with local Azure credentials."""
+    project_path = project_root / "workbench.project.json"
+    try:
+        project = json.loads(project_path.read_text(encoding="utf-8"))
+        benchmark_studio = project["benchmark_studio"]
+        account_url = str(benchmark_studio["storage_account_url"]).strip()
+        container = str(benchmark_studio["storage_container"]).strip()
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise ValueError(
+            "workbench.project.json must declare Benchmark Studio Blob account "
+            "and container identities for evidence retrieval."
+        ) from error
+    if not account_url or not container:
+        raise ValueError(
+            "Benchmark Studio Blob account and container identities must not be empty."
+        )
     return SpiraxEvidenceAdapter(
-        repository=repository,
-        evidence_store=AzureBlobEvidenceStore(),
+        evidence_store=AzureBlobEvidenceStore(
+            account_url=account_url,
+            container=container,
+        )
+    )
+
+
+def _retained_benchmark_example(payload: dict[str, Any]) -> BenchmarkExample:
+    """Validate one complete frozen example retained by the run manifest."""
+    return BenchmarkExample.model_validate(
+        {
+            "example_id": payload.get("example_id"),
+            "unit_id": payload.get("unit_id"),
+            "decision_timestamp": payload.get("decision_timestamp"),
+            "approved_label_payload": payload.get("benchmark_labels"),
+            "label_schema_version_id": payload.get("label_schema_version_id"),
+            "example_metadata": payload.get("metadata", {}),
+            "source_snapshot_id": payload.get("source_snapshot_id"),
+            "raw_snapshot_content_sha256": payload.get(
+                "raw_snapshot_content_sha256"
+            ),
+            "raw_source_kind": payload.get("raw_source_kind"),
+            "raw_captured_at": payload.get("raw_captured_at"),
+            "raw_window_start": payload.get("raw_window_start"),
+            "raw_window_end": payload.get("raw_window_end"),
+            "raw_known_gaps": payload.get("raw_known_gaps", []),
+            "raw_artifacts": payload.get("raw_artifacts"),
+        }
     )
 
 
 def build_app(*, project_root: Path | None = None) -> Any:
+    bootstrap_environment()
     root = repository_root(project_root or Path.cwd())
     return create_app(
         backend=ProjectExplorerBackend(root), static_dir=root / "www" / "dist"

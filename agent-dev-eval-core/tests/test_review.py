@@ -412,6 +412,9 @@ def test_review_verify_rejects_orphans_and_capture_count_mismatch(
     orphan = store.objects_dir / orphan_digest[:2] / orphan_digest
     orphan.parent.mkdir(parents=True, exist_ok=True)
     orphan.write_bytes(orphan_content)
+    state = store.review_state(expected_execution_ids=["work_a.1"])
+    assert state["integrity"]["status"] == "invalid"
+    assert state["integrity"]["orphaned_object_count"] == 1
     with pytest.raises(ReviewStoreError, match="Orphaned review objects"):
         store.verify()
 
@@ -421,6 +424,160 @@ def test_review_verify_rejects_orphans_and_capture_count_mismatch(
     store.capture_path.write_text(json.dumps(capture), encoding="utf-8")
     with pytest.raises(ReviewStoreError, match="object_count"):
         store.verify()
+
+
+def test_review_initialize_recovers_promoted_objects_from_uncommitted_journal(
+    tmp_path: Path,
+) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review")
+    store.initialize(run_spec_sha256="a" * 64)
+    content = b"interrupted transaction"
+    digest = hashlib.sha256(content).hexdigest()
+    object_path = store.objects_dir / digest[:2] / digest
+    object_path.parent.mkdir(parents=True, exist_ok=True)
+    object_path.write_bytes(content)
+    transaction = store.staging_dir / "execution-interrupted"
+    transaction.mkdir(parents=True)
+    (transaction / "journal.json").write_text(
+        json.dumps(
+            {
+                "review_transaction_schema_version": 1,
+                "run_id": "eval_review",
+                "execution_id": "work_a.1",
+                "manifest_relative_path": "executions/wo/work_a.1.json",
+                "manifest_sha256": "b" * 64,
+                "object_relative_paths": [
+                    object_path.relative_to(store.review_dir).as_posix()
+                ],
+                "phase": "publishing",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    store.initialize(run_spec_sha256="a" * 64)
+
+    assert not object_path.exists()
+    assert not store.staging_dir.exists()
+    assert store.review_state()["integrity"]["status"] == "valid"
+
+
+def test_review_initialize_preserves_objects_for_committed_journal(
+    tmp_path: Path,
+) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review", inline_text_bytes=0)
+    store.initialize(run_spec_sha256="a" * 64)
+    store.commit_execution(
+        {
+            "run_id": "eval_review",
+            "work_item_id": "work_a",
+            "execution_id": "work_a.1",
+            "capture_status": "complete",
+            "model_interactions": {"prompt": "committed review object"},
+        }
+    )
+    manifest_path = next(store.executions_dir.glob("*/*.json"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    object_path = next(store.objects_dir.glob("*/*"))
+    transaction = store.staging_dir / "execution-committed"
+    transaction.mkdir(parents=True)
+    (transaction / "journal.json").write_text(
+        json.dumps(
+            {
+                "review_transaction_schema_version": 1,
+                "run_id": "eval_review",
+                "execution_id": "work_a.1",
+                "manifest_relative_path": manifest_path.relative_to(
+                    store.review_dir
+                ).as_posix(),
+                "manifest_sha256": manifest["manifest_sha256"],
+                "object_relative_paths": [
+                    object_path.relative_to(store.review_dir).as_posix()
+                ],
+                "phase": "publishing",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    store.initialize(run_spec_sha256="a" * 64)
+
+    assert object_path.exists()
+    assert manifest_path.exists()
+    assert not store.staging_dir.exists()
+
+
+def test_review_initialize_recovers_interrupted_manifest_write(
+    tmp_path: Path,
+) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review")
+    store.initialize(run_spec_sha256="a" * 64)
+    content = b"promoted before interrupted manifest write"
+    digest = hashlib.sha256(content).hexdigest()
+    object_path = store.objects_dir / digest[:2] / digest
+    object_path.parent.mkdir(parents=True, exist_ok=True)
+    object_path.write_bytes(content)
+    manifest_path = store.executions_dir / "wo" / "work_a.1.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text("{", encoding="utf-8")
+    transaction = store.staging_dir / "execution-partial-manifest"
+    transaction.mkdir(parents=True)
+    (transaction / "journal.json").write_text(
+        json.dumps(
+            {
+                "review_transaction_schema_version": 1,
+                "run_id": "eval_review",
+                "execution_id": "work_a.1",
+                "manifest_relative_path": manifest_path.relative_to(
+                    store.review_dir
+                ).as_posix(),
+                "manifest_sha256": "b" * 64,
+                "object_relative_paths": [
+                    object_path.relative_to(store.review_dir).as_posix()
+                ],
+                "phase": "publishing",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    store.initialize(run_spec_sha256="a" * 64)
+
+    assert not manifest_path.exists()
+    assert not object_path.exists()
+    assert not store.staging_dir.exists()
+
+
+def test_review_recovery_rejects_journal_paths_outside_review_cas(
+    tmp_path: Path,
+) -> None:
+    run_dir = _run_dir(tmp_path)
+    store = LocalReviewStore(run_dir, run_id="eval_review")
+    store.initialize(run_spec_sha256="a" * 64)
+    transaction = store.staging_dir / "execution-unsafe"
+    transaction.mkdir(parents=True)
+    (transaction / "journal.json").write_text(
+        json.dumps(
+            {
+                "review_transaction_schema_version": 1,
+                "run_id": "eval_review",
+                "execution_id": "work_a.1",
+                "manifest_relative_path": "executions/wo/work_a.1.json",
+                "manifest_sha256": "b" * 64,
+                "object_relative_paths": ["capture.json"],
+                "phase": "publishing",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ReviewStoreError, match="escapes CAS"):
+        store.initialize(run_spec_sha256="a" * 64)
+
+    assert store.capture_path.exists()
 
 
 def test_diagnosis_markdown_does_not_persist_embedded_credentials(

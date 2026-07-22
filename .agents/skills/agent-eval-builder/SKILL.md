@@ -186,6 +186,8 @@ Eval schema v1 is split by retention policy:
 Together, while the local detail is present, these files preserve:
 
 - published benchmark and source-state identity;
+- each selected example's frozen source-snapshot identity, window, known gaps,
+  and complete hash/size-verified raw artifact manifest;
 - frozen label-schema identities and hashes;
 - evaluation profile ID/version/hash, grader set, and slices;
 - complete benchmark labels for every example;
@@ -204,6 +206,12 @@ Detailed rows are reconstructed on demand through
 Deleting attempts intentionally gives up resume, rematerialization, detailed
 inspection, and per-attempt verification while preserving the committed compact
 summary and exact run/agent identity.
+
+The local explorer reconstructs reviewer evidence from the selected example's
+retained frozen-artifact manifest and reads those exact objects from Blob. It
+must not re-query the current publication catalog to recover historical run
+evidence. A legacy run that lacks the retained artifact manifest fails closed
+and must be rerun with the current writer.
 
 Performance schema v1 lives under ignored `<run-dir>/performance/`. It owns
 invocation events, attempt/stage durations, retry observations, backend-call
@@ -224,13 +232,18 @@ invalidating scoring, resume, comparisons, or agent-version linkage.
 
 Treat each execution review as a transaction. Normalize only explicitly
 supported binary encodings, stage and hash the complete manifest/object set,
-publish the manifest as the commit point, and remove staged or newly promoted
-objects on failure. Capture begins `in_progress` and is finalized against the
-durable execution IDs as `complete`, `partial`, or `failed`; purge produces
+write a recovery journal before promotion, publish the manifest as the commit
+point, and remove staged or newly promoted objects on failure or interrupted
+transaction recovery. Capture begins `in_progress` and is finalized against
+the durable execution IDs as `complete`, `partial`, or `failed`; purge produces
 `purged`. Persist bounded redacted failure observations, verify orphan/missing
 objects plus manifest/count mismatches, and derive lifecycle/explorer status
-from evidence rather than trusting the descriptor string. Review failure must
-remain nonfatal to durable attempt, scoring, and performance persistence.
+from one evidence-backed review-state projection rather than trusting the
+descriptor string. The disposable schema-v2 inspection index fingerprints the
+compact result, current attempt generations, capture descriptor, execution
+manifests, objects, and staging state and is rebuilt whenever those sources
+change. Review failure must remain nonfatal to durable attempt, scoring, and
+performance persistence.
 
 ## Hosted Inputs
 

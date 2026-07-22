@@ -151,6 +151,11 @@ The explorer has two UI layers:
 - `www/` is the project frontend that composes that shell with the Spirax-owned
   evidence schema and charts in `www/src/use_case/`.
 
+Evidence inspection uses the exact selected-example source snapshot and raw
+artifact hashes retained in each current run manifest; it does not re-query the
+current published benchmark catalog. Runs created before that retained evidence
+contract must be rerun before their Evidence package can be rendered.
+
 Install, test, and build the frontend from `www/` before starting the Python
 explorer backend:
 

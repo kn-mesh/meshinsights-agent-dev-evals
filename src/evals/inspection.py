@@ -39,7 +39,8 @@ def materialize_review_index(run_dir: Path) -> Path:
     expected_execution_ids = [
         str(item["execution_id"]) for item in run_store.read_attempt_records()
     ]
-    capture = store.capture_summary(expected_execution_ids=expected_execution_ids)
+    review_state = store.review_state(expected_execution_ids=expected_execution_ids)
+    capture = review_state["capture"]
     failures = {
         str(item.get("execution_id")): item
         for item in capture.get("capture_failures", [])
@@ -122,6 +123,9 @@ def materialize_review_index(run_dir: Path) -> Path:
     payload = {
         "result_schema_version": result.get("schema_version"),
         "result_sha256": canonical_sha256(result),
+        "attempt_state_sha256": _attempt_state_sha256(run_store),
+        "review_state_sha256": review_state["review_state_sha256"],
+        "review_integrity": review_state["integrity"],
         "row_count": len(rows),
         "rows": rows,
     }
@@ -140,7 +144,8 @@ def inspection_summary(run_dir: Path) -> dict[str, Any]:
             run_dir.resolve(), run_id=run_dir.resolve().name
         ).read_attempt_records()
     ]
-    capture = store.capture_summary(expected_execution_ids=expected_execution_ids)
+    review_state = store.review_state(expected_execution_ids=expected_execution_ids)
+    capture = review_state["capture"]
     return {
         "run_id": store.run_id,
         "run": {
@@ -155,7 +160,11 @@ def inspection_summary(run_dir: Path) -> dict[str, Any]:
             )
         },
         "summary": result.get("summary", {}),
-        "review": {**capture, **store.size()},
+        "review": {
+            **capture,
+            "integrity": review_state["integrity"],
+            **store.size(),
+        },
         "attempt_counts": {
             "total": len(rows),
             "incorrect": sum(
@@ -268,19 +277,54 @@ def inspect_execution(
 
 
 def _ensure_index(run_dir: Path) -> dict[str, Any]:
-    store = _store(run_dir)
-    result = _verified_result(run_dir)
-    current_result_sha256 = canonical_sha256(result)
-    if not store.index_path.exists():
-        materialize_review_index(run_dir)
-    else:
-        index = store.read_index()
-        if index.get("result_sha256") != current_result_sha256:
+    for _ in range(3):
+        store = _store(run_dir)
+        sources = _index_sources(run_dir, store=store)
+        index = store.read_index() if store.index_path.exists() else {}
+        if index.get("review_index_schema_version") != 2 or any(
+            index.get(key) != value for key, value in sources.items()
+        ):
             materialize_review_index(run_dir)
-    index = store.read_index()
-    if index.get("result_sha256") != current_result_sha256:
-        raise ReviewStoreError("Review index does not match the current result.")
-    return index
+            index = store.read_index()
+        current = _index_sources(run_dir, store=store)
+        if index.get("review_index_schema_version") == 2 and all(
+            index.get(key) == value for key, value in current.items()
+        ):
+            return index
+    raise ReviewStoreError("Review index inputs changed repeatedly during refresh.")
+
+
+def _index_sources(
+    run_dir: Path, *, store: LocalReviewStore | None = None
+) -> dict[str, str]:
+    result = _verified_result(run_dir)
+    run_store = LocalRunStore(run_dir, run_id=run_dir.name)
+    expected_execution_ids = [
+        str(item["execution_id"]) for item in run_store.read_attempt_records()
+    ]
+    review_store = store or _store(run_dir)
+    review_state = review_store.review_state(
+        expected_execution_ids=expected_execution_ids
+    )
+    return {
+        "result_sha256": canonical_sha256(result),
+        "attempt_state_sha256": _attempt_state_sha256(run_store),
+        "review_state_sha256": str(review_state["review_state_sha256"]),
+    }
+
+
+def _attempt_state_sha256(run_store: LocalRunStore) -> str:
+    records = run_store.read_attempt_records()
+    return canonical_sha256(
+        [
+            {
+                "work_item_id": item.get("work_item_id"),
+                "execution_id": item.get("execution_id"),
+                "generation": item.get("generation"),
+            }
+            for item in records
+        ]
+    )
 
 
 def _store(run_dir: Path) -> LocalReviewStore:
