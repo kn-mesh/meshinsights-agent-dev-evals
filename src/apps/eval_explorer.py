@@ -16,10 +16,10 @@ import uvicorn
 
 from src.benchmarks import AzurePostgresBenchmarkRepository
 from src.evals.inspection import (
+    all_inspection_rows,
     find_run_directory,
     inspect_execution,
     inspection_summary,
-    list_inspection_rows,
 )
 from src.evals.result_integrity import load_verified_result
 from src.evals.run_specs import repository_root
@@ -138,9 +138,7 @@ class ProjectExplorerBackend:
     ) -> dict[str, Any]:
         if state not in _ATTEMPT_STATES:
             raise ValueError(f"Unsupported attempt state: {state}.")
-        rows = list_inspection_rows(
-            self._run_dir(run_id), filter_name="all", limit=10_000
-        )["rows"]
+        rows = all_inspection_rows(self._run_dir(run_id))
         payload = query_attempt_rows(
             rows,
             AttemptQuery(
@@ -156,7 +154,7 @@ class ProjectExplorerBackend:
 
     def get_attempt(self, run_id: str, execution_id: str) -> dict[str, Any]:
         run_dir = self._run_dir(run_id)
-        rows = list_inspection_rows(run_dir, filter_name="all", limit=10_000)["rows"]
+        rows = all_inspection_rows(run_dir)
         matching = [row for row in rows if row.get("execution_id") == execution_id]
         if len(matching) != 1:
             raise FileNotFoundError(

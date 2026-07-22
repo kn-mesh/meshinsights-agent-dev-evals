@@ -152,9 +152,6 @@ def validate_project(project_root: Path) -> dict[str, Any]:
     ]
     if missing:
         raise ValueError("Generated project is missing: " + ", ".join(missing))
-    if (root / ".env").exists():
-        raise ValueError("Generated project must not contain a root .env file.")
-
     with (root / "pyproject.toml").open("rb") as handle:
         pyproject = tomllib.load(handle)
     actual_name = pyproject.get("project", {}).get("name")

@@ -88,10 +88,11 @@ views, and use-case-specific graders in the root project.
 11. Grade only valid outputs with explicit deterministic graders.
 12. Aggregate valid-run accuracy separately from reliability and scoring
     coverage.
-13. Persist exact agent manifest, benchmark, schema, profile, grader, slice,
-    model, runtime, outputs, grades, usage, and attempt identities in tracked
-    eval schema v1. Persist durations, retries, and backend-call timing only in
-    disposable performance schema v1.
+13. Persist the exact agent manifest, benchmark, schema, profile, grader, slice,
+    model, runtime, aggregate outputs, usage, and attempt identities in eval
+    schema v1. Retain the compact result, run manifest, and agent manifest in
+    Git; keep detailed attempt generations local by default. Persist durations,
+    retries, and backend-call timing only in disposable performance schema v1.
 
 Preflight must resolve the final structured output schema declared by the
 pipeline. Every configured `receipt_metadata_path` begins at `agent_output`,
@@ -165,7 +166,7 @@ slices. Never execute Python, templates, or arbitrary expressions from a
 profile. Slices may use immutable benchmark labels, metadata, identity, and
 decision timestamps; do not derive slice membership from model output.
 
-## Tracked Eval And Disposable Performance Contracts
+## Retained Eval, Local Detail, And Disposable Performance Contracts
 
 Keep `result.json` compact with top-level keys in this order:
 
@@ -174,8 +175,15 @@ Keep `result.json` compact with top-level keys in this order:
 3. `run`
 4. `artifacts`
 
-Tracked eval schema v1 must preserve across `manifest.json`, immutable
-`attempts/`, `agent-version.json`, and compact `result.json`:
+Eval schema v1 is split by retention policy:
+
+- `manifest.json`, `agent-version.json`, and compact `result.json` are retained
+  in Git for important runs;
+- immutable `attempts/` are detailed local evidence, ignored by Git by default,
+  and may be removed after initial analysis; and
+- `performance/` and `review/` are disposable local diagnostics.
+
+Together, while the local detail is present, these files preserve:
 
 - published benchmark and source-state identity;
 - frozen label-schema identities and hashes;
@@ -189,9 +197,13 @@ Tracked eval schema v1 must preserve across `manifest.json`, immutable
 - effective AI execution policies and token/cost observations.
 
 Do not persist duplicated per-example rows in `result.json`. Complete benchmark
-labels live once in the manifest eval contract; canonical agent output, grades,
-usage, and failures live once in immutable attempt generations. Detailed rows
-are reconstructed on demand through `LocalRunStore.evaluation_rows()`.
+labels live once in the retained manifest eval contract; canonical agent output,
+grades, usage, and failures live in local immutable attempt generations.
+Detailed rows are reconstructed on demand through
+`LocalRunStore.evaluation_rows()` while those attempts are retained locally.
+Deleting attempts intentionally gives up resume, rematerialization, detailed
+inspection, and per-attempt verification while preserving the committed compact
+summary and exact run/agent identity.
 
 Performance schema v1 lives under ignored `<run-dir>/performance/`. It owns
 invocation events, attempt/stage durations, retry observations, backend-call
@@ -258,7 +270,8 @@ At minimum cover:
 - valid-run field/complete accuracy and separate reliability/coverage;
 - provider, transport, timeout, pipeline, identity, output, grader, executor,
   and cancellation failures;
-- tracked eval schema v1 identities, compactness, and durable evidence;
+- retained schema-v1 run/agent identity, compact summaries, and local detailed
+  attempt evidence;
 - disposable performance schema v1 separation and backend-call timing;
 - URL-safe Pydantic AI binary capture, malformed-artifact rollback, CAS
   deduplication, truthful capture finalization, and orphan/count integrity;

@@ -182,6 +182,11 @@ def inspection_summary(run_dir: Path) -> dict[str, Any]:
     }
 
 
+def all_inspection_rows(run_dir: Path) -> list[dict[str, Any]]:
+    """Return every compact attempt row for in-process filtering and pagination."""
+    return list(_ensure_index(run_dir)["rows"])
+
+
 def list_inspection_rows(
     run_dir: Path,
     *,

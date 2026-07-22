@@ -343,6 +343,46 @@ def test_project_backend_exposes_optional_correlated_performance(
     assert backend.get_evidence(run_id, "example-a")["verified"] is True
 
 
+def test_project_backend_pages_and_resolves_attempts_beyond_ten_thousand(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    backend = ProjectExplorerBackend(tmp_path)
+    rows = [
+        {
+            "example_id": f"example-{index}",
+            "unit_id": f"unit-{index}",
+            "execution_id": f"execution-{index}",
+            "execution_status": "completed",
+            "output_contract_status": "valid",
+            "scoring_status": "scored",
+            "complete_evaluation_correct": True,
+            "evaluations": {},
+            "slice_keys": [],
+            "review_status": "unavailable",
+        }
+        for index in range(10_001)
+    ]
+    monkeypatch.setattr(
+        "src.apps.eval_explorer.all_inspection_rows", lambda run_dir: rows
+    )
+    monkeypatch.setattr(backend, "_run_dir", lambda run_id: tmp_path / run_id)
+
+    page = backend.list_attempts(
+        "run-large",
+        state="all",
+        search="",
+        field=None,
+        slice_key=None,
+        offset=10_000,
+        limit=100,
+    )
+    attempt = backend.get_attempt("run-large", "execution-10000")
+
+    assert page["total"] == 10_001
+    assert [row["execution_id"] for row in page["rows"]] == ["execution-10000"]
+    assert attempt["row"]["example_id"] == "example-10000"
+
+
 @pytest.mark.parametrize(
     "model_calls",
     [None, "invalid", {"slowest": None}, {"slowest": "invalid"}],

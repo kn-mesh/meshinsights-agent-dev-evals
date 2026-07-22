@@ -26,10 +26,11 @@ in this skill.
    profile, benchmark key, benchmark version, model, reasoning effort, run
    count, runtime, worker count, error action, and an explicit scope. Use
    `--all-examples` for a full benchmark; absence of filters no longer implies
-   all examples in unattended execution. Include `--agent-version` and
+   all examples in unattended execution. Include `--agent-version-id` and
    repeatable `--dimension KEY=JSON_VALUE` flags whenever those stable
-   comparison identities are known. Avoid interactive profile or benchmark
-   selection unless discovery is the requested task.
+   comparison identities are known. Do not use the deprecated
+   `--agent-version` display label as exact identity. Avoid interactive profile
+   or benchmark selection unless discovery is the requested task.
 4. Start with the runbook's one-example serial smoke run when pipeline/model
    compatibility has not already been established.
 5. When authorized to execute, monitor the run through completion and report

@@ -33,14 +33,12 @@ wheels/
 # Local immutable agent-version manifests and content-addressed objects
 /agent_versions/
 
-# Track durable eval manifests, outputs, scores, usage, and summaries. Ignore only
-# short-lived operational diagnostics and heavy local review payloads.
+# Retain compact run identity and summaries in Git. Detailed attempt, performance,
+# and review evidence remains local by default and may be removed after analysis.
 /eval_results/**/performance/
 /eval_results/**/review/
 /eval_results/**/attempts/
 /eval_results/**/objects/
-/eval_results/**/agent-version.json
-/eval_results/**/manifest.json
 /eval_results/**/.coordinator.lock
 /eval_results/**/.DS_Store
 

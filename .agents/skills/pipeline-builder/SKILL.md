@@ -1,6 +1,6 @@
 ---
 name: pipeline-builder
-description: Build or evolve stage-based use-case pipelines in this repo. Use this skill when a request involves creating or modifying retrievers, hydrators, process or action objects, pipeline YAML, pipeline runner CLIs, pipeline receipts, processor variant organization, or the staged progression from visualization to compute-only control pipelines to optional AI and eval support.
+description: Build or evolve stage-based use-case pipelines in this repo. Use this skill when a request involves creating or modifying retrievers, hydrators, process or action objects, pipeline YAML, the exact-example pipeline runner, pipeline receipts, processor variant organization, or the progression from compute-only logic to optional AI and eval support.
 ---
 
 # Pipeline Builder
@@ -30,7 +30,6 @@ Use `$external-runtime-setup` when the task also depends on provider auth, traci
 ## Repository-local mi-core
 
 - Treat `mi-core/` as editable source in this repository, not as a static imported package.
-- Its current checkout path is `/Users/kurt.neuens/Desktop/Code - Product/meshinsights-agent-dev-evals-mvp/mi-core`; use the repo-relative `mi-core/` path in code and documentation.
 - Framework source lives under `mi-core/core/src/mi/`, and CLI source lives under `mi-core/cli/src/cli/`.
 - The root `uv` environment installs both as editable local sources. Modify that source when the requested work belongs in the framework, then run the relevant `mi-core` tests.
 
@@ -52,7 +51,7 @@ Design the pipeline so the final business outcome for a unit is captured on the 
 Rules:
 - Keep receipt payloads compact, serializable, and stable.
 - Keep intermediate computation on the process object as artifacts, not in the receipt.
-- Use visualization sinks and debug outputs only as side effects, not as the durable record.
+- Treat debug and inspection outputs as optional side effects, not as the durable record.
 
 ### Variant-first organization
 
@@ -67,31 +66,32 @@ Keep one shared process object, action object, and shared hydrators if that keep
 ## Development Sequence
 
 Build in this order unless the user explicitly asks to skip ahead:
-1. Data visualization pipeline with no AI.
-2. YAML control pipeline.
+1. Inspect one exact published benchmark example and its frozen evidence.
+2. Build or evolve the YAML pipeline for one-example execution.
 3. Stop at compute-only if that solves the use case reliably enough.
 4. Add an AI baseline only if compute-only logic is insufficient or too brittle.
-5. Add eval orchestration when you need repeated-run comparison.
-6. Iterate using measured deltas, not intuition.
+5. Verify one exact example through the pipeline runner.
+6. Use eval orchestration for benchmark selection, repeated runs, concurrency, and comparison.
+7. Iterate using measured deltas, not intuition.
 
 ### Stage exit criteria
 
-- Visualization stage:
-  You can run one benchmark example and all examples in a published benchmark version, render raw and derived data, and inspect the first baseline artifact.
-- Control pipeline stage:
-  YAML runs for single and all units and the final pipeline determination appears on receipts.
+- Evidence-inspection stage:
+  You can load one exact published benchmark example, verify its frozen raw artifacts, and inspect the normalized evidence needed by the pipeline.
+- Pipeline stage:
+  YAML runs for one exact example and the final pipeline determination appears on the returned receipt.
 - AI stage:
   The AI path runs successfully and its output reaches receipt metadata.
 - Eval stage:
-  Eval JSON is written with summary and per-run rows for the selected units.
+  The eval orchestrator selects examples, executes repetitions, and materializes the schema-v1 run bundle.
 
-## Stage 1: Data Visualization Pipeline
+## Stage 1: Exact-Example Pipeline
 
-Build this first to validate data quality and feature usefulness before committing to pipeline logic.
+Build or evolve the reusable pipeline shape against one exact published example before running an eval set.
 
-Build a real visualization pipeline when inspection requires meaningful
-retrieval, normalization, artifact production, or processor experimentation
-that should be reused in later pipeline stages.
+The pipeline runner owns one-example execution. It does not own benchmark-wide
+selection, batching, repetition, concurrency, resume, or aggregation; those
+belong to eval orchestration.
 
 ### What to build
 
@@ -103,58 +103,29 @@ that should be reused in later pipeline stages.
 3. A retrieve-to-process hydrator in `src/hydrators/` that validates retriever outputs and populates datasets and artifacts on the process object.
 4. A process object subclass in `src/objects/` with typed getters and setters for normalized datasets and important artifacts.
 5. One baseline compute processor in the relevant processor package.
-6. An action object, process-to-action hydrator, visualization hydrator, finalize hydrator, and visualization action.
-7. A visualization pipeline module in `src/pipelines/`.
-
-### Why the visualization sink exists
-
-`mi.core` clears intermediate objects as stages complete. If you need post-run inspection of process-stage artifacts, emit them through an action side effect rather than trying to read the process object after `pipeline.run()`.
-
-### Critical deepcopy rule
-
-If the visualization action stores a caller-provided sink dict, preserve that sink by reference in `__deepcopy__`. Otherwise `PipelineBuilder.build()` will deepcopy the action and the caller will read an empty sink.
-
-Required pattern:
-
-```python
-import copy
-
-
-def __deepcopy__(self, memo: dict[int, object]) -> "MyVisualizationAction":
-    """Preserve the sink reference across pipeline deepcopy."""
-
-    cls = self.__class__
-    result = cls.__new__(cls)
-    memo[id(self)] = result
-    for key, value in self.__dict__.items():
-        object.__setattr__(
-            result,
-            key,
-            self._sink if key == "_sink" else copy.deepcopy(value, memo),
-        )
-    return result
-```
+6. An action object, process-to-action hydrator, finalize hydrator, and action.
+7. A `.ppln` config under `pipeline_configs/` and any use-case-specific runner helpers required by `src/pipelines/pipeline_run_from_yaml.py`.
 
 ### Done checklist
 
-- `run_unit(unit_id)` returns a receipt plus visualization payload.
-- `run_all_units(...)` works through orchestrator execution.
-- The visualization payload contains raw normalized data, the first baseline
-  artifact, and key unit metadata for inspection by the caller.
+- `run_pipeline(...)` receives one exact `BenchmarkVersion` and
+  `BenchmarkExample` and returns a `PipelineReceipt`.
+- `src.pipelines.pipeline_run_from_yaml` requires explicit benchmark and
+  example identity and runs that exact example.
+- Frozen evidence identity is preflighted before execution, and raw artifacts
+  are verified before decoding.
+- Important derived artifacts flow through the process and action objects, and
+  the final business output appears in act-stage receipt metadata.
 
+## Stage 2: YAML Pipeline Contract
 
-
-## Stage 2: YAML Control Pipeline
-
-Turn the visualization prototype into the real runnable pipeline shape for the repo.
+Keep the runnable pipeline shape explicit and compatible with benchmark preflight.
 
 ### What to build
 
 1. A pipeline YAML in `pipeline_configs/`.
-2. A YAML runner in `src/pipelines/` that supports:
-   single unit execution,
-   all examples in one published benchmark version,
-   optional runtime AI overrides when AI processors exist.
+2. The exact-example runner in `src/pipelines/` with optional runtime AI
+   overrides when AI processors exist.
 3. A process processor list that includes exactly the processors required for the use case.
 
 ### YAML rules
@@ -164,15 +135,21 @@ Turn the visualization prototype into the real runnable pipeline shape for the r
   published schema version, evidence-recipe ID, source-snapshot contract ID,
   and required artifact kinds. The benchmark-aware runner validates and strips
   this block before calling `PipelineBuilder`.
-- Let `PipelineBuilder.from_yaml(...)` resolve relative `file_path` keys.
-- Require an explicit benchmark key and resolve the requested or latest published version from the benchmark repository.
+- Let the benchmark-aware runner inject exact example and raw-artifact
+  metadata, strip `benchmark_contract`, and build an ephemeral runtime config.
+- Require explicit benchmark and example identity at the CLI boundary. A
+  benchmark version may resolve to the latest published version when omitted.
 - Keep benchmark identity and raw artifact manifests in runtime metadata rather than YAML secrets or local files.
+- Do not add all-example or repeated-run helpers to the pipeline runner. Route
+  those requests through `src.evals.eval_orchestration`.
 
 Minimal shape:
 
 ```yaml
 name: your_use_case
 version: 1.0.0
+
+metadata_class: BenchmarkExamplePipelineMetadata
 
 benchmark_contract:
   published_contract_schema_version: 2
@@ -187,11 +164,8 @@ objects:
 retrieve:
   hydrator: YourRetrieveToProcessHydrator
   retrievers:
-    - retriever: YourCsvRetriever
-      file_path: ../../data/your_use_case/data.csv
-      # Raw artifact identity is injected from the published benchmark example.
-      unit_id: ${unit}
-      dataset_name: your_dataset
+    - retriever: YourFrozenEvidenceRetriever
+      # Exact example and raw-artifact identity are injected at runtime.
 
 process:
   hydrator: YourProcessToActionHydrator
@@ -202,8 +176,8 @@ process:
 action:
   hydrator: YourFinalizeActionHydrator
   actions:
-    - action: YourAction
-      # Benchmark identity is injected by the runner.
+    - action: NoOpAction
+      # The final business output is already carried in action/receipt metadata.
 ```
 
 ### Runtime AI overrides
@@ -272,17 +246,15 @@ When introducing a new artifact:
 1. Add typed getter and setter methods on the process object.
 2. Add one processor that validates inputs, computes the artifact, and writes it to the process object.
 3. Update downstream hydrators and processors that consume that artifact.
-4. Update visualization output so the artifact is inspectable during debugging.
+4. Update focused tests or optional diagnostics so the artifact is inspectable during debugging.
 5. Re-run evals if AI behavior depends on that artifact.
 
 Keep one clear producer for each artifact whenever practical.
 
 ## Common Failure Modes
 
-- Empty visualization payload after a run:
-  the sink reference was lost during deepcopy.
 - Benchmark example selection fails:
-  the runner did not resolve the requested published benchmark version or example IDs.
+  the runner did not resolve the requested published benchmark version or example ID.
 - AI provider validation fails:
   environment variables or provider settings are missing.
 - AI runtime overrides report that no processors were updated:

@@ -197,7 +197,7 @@ are written under:
 eval_results/v1_3/<benchmark-key>/v<version>/runs/<run-id>/
   manifest.json
   agent-version.json
-  attempts/<prefix>/<work-item-id>.<generation>.json
+  attempts/<prefix>/<work-item-id>.<generation>.json  # detailed, local, Git-ignored
   result.json
   performance/                     # disposable and ignored by Git
     attempts/<prefix>/<work-item-id>.<generation>.json
@@ -216,10 +216,13 @@ pipeline, benchmark, profile/graders, model, reasoning, scope, repetitions,
 runtime, worker limit, error policy, and configuration dimensions. Running the
 identical command again resumes that run and does not duplicate completed work.
 
-`manifest.json`, `agent-version.json`, immutable attempt generations, and the
-atomically rebuilt `result.json` are durable schema-v1 evaluation evidence.
-They are intended to be retained in Git. Confirm `run` records the intended
-run ID and conditions and use `run.dimensions` for exact comparison identities.
+`manifest.json`, `agent-version.json`, and the atomically rebuilt `result.json`
+are the compact schema-v1 artifacts intended to be retained in Git for important
+runs. Immutable attempt generations are detailed local evidence and are ignored
+by Git by default; retain them through initial analysis and any resume,
+rematerialization, or per-attempt inspection work. Confirm `run` records the
+intended run ID and conditions and use `run.dimensions` for exact comparison
+identities.
 
 Result schema version 1 separates durable evaluation evidence from disposable
 performance diagnostics. Its summary contains `accuracy`, `reliability`,

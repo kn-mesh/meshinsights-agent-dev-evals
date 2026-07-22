@@ -50,6 +50,16 @@ def test_eval_skills_cover_current_artifact_boundaries() -> None:
         assert required in analysis_skill
 
 
+def test_git_retention_boundary_matches_operator_contract() -> None:
+    gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+
+    assert "/eval_results/**/attempts/" in gitignore
+    assert "/eval_results/**/performance/" in gitignore
+    assert "/eval_results/**/review/" in gitignore
+    assert "/eval_results/**/manifest.json" not in gitignore
+    assert "/eval_results/**/agent-version.json" not in gitignore
+
+
 def test_runbook_explicit_eval_flags_match_current_cli_help() -> None:
     runbook = (ROOT / "EvalRunbook.md").read_text(encoding="utf-8")
     completed = subprocess.run(

@@ -27,7 +27,6 @@ Use this skill alongside:
 ## Repository-local mi-core
 
 - Treat `mi-core/` as editable source in this repository, not as a static imported package.
-- Its current checkout path is `/Users/kurt.neuens/Desktop/Code - Product/meshinsights-agent-dev-evals-mvp/mi-core`; use the repo-relative `mi-core/` path in code and documentation.
 - Runtime source lives under `mi-core/core/src/mi/`, and CLI source lives under `mi-core/cli/src/cli/`.
 - The root `uv` environment installs both as editable local sources. Inspect or modify that source when runtime or CLI behavior itself must change, then run the relevant `mi-core` tests.
 

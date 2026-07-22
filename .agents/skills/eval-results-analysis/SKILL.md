@@ -24,7 +24,6 @@ Rules:
 ## Repository-local mi-core
 
 - Treat `mi-core/` as editable source in this repository, not as a static imported package.
-- Its current checkout path is `/Users/kurt.neuens/Desktop/Code - Product/meshinsights-agent-dev-evals-mvp/mi-core`; use the repo-relative `mi-core/` path in code and documentation.
 - Runtime source lives under `mi-core/core/src/mi/`, and the root `uv` environment installs it as an editable local source.
 - When analysis depends on framework behavior, verify the implementation directly in that source rather than assuming behavior from a published package.
 
@@ -96,7 +95,9 @@ Rules:
   rows are not duplicated in `result.json`. Complete frozen benchmark labels
   come from `manifest.json`, while immutable attempt generations supply
   `agent_output`, `evaluations`, contract errors, usage, cost, and failure
-  details.
+  details. Attempts are local and Git-ignored by default, so report detailed
+  analysis as unavailable when they were removed after initial analysis; use
+  the retained compact result only for aggregate conclusions in that case.
 - `performance/summary.json`
   When present, use its `summary`, `model_calls`, and `retries` sections for
   throughput, stage/API latency, slowest execution IDs, timeout observations,

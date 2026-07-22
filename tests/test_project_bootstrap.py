@@ -250,6 +250,24 @@ def test_validation_rejects_project_identity_drift(tmp_path: Path) -> None:
         validate_project(destination)
 
 
+def test_validation_accepts_local_root_environment_file(tmp_path: Path) -> None:
+    template = tmp_path / "template"
+    _write_template(template)
+    destination = tmp_path / "project"
+    initialize_project(
+        destination,
+        spec_path=_write_spec(tmp_path),
+        template_source=str(template),
+        template_revision="fixture-v1",
+        initialize_git=False,
+    )
+    (destination / ".env").write_text(
+        "LOCAL_SECRET=developer-only\n", encoding="utf-8"
+    )
+
+    assert validate_project(destination)["status"] == "valid"
+
+
 def test_cli_emits_machine_readable_success(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

@@ -1,8 +1,10 @@
 # MeshInsights Agent Workbench
 
 This repository combines the full `mi-core` source with a root-level use-case
-Agent Workbench project for building and evaluating connected-system agents. It is Python-only,
-and all Python dependencies are managed with `uv`.
+Agent Workbench project for building and evaluating connected-system agents.
+The runtime and operator tooling are Python, with dependencies managed by `uv`;
+the local eval-results explorer also includes a TypeScript/React frontend managed
+by `pnpm`.
 
 The source snapshots were imported from:
 
@@ -24,6 +26,9 @@ Use this README as the quick on-ramp. Keep durable use-case context in `docs/use
 
 1. Python `>=3.13.5` (see `pyproject.toml`).
 2. `uv` installed.
+3. Node.js `>=22.13.0` for the eval-results explorer frontend.
+4. pnpm `>=11.9.0` (the exact package-manager version is recorded in
+   `www/package.json`).
 
 ## Quickstart (with `uv`)
 
@@ -139,11 +144,28 @@ uv run python -m src.lifecycle.cli --help
 See [`EvalRunbook.md`](EvalRunbook.md) for the explicit, reproducible eval
 command shape. Prefer it over the slower interactive benchmark chooser.
 
-The explorer keeps reusable run/attempt/review mechanics in
-`agent-dev-eval-core/` and `agent-dev-eval-ui/`. This project's immutable
-Spirax evidence projection lives in `src/evidence/`, while its evidence charts
-live in `www/src/use_case/`; a new use case replaces those project-owned
-adapters without rebuilding the shell.
+The explorer has two UI layers:
+
+- `agent-dev-eval-ui/web/` is the reusable React shell for run, attempt, review,
+  and evidence navigation.
+- `www/` is the project frontend that composes that shell with the Spirax-owned
+  evidence schema and charts in `www/src/use_case/`.
+
+Install, test, and build the frontend from `www/` before starting the Python
+explorer backend:
+
+```bash
+cd www
+pnpm install --frozen-lockfile
+pnpm test
+pnpm build
+cd ..
+APP_PROJECT_KEY=<benchmark-studio-project-key> \
+  uv run python -m src.apps.eval_explorer
+```
+
+A new use case replaces the project-owned `www/src/use_case/` adapters without
+rebuilding the reusable shell.
 
 ## Current Spirax Reference Pipeline
 
@@ -319,13 +341,13 @@ src/
   lifecycle/
 ```
 
-Schema-v1 keeps three evidence classes separate: `manifest.json`, immutable
-`attempts/`, `agent-version.json`, and compact `result.json` are durable eval
-evidence; `performance/` contains optional short-lived timing and retry
-observations; `review/` contains optional local diagnostic prompts, images, and
-traces. Deleting either disposable tree does not invalidate scoring, resume,
-comparison, or promotion. Use `EvalRunbook.md` for exact execution and
-verification commands.
+Schema-v1 keeps three retention classes separate: `manifest.json`,
+`agent-version.json`, and compact `result.json` are retained in Git for important
+runs; immutable `attempts/` are detailed local evidence kept through initial
+analysis; and `performance/` plus `review/` are disposable local diagnostics.
+Deleting attempts gives up resume, rematerialization, and detailed inspection,
+while deleting performance or review does not affect those operations. Use
+`EvalRunbook.md` for exact execution and verification commands.
 
 ## Notes
 
