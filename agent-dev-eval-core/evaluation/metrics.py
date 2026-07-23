@@ -245,6 +245,7 @@ def _duration_stats(values: Iterable[float]) -> dict[str, int | float | None]:
             "maximum": None,
             "mean": None,
             "median": None,
+            "p5": None,
             "p95": None,
         }
     return {
@@ -253,6 +254,7 @@ def _duration_stats(values: Iterable[float]) -> dict[str, int | float | None]:
         "maximum": samples[-1],
         "mean": mean(samples),
         "median": median(samples),
+        "p5": _percentile(samples, 0.05),
         "p95": _percentile(samples, 0.95),
     }
 

@@ -53,6 +53,7 @@ import yaml
 from model_catalog import (
     ModelCatalog,
     ModelDefinition,
+    ModelPricing,
     load_model_catalog,
     resolve_model,
     resolve_model_definition,
@@ -1603,6 +1604,13 @@ def _build_cost_observation(
             "unpriced_usage": {},
             "reason": "No frozen pricing record is configured for this model.",
         }
+    return _estimate_cost_from_usage(usage, pricing)
+
+
+def _estimate_cost_from_usage(
+    usage: dict[str, Any], pricing: ModelPricing
+) -> dict[str, Any]:
+    """Estimate one attempt from its usage and the run's frozen pricing."""
     cached = usage.get("cached_input_tokens", 0)
     reasoning = usage.get("reasoning_tokens", 0)
     raw_input = usage.get("input_tokens", 0)
@@ -1625,7 +1633,13 @@ def _build_cost_observation(
         "input_tokens": pricing.input_per_million_tokens,
         "output_tokens": pricing.output_per_million_tokens,
         "cached_input_tokens": pricing.cached_input_per_million_tokens,
-        "reasoning_tokens": pricing.reasoning_per_million_tokens,
+        # OpenAI-family reasoning tokens are billed at the output-token rate
+        # unless the frozen pricing record declares a distinct reasoning rate.
+        "reasoning_tokens": (
+            pricing.reasoning_per_million_tokens
+            if pricing.reasoning_per_million_tokens is not None
+            else pricing.output_per_million_tokens
+        ),
     }
     amount = 0.0
     unpriced: dict[str, int] = {}
@@ -1659,6 +1673,7 @@ def _build_summary(
     *,
     profile: EvaluationProfile,
     runs_per_example: int,
+    frozen_pricing: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     attempts = [attempt for result in results for attempt in result.attempts]
     planned_runs = len(results) * runs_per_example
@@ -1686,7 +1701,7 @@ def _build_summary(
             ),
         },
         "usage": _build_usage_summary(attempts),
-        "cost": _build_cost_summary(attempts),
+        "cost": _build_cost_summary(attempts, frozen_pricing=frozen_pricing),
         "nondeterminism": _build_nondeterminism_summary(results),
         "total_examples": len(results),
         "runs_per_example": runs_per_example,
@@ -1789,12 +1804,31 @@ def _build_usage_summary(attempts: list[EvalAttempt]) -> dict[str, Any]:
     }
 
 
-def _build_cost_summary(attempts: list[EvalAttempt]) -> dict[str, Any]:
-    observations = [
-        cost
-        for attempt in attempts
-        if isinstance((cost := attempt.get_artifact("cost")), dict)
-    ]
+def _build_cost_summary(
+    attempts: list[EvalAttempt],
+    *,
+    frozen_pricing: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    pricing = _model_pricing_from_frozen_snapshot(frozen_pricing)
+    observations: list[dict[str, Any]] = []
+    for attempt in attempts:
+        cost = attempt.get_artifact("cost")
+        usage = attempt.get_artifact("usage")
+        if (
+            pricing is not None
+            and isinstance(usage, dict)
+            and not (
+                isinstance(cost, dict)
+                and cost.get("status") == "actual"
+            )
+        ):
+            # The compact result is a derived view. Re-estimate from immutable
+            # usage plus the exact pricing snapshot frozen into this run so a
+            # corrected estimator can repair aggregates without rewriting the
+            # attempt evidence.
+            cost = _estimate_cost_from_usage(usage, pricing)
+        if isinstance(cost, dict):
+            observations.append(cost)
     status_counts: dict[str, int] = {}
     actual_by_currency: dict[str, float] = {}
     estimated_by_currency: dict[str, float] = {}
@@ -1844,6 +1878,31 @@ def _build_cost_summary(attempts: list[EvalAttempt]) -> dict[str, Any]:
             for currency, values in sorted(complete_unit_costs.items())
         },
     }
+
+
+def _model_pricing_from_frozen_snapshot(
+    snapshot: dict[str, Any] | None,
+) -> ModelPricing | None:
+    if not isinstance(snapshot, dict):
+        return None
+    fields = {
+        key: snapshot.get(key)
+        for key in (
+            "version",
+            "currency",
+            "input_per_million_tokens",
+            "output_per_million_tokens",
+            "cached_input_per_million_tokens",
+            "reasoning_per_million_tokens",
+            "effective_date",
+            "source",
+        )
+    }
+    if not isinstance(fields["version"], str) or not isinstance(
+        fields["currency"], str
+    ):
+        return None
+    return ModelPricing(**fields)  # type: ignore[arg-type]
 
 
 def _cost_distribution(values: list[float]) -> dict[str, float | int]:

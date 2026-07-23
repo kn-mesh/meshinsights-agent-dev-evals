@@ -116,15 +116,27 @@ export function TimeseriesChart({
 
   if (!points.length || !data.length) {
     return (
-      <div className="chart-empty" style={{ height }}>
+      <div
+        className="grid place-items-center rounded-lg border border-dashed bg-muted/35 p-8 text-center text-sm text-muted-foreground"
+        style={{ height }}
+      >
         Not enough retained samples to chart this signal.
       </div>
     );
   }
 
   return (
-    <div className="chart-frame" role="img" aria-label={ariaLabel} style={{ height: height + 20 }}>
-      <Suspense fallback={<div className="chart-empty" style={{ height }}>Loading interactive chart…</div>}>
+    <div className="relative min-w-0 overflow-hidden" role="img" aria-label={ariaLabel} style={{ height: height + 20 }}>
+      <Suspense
+        fallback={
+          <div
+            className="grid place-items-center rounded-lg border border-dashed bg-muted/35 p-8 text-center text-sm text-muted-foreground"
+            style={{ height }}
+          >
+            Loading interactive chart…
+          </div>
+        }
+      >
         <Plot
           data={data}
           layout={layout}

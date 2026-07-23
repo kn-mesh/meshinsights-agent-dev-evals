@@ -35,6 +35,31 @@ export interface CostSummary {
   complete_unit_cost_by_currency: Record<string, CostDistribution>;
 }
 
+export interface DurationDistribution {
+  count: number;
+  minimum: number | null;
+  maximum: number | null;
+  mean: number | null;
+  median: number | null;
+  p5: number | null;
+  p95: number | null;
+}
+
+export type PerformanceSummary =
+  | {
+      availability: "available";
+      recorded_executions: number;
+      summary: {
+        evaluation_wall_time_seconds: number;
+        throughput_runs_per_minute: number | null;
+        run_duration_seconds: DurationDistribution;
+      };
+    }
+  | {
+      availability: "unavailable";
+      reason: string;
+    };
+
 export interface PublishedLabelerNote {
   review_event_id: string;
   reviewer_display_name: string;

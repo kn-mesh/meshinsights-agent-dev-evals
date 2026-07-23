@@ -1,5 +1,16 @@
 import type { EvidenceView, UseCaseAdapter } from "@eval-ui/contracts";
 import { Button } from "@eval-ui/components/ui/button";
+import { cn } from "@eval-ui/lib/utils";
+import {
+  Activity,
+  AlertTriangle,
+  Clock,
+  Database,
+  Gauge,
+  Maximize2,
+  Minimize2,
+  type LucideIcon,
+} from "lucide-react";
 import {
   DEFAULT_TIMESERIES_CHART_HEIGHT,
   TimeseriesChart,
@@ -27,9 +38,9 @@ export function SpiraxEvidenceDisplay({ evidence }: { evidence: EvidenceView }) 
   const xRange = { start: evidence.window.start, end: evidence.window.end };
 
   return (
-    <div className="evidence-stack">
-      <section className="evidence-summary">
-        <dl className="evidence-primary-meta">
+    <div className="grid gap-4 px-5 py-5 pb-10">
+      <section className="flex flex-wrap items-center justify-between gap-4">
+        <dl className="grid flex-1 grid-cols-4 gap-x-7 gap-y-3 max-[1100px]:grid-cols-2">
           <Meta label="Sensor ID" value={evidence.example.unit_id} />
           <Meta label="Alarm" value={formatDate(alarmTimestamp)} />
           <Meta
@@ -38,18 +49,18 @@ export function SpiraxEvidenceDisplay({ evidence }: { evidence: EvidenceView }) 
           />
           <Meta label="Customer" value={metadata.organization ?? metadata.customer} />
         </dl>
-        <div className="evidence-window-note">
-          <UiIcon name="clock" />
+        <div className="flex max-w-64 items-center gap-2 text-[0.75rem] leading-snug text-muted-foreground">
+          <Clock className="size-4 shrink-0" />
           <span>{historyLabel} ending at the retained alarm decision.</span>
         </div>
       </section>
 
-      <details className="provenance-panel">
-        <summary>
-          <UiIcon name="database" />
+      <details className="group overflow-hidden rounded-lg border bg-card">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[0.8125rem] text-muted-foreground group-open:border-b group-open:text-foreground [&::-webkit-details-marker]:hidden">
+          <Database className="size-4" />
           Frozen evidence provenance
         </summary>
-        <dl className="provenance-grid">
+        <dl className="grid grid-cols-4 gap-x-7 gap-y-3 px-3.5 py-3.5 max-[1100px]:grid-cols-2">
           <Meta label="Source snapshot" value={evidence.metadata.source_snapshot_id} />
           <Meta label="Evidence recipe" value={evidence.metadata.evidence_recipe_id} />
           <Meta label="Schema" value={evidence.metadata.evidence_schema_version} />
@@ -58,21 +69,25 @@ export function SpiraxEvidenceDisplay({ evidence }: { evidence: EvidenceView }) 
       </details>
 
       {knownGaps.length ? (
-        <div className="warning" role="note">
-          <UiIcon name="alert" />
+        <div role="note" className="flex items-start gap-2.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-3.5 py-3 text-[0.8125rem] text-amber-800">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <div>
-            <strong>Evidence gaps</strong>
-            <ul>{knownGaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
+            <strong className="font-semibold">Evidence gaps</strong>
+            <ul className="mt-1.5 list-disc pl-4">
+              {knownGaps.map((gap) => <li key={gap}>{gap}</li>)}
+            </ul>
           </div>
         </div>
       ) : null}
 
-      <div className="chart-intro">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="eyebrow">Frozen source evidence</div>
-          <h3>Telemetry at the alarm decision</h3>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Frozen source evidence</div>
+          <h3 className="mt-0.5 text-base font-semibold tracking-tight">Telemetry at the alarm decision</h3>
         </div>
-        <p>Use the time controls to inspect 1 day, 7 days, 30 days, 6 months, or the complete retained window.</p>
+        <p className="max-w-xl text-right text-[0.75rem] leading-relaxed text-muted-foreground max-[900px]:text-left">
+          Use the time controls to inspect 1 day, 7 days, 30 days, 6 months, or the complete retained window.
+        </p>
       </div>
 
       <ChartPanel title={`Steam & Condensate Temperature (${historyLabel})`} icon="gauge">
@@ -149,9 +164,11 @@ export function buildEvidenceWindow(rows: TelemetryRow[], start: string, end: st
 
 function Meta({ label, value }: { label: string; value: unknown }) {
   return (
-    <div>
-      <dt>{label}</dt>
-      <dd title={displayValue(value)}>{displayValue(value)}</dd>
+    <div className="min-w-0">
+      <dt className="text-[0.6875rem] text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[0.8125rem] font-semibold" title={displayValue(value)}>
+        {displayValue(value)}
+      </dd>
     </div>
   );
 }
@@ -171,13 +188,18 @@ function formatDate(value: string) {
   }).format(date);
 }
 
+const chartPanelIcons: Record<"gauge" | "activity", LucideIcon> = {
+  gauge: Gauge,
+  activity: Activity,
+};
+
 function ChartPanel({
   title,
   icon,
   children,
 }: {
   title: string;
-  icon: IconName;
+  icon: "gauge" | "activity";
   children: ReactNode | ((state: { chartHeight: number }) => ReactNode);
 }) {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -200,13 +222,20 @@ function ChartPanel({
 
   const chartHeight = isMaximized ? fullscreenHeight : DEFAULT_TIMESERIES_CHART_HEIGHT;
   const content = typeof children === "function" ? children({ chartHeight }) : children;
+  const Icon = chartPanelIcons[icon];
 
   return (
-    <section className="chart-panel" data-fullscreen={isMaximized}>
-      <div className="chart-panel-heading">
-        <h3>{title}</h3>
-        <div className="chart-panel-actions">
-          <UiIcon name={icon} />
+    <section
+      data-fullscreen={isMaximized}
+      className={cn(
+        "min-w-0 rounded-lg border bg-card p-3.5",
+        isMaximized && "fixed inset-0 z-[100] h-screen overflow-auto rounded-none border-0 bg-background p-6",
+      )}
+    >
+      <div className="mb-2 flex items-center justify-between gap-4">
+        <h3 className="text-[0.8125rem] tracking-[-0.005em]">{title}</h3>
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <Icon className="size-4" />
           <Button
             variant="ghost"
             size="icon"
@@ -214,7 +243,7 @@ function ChartPanel({
             title={isMaximized ? "Exit full screen" : "Maximize chart"}
             aria-label={isMaximized ? "Exit full screen" : `Maximize ${title}`}
           >
-            <UiIcon name={isMaximized ? "minimize" : "maximize"} />
+            {isMaximized ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
           </Button>
         </div>
       </div>
@@ -226,30 +255,6 @@ function ChartPanel({
 function getFullscreenChartHeight() {
   if (typeof window === "undefined") return 680;
   return Math.max(560, Math.min(window.innerHeight - 132, 920));
-}
-
-type IconName = "activity" | "alert" | "clock" | "database" | "gauge" | "maximize" | "minimize";
-
-function UiIcon({ name }: { name: IconName }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {name === "activity" ? <path d="M3 12h4l2.5-6 5 12 2.5-6h4" /> : null}
-      {name === "alert" ? <><path d="M10.3 3.7 2.4 18a2 2 0 0 0 1.8 3h15.6a2 2 0 0 0 1.8-3L13.7 3.7a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></> : null}
-      {name === "clock" ? <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></> : null}
-      {name === "database" ? <><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7" /></> : null}
-      {name === "gauge" ? <><path d="M4.9 19a9 9 0 1 1 14.2 0" /><path d="m12 13 4-4M12 19h.01" /></> : null}
-      {name === "maximize" ? <><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" /></> : null}
-      {name === "minimize" ? <><path d="M8 8H3V3M16 8h5V3M8 16H3v5M16 16h5v5" /></> : null}
-    </svg>
-  );
 }
 
 export const projectUseCaseAdapter: UseCaseAdapter = {

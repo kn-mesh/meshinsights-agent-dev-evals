@@ -90,6 +90,7 @@ def test_performance_reports_completed_failed_and_stage_latency() -> None:
         "maximum": 4.0,
         "mean": 3.0,
         "median": 3.0,
+        "p5": 2.1,
         "p95": 3.9,
     }
     assert performance["stage_duration_seconds"]["process"]["mean"] == 2.0

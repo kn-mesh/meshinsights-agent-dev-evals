@@ -162,19 +162,32 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
 ## Benchmark Discovery And Availability
 
 Before a new live run, or whenever the environment or catalog may have changed,
-run the interactive chooser:
+run the interactive chooser with the hosted data-plane identities explicit:
 
 ```bash
-uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln
+uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
+  --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
+  --project-key spirax-pulse \
+  --azure-postgres-host misprx-lb-dv-pg-qdol4f5j2ozla.postgres.database.azure.com \
+  --azure-postgres-database label_benchmark \
+  --azure-postgres-user kurt.neuens@mesh-systems.com \
+  --azure-storage-account-url https://misprxlbdvqdol4f5j2ozla.blob.core.windows.net \
+  --azure-storage-container source-snapshots
 ```
 
-`Retrieving published benchmarks for spirax-pulse from Azure...` uses direct
-Entra-authenticated PostgreSQL. Record the selected benchmark key and version,
-then use the explicit command for subsequent runs in the same environment.
-Repeat discovery after publication changes or when an explicit command reports
-that its benchmark is unavailable. Do not use the interactive form in
-automation; resolve and validate the key/version before starting unattended
-work.
+With the complete `--azure-postgres-*` arguments above, discovery uses direct
+Entra-authenticated Azure PostgreSQL. Without them, the repository falls back
+to `DATABASE_URL` when it is set; this repository's normal local environment
+may therefore show a local catalog instead of hosted Azure state. The message
+`Retrieving published benchmarks for spirax-pulse from Azure...` is emitted
+before connection-path verification and is not evidence that Azure was queried.
+Do not use the bare chooser to establish hosted availability.
+
+Record the selected benchmark key and version, then use the fully explicit
+command for subsequent runs in the same environment. Repeat discovery after
+publication changes or when an explicit command reports that its benchmark is
+unavailable. Do not use the interactive form in automation; resolve and
+validate the key/version before starting unattended work.
 
 `workbench.project.json` is the project-owned compatibility allow-list, not a
 live catalog cache. A configured benchmark identity or a retained run proves
@@ -192,8 +205,10 @@ environment and verification timestamp outside the reusable command templates.
 - Run from the repository root with dependencies installed by `uv`.
 - Set `APP_PROJECT_KEY=spirax-pulse` or pass `--project-key spirax-pulse`.
 - Pass the hosted PostgreSQL host, database, Entra login, Blob account URL, and
-  container. These are non-secret resource identities and may instead be set in
-  `.env`.
+  container explicitly for both discovery and execution. These are non-secret
+  resource identities. Complete `AZURE_POSTGRES_*` and Azure Storage
+  environment settings are supported, but do not rely on an ambiguous
+  `DATABASE_URL` fallback for hosted discovery.
 - Sign in with Azure CLI so `DefaultAzureCredential` can obtain short-lived
   PostgreSQL and Blob tokens. PostgreSQL must have Entra authentication enabled,
   the login must be mapped to a database role, the local public IP must be
@@ -500,7 +515,8 @@ Retained; it has no elevate or delete actions.
 ## Fast Diagnosis
 
 - Azure Blob status `206` is a successful ranged download.
-- `Retrieving published benchmarks...` means `--benchmark-key` was omitted.
+- `Retrieving published benchmarks...` means `--benchmark-key` was omitted; it
+  does not prove that the repository selected the Azure connection path.
 - A `400` mentioning `/v1/responses` means the chosen model requires the
   Responses API but the runtime sent Chat Completions.
 - Interrupting a run can produce worker and tracing shutdown output. Completed

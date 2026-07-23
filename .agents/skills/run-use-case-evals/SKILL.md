@@ -23,24 +23,33 @@ in this skill.
    If the user did not name a model and compatibility is not already proven,
    retain the runbook's `<provider:model>` placeholder instead of inserting the
    catalog default.
-3. Prefer the fully explicit command from `EvalRunbook.md`. Supply evaluation
-   profile, benchmark key, benchmark version, model, reasoning effort, worker
-   count, and exactly one supported scope: `--all-examples`, an explicit
+3. Use the fully explicit commands from `EvalRunbook.md`. For live discovery,
+   pass the evaluation profile, project key, all three Azure PostgreSQL
+   identities, and both Azure Storage identities explicitly. Never use the bare
+   interactive chooser when `DATABASE_URL` may be set: without complete
+   `--azure-postgres-*` arguments, the repository can silently query that
+   database instead of hosted Azure PostgreSQL. The CLI text
+   `Retrieving published benchmarks ... from Azure` does not prove which
+   connection path was selected. For execution, also supply benchmark key,
+   benchmark version, model, reasoning effort, worker count, and exactly one
+   supported scope: `--all-examples`, an explicit
    `--example-ids`/`--unit-ids` list, or one or more named `--section` values.
    Use threaded execution normally and `--runtime serial --max-workers 1` only
    for debugging. A run count of one and threaded execution are defaults, but
    keep them explicit in reproducible handoffs. Avoid interactive profile or
    benchmark selection unless discovery is the requested task.
 4. Treat hosted benchmark availability as mutable operational state. Before a
-   live run, confirm the exact key and version through the runbook's discovery
-   workflow or a current catalog result from the same environment. A value in
-   `workbench.project.json`, durable documentation, or a retained result proves
-   compatibility or historical identity, not current publication. Require the
-   selected live identity to be present in the project compatibility allow-list;
-   stop on a catalog/configuration mismatch. For a command-only request without
-   a current catalog result, retain the benchmark placeholders and tell the user
-   to resolve them; never present a concrete key as "currently available" based
-   only on repository contents.
+   live run, confirm the exact key and version through the runbook's explicit
+   Azure discovery workflow or a current catalog result proven to come from the
+   same hosted Azure PostgreSQL environment. A value in
+   `workbench.project.json`, durable documentation, a retained result, or a
+   local `DATABASE_URL` catalog proves compatibility or historical/local
+   identity, not current Azure publication. Require the selected live identity
+   to be present in the project compatibility allow-list; stop on a genuine
+   Azure catalog/configuration mismatch. For a command-only request without a
+   current hosted catalog result, retain the benchmark placeholders and tell
+   the user to resolve them; never present a concrete key as "currently
+   available" based only on repository contents.
 5. Start with the runbook's one-example serial smoke run when pipeline/model
    compatibility has not already been established.
 6. When authorized to execute, monitor the run through completion and report

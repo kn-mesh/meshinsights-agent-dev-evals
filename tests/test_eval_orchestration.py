@@ -1336,6 +1336,40 @@ def test_cost_estimate_uses_frozen_model_pricing(
     assert cost["actual"] is None
 
 
+def test_cost_estimate_prices_reasoning_at_output_rate_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        eval_orchestration,
+        "resolve_model_definition",
+        lambda model: ModelDefinition(
+            id=str(model),
+            api="openai_responses",
+            pricing=ModelPricing(
+                version="2026-07",
+                currency="USD",
+                input_per_million_tokens=2.0,
+                output_per_million_tokens=10.0,
+            ),
+        ),
+    )
+
+    cost = eval_orchestration._build_cost_observation(
+        ai_model="azure:test",
+        usage={
+            "input_tokens": 1_000_000,
+            "output_tokens": 100_000,
+            "reasoning_tokens": 40_000,
+        },
+        provider_cost=None,
+    )
+
+    assert cost["status"] == "estimated_complete"
+    assert cost["estimated"]["amount"] == 3.0
+    assert cost["estimated"]["priced_usage"]["output_tokens"] == 60_000
+    assert cost["estimated"]["priced_usage"]["reasoning_tokens"] == 40_000
+
+
 def test_run_identity_freezes_selected_pricing_snapshot(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -1425,6 +1459,46 @@ def test_cost_summary_reports_complete_partial_and_unavailable_unit_coverage() -
         "average": 2.0,
         "p5": 1.1,
         "p95": 2.9,
+    }
+
+
+def test_cost_summary_rebuilds_estimates_from_usage_and_frozen_pricing() -> None:
+    attempt = EvalAttempt(
+        execution_status=ExecutionStatus.COMPLETED,
+        output_contract_status=OutputContractStatus.VALID,
+        scoring_status=ScoringStatus.NO_APPLICABLE_TARGETS,
+        artifacts={
+            "usage": {
+                "input_tokens": 1_000_000,
+                "output_tokens": 100_000,
+                "reasoning_tokens": 40_000,
+            },
+            "cost": {
+                "status": "estimated_partial",
+                "estimated": {"amount": 2.6, "currency": "USD"},
+                "actual": None,
+            },
+        },
+    )
+
+    summary = eval_orchestration._build_cost_summary(
+        [attempt],
+        frozen_pricing={
+            "version": "2026-07",
+            "currency": "USD",
+            "input_per_million_tokens": 2.0,
+            "output_per_million_tokens": 10.0,
+        },
+    )
+
+    assert summary["status_counts"] == {"estimated_complete": 1}
+    assert summary["units_with_complete_cost_observations"] == 1
+    assert summary["complete_unit_cost_by_currency"]["USD"] == {
+        "count": 1,
+        "total": 3.0,
+        "average": 3.0,
+        "p5": 3.0,
+        "p95": 3.0,
     }
 
 

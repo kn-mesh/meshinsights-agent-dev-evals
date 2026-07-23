@@ -126,11 +126,30 @@ const benchmarkContext = {
   },
 } as const;
 
+const performance = {
+  availability: "available",
+  recorded_executions: 1201,
+  summary: {
+    evaluation_wall_time_seconds: 404.1,
+    throughput_runs_per_minute: 10.4,
+    run_duration_seconds: {
+      count: 1201,
+      minimum: 4.1,
+      maximum: 134.5,
+      mean: 18.9,
+      median: 9.1,
+      p5: 6.2,
+      p95: 130.2,
+    },
+  },
+};
+
 let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
   (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  Element.prototype.scrollIntoView = vi.fn();
   window.history.replaceState(null, "", "/");
   container = document.createElement("div");
   document.body.append(container);
@@ -173,6 +192,8 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).toContain("Failure classification");
     expect(container.textContent).toContain("Failure classification · High");
     expect(container.textContent).toContain("Root cause classification · Low");
+    expect(container.textContent).not.toContain("Complete evaluation");
+    expect(container.textContent).not.toContain("overall accuracy");
     expect(container.textContent).toContain("$12.35");
     expect(container.textContent).toContain("Mean $0.0103");
     expect(container.textContent).toContain("P5 $0.004321");
@@ -241,7 +262,6 @@ describe("EvalExplorerApp workflow", () => {
 
     await select(byLabel("Evaluation field"), "classification");
     await waitFor(() => requested.some((url) => url.includes("field=classification")));
-    await waitFor(() => (byLabel("Evaluation slice") as HTMLSelectElement).querySelector('option[value="priority"]') !== null);
     await select(byLabel("Evaluation slice"), "priority");
     await waitFor(() => requested.some((url) => url.includes("field=classification") && url.includes("slice=priority")));
     expect(new URL(window.location.href).searchParams.get("offset")).toBeNull();
@@ -259,7 +279,7 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).not.toContain("Frozen evidence unavailable");
   });
 
-  it("keeps technical trace secondary and does not request performance data", async () => {
+  it("keeps technical trace secondary while loading run-level duration data", async () => {
     window.history.replaceState(null, "", "/?run=run-a&execution=execution-a.1&tab=execution");
     const requested: string[] = [];
     installFetch((url) => {
@@ -276,7 +296,7 @@ describe("EvalExplorerApp workflow", () => {
     await render();
     await waitFor(() => container.textContent?.includes("Detailed review unavailable (purged)") === true);
     expect(new URL(window.location.href).searchParams.get("execution")).toBe("execution-a.1");
-    expect(requested.some((url) => url.includes("performance"))).toBe(false);
+    expect(requested.some((url) => url.includes("/runs/run-a/performance"))).toBe(true);
     expect(container.textContent).not.toContain("Performance diagnostics");
   });
 
@@ -297,6 +317,14 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).toContain("P5 / unit");
     expect(container.textContent).toContain("P95 / unit");
     expect(container.textContent).toContain("$12.35");
+    expect(container.textContent).toContain("Run duration");
+    expect(container.textContent).toContain("Elapsed eval");
+    expect(container.textContent).toContain("Mean / run");
+    expect(container.textContent).toContain("P5 / run");
+    expect(container.textContent).toContain("P95 / run");
+    expect(container.textContent).toContain("6m 44s");
+    expect(container.textContent).toContain("18.9 s");
+    expect(container.textContent).toContain("2m 10s");
     expect(container.textContent).toContain("Alex Labeler");
     expect(container.textContent).toContain("Pressure decay and the downstream alarm");
     expect(container.textContent).toContain("Customer verified");
@@ -304,7 +332,7 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).toContain("Trap failed closed");
     expect(container.textContent).toContain("Replaced the trap");
     expect(container.querySelector(".run-summary")?.hasAttribute("open")).toBe(false);
-    expect(container.querySelector(".benchmark-context")?.hasAttribute("open")).toBe(false);
+    expect(container.querySelector(".benchmark-context")?.hasAttribute("open")).toBe(true);
     expect(container.querySelector("pre")).toBeNull();
   });
 
@@ -358,6 +386,23 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).toContain("0/1201 units fully priced");
   });
 
+  it("shows duration as unavailable when disposable performance was pruned", async () => {
+    window.history.replaceState(null, "", "/?run=run-a");
+    installFetch((url) => url === "/api/runs/run-a/performance"
+      ? {
+          availability: "unavailable",
+          reason: "Performance detail was pruned when this eval was retained.",
+        }
+      : route(url));
+    await render();
+    await waitFor(() => container.textContent?.includes(
+      "Performance detail was pruned when this eval was retained.",
+    ) === true);
+
+    expect(container.querySelector('[aria-label="Run duration summary"]')?.textContent)
+      .toContain("Performance detail was pruned when this eval was retained.");
+  });
+
   it("shows a clear recovery state for an invalid run deep link", async () => {
     window.history.replaceState(null, "", "/?run=missing-run");
     const requested: string[] = [];
@@ -403,6 +448,7 @@ function installFetch(handler: (url: string) => unknown) {
 
 function route(url: string): unknown {
   if (url === "/api/runs") return { runs: [run], findings: [] };
+  if (url === "/api/runs/run-a/performance") return performance;
   if (url.startsWith("/api/runs/run-a/attempts?")) return attemptsPayload(row);
   if (url === "/api/runs/run-a/attempts/execution-a.1") {
     return { row, review: { model_interactions: {} }, benchmark_context: benchmarkContext };
@@ -446,11 +492,11 @@ async function click(element: Element) {
 }
 
 async function select(element: HTMLElement, value: string) {
-  if (!(element instanceof HTMLSelectElement)) throw new Error("Expected a select element.");
-  await act(async () => {
-    element.value = value;
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+  if (!(element instanceof HTMLButtonElement)) throw new Error("Expected a select trigger.");
+  await click(element);
+  const option = document.querySelector(`[role="option"][data-value="${value}"]`);
+  if (!(option instanceof HTMLElement)) throw new Error(`Missing select option: ${value}`);
+  await click(option);
 }
 
 async function fill(element: HTMLElement, value: string) {

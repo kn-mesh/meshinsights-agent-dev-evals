@@ -480,6 +480,11 @@ class LocalRunStore:
                 state["summary_rows"],
                 profile=cast("EvaluationProfile", state["profile"]),
                 runs_per_example=int(expected_config["runs_per_example"]),
+                frozen_pricing=(
+                    expected_config.get("dimensions", {})
+                    .get("model", {})
+                    .get("pricing")
+                ),
             ),
             "run": expected_config,
             "artifacts": {

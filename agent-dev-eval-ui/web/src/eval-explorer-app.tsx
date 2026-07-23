@@ -1,8 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  BarChart3,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Loader2,
+  Search,
+  StickyNote,
+  XCircle,
+} from "lucide-react";
 import { api } from "./api";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
+import { Input } from "./components/ui/input";
+import { Select } from "./components/ui/select";
+import { cn } from "./lib/utils";
 import type {
   AccuracyMetric,
   AttemptRow,
@@ -10,6 +26,7 @@ import type {
   CostDistribution,
   CostSummary,
   EvidenceView,
+  PerformanceSummary,
   RunEntry,
   SourceVerificationSchema,
   UseCaseAdapter,
@@ -113,6 +130,13 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
     ),
     enabled: Boolean(runId && selectedRun),
   });
+  const performance = useQuery({
+    queryKey: ["performance", runId],
+    queryFn: () => api<PerformanceSummary>(
+      `/runs/${encodeURIComponent(runId)}/performance`,
+    ),
+    enabled: Boolean(runId && selectedRun),
+  });
   const detail = useQuery({
     queryKey: ["attempt", runId, executionId],
     queryFn: () => api<AttemptPayload>(
@@ -159,18 +183,29 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
   };
 
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <div className="brand-lockup">
-          <div className="brand-mark" aria-hidden="true">MI</div>
-          <div>
-            <div className="brand-name">MeshInsights</div>
-            <div className="brand-product">Agent Workbench</div>
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center border-b bg-card/95 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-card/80">
+        <div className="flex h-full shrink-0 items-center gap-3 border-r px-5">
+          <div
+            aria-hidden="true"
+            className="grid size-8 place-items-center rounded-md bg-foreground font-heading text-[11px] font-bold tracking-tight text-background"
+          >
+            MI
+          </div>
+          <div className="leading-tight">
+            <div className="text-sm font-bold tracking-tight">MeshInsights</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Agent Workbench
+            </div>
           </div>
         </div>
-        <div className="header-context">
-          <div className="eyebrow">{adapter.contextLabel ?? "Evaluation review"}</div>
-          <h1>{runId ? "Run analysis" : "Evaluation results"}</h1>
+        <div className="min-w-0 flex-1 px-5 leading-tight max-[900px]:hidden">
+          <div className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {adapter.contextLabel ?? "Evaluation review"}
+          </div>
+          <h1 className="mt-0.5 truncate text-sm font-semibold tracking-tight">
+            {runId ? "Run analysis" : "Evaluation results"}
+          </h1>
         </div>
       </header>
 
@@ -195,50 +230,62 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
       ) : null}
 
       {runUnavailable ? (
-        <main className="unavailable-page">
-          <div className="empty">
-            <strong>Evaluation run unavailable</strong>
+        <main className="mx-auto max-w-2xl px-4 py-8">
+          <EmptyState title="Evaluation run unavailable">
             <span>This run does not exist locally or may have been permanently deleted.</span>
-            <Button variant="outline" onClick={showOverview}>Back to evaluation results</Button>
-          </div>
+            <Button variant="outline" onClick={showOverview} className="mt-2">
+              <ArrowLeft className="size-3.5" />
+              Back to evaluation results
+            </Button>
+          </EmptyState>
         </main>
       ) : null}
 
       {runId && runs.isSuccess && !runUnavailable ? (
         <>
-          <section className="run-page-header">
-            <div className="run-page-heading">
-              <button type="button" aria-label="Back to evaluation results" onClick={showOverview}>
-                <UiIcon name="arrow-left" />
+          <section className="flex flex-wrap items-center justify-between gap-4 border-b bg-card px-5 py-3">
+            <div className="flex min-w-0 items-center gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-label="Back to evaluation results"
+                onClick={showOverview}
+              >
+                <ArrowLeft className="size-3.5" />
                 <span>Evaluation results</span>
-              </button>
-              <div>
-                <div className="eyebrow">Evaluation run</div>
-                <h2>{selectedRun?.benchmark_key ?? "Benchmark"} <span>v{selectedRun?.benchmark_version ?? "—"}</span></h2>
+              </Button>
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Evaluation run
+                </div>
+                <h2 className="mt-0.5 truncate text-base font-semibold tracking-tight">
+                  {selectedRun?.benchmark_key ?? "Benchmark"}{" "}
+                  <span className="font-medium text-muted-foreground">
+                    v{selectedRun?.benchmark_version ?? "—"}
+                  </span>
+                </h2>
               </div>
             </div>
-            <div className="run-page-meta">
+            <div className="flex items-center">
               <RunFact label="Model" value={selectedRun?.model ?? "Unknown"} />
               <RunFact label="Reasoning" value={selectedRun?.reasoning_effort ?? "—"} />
               <RunFact label="Attempts" value={`${selectedRun?.recorded_attempts ?? 0}/${selectedRun?.planned_attempts ?? 0}`} />
             </div>
           </section>
-          {selectedRun?.accuracy || selectedRun?.cost ? (
-            <details className="run-summary">
-              <summary>
-                <span><UiIcon name="chart" /> Run metrics</span>
-                <div className="run-summary-highlights">
-                  {selectedRun.accuracy ? (
-                    <span>
-                      <strong>{formatAccuracy(selectedRun.accuracy.complete_evaluation)}</strong>
-                      <small>overall accuracy</small>
-                    </span>
-                  ) : null}
+          {selectedRun ? (
+            <details className="run-summary group border-b bg-muted/40">
+              <summary className="flex min-h-[2.65rem] cursor-pointer list-none items-center gap-2.5 px-5 py-2.5 text-[13px] text-muted-foreground [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
+                  <BarChart3 className="size-[0.95rem]" />
+                  Run metrics
+                </span>
+                <div className="ml-auto flex items-center gap-5">
                   <CostHighlight cost={selectedRun.cost} />
                 </div>
-                <UiIcon name="chevron" />
+                <ChevronRight className="ml-1 size-[0.95rem] shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
               </summary>
-              <div className="run-metrics-detail">
+              <div className="grid border-t">
                 {selectedRun.accuracy ? (
                   <RunAccuracySummary
                     run={selectedRun}
@@ -246,85 +293,113 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                   />
                 ) : null}
                 <RunCostSummary cost={selectedRun.cost} />
+                <RunDurationSummary
+                  performance={performance.data}
+                  isPending={performance.isPending}
+                  error={performance.error}
+                />
               </div>
             </details>
           ) : null}
 
-          <main className="explorer-workspace">
-            <aside className="attempt-sidebar">
-              <div className="attempt-sidebar-heading">
-                <div>
-                  <h2>Attempts</h2>
-                  <span>{attempts.data?.matched ?? 0} results</span>
+          <main className="mx-5 my-4 grid min-h-[calc(100vh-11rem)] grid-cols-[340px_minmax(0,1fr)] overflow-clip rounded-xl border bg-card shadow-sm max-[900px]:grid-cols-1">
+            <aside className="min-w-0 border-r bg-muted/25 max-[900px]:border-b max-[900px]:border-r-0">
+              <div className="flex min-h-[3.75rem] items-center justify-between gap-3 border-b bg-card px-3.5">
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-sm font-semibold">Attempts</h2>
+                  <span className="text-[0.65rem] text-muted-foreground">{attempts.data?.matched ?? 0} results</span>
                 </div>
-                <span className="attempt-state-label">{state === "all" ? "All states" : humanize(state)}</span>
+                <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {state === "all" ? "All states" : humanize(state)}
+                </span>
               </div>
-              <div className="filters">
-                <label className="search-field">
+              <div className="grid grid-cols-2 gap-2 border-b bg-card p-3.5">
+                <label className="relative col-span-2 block">
                   <span className="sr-only">Search attempts</span>
-                  <UiIcon name="search" />
-                  <input
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
                     aria-label="Search attempts"
                     placeholder="Search unit or output"
                     value={search}
+                    className="pl-8"
                     onChange={(event) => {
                       setSearch(event.target.value);
                       resetAttemptSelection();
                     }}
                   />
                 </label>
-                <select aria-label="Attempt state" value={state} onChange={(event) => {
-                  setState(event.target.value);
-                  resetAttemptSelection();
-                }}>
+                <Select
+                  aria-label="Attempt state"
+                  value={state}
+                  onValueChange={(value) => {
+                    setState(value);
+                    resetAttemptSelection();
+                  }}
+                >
                   {states.map((item) => (
                     <option key={item} value={item}>
                       {item} ({attempts.data?.facets.states[item] ?? 0})
                     </option>
                   ))}
-                </select>
-                <select aria-label="Evaluation field" value={field} onChange={(event) => {
-                  setField(event.target.value);
-                  resetAttemptSelection();
-                }}>
+                </Select>
+                <Select
+                  aria-label="Evaluation field"
+                  value={field}
+                  onValueChange={(value) => {
+                    setField(value);
+                    resetAttemptSelection();
+                  }}
+                >
                   <option value="">All fields</option>
                   {attempts.data?.facets.fields.map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
-                <select aria-label="Evaluation slice" value={sliceKey} onChange={(event) => {
-                  setSliceKey(event.target.value);
-                  resetAttemptSelection();
-                }}>
+                </Select>
+                <Select
+                  aria-label="Evaluation slice"
+                  value={sliceKey}
+                  onValueChange={(value) => {
+                    setSliceKey(value);
+                    resetAttemptSelection();
+                  }}
+                >
                   <option value="">All slices</option>
                   {attempts.data?.facets.slices.map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
+                </Select>
               </div>
               {attempts.error ? <QueryError error={attempts.error} compact /> : null}
-              <div className="attempt-count">
+              <div className="flex items-center justify-between gap-3 border-b bg-muted/40 px-3.5 py-2.5 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
                 <span>Attempt queue</span>
                 {attempts.data ? <span>{pageRange(attempts.data, offset)}</span> : null}
               </div>
-              <div className="attempt-list">
+              <div className="max-h-[calc(100vh-15rem)] overflow-y-auto">
                 {attempts.isPending ? <LoadingState label="Loading attempts…" compact /> : null}
                 {attempts.data && !attempts.data.rows.length ? (
-                  <div className="empty compact-empty">No attempts match these filters.</div>
+                  <EmptyState className="m-3 min-h-28 p-4">No attempts match these filters.</EmptyState>
                 ) : null}
                 {attempts.data?.rows.map((row) => (
                   <button
-                    className={row.execution_id === executionId ? "attempt active" : "attempt"}
+                    type="button"
                     key={row.execution_id}
                     onClick={() => setExecutionId(row.execution_id)}
                     aria-current={row.execution_id === executionId ? "true" : undefined}
+                    className={cn(
+                      "block w-full border-t border-l-2 border-l-transparent px-3.5 py-3 text-left outline-none transition-colors first:border-t-0 hover:bg-card focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                      row.execution_id === executionId && "border-l-primary bg-card",
+                    )}
                   >
-                    <div className="attempt-title">
-                      <span>{row.unit_id}</span>
+                    <div className="flex items-center justify-between gap-3 text-[0.8125rem] font-semibold">
+                      <span className="truncate">{row.unit_id}</span>
                       <Status row={row} />
                     </div>
-                    <small>{row.example_id} · repetition {row.run_index}</small>
-                    <div className="output-line">AI output · {summarizeOutput(row.agent_output)}</div>
+                    <small className="text-[0.6875rem] text-muted-foreground">
+                      {row.example_id} · repetition {row.run_index}
+                    </small>
+                    <div className="mt-1.5 truncate text-[0.6875rem] text-foreground/70">
+                      AI output · {summarizeOutput(row.agent_output)}
+                    </div>
                   </button>
                 ))}
               </div>
-              <div className="pagination">
+              <div className="grid grid-cols-2 gap-2 border-t p-3">
                 <Button
                   variant="outline"
                   size="sm"
@@ -334,7 +409,10 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                     setExecutionId("");
                     setOffset(Math.max(0, offset - pageSize));
                   }}
-                >Previous</Button>
+                >
+                  <ChevronLeft className="size-3.5" />
+                  Previous
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -344,25 +422,36 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                     setExecutionId("");
                     setOffset(offset + pageSize);
                   }}
-                >Next</Button>
+                >
+                  Next
+                  <ChevronRight className="size-3.5" />
+                </Button>
               </div>
             </aside>
 
-            <article className="attempt-detail">
-              {!executionId && !attempts.isPending ? <div className="empty">No attempt is selected.</div> : null}
+            <article className="min-w-0 bg-card">
+              {!executionId && !attempts.isPending ? (
+                <EmptyState className="m-5 min-h-40">No attempt is selected.</EmptyState>
+              ) : null}
               {detail.isPending && executionId ? <LoadingState label="Loading attempt review…" /> : null}
               {detail.error ? <QueryError error={detail.error} /> : null}
               {detail.data ? (
                 <>
-                  <div className="detail-heading">
-                    <div>
-                      <div className="eyebrow">Attempt review</div>
-                      <h2>{detail.data.row.unit_id}</h2>
-                      <p>{detail.data.row.example_id} · repetition {detail.data.row.run_index}</p>
+                  <div className="flex min-h-[4.8rem] items-center justify-between gap-4 border-b bg-card px-5 py-3.5">
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Attempt review
+                      </div>
+                      <h2 className="mt-0.5 truncate text-[1.05rem] font-semibold tracking-tight">
+                        {detail.data.row.unit_id}
+                      </h2>
+                      <p className="mt-0.5 text-[0.7rem] text-muted-foreground">
+                        {detail.data.row.example_id} · repetition {detail.data.row.run_index}
+                      </p>
                     </div>
                     <Status row={detail.data.row} />
                   </div>
-                  <nav className="tabs" aria-label="Attempt review sections">
+                  <nav aria-label="Attempt review sections" className="flex flex-wrap gap-1 border-b px-5">
                     {[
                       ["evaluation", "AI output"],
                       ["evidence", "Evidence"],
@@ -370,10 +459,16 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                     ].map(([key, label]) => (
                       <button
                         key={key}
-                        className={tab === key ? "active" : ""}
+                        type="button"
                         aria-current={tab === key ? "page" : undefined}
                         onClick={() => setTab(key)}
-                      >{label}</button>
+                        className={cn(
+                          "border-b-2 border-transparent px-3 py-2.5 text-[0.8125rem] font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                          tab === key && "border-primary font-semibold text-primary",
+                        )}
+                      >
+                        {label}
+                      </button>
                     ))}
                   </nav>
                   {tab === "evaluation" ? (
@@ -384,9 +479,13 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                     />
                   ) : null}
                   {tab === "evidence" ? (
-                    evidence.isPending ? <div className="empty">Loading and verifying frozen evidence…</div> :
-                    evidence.error ? <QueryError error={evidence.error} /> :
-                    evidence.data ? <EvidenceDisplay evidence={evidence.data} /> : null
+                    evidence.isPending ? (
+                      <EmptyState className="m-5 min-h-40">Loading and verifying frozen evidence…</EmptyState>
+                    ) : evidence.error ? (
+                      <QueryError error={evidence.error} />
+                    ) : evidence.data ? (
+                      <EvidenceDisplay evidence={evidence.data} />
+                    ) : null
                   ) : null}
                   {tab === "execution" ? <Execution review={detail.data.review} row={detail.data.row} /> : null}
                 </>
@@ -453,69 +552,85 @@ function ResultsOverview({
   const controlsChanged = Boolean(modelFilter || reasoningFilter || lifecycleFilter || search || activeSort !== defaultRunSort);
 
   return (
-    <main className="results-overview">
-      <section className="overview-heading">
+    <main className="mx-auto grid max-w-[1600px] gap-4 px-9 py-8 max-[900px]:px-4 max-[900px]:py-4">
+      <section className="flex flex-wrap items-end justify-between gap-8 py-1">
         <div>
-          <div className="eyebrow">Evaluation runs</div>
-          <h2>Overall evaluation results</h2>
-          <p>Review recent detail or compare meaningful elevated results, then open a run to inspect units and evidence.</p>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Evaluation runs
+          </div>
+          <h2 className="mt-0.5 text-[clamp(1.65rem,3vw,2.35rem)] font-bold tracking-tight">
+            Overall evaluation results
+          </h2>
+          <p className="mt-1.5 max-w-3xl text-[0.8125rem] leading-relaxed text-muted-foreground">
+            Review recent detail or compare meaningful elevated results, then open a run to inspect units and evidence.
+          </p>
         </div>
-        <div className="overview-run-count">
-          <strong>{filteredRuns.length}</strong>
-          <span>{filteredRuns.length === 1 ? "run shown" : "runs shown"}</span>
+        <div className="grid min-w-32 gap-0.5 border-l pl-5 text-right max-[900px]:border-l-0 max-[900px]:pl-0 max-[900px]:text-left">
+          <strong className="font-heading text-[1.75rem] leading-none">{filteredRuns.length}</strong>
+          <span className="text-[0.6875rem] uppercase text-muted-foreground">
+            {filteredRuns.length === 1 ? "run shown" : "runs shown"}
+          </span>
         </div>
       </section>
 
-      <section className="run-results-panel">
-        <div className="run-results-heading">
-          <div>
-            <h3>Results by run</h3>
-            <p>Select any row to inspect its attempts and retained evidence.</p>
-          </div>
+      <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        <div className="border-b px-4 py-3.5">
+          <h3 className="text-[0.95rem] font-semibold">Results by run</h3>
+          <p className="mt-0.5 max-w-3xl text-[0.8125rem] leading-relaxed text-muted-foreground">
+            Select any row to inspect its attempts and retained evidence.
+          </p>
         </div>
-        <section className="overview-filters" aria-label="Evaluation result table controls">
-          <label className="run-search-control">
-            <span>Search runs</span>
-            <input
-              type="search"
-              aria-label="Search evaluation runs"
-              placeholder="Run ID, model, benchmark, pipeline…"
-              value={search}
-              onChange={(event) => onSearch(event.target.value)}
-            />
+        <section
+          aria-label="Evaluation result table controls"
+          className="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(130px,1fr))_auto] items-end gap-3 border-b bg-muted p-3.5 max-[1100px]:grid-cols-2 max-[560px]:grid-cols-1"
+        >
+          <label className="grid min-w-0 gap-1">
+            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Search runs</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                aria-label="Search evaluation runs"
+                placeholder="Run ID, model, benchmark, pipeline…"
+                value={search}
+                onChange={(event) => onSearch(event.target.value)}
+                className="pl-8"
+              />
+            </div>
           </label>
-          <label>
-            <span>Lifecycle</span>
-            <select aria-label="Filter by lifecycle" value={lifecycleFilter} onChange={(event) => onLifecycleFilter(event.target.value)}>
+          <label className="grid min-w-0 gap-1">
+            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Lifecycle</span>
+            <Select aria-label="Filter by lifecycle" value={lifecycleFilter} onValueChange={onLifecycleFilter}>
               <option value="">All evals</option>
               <option value="working">Not elevated</option>
               <option value="retained">Elevated</option>
-            </select>
+            </Select>
           </label>
-          <label>
-            <span>Model</span>
-            <select aria-label="Filter by model" value={modelFilter} onChange={(event) => onModelFilter(event.target.value)}>
+          <label className="grid min-w-0 gap-1">
+            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Model</span>
+            <Select aria-label="Filter by model" value={modelFilter} onValueChange={onModelFilter}>
               <option value="">All models</option>
               {models.map((model) => <option key={model} value={model}>{model}</option>)}
-            </select>
+            </Select>
           </label>
-          <label>
-            <span>Reasoning</span>
-            <select aria-label="Filter by reasoning effort" value={reasoningFilter} onChange={(event) => onReasoningFilter(event.target.value)}>
+          <label className="grid min-w-0 gap-1">
+            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Reasoning</span>
+            <Select aria-label="Filter by reasoning effort" value={reasoningFilter} onValueChange={onReasoningFilter}>
               <option value="">All efforts</option>
               {reasoningEfforts.map((effort) => <option key={effort} value={effort}>{humanize(effort)}</option>)}
-            </select>
+            </Select>
           </label>
-          <label>
-            <span>Sort by</span>
-            <select aria-label="Sort evaluation runs" value={activeSort} onChange={(event) => onSort(event.target.value)}>
+          <label className="grid min-w-0 gap-1">
+            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Sort by</span>
+            <Select aria-label="Sort evaluation runs" value={activeSort} onValueChange={onSort}>
               {sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
+            </Select>
           </label>
           {controlsChanged ? (
             <Button
               variant="outline"
               size="sm"
+              className="self-end"
               onClick={() => {
                 onSearch("");
                 onModelFilter("");
@@ -523,58 +638,78 @@ function ResultsOverview({
                 onLifecycleFilter("");
                 onSort(defaultRunSort);
               }}
-            >Reset</Button>
+            >
+              Reset
+            </Button>
           ) : null}
         </section>
         {filteredRuns.length ? (
-            <div className="run-results-scroll">
-              <table className="run-results-table" aria-label="Evaluation runs and metrics">
-                <thead>
-                  <tr>
-                    <th>Run inputs</th>
-                    {metricColumns.map((column) => <th key={column.key}>{column.label}</th>)}
-                    <th>Cost</th>
-                    <th><span className="sr-only">Open run</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRuns.map((run) => (
-                    <tr
-                      key={run.run_id}
-                      className="selectable-run"
-                      onClick={() => onSelectRun(run.run_id)}
-                    >
-                      <td>
-                        <div className="run-inputs">
-                          <button
-                            type="button"
-                            className="run-open-button"
-                            aria-label={`Open evaluation run ${run.run_id}`}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onSelectRun(run.run_id);
-                            }}
-                          >{run.model ?? "Unknown model"}</button>
-                          {run.lifecycle_state === "retained" ? (
-                            <Badge variant="primary">Elevated</Badge>
-                          ) : null}
-                          <span>{humanize(run.reasoning_effort ?? "unspecified")} reasoning</span>
-                          <small>{formatRunDate(run.created_at_utc)} · {run.recorded_attempts}/{run.planned_attempts} attempts</small>
-                          <code title={run.run_id}>{shortRunId(run.run_id)}</code>
-                        </div>
-                      </td>
-                      {metricColumns.map((column) => <MetricCell key={column.key} metric={column.get(run)} />)}
-                      <CostCell cost={run.cost} />
-                      <td className="run-row-action" aria-hidden="true">›</td>
-                    </tr>
+          <div className="overflow-x-auto overscroll-x-contain">
+            <table aria-label="Evaluation runs and metrics" className="w-full min-w-[1040px] border-collapse text-[0.75rem]">
+              <thead>
+                <tr>
+                  <th className="min-w-[250px] border-b bg-muted px-3.5 py-2.5 text-left align-bottom text-[0.625rem] font-bold uppercase leading-snug tracking-wide text-muted-foreground">
+                    Run inputs
+                  </th>
+                  {metricColumns.map((column) => (
+                    <th key={column.key} className="border-b bg-muted px-3.5 py-2.5 text-left align-bottom text-[0.625rem] font-bold uppercase leading-snug tracking-wide text-muted-foreground">
+                      {column.label}
+                    </th>
                   ))}
-                </tbody>
-              </table>
-            </div>
-        ) : (
-          <div className="empty table-empty">
-            {runs.length ? "No evaluation runs match these controls." : "No evaluation runs are available yet."}
+                  <th className="border-b bg-muted px-3.5 py-2.5 text-left align-bottom text-[0.625rem] font-bold uppercase leading-snug tracking-wide text-muted-foreground">
+                    Cost
+                  </th>
+                  <th className="border-b bg-muted px-3.5 py-2.5 text-left align-bottom text-[0.625rem] font-bold uppercase leading-snug tracking-wide text-muted-foreground">
+                    <span className="sr-only">Open run</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRuns.map((run) => (
+                  <tr
+                    key={run.run_id}
+                    className="group cursor-pointer transition-colors hover:bg-accent/40"
+                    onClick={() => onSelectRun(run.run_id)}
+                  >
+                    <td className="border-t px-3.5 py-3 align-middle">
+                      <div className="grid gap-0.5">
+                        <button
+                          type="button"
+                          aria-label={`Open evaluation run ${run.run_id}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onSelectRun(run.run_id);
+                          }}
+                          className="w-fit max-w-full overflow-hidden text-ellipsis whitespace-nowrap border-0 bg-transparent p-0 text-left text-[0.75rem] font-bold text-foreground outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {run.model ?? "Unknown model"}
+                        </button>
+                        {run.lifecycle_state === "retained" ? (
+                          <Badge variant="primary" className="w-fit">Elevated</Badge>
+                        ) : null}
+                        <span className="text-muted-foreground">{humanize(run.reasoning_effort ?? "unspecified")} reasoning</span>
+                        <small className="text-muted-foreground">
+                          {formatRunDate(run.created_at_utc)} · {run.recorded_attempts}/{run.planned_attempts} attempts
+                        </small>
+                        <code title={run.run_id} className="mt-1 w-fit text-[0.625rem] text-foreground/65">
+                          {shortRunId(run.run_id)}
+                        </code>
+                      </div>
+                    </td>
+                    {metricColumns.map((column) => <MetricCell key={column.key} metric={column.get(run)} />)}
+                    <CostCell cost={run.cost} />
+                    <td className="border-t px-3.5 py-3 text-center align-middle text-muted-foreground transition-colors group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true">
+                      <ChevronRight className="inline size-4" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+        ) : (
+          <EmptyState className="m-3.5 min-h-36">
+            {runs.length ? "No evaluation runs match these controls." : "No evaluation runs are available yet."}
+          </EmptyState>
         )}
       </section>
     </main>
@@ -583,9 +718,11 @@ function ResultsOverview({
 
 function MetricCell({ metric }: { metric: AccuracyMetric | null }) {
   return (
-    <td className="metric-cell">
-      <strong>{formatAccuracy(metric)}</strong>
-      <small>{metric ? `${metric.correct_runs}/${metric.evaluated_runs}` : "No data"}</small>
+    <td className="min-w-[105px] border-t px-3.5 py-3 align-middle">
+      <strong className="block font-heading text-[0.9rem]">{formatAccuracy(metric)}</strong>
+      <small className="mt-0.5 block text-[0.625rem] text-muted-foreground">
+        {metric ? `${metric.correct_runs}/${metric.evaluated_runs}` : "No data"}
+      </small>
     </td>
   );
 }
@@ -594,25 +731,25 @@ function CostCell({ cost }: { cost?: CostSummary | null }) {
   const rows = costRows(cost);
   if (!cost || !rows.length) {
     return (
-      <td className="metric-cell cost-cell">
-        <strong>—</strong>
-        <small>Unavailable</small>
+      <td className="min-w-[230px] border-t px-3.5 py-3 align-middle">
+        <strong className="block font-heading text-[0.9rem]">—</strong>
+        <small className="mt-0.5 block text-[0.625rem] text-muted-foreground">Unavailable</small>
       </td>
     );
   }
   return (
-    <td className="metric-cell cost-cell">
-      {rows.map((row) => (
-        <div key={row.currency}>
-          <strong>{formatCost(row.total, row.currency)}</strong>
-          <small>
+    <td className="min-w-[230px] border-t px-3.5 py-3 align-middle">
+      {rows.map((row, index) => (
+        <div key={row.currency} className={cn(index > 0 && "mt-2 border-t pt-2")}>
+          <strong className="block font-heading text-[0.9rem]">{formatCost(row.total, row.currency)}</strong>
+          <small className="mt-0.5 block text-[0.625rem] text-muted-foreground">
             Mean {formatCost(row.distribution?.average, row.currency)}
             {" · "}P5 {formatCost(row.distribution?.p5, row.currency)}
             {" · "}P95 {formatCost(row.distribution?.p95, row.currency)}
           </small>
         </div>
       ))}
-      <small>{costCoverageLabel(cost)}</small>
+      <small className="mt-1.5 block text-[0.625rem] text-muted-foreground">{costCoverageLabel(cost)}</small>
     </td>
   );
 }
@@ -626,22 +763,22 @@ function RunAccuracySummary({
 }) {
   const metrics = buildMetricColumns([run], fieldLabels);
   return (
-    <section className="run-accuracy" aria-label="Run accuracy summary">
-      <div className="run-accuracy-heading">
+    <section aria-label="Run accuracy summary" className="border-b bg-muted/30 px-5 py-4">
+      <div className="mb-2.5 flex items-end justify-between gap-4">
         <div>
-          <div className="eyebrow">Evaluation statistics</div>
-          <h2>Run accuracy</h2>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Evaluation statistics</div>
+          <h2 className="mt-0.5 text-sm font-semibold tracking-tight">Run accuracy</h2>
         </div>
-        <span>Correct / evaluated</span>
+        <span className="text-[0.65rem] text-muted-foreground">Correct / evaluated</span>
       </div>
-      <div className="run-accuracy-grid">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] overflow-hidden rounded-lg border bg-card">
         {metrics.map((column) => {
           const metric = column.get(run);
           return (
-            <div className="run-accuracy-metric" key={column.key}>
-              <span>{column.label}</span>
-              <strong>{formatAccuracy(metric)}</strong>
-              <small>{metric ? `${metric.correct_runs} / ${metric.evaluated_runs}` : "No data"}</small>
+            <div className="grid min-w-0 gap-1 border-r px-3.5 py-3 last:border-r-0" key={column.key}>
+              <span className="min-h-[2.2em] text-[0.65rem] font-semibold uppercase leading-tight text-muted-foreground">{column.label}</span>
+              <strong className="font-heading text-[1.1rem]">{formatAccuracy(metric)}</strong>
+              <small className="text-[0.625rem] text-muted-foreground">{metric ? `${metric.correct_runs} / ${metric.evaluated_runs}` : "No data"}</small>
             </div>
           );
         })}
@@ -655,9 +792,9 @@ function CostHighlight({ cost }: { cost?: CostSummary | null }) {
   if (!rows.length) return null;
   const primary = rows[0];
   return (
-    <span>
-      <strong>{formatCost(primary.total, primary.currency)}</strong>
-      <small>{rows.length === 1 ? "eval cost" : `eval cost · ${rows.length} currencies`}</small>
+    <span className="grid gap-0.5 text-right">
+      <strong className="font-heading text-[0.85rem] text-foreground">{formatCost(primary.total, primary.currency)}</strong>
+      <small className="text-[0.625rem] text-muted-foreground">{rows.length === 1 ? "eval cost" : `eval cost · ${rows.length} currencies`}</small>
     </span>
   );
 }
@@ -665,23 +802,23 @@ function CostHighlight({ cost }: { cost?: CostSummary | null }) {
 function RunCostSummary({ cost }: { cost?: CostSummary | null }) {
   const rows = costRows(cost);
   return (
-    <section className="run-cost" aria-label="Run cost summary">
-      <div className="run-accuracy-heading">
+    <section aria-label="Run cost summary" className="bg-muted/20 px-5 py-4">
+      <div className="mb-2.5 flex items-end justify-between gap-4">
         <div>
-          <div className="eyebrow">Pricing statistics</div>
-          <h2>Run cost</h2>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pricing statistics</div>
+          <h2 className="mt-0.5 text-sm font-semibold tracking-tight">Run cost</h2>
         </div>
-        <span>{cost ? costCoverageLabel(cost) : "Cost information unavailable"}</span>
+        <span className="text-[0.65rem] text-muted-foreground">{cost ? costCoverageLabel(cost) : "Cost information unavailable"}</span>
       </div>
       {rows.length ? (
-        <div className="run-cost-currencies">
+        <div className="grid gap-2.5">
           {rows.map((row) => (
-            <section key={row.currency} className="run-cost-currency">
-              <div className="run-cost-currency-heading">
-                <strong>{row.currency}</strong>
-                <span className="run-cost-status">{costStatus(cost)}</span>
+            <section key={row.currency} className="overflow-hidden rounded-lg border bg-card">
+              <div className="flex items-center justify-between border-b px-3.5 py-2.5">
+                <strong className="text-[0.7rem] tracking-wide">{row.currency}</strong>
+                <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">{costStatus(cost)}</span>
               </div>
-              <div className="run-cost-grid">
+              <div className="grid grid-cols-4 max-[560px]:grid-cols-1">
                 <CostMetric label="Overall eval" value={formatCost(row.total, row.currency)} />
                 <CostMetric label="Mean / unit" value={formatCost(row.distribution?.average, row.currency)} />
                 <CostMetric label="P5 / unit" value={formatCost(row.distribution?.p5, row.currency)} />
@@ -691,7 +828,7 @@ function RunCostSummary({ cost }: { cost?: CostSummary | null }) {
           ))}
         </div>
       ) : (
-        <div className="run-cost-unavailable">
+        <div className="rounded-lg border border-dashed px-3.5 py-3 text-[0.75rem] text-muted-foreground">
           No usable cost observations were stored for this run.
         </div>
       )}
@@ -701,10 +838,63 @@ function RunCostSummary({ cost }: { cost?: CostSummary | null }) {
 
 function CostMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="run-cost-metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
+    <div className="grid gap-1 border-r px-3.5 py-3 last:border-r-0 max-[560px]:border-b max-[560px]:border-r-0 max-[560px]:last:border-b-0">
+      <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+      <strong className="font-heading text-[1rem]">{value}</strong>
     </div>
+  );
+}
+
+function RunDurationSummary({
+  performance,
+  isPending,
+  error,
+}: {
+  performance?: PerformanceSummary;
+  isPending: boolean;
+  error: Error | null;
+}) {
+  const distribution = performance?.availability === "available"
+    ? performance.summary.run_duration_seconds
+    : null;
+  const coverage = performance?.availability === "available"
+    ? `${distribution?.count ?? 0}/${performance.recorded_executions} runs timed`
+    : "Timing information unavailable";
+
+  return (
+    <section aria-label="Run duration summary" className="border-t bg-muted/20 px-5 py-4">
+      <div className="mb-2.5 flex items-end justify-between gap-4">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Performance statistics</div>
+          <h2 className="mt-0.5 text-sm font-semibold tracking-tight">Run duration</h2>
+        </div>
+        <span className="text-[0.65rem] text-muted-foreground">{coverage}</span>
+      </div>
+      {isPending ? (
+        <div className="rounded-lg border border-dashed px-3.5 py-3 text-[0.75rem] text-muted-foreground">
+          Loading duration observations…
+        </div>
+      ) : error ? (
+        <div className="rounded-lg border border-dashed px-3.5 py-3 text-[0.75rem] text-muted-foreground">
+          Duration information could not be loaded.
+        </div>
+      ) : performance?.availability === "available" && distribution?.count ? (
+        <div className="overflow-hidden rounded-lg border bg-card">
+          <div className="grid grid-cols-4 max-[560px]:grid-cols-1">
+            <CostMetric label="Elapsed eval" value={formatDuration(performance.summary.evaluation_wall_time_seconds)} />
+            <CostMetric label="Mean / run" value={formatDuration(distribution.mean)} />
+            <CostMetric label="P5 / run" value={formatDuration(distribution.p5)} />
+            <CostMetric label="P95 / run" value={formatDuration(distribution.p95)} />
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed px-3.5 py-3 text-[0.75rem] text-muted-foreground">
+          {performance?.availability === "unavailable"
+            ? performance.reason
+            : "No usable duration observations were stored for this run."}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -751,11 +941,7 @@ function buildMetricColumns(runs: RunEntry[], labels: Record<string, string> = {
   const fieldKeys = Array.from(new Set(
     runs.flatMap((run) => Object.keys(run.accuracy?.by_field ?? {})),
   )).sort((left, right) => metricFieldOrder(left) - metricFieldOrder(right) || left.localeCompare(right));
-  const columns: MetricColumn[] = [{
-    key: "complete",
-    label: "Complete evaluation",
-    get: (run) => run.accuracy?.complete_evaluation ?? null,
-  }];
+  const columns: MetricColumn[] = [];
   for (const fieldKey of fieldKeys) {
     const label = labels[fieldKey] ?? humanize(fieldKey);
     columns.push({
@@ -848,28 +1034,34 @@ function Evaluation({
     ...Object.keys(row.agent_output),
   ]));
   return (
-    <div className="review-stack">
-      <section className="review-intro">
+    <div className="grid gap-4 px-5 py-5 pb-10">
+      <section className="flex flex-wrap items-end justify-between gap-6 py-1">
         <div>
-          <div className="eyebrow">Evaluation</div>
-          <h3>Expected and actual output</h3>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Evaluation</div>
+          <h3 className="mt-0.5 text-base font-semibold tracking-tight">Expected and actual output</h3>
         </div>
-        <p>Compare scored fields, then open the evidence when a result needs investigation.</p>
+        <p className="max-w-lg text-right text-[0.75rem] leading-relaxed text-muted-foreground">
+          Compare scored fields, then open the evidence when a result needs investigation.
+        </p>
       </section>
-      <section className="output-comparison" aria-label="AI output comparison">
-        <div className="comparison-row comparison-header" aria-hidden="true">
+      <section aria-label="AI output comparison" className="overflow-hidden rounded-lg border shadow-sm">
+        <div
+          aria-hidden="true"
+          className="grid grid-cols-[minmax(110px,0.7fr)_minmax(140px,1fr)_minmax(180px,1.3fr)_88px] items-center gap-4 bg-muted px-4 py-2.5 text-[0.675rem] font-semibold uppercase tracking-wide text-muted-foreground"
+        >
           <span>Field</span><span>Benchmark</span><span>AI output</span><span>Result</span>
         </div>
         {fields.map((fieldName) => {
           const result = fieldResult(row.evaluations[fieldName]);
           return (
-            <div className="comparison-row" key={fieldName}>
-              <strong>{humanize(fieldName)}</strong>
-              <span className="review-value">{displayValue(row.benchmark_labels[fieldName])}</span>
+            <div
+              key={fieldName}
+              className="grid grid-cols-[minmax(110px,0.7fr)_minmax(140px,1fr)_minmax(180px,1.3fr)_88px] items-start gap-4 border-t px-4 py-3.5 text-[0.8125rem]"
+            >
+              <strong className="font-semibold">{humanize(fieldName)}</strong>
+              <span className="min-w-0 break-words leading-relaxed">{displayValue(row.benchmark_labels[fieldName])}</span>
               <AiOutputValue value={row.agent_output[fieldName]} />
-              <span className={`comparison-result ${result === true ? "match" : result === false ? "mismatch" : "review"}`}>
-                {result === true ? "Match" : result === false ? "Mismatch" : "Review"}
-              </span>
+              <ComparisonResultBadge result={result} />
             </div>
           );
         })}
@@ -882,6 +1074,26 @@ function Evaluation({
       />
     </div>
   );
+}
+
+function ComparisonResultBadge({ result }: { result: boolean | null }) {
+  if (result === true) {
+    return (
+      <Badge variant="success" className="w-fit gap-1">
+        <CheckCircle2 className="size-3" />
+        Match
+      </Badge>
+    );
+  }
+  if (result === false) {
+    return (
+      <Badge variant="destructive" className="w-fit gap-1">
+        <XCircle className="size-3" />
+        Mismatch
+      </Badge>
+    );
+  }
+  return <Badge variant="neutral" className="w-fit">Review</Badge>;
 }
 
 function BenchmarkContextPanel({
@@ -898,61 +1110,65 @@ function BenchmarkContextPanel({
   const notes = context.labeler_notes.filter((note) => note.explanation.trim());
   const verification = context.verification;
   return (
-    <details className="benchmark-context">
-      <summary className="benchmark-context-heading">
-        <div>
-          <UiIcon name="note" />
+    <details open className="benchmark-context group overflow-hidden rounded-lg border">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-muted/60 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+        <div className="flex items-center gap-2.5">
+          <StickyNote className="size-4 text-primary" />
           <div>
-            <div className="eyebrow">Supporting context</div>
-            <h3>Labeler notes and verification</h3>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Supporting context</div>
+            <h3 className="mt-0.5 text-[0.95rem] font-semibold tracking-tight">Labeler notes and verification</h3>
           </div>
         </div>
-        <span>
-          {verification ? <span className="context-status">Verified</span> : null}
-          <UiIcon name="chevron" />
+        <span className="flex items-center gap-2.5">
+          {verification ? (
+            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Verified</span>
+          ) : null}
+          <ChevronRight className="size-[0.95rem] text-muted-foreground transition-transform group-open:rotate-90" />
         </span>
       </summary>
 
-      <div className="benchmark-context-grid">
-        <section className="benchmark-context-section">
-          <h4>Labeler notes</h4>
+      <div className="grid grid-cols-2 border-t max-[900px]:grid-cols-1">
+        <section className="min-w-0 p-4">
+          <h4 className="mb-2.5 text-[0.78rem] font-semibold">Labeler notes</h4>
           {notes.length ? (
-            <div className="labeler-note-list">
+            <div className="grid gap-2.5">
               {notes.map((note) => (
-                <article className="labeler-note" key={note.review_event_id}>
-                  <div>
-                    <strong>{note.reviewer_display_name}</strong>
-                    <span>{humanize(note.reviewer_project_role)} · {formatRunDate(note.submitted_at)}</span>
+                <article className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 rounded-md border bg-card p-3" key={note.review_event_id}>
+                  <div className="grid min-w-0 gap-0.5">
+                    <strong className="text-[0.75rem] font-semibold">{note.reviewer_display_name}</strong>
+                    <span className="text-[0.65rem] text-muted-foreground">{humanize(note.reviewer_project_role)} · {formatRunDate(note.submitted_at)}</span>
                   </div>
-                  {note.selected_for_publication ? <span className="label-note-status">Selected label</span> : null}
-                  <p>{note.explanation}</p>
+                  {note.selected_for_publication ? (
+                    <span className="justify-self-end text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Selected label</span>
+                  ) : null}
+                  <p className="col-span-2 whitespace-pre-wrap text-[0.75rem] leading-relaxed text-foreground/85">{note.explanation}</p>
                 </article>
               ))}
             </div>
           ) : (
-            <p className="benchmark-context-empty">No labeler notes were attached to the published reviewer revisions.</p>
+            <p className="text-[0.75rem] leading-relaxed text-muted-foreground">No labeler notes were attached to the published reviewer revisions.</p>
           )}
         </section>
 
-        <section className="benchmark-context-section verification-context">
-          <h4>{verification ? verificationSourceLabel(verification.source) : "Customer verification"}</h4>
+        <section className="min-w-0 border-l p-4 max-[900px]:border-l-0 max-[900px]:border-t">
+          <h4 className="mb-2.5 text-[0.78rem] font-semibold">{verification ? verificationSourceLabel(verification.source) : "Customer verification"}</h4>
           {verification ? (
             <>
-              <p className="verification-summary">
+              <p className="text-[0.75rem] leading-relaxed text-muted-foreground">
                 The following frozen benchmark labels were covered by this verification.
               </p>
-              <dl className="verified-labels">
+              <dl className="mt-2.5 grid grid-cols-2 gap-2">
                 {Object.entries(benchmarkLabels).map(([key, value]) => (
-                  <div key={key}>
-                    <dt>{fieldLabels[key] ?? humanize(key)}</dt>
-                    <dd>{displayValue(value)}</dd>
+                  <div className="min-w-0 rounded-md bg-muted px-2.5 py-2" key={key}>
+                    <dt className="text-[0.625rem] text-muted-foreground">{fieldLabels[key] ?? humanize(key)}</dt>
+                    <dd className="mt-0.5 break-words text-[0.75rem] font-semibold leading-tight">{displayValue(value)}</dd>
                   </div>
                 ))}
               </dl>
               <VerificationDetails verification={verification} schemas={verificationSchemas} />
             </>
           ) : (
-            <p className="benchmark-context-empty">No customer or onsite verification was frozen with this benchmark example.</p>
+            <p className="text-[0.75rem] leading-relaxed text-muted-foreground">No customer or onsite verification was frozen with this benchmark example.</p>
           )}
         </section>
       </div>
@@ -973,26 +1189,33 @@ function VerificationDetails({
   );
   const fields = verification.source_fields ?? {};
   return (
-    <div className="verification-details">
-      {verification.note ? <p className="verification-note">{verification.note}</p> : null}
+    <div className="mt-3.5 border-t pt-3">
+      {verification.note ? <p className="mb-2.5 text-[0.75rem] leading-relaxed">{verification.note}</p> : null}
       {schema ? (
         <>
-          <div className="verification-schema-title">{schema.title} · Immutable source record</div>
-          <dl>
+          <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">{schema.title} · Immutable source record</div>
+          <dl className="mt-2.5 grid grid-cols-2 gap-2">
             {schema.fields.flatMap((field) => {
               const value = fields[field.key];
               if (value == null || value === "") return [];
               return (
-                <div className={field.value_type === "long_text" ? "wide" : ""} key={field.key}>
-                  <dt>{field.label}</dt>
-                  <dd>{field.value_type === "timestamp" && typeof value === "string" ? formatRunDate(value) : displayValue(value)}</dd>
+                <div
+                  className={cn("min-w-0 rounded-md bg-muted px-2.5 py-2", field.value_type === "long_text" && "col-span-2")}
+                  key={field.key}
+                >
+                  <dt className="text-[0.625rem] text-muted-foreground">{field.label}</dt>
+                  <dd className="mt-0.5 break-words text-[0.75rem] font-semibold leading-tight">
+                    {field.value_type === "timestamp" && typeof value === "string" ? formatRunDate(value) : displayValue(value)}
+                  </dd>
                 </div>
               );
             })}
           </dl>
         </>
       ) : null}
-      {verification.recorded_at ? <small>Recorded {formatRunDate(verification.recorded_at)}</small> : null}
+      {verification.recorded_at ? (
+        <small className="mt-2.5 block text-[0.625rem] text-muted-foreground">Recorded {formatRunDate(verification.recorded_at)}</small>
+      ) : null}
     </div>
   );
 }
@@ -1004,14 +1227,16 @@ function verificationSourceLabel(source: "direct_observation" | "operator_feedba
 function Execution({ review, row }: { review: Record<string, unknown> | null; row: AttemptRow }) {
   if (!review) return <ReviewUnavailable row={row} />;
   return (
-    <div className="execution-stack">
-      <section className="review-status-strip" aria-label="Attempt status">
+    <div className="grid gap-3.5 px-5 py-5 pb-10">
+      <section aria-label="Attempt status" className="grid grid-cols-4 overflow-hidden rounded-lg border bg-muted max-[560px]:grid-cols-2">
         <ReviewFact label="Execution" value={row.execution_status} />
         <ReviewFact label="Output contract" value={row.output_contract_status} />
         <ReviewFact label="Scoring" value={row.scoring_status} />
         <ReviewFact label="Stability" value={row.flaky ? "Flaky" : "Stable"} />
       </section>
-      <p className="secondary-note">Technical trace data is collapsed by default so it does not compete with output and evidence review.</p>
+      <p className="max-w-lg text-[0.75rem] leading-relaxed text-muted-foreground">
+        Technical trace data is collapsed by default so it does not compete with output and evidence review.
+      </p>
       <CollapsibleJson title="Model interactions and tool activity" value={review.model_interactions ?? { unavailable: true }} />
       <CollapsibleJson title="Pipeline trace" value={review.pipeline ?? { unavailable: true }} />
       <CollapsibleJson title="Attempt outcome" value={review.attempt_outcome ?? { unavailable: true }} />
@@ -1020,11 +1245,23 @@ function Execution({ review, row }: { review: Record<string, unknown> | null; ro
 }
 
 function CollapsibleJson({ title, value }: { title: string; value: unknown }) {
-  return <details className="technical-disclosure"><summary>{title}</summary><Json value={value} /></details>;
+  return (
+    <details className="group overflow-hidden rounded-lg border bg-card">
+      <summary className="cursor-pointer px-3.5 py-3 text-[0.8125rem] font-semibold group-open:border-b [&::-webkit-details-marker]:hidden">
+        {title}
+      </summary>
+      <Json value={value} className="max-h-96 rounded-none" />
+    </details>
+  );
 }
 
 function ReviewFact({ label, value }: { label: string; value: string }) {
-  return <div><small>{label}</small><strong>{humanize(value)}</strong></div>;
+  return (
+    <div className="grid gap-0.5 border-l px-3.5 py-2.5 first:border-l-0">
+      <small className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">{label}</small>
+      <strong className="text-[0.75rem] font-semibold">{humanize(value)}</strong>
+    </div>
+  );
 }
 
 function AiOutputValue({ value }: { value: unknown }) {
@@ -1032,10 +1269,17 @@ function AiOutputValue({ value }: { value: unknown }) {
   const confidence = typeof record?.confidence === "string" ? record.confidence : null;
   const explanation = typeof record?.explanation === "string" ? record.explanation : null;
   return (
-    <div className="review-value ai-value">
-      <span>{displayValue(value)}</span>
-      {confidence ? <small>{confidence} confidence</small> : null}
-      {explanation ? <details className="rationale"><summary>Model rationale</summary><p>{explanation}</p></details> : null}
+    <div className="grid min-w-0 gap-1">
+      <span className="break-words font-medium leading-relaxed">{displayValue(value)}</span>
+      {confidence ? <small className="text-[0.6875rem] text-muted-foreground">{confidence} confidence</small> : null}
+      {explanation ? (
+        <details className="mt-0.5">
+          <summary className="w-fit cursor-pointer text-[0.7rem] font-semibold text-primary [&::-webkit-details-marker]:hidden">
+            Model rationale
+          </summary>
+          <p className="mt-1.5 text-[0.75rem] font-normal leading-relaxed text-foreground/80">{explanation}</p>
+        </details>
+      ) : null}
     </div>
   );
 }
@@ -1043,56 +1287,86 @@ function AiOutputValue({ value }: { value: unknown }) {
 function ReviewUnavailable({ row }: { row: AttemptRow }) {
   const reason = row.review_unavailable_reason;
   return (
-    <div className="empty">
+    <EmptyState className="m-5 min-h-40">
       Detailed review unavailable ({reason?.code ?? "absent"})
       {reason?.message ? `: ${reason.message}` : "."}
-    </div>
+    </EmptyState>
   );
 }
 
 function Status({ row }: { row: AttemptRow }) {
   const value = row.execution_status === "failed" ? "failed" : row.complete_evaluation_correct === true ? "correct" : row.complete_evaluation_correct === false ? "incorrect" : row.scoring_status;
-  return <span className={`status-text ${value}`}>{value}</span>;
-}
-
-function RunFact({ label, value }: { label: string; value: string }) {
-  return <div className="run-fact"><small>{label}</small><strong>{value}</strong></div>;
-}
-
-type UiIconName = "arrow-left" | "chart" | "chevron" | "note" | "search";
-
-function UiIcon({ name }: { name: UiIconName }) {
+  const isCorrect = value === "correct";
+  const isNegative = value === "incorrect" || value === "failed";
+  const variant = isCorrect ? "success" : isNegative ? "destructive" : "neutral";
+  const Icon = isCorrect ? CheckCircle2 : isNegative ? XCircle : Clock;
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {name === "arrow-left" ? <><path d="m15 18-6-6 6-6" /><path d="M9 12h10" /></> : null}
-      {name === "chart" ? <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /></> : null}
-      {name === "chevron" ? <path d="m9 18 6-6-6-6" /> : null}
-      {name === "note" ? <><path d="M14 2H6a2 2 0 0 0-2 2v16l4-4h10a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M8 11h8M8 7h2" /></> : null}
-      {name === "search" ? <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></> : null}
-    </svg>
+    <Badge variant={variant} className="w-fit shrink-0 gap-1 whitespace-nowrap">
+      <Icon className="size-3" />
+      {value}
+    </Badge>
   );
 }
 
-function Json({ value }: { value: unknown }) {
-  return <pre>{JSON.stringify(value, null, 2)}</pre>;
+function RunFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid min-w-0 max-w-[220px] gap-0.5 border-l px-4 first:border-l-0 first:pl-0">
+      <small className="text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</small>
+      <strong className="truncate text-[13px] font-semibold">{value}</strong>
+    </div>
+  );
+}
+
+function EmptyState({
+  title,
+  children,
+  className,
+}: {
+  title?: string;
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("grid min-h-40 place-items-center gap-2 rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground", className)}>
+      {title ? <strong className="text-base font-semibold text-foreground">{title}</strong> : null}
+      {children}
+    </div>
+  );
+}
+
+function Json({ value, className }: { value: unknown; className?: string }) {
+  return (
+    <pre className={cn("m-0 max-h-[32rem] overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#151b20] p-3 font-mono text-[0.75rem] leading-relaxed text-[#dce8ed]", className)}>
+      {JSON.stringify(value, null, 2)}
+    </pre>
+  );
 }
 
 function QueryError({ error, compact = false }: { error: Error; compact?: boolean }) {
-  return <div className={compact ? "error compact-error" : "error"} role="alert">{error.message}</div>;
+  return (
+    <div
+      role="alert"
+      className={cn(
+        "flex items-start gap-2.5 rounded-md border border-destructive/30 bg-destructive/10 px-3.5 py-3 text-sm text-destructive",
+        compact ? "m-2.5" : "m-4",
+      )}
+    >
+      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+      <span>{error.message}</span>
+    </div>
+  );
 }
 
 function LoadingState({ label, compact = false }: { label: string; compact?: boolean }) {
   return (
-    <div className={compact ? "loading-state compact-loading" : "loading-state"} role="status">
-      <span className="loading-spinner" aria-hidden="true" />
+    <div
+      role="status"
+      className={cn(
+        "flex items-center justify-center gap-2.5 text-sm text-muted-foreground",
+        compact ? "min-h-28" : "m-4 min-h-40",
+      )}
+    >
+      <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
       <span>{label}</span>
     </div>
   );
@@ -1200,6 +1474,17 @@ function formatCost(value: number | null | undefined, currency: string) {
   } catch {
     return `${currency} ${value.toFixed(fractionDigits)}`;
   }
+}
+
+function formatDuration(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  if (value < 1) return `${Math.round(value * 1_000)} ms`;
+  if (value < 60) {
+    return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(value)} s`;
+  }
+  const minutes = Math.floor(value / 60);
+  const seconds = Math.round(value % 60);
+  return seconds ? `${minutes}m ${seconds}s` : `${minutes}m`;
 }
 
 function formatRunDate(value: string | null | undefined) {
