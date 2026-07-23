@@ -56,8 +56,20 @@ class ProjectExplorerBackend:
 
     def list_runs(self) -> dict[str, Any]:
         catalog = LocalLifecycleCatalog(self.project_root).build()
+        runs = []
+        for item in catalog.runs:
+            entry = item.model_dump(mode="json")
+            if item.result_status == "materialized":
+                result_path = self.project_root / item.path / "result.json"
+                result = load_verified_result(result_path)
+                summary = result.get("summary", {})
+                accuracy = summary.get("accuracy") if isinstance(summary, dict) else None
+                entry["accuracy"] = accuracy if isinstance(accuracy, dict) else None
+            else:
+                entry["accuracy"] = None
+            runs.append(entry)
         return {
-            "runs": [item.model_dump(mode="json") for item in catalog.runs],
+            "runs": runs,
             "findings": [item.model_dump(mode="json") for item in catalog.findings],
         }
 
@@ -166,11 +178,15 @@ class ProjectExplorerBackend:
                 run_dir, execution_id=execution_id, resolve_text=True
             )
         performance = self._attempt_performance(run_dir, execution_id=execution_id)
+        benchmark_context = self._benchmark_context(
+            run_dir, example_id=str(matching[0]["example_id"])
+        )
         return {
             "run_id": run_id,
             "row": matching[0],
             "review": review,
             "performance": performance,
+            "benchmark_context": benchmark_context,
         }
 
     def get_evidence(self, run_id: str, example_id: str) -> dict[str, Any]:
@@ -250,6 +266,32 @@ class ProjectExplorerBackend:
 
     def _run_dir(self, run_id: str) -> Path:
         return find_run_directory(run_id, root=self.eval_root)
+
+    @staticmethod
+    def _benchmark_context(
+        run_dir: Path, *, example_id: str
+    ) -> dict[str, Any]:
+        manifest = LocalRunStore(run_dir, run_id=run_dir.name).read_manifest()
+        examples = manifest.get("eval_contract", {}).get("examples", [])
+        matches = [
+            item
+            for item in examples
+            if isinstance(item, dict) and item.get("example_id") == example_id
+        ]
+        if len(matches) != 1:
+            raise FileNotFoundError(
+                f"Expected one retained example {example_id}; found {len(matches)}."
+            )
+        context = matches[0].get("published_review_context")
+        if not isinstance(context, dict):
+            return {
+                "availability": "unavailable",
+                "reason": (
+                    "This run predates retained benchmark labeler notes and "
+                    "verification provenance."
+                ),
+            }
+        return {"availability": "available", **context}
 
     @staticmethod
     def _execution_correlations(
@@ -361,6 +403,7 @@ def _retained_benchmark_example(payload: dict[str, Any]) -> BenchmarkExample:
             "raw_window_end": payload.get("raw_window_end"),
             "raw_known_gaps": payload.get("raw_known_gaps", []),
             "raw_artifacts": payload.get("raw_artifacts"),
+            "published_review_context": payload.get("published_review_context"),
         }
     )
 

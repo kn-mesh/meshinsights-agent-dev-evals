@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 import hashlib
 import json
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -46,6 +46,44 @@ class PublishedLabelSchema(BaseModel):
         return self
 
 
+class PublishedLabelerNote(BaseModel):
+    """One exact reviewer note frozen into published benchmark context."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    review_event_id: str = Field(min_length=1)
+    reviewer_display_name: str = Field(min_length=1)
+    reviewer_project_role: str = Field(min_length=1)
+    submitted_at: datetime
+    explanation: str
+    selected_for_publication: bool
+
+
+class PublishedVerification(BaseModel):
+    """Immutable customer or onsite verification for the published labels."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    source: Literal["direct_observation", "operator_feedback"]
+    note: str | None = None
+    recorded_at: datetime | None = None
+    source_content_sha256: str | None = Field(
+        default=None, pattern=r"^[0-9a-f]{64}$"
+    )
+    context_schema_key: str | None = None
+    context_schema_version: str | None = None
+    source_fields: dict[str, Any] | None = None
+
+
+class PublishedReviewContext(BaseModel):
+    """Frozen reviewer notes and verification retained with an eval run."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    labeler_notes: tuple[PublishedLabelerNote, ...] = ()
+    verification: PublishedVerification | None = None
+
+
 class BenchmarkExample(BaseModel):
     """One frozen example in a published benchmark version."""
 
@@ -65,6 +103,7 @@ class BenchmarkExample(BaseModel):
     raw_window_end: datetime | None = None
     raw_known_gaps: tuple[Any, ...] = ()
     raw_artifacts: tuple[SourceArtifact, ...]
+    published_review_context: PublishedReviewContext | None = None
 
     @field_validator("approved_label_payload")
     @classmethod

@@ -254,4 +254,20 @@ function UiIcon({ name }: { name: IconName }) {
 
 export const projectUseCaseAdapter: UseCaseAdapter = {
   EvidenceDisplay: SpiraxEvidenceDisplay,
+  evaluationFieldLabels: {
+    classification: "Failure classification",
+    root_cause: "Root cause classification",
+  },
+  sourceVerificationSchemas: [{
+    schema_key: "spirax_customer_verification",
+    version: "1",
+    title: "Customer verification",
+    fields: [
+      { key: "failure_cause", label: "Customer outcome", value_type: "text" },
+      { key: "action_to_resolve", label: "Action taken", value_type: "text" },
+      { key: "resolution_notes", label: "Resolution notes", value_type: "long_text" },
+      { key: "acknowledgement_status", label: "Acknowledgement status", value_type: "text" },
+      { key: "acknowledgement_notes", label: "Acknowledgement notes", value_type: "long_text" },
+    ],
+  }],
 };

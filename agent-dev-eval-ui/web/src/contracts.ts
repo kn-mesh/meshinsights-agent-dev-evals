@@ -1,5 +1,61 @@
 import type { ComponentType } from "react";
 
+export interface AccuracyMetric {
+  accuracy: number | null;
+  correct_runs: number;
+  evaluated_runs: number;
+}
+
+export interface FieldAccuracyMetric extends AccuracyMetric {
+  by_confidence: Record<string, AccuracyMetric>;
+}
+
+export interface AccuracySummary {
+  complete_evaluation: AccuracyMetric;
+  by_field: Record<string, FieldAccuracyMetric>;
+}
+
+export interface PublishedLabelerNote {
+  review_event_id: string;
+  reviewer_display_name: string;
+  reviewer_project_role: string;
+  submitted_at: string;
+  explanation: string;
+  selected_for_publication: boolean;
+}
+
+export interface PublishedVerification {
+  source: "direct_observation" | "operator_feedback";
+  note?: string | null;
+  recorded_at?: string | null;
+  source_content_sha256?: string | null;
+  context_schema_key?: string | null;
+  context_schema_version?: string | null;
+  source_fields?: Record<string, unknown> | null;
+}
+
+export type BenchmarkContext =
+  | {
+      availability: "available";
+      labeler_notes: PublishedLabelerNote[];
+      verification: PublishedVerification | null;
+    }
+  | {
+      availability: "unavailable";
+      reason: string;
+    };
+
+export interface SourceVerificationSchema {
+  schema_key: string;
+  version: string;
+  title: string;
+  fields: Array<{
+    key: string;
+    label: string;
+    value_type: "text" | "long_text" | "timestamp";
+  }>;
+}
+
 export interface RunEntry {
   run_id: string;
   result_status: string;
@@ -9,9 +65,12 @@ export interface RunEntry {
   benchmark_version?: number | null;
   model?: string | null;
   reasoning_effort?: string | null;
+  configuration?: Record<string, unknown>;
   planned_attempts: number;
   recorded_attempts: number;
   review_status: string;
+  created_at_utc?: string | null;
+  accuracy?: AccuracySummary | null;
 }
 
 export interface AttemptRow {
@@ -62,4 +121,6 @@ export interface EvidenceView<T = unknown> {
 
 export interface UseCaseAdapter {
   EvidenceDisplay: ComponentType<{ evidence: EvidenceView }>;
+  evaluationFieldLabels?: Record<string, string>;
+  sourceVerificationSchemas?: SourceVerificationSchema[];
 }

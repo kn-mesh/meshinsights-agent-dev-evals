@@ -7,6 +7,7 @@ import io
 import json
 from pathlib import Path
 import shutil
+from types import SimpleNamespace
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -90,6 +91,47 @@ def test_static_app_serves_the_spa_without_shadowing_unknown_api(
 
     assert client.get("/attempts/run-1").text == "explorer"
     assert client.get("/api/not-a-route").status_code == 404
+
+
+def test_project_run_catalog_includes_verified_accuracy_summaries(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class _RunEntry:
+        run_id = "run-a"
+        path = "eval_results/run-a"
+        result_status = "materialized"
+
+        def model_dump(self, *, mode: str) -> dict[str, Any]:
+            assert mode == "json"
+            return {"run_id": self.run_id, "result_status": self.result_status}
+
+    monkeypatch.setattr(
+        "src.apps.eval_explorer.LocalLifecycleCatalog.build",
+        lambda self: SimpleNamespace(runs=(_RunEntry(),), findings=()),
+    )
+    monkeypatch.setattr(
+        "src.apps.eval_explorer.load_verified_result",
+        lambda path: {
+            "summary": {
+                "accuracy": {
+                    "complete_evaluation": {
+                        "accuracy": 0.75,
+                        "correct_runs": 3,
+                        "evaluated_runs": 4,
+                    },
+                    "by_field": {},
+                }
+            }
+        },
+    )
+
+    payload = ProjectExplorerBackend(tmp_path).list_runs()
+
+    assert payload["runs"][0]["accuracy"]["complete_evaluation"] == {
+        "accuracy": 0.75,
+        "correct_runs": 3,
+        "evaluated_runs": 4,
+    }
 
 
 def test_spirax_projection_preserves_reviewer_evidence_semantics() -> None:
@@ -211,7 +253,9 @@ class _FrozenEvidenceStore:
         raise AssertionError(f"Unexpected artifact: {artifact.artifact_kind}")
 
 
-def _schema_v1_run(project_root: Path) -> tuple[Path, str, str]:
+def _schema_v1_run(
+    project_root: Path, *, retain_review_context: bool = False
+) -> tuple[Path, str, str]:
     run_spec = {"scope": {"example_ids": ["example-a"]}, "runs_per_example": 1}
     run_id, digest = build_run_identity(run_spec)
     run_dir = (
@@ -287,6 +331,39 @@ def _schema_v1_run(project_root: Path) -> tuple[Path, str, str]:
                     "benchmark_labels": {"classification": "Healthy"},
                     "slice_keys": [],
                     "metadata": {"sensor_id": "7"},
+                    **(
+                        {
+                            "published_review_context": {
+                                "labeler_notes": [
+                                    {
+                                        "review_event_id": "review-event-a",
+                                        "reviewer_display_name": "Alex Labeler",
+                                        "reviewer_project_role": "domain_reviewer",
+                                        "submitted_at": "2026-01-01T00:00:00Z",
+                                        "explanation": (
+                                            "Telemetry supports the published label."
+                                        ),
+                                        "selected_for_publication": True,
+                                    }
+                                ],
+                                "verification": {
+                                    "source": "operator_feedback",
+                                    "note": "Confirmed by customer.",
+                                    "recorded_at": "2026-01-02T00:00:00Z",
+                                    "source_content_sha256": "d" * 64,
+                                    "context_schema_key": (
+                                        "spirax_customer_verification"
+                                    ),
+                                    "context_schema_version": "1",
+                                    "source_fields": {
+                                        "failure_cause": "Trap failed closed"
+                                    },
+                                },
+                            }
+                        }
+                        if retain_review_context
+                        else {}
+                    ),
                 }
             ],
             "output_fields": [
@@ -409,6 +486,13 @@ def test_project_backend_exposes_optional_correlated_performance(
     attempt = backend.get_attempt(run_id, execution_id)
     assert attempt["performance"]["availability"] == "available"
     assert attempt["performance"]["metrics"]["duration_seconds"] == 12.0
+    assert attempt["benchmark_context"] == {
+        "availability": "unavailable",
+        "reason": (
+            "This run predates retained benchmark labeler notes and "
+            "verification provenance."
+        ),
+    }
     evidence = backend.get_evidence(run_id, "example-a")
     assert evidence == {
         "verified": True,
@@ -436,6 +520,25 @@ def test_project_backend_exposes_optional_correlated_performance(
     assert attempt_without_performance["row"]["example_id"] == "example-a"
     assert attempt_without_performance["performance"]["availability"] == "unavailable"
     assert backend.get_evidence(run_id, "example-a")["verified"] is True
+
+
+def test_project_backend_exposes_retained_published_review_context(
+    tmp_path: Path,
+) -> None:
+    _, run_id, execution_id = _schema_v1_run(
+        tmp_path, retain_review_context=True
+    )
+    backend = ProjectExplorerBackend(tmp_path)
+
+    context = backend.get_attempt(run_id, execution_id)["benchmark_context"]
+
+    assert context["availability"] == "available"
+    assert context["labeler_notes"][0]["review_event_id"] == "review-event-a"
+    assert context["labeler_notes"][0]["selected_for_publication"] is True
+    assert context["verification"]["source"] == "operator_feedback"
+    assert context["verification"]["source_fields"] == {
+        "failure_cause": "Trap failed closed"
+    }
 
 
 def test_project_backend_rejects_evidence_outside_retained_run_scope(
@@ -575,6 +678,14 @@ def test_project_backend_pages_and_resolves_attempts_beyond_ten_thousand(
         "src.apps.eval_explorer.all_inspection_rows", lambda run_dir: rows
     )
     monkeypatch.setattr(backend, "_run_dir", lambda run_id: tmp_path / run_id)
+    monkeypatch.setattr(
+        backend,
+        "_benchmark_context",
+        lambda run_dir, *, example_id: {
+            "availability": "unavailable",
+            "reason": "Synthetic pagination fixture.",
+        },
+    )
 
     page = backend.list_attempts(
         "run-large",

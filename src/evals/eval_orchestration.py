@@ -2076,6 +2076,17 @@ def _build_examples(
                 "benchmark_labels": result.example.approved_label_payload,
                 "slice_keys": list(result.slice_keys),
                 "metadata": result.example.example_metadata,
+                **(
+                    {
+                        "published_review_context": (
+                            result.example.published_review_context.model_dump(
+                                mode="json"
+                            )
+                        )
+                    }
+                    if result.example.published_review_context is not None
+                    else {}
+                ),
             }
         )
     return output

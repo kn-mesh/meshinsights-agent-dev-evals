@@ -104,7 +104,15 @@ select
   bve.raw_window_start,
   bve.raw_window_end,
   bve.raw_known_gaps,
-  bve.raw_artifacts
+  bve.raw_artifacts,
+  bve.verification_source,
+  bve.verification_note,
+  bve.verification_recorded_at,
+  bve.source_verification_sha256,
+  bve.source_verification_schema_key,
+  bve.source_verification_schema_version,
+  bve.source_verification_fields,
+  published_notes.labeler_notes
 from selected_version sv
 join benchmark_version_examples bve
   on bve.project_id = sv.project_id
@@ -112,6 +120,29 @@ join benchmark_version_examples bve
 left join label_schema_versions lsv
   on lsv.project_id = bve.project_id
  and lsv.id = bve.label_schema_version_id
+left join lateral (
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'review_event_id', re.id::text,
+        'reviewer_display_name', re.reviewer_display_name,
+        'reviewer_project_role', re.reviewer_project_role,
+        'submitted_at', re.submitted_at,
+        'explanation', re.explanation,
+        'selected_for_publication', re.id = bve.selected_review_event_id
+      )
+      order by re.submitted_at, re.id
+    ),
+    '[]'::jsonb
+  ) as labeler_notes
+  from review_events re
+  where re.project_id = bve.project_id
+    and exists (
+      select 1
+      from jsonb_array_elements(bve.reviewer_coverage) as coverage(item)
+      where coverage.item ->> 'review_event_id' = re.id::text
+    )
+) published_notes on true
 order by bve.example_id
 """
 
@@ -359,6 +390,7 @@ def _build_benchmark_version(
                     "raw_window_end": row.get("raw_window_end"),
                     "raw_known_gaps": row.get("raw_known_gaps") or [],
                     "raw_artifacts": row.get("raw_artifacts") or [],
+                    "published_review_context": _published_review_context(row),
                 }
             )
         )
@@ -377,6 +409,29 @@ def _build_benchmark_version(
             "examples": examples,
         }
     )
+
+
+def _published_review_context(row: dict[str, Any]) -> dict[str, Any]:
+    notes = row.get("labeler_notes")
+    if notes is None:
+        notes = []
+    if not isinstance(notes, list):
+        raise ValueError("Published labeler notes must be an array.")
+    source = row.get("verification_source")
+    verification = None
+    if source is not None:
+        verification = {
+            "source": source,
+            "note": row.get("verification_note"),
+            "recorded_at": row.get("verification_recorded_at"),
+            "source_content_sha256": row.get("source_verification_sha256"),
+            "context_schema_key": row.get("source_verification_schema_key"),
+            "context_schema_version": row.get(
+                "source_verification_schema_version"
+            ),
+            "source_fields": row.get("source_verification_fields"),
+        }
+    return {"labeler_notes": notes, "verification": verification}
 
 
 def _normalize_trusted_postgres_rows(

@@ -3,8 +3,11 @@
 from src.benchmarks.models import (
     BenchmarkExample,
     BenchmarkVersion,
-    PublishedLabelSchema,
     PublishedBenchmarkVersionSummary,
+    PublishedLabelerNote,
+    PublishedLabelSchema,
+    PublishedReviewContext,
+    PublishedVerification,
     SourceArtifact,
 )
 from src.benchmarks.postgres_repository import (
@@ -17,7 +20,10 @@ __all__ = [
     "BenchmarkExample",
     "BenchmarkRepository",
     "BenchmarkVersion",
-    "PublishedLabelSchema",
     "PublishedBenchmarkVersionSummary",
+    "PublishedLabelerNote",
+    "PublishedLabelSchema",
+    "PublishedReviewContext",
+    "PublishedVerification",
     "SourceArtifact",
 ]

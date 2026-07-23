@@ -21,7 +21,10 @@ from src.agent_versions import AgentVersionStore, resolve_agent_version
 from src.benchmarks import (
     BenchmarkExample,
     BenchmarkVersion,
+    PublishedLabelerNote,
     PublishedLabelSchema,
+    PublishedReviewContext,
+    PublishedVerification,
     SourceArtifact,
 )
 from src.evals import eval_orchestration
@@ -1102,7 +1105,36 @@ def test_interruption_preserves_completed_work_and_resume_runs_only_missing(
 def test_dry_run_resolves_manifest_without_pipeline_execution(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    benchmark = _benchmark()
+    example = _example().model_copy(
+        update={
+            "published_review_context": PublishedReviewContext(
+                labeler_notes=(
+                    PublishedLabelerNote(
+                        review_event_id="review-event-a",
+                        reviewer_display_name="Alex Labeler",
+                        reviewer_project_role="domain_reviewer",
+                        submitted_at=datetime(
+                            2026, 3, 18, 8, tzinfo=timezone.utc
+                        ),
+                        explanation="Telemetry supports the published label.",
+                        selected_for_publication=True,
+                    ),
+                ),
+                verification=PublishedVerification(
+                    source="operator_feedback",
+                    note="Confirmed by customer.",
+                    recorded_at=datetime(
+                        2026, 3, 19, tzinfo=timezone.utc
+                    ),
+                    source_content_sha256="e" * 64,
+                    context_schema_key="spirax_customer_verification",
+                    context_schema_version="1",
+                    source_fields={"failure_cause": "Trap failed closed"},
+                ),
+            )
+        }
+    )
+    benchmark = _benchmark(example)
     monkeypatch.setattr(
         eval_orchestration,
         "run_pipeline",
@@ -1132,6 +1164,14 @@ def test_dry_run_resolves_manifest_without_pipeline_execution(
         "telemetry",
         "alarms",
     ]
+    context = retained_example["published_review_context"]
+    assert context["labeler_notes"][0]["explanation"] == (
+        "Telemetry supports the published label."
+    )
+    assert context["verification"]["source"] == "operator_feedback"
+    assert context["verification"]["source_fields"] == {
+        "failure_cause": "Trap failed closed"
+    }
 
 
 def test_run_identity_excludes_progress_interval_but_includes_worker_limit(

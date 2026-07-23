@@ -97,6 +97,30 @@ def _row() -> dict[str, Any]:
         "raw_window_start": datetime(2025, 3, 17, tzinfo=timezone.utc),
         "raw_window_end": datetime(2026, 3, 17, 12, tzinfo=timezone.utc),
         "raw_known_gaps": [],
+        "verification_source": "operator_feedback",
+        "verification_note": "Confirmed by customer.",
+        "verification_recorded_at": datetime(
+            2026, 3, 19, tzinfo=timezone.utc
+        ),
+        "source_verification_sha256": "e" * 64,
+        "source_verification_schema_key": "spirax_customer_verification",
+        "source_verification_schema_version": "1",
+        "source_verification_fields": {
+            "failure_cause": "Trap failed closed",
+            "action_to_resolve": "Replaced the trap",
+        },
+        "labeler_notes": [
+            {
+                "review_event_id": "review-event-a",
+                "reviewer_display_name": "Alex Labeler",
+                "reviewer_project_role": "domain_reviewer",
+                "submitted_at": datetime(
+                    2026, 3, 18, 8, tzinfo=timezone.utc
+                ),
+                "explanation": "Telemetry and alarm evidence support failure.",
+                "selected_for_publication": True,
+            }
+        ],
         "raw_artifacts": [
             {
                 "artifact_kind": "telemetry",
@@ -151,6 +175,16 @@ def test_repository_loads_full_labels_schema_and_frozen_manifest() -> None:
     assert benchmark.label_schemas[0].content_sha256 == expected_hash
     assert benchmark.examples[0].source_snapshot_id == "snapshot-id"
     assert benchmark.examples[0].unit_id == "7"
+    review_context = benchmark.examples[0].published_review_context
+    assert review_context is not None
+    assert review_context.labeler_notes[0].reviewer_display_name == "Alex Labeler"
+    assert review_context.labeler_notes[0].selected_for_publication is True
+    assert review_context.verification is not None
+    assert review_context.verification.source == "operator_feedback"
+    assert review_context.verification.source_fields == {
+        "failure_cause": "Trap failed closed",
+        "action_to_resolve": "Replaced the trap",
+    }
 
 
 def test_repository_uses_entra_token_for_hosted_postgres(

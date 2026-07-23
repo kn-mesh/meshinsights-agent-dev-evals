@@ -19,6 +19,30 @@ const run = {
   planned_attempts: 1201,
   recorded_attempts: 1201,
   review_status: "complete",
+  created_at_utc: "2026-07-23T10:00:00Z",
+  accuracy: {
+    complete_evaluation: { accuracy: 0.7, correct_runs: 7, evaluated_runs: 10 },
+    by_field: {
+      classification: {
+        accuracy: 0.8,
+        correct_runs: 8,
+        evaluated_runs: 10,
+        by_confidence: {
+          High: { accuracy: 0.875, correct_runs: 7, evaluated_runs: 8 },
+          Low: { accuracy: 0.5, correct_runs: 1, evaluated_runs: 2 },
+        },
+      },
+      root_cause: {
+        accuracy: 0.6,
+        correct_runs: 3,
+        evaluated_runs: 5,
+        by_confidence: {
+          High: { accuracy: 0.75, correct_runs: 3, evaluated_runs: 4 },
+          Low: { accuracy: 0, correct_runs: 0, evaluated_runs: 1 },
+        },
+      },
+    },
+  },
 };
 
 const row = {
@@ -40,7 +64,46 @@ const row = {
 
 const adapter: UseCaseAdapter = {
   EvidenceDisplay: ({ evidence }: { evidence: EvidenceView }) => <div>Evidence for {evidence.example.example_id}</div>,
+  evaluationFieldLabels: {
+    classification: "Failure classification",
+    root_cause: "Root cause classification",
+  },
+  sourceVerificationSchemas: [{
+    schema_key: "spirax_customer_verification",
+    version: "1",
+    title: "Customer verification",
+    fields: [
+      { key: "failure_cause", label: "Customer outcome", value_type: "text" },
+      { key: "action_to_resolve", label: "Action taken", value_type: "text" },
+      { key: "resolution_notes", label: "Resolution notes", value_type: "long_text" },
+    ],
+  }],
 };
+
+const benchmarkContext = {
+  availability: "available",
+  labeler_notes: [{
+    review_event_id: "review-a",
+    reviewer_display_name: "Alex Labeler",
+    reviewer_project_role: "domain_reviewer",
+    submitted_at: "2026-07-20T09:30:00Z",
+    explanation: "Pressure decay and the downstream alarm support a failed trap.",
+    selected_for_publication: true,
+  }],
+  verification: {
+    source: "operator_feedback",
+    note: "Confirmed during the customer review.",
+    recorded_at: "2026-07-21T11:00:00Z",
+    source_content_sha256: "f".repeat(64),
+    context_schema_key: "spirax_customer_verification",
+    context_schema_version: "1",
+    source_fields: {
+      failure_cause: "Trap failed closed",
+      action_to_resolve: "Replaced the trap",
+      resolution_notes: "Normal steam flow returned after replacement.",
+    },
+  },
+} as const;
 
 let container: HTMLDivElement;
 let root: Root;
@@ -60,6 +123,59 @@ afterEach(async () => {
 });
 
 describe("EvalExplorerApp workflow", () => {
+  it("searches, filters, sorts, and drills into a run from its selectable row", async () => {
+    const secondRun = {
+      ...run,
+      run_id: "run-b",
+      model: "provider:other-model",
+      reasoning_effort: "high",
+      created_at_utc: "2026-07-22T10:00:00Z",
+      accuracy: {
+        ...run.accuracy,
+        complete_evaluation: { accuracy: 0.2, correct_runs: 2, evaluated_runs: 10 },
+        by_field: {
+          ...run.accuracy.by_field,
+          classification: {
+            ...run.accuracy.by_field.classification,
+            accuracy: 0.1,
+            correct_runs: 1,
+            evaluated_runs: 10,
+          },
+        },
+      },
+    };
+    installFetch((url) => url === "/api/runs" ? { runs: [run, secondRun], findings: [] } : route(url));
+    await render();
+    await waitFor(() => container.textContent?.includes("Overall evaluation results") === true);
+
+    expect(container.textContent).toContain("Failure classification");
+    expect(container.textContent).toContain("Failure classification · High");
+    expect(container.textContent).toContain("Root cause classification · Low");
+    expect(container.querySelector(".metric-cards")).toBeNull();
+    expect(container.querySelectorAll("tbody tr")).toHaveLength(2);
+
+    await select(byLabel("Sort evaluation runs"), "field:classification:asc");
+    await waitFor(() => container.querySelector("tbody tr")?.getAttribute("aria-label")?.includes("run-b") === true);
+    expect(new URL(window.location.href).searchParams.get("sort")).toBe("field:classification:asc");
+
+    await fill(byLabel("Search evaluation runs"), "run-a");
+    await waitFor(() => container.querySelectorAll("tbody tr").length === 1);
+    expect(new URL(window.location.href).searchParams.get("q")).toBe("run-a");
+
+    await select(byLabel("Filter by model"), "provider:model");
+    const selectedRow = container.querySelector("tbody tr");
+    if (!selectedRow) throw new Error("Missing selectable run row.");
+    await click(selectedRow);
+    await waitFor(() => container.textContent?.includes("Select an attempt to inspect.") === true);
+    expect(new URL(window.location.href).searchParams.get("run")).toBe("run-a");
+    expect(container.querySelector('[aria-label="Evaluation run"]')).toBeNull();
+
+    await click(byLabel("Back to evaluation results"));
+    await waitFor(() => container.textContent?.includes("Overall evaluation results") === true);
+    expect(new URL(window.location.href).searchParams.get("run")).toBeNull();
+    expect(new URL(window.location.href).searchParams.get("q")).toBe("run-a");
+  });
+
   it("restores page state, reaches attempts beyond 1,000, and applies field and slice facets", async () => {
     window.history.replaceState(null, "", "/?run=run-a&offset=900");
     const requested: string[] = [];
@@ -105,7 +221,11 @@ describe("EvalExplorerApp workflow", () => {
     installFetch((url) => {
       requested.push(url);
       if (url.endsWith("/attempts/execution-a.1")) {
-        return { row: { ...row, review_status: "unavailable", review_unavailable_reason: { code: "purged" } }, review: null };
+        return {
+          row: { ...row, review_status: "unavailable", review_unavailable_reason: { code: "purged" } },
+          review: null,
+          benchmark_context: benchmarkContext,
+        };
       }
       return route(url);
     });
@@ -124,7 +244,36 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).toContain("Failure");
     expect(container.textContent).toContain("Healthy");
     expect(container.textContent).toContain("Mismatch");
+    expect(container.textContent).toContain("Run accuracy");
+    expect(container.textContent).toContain("Failure classification · High");
+    expect(container.textContent).toContain("87.5%");
+    expect(container.textContent).toContain("Alex Labeler");
+    expect(container.textContent).toContain("Pressure decay and the downstream alarm");
+    expect(container.textContent).toContain("Customer verified");
+    expect(container.textContent).toContain("Selected label");
+    expect(container.textContent).toContain("Trap failed closed");
+    expect(container.textContent).toContain("Replaced the trap");
     expect(container.querySelector("pre")).toBeNull();
+  });
+
+  it("explains when an older run did not retain published review context", async () => {
+    window.history.replaceState(null, "", "/?run=run-a&execution=execution-a.1");
+    installFetch((url) => {
+      if (url === "/api/runs/run-a/attempts/execution-a.1") {
+        return {
+          row,
+          review: { model_interactions: {} },
+          benchmark_context: {
+            availability: "unavailable",
+            reason: "This run predates retained benchmark labeler notes and verification provenance.",
+          },
+        };
+      }
+      return route(url);
+    });
+    await render();
+    await waitFor(() => container.textContent?.includes("Context was not retained for this run.") === true);
+    expect(container.textContent).toContain("predates retained benchmark labeler notes");
   });
 });
 
@@ -149,7 +298,9 @@ function installFetch(handler: (url: string) => unknown) {
 function route(url: string): unknown {
   if (url === "/api/runs") return { runs: [run], findings: [] };
   if (url.startsWith("/api/runs/run-a/attempts?")) return attemptsPayload(row);
-  if (url === "/api/runs/run-a/attempts/execution-a.1") return { row, review: { model_interactions: {} } };
+  if (url === "/api/runs/run-a/attempts/execution-a.1") {
+    return { row, review: { model_interactions: {} }, benchmark_context: benchmarkContext };
+  }
   if (url.includes("/evidence")) return { example: { example_id: "example-a", unit_id: "unit-a", decision_timestamp: "2026-01-01T00:00:00Z", metadata: {} }, window: { start: "2025-01-01", end: "2026-01-01", basis: "lookback" }, evidence: {}, metadata: {} };
   throw new Error(`Unhandled fetch: ${url}`);
 }
@@ -193,6 +344,15 @@ async function select(element: HTMLElement, value: string) {
   await act(async () => {
     element.value = value;
     element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
+async function fill(element: HTMLElement, value: string) {
+  if (!(element instanceof HTMLInputElement)) throw new Error("Expected an input element.");
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    setter?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
   });
 }
 
