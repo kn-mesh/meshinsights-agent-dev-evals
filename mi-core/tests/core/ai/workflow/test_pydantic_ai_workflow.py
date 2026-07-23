@@ -204,7 +204,7 @@ class TemperaturePatternWorkflowOrchestrator:
             model=model_name,
             backend="pydantic_ai",
             reasoning_effort=reasoning_effort,
-            retries=2,
+            transport_retries=2,
             timeout=120.0,
         )
 

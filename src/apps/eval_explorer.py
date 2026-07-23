@@ -183,9 +183,15 @@ class ProjectExplorerBackend:
         config = contract.get("run")
         if not isinstance(config, dict):
             raise ValueError("Run manifest is missing retained run identity.")
-        benchmark_key = str(config.get("benchmark_key") or "")
-        benchmark_version_id = str(config.get("benchmark_version_id") or "")
-        version = int(config.get("benchmark_version_number") or 0)
+        dimensions = config.get("dimensions")
+        if not isinstance(dimensions, dict):
+            raise ValueError("Run manifest is missing canonical dimensions.")
+        benchmark = dimensions.get("benchmark")
+        if not isinstance(benchmark, dict):
+            raise ValueError("Run manifest is missing benchmark dimensions.")
+        benchmark_key = str(benchmark.get("key") or "")
+        benchmark_version_id = str(benchmark.get("version_id") or "")
+        version = int(benchmark.get("version") or 0)
         if not benchmark_key or not benchmark_version_id or version < 1:
             raise ValueError("Run is missing exact benchmark identity.")
 

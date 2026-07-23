@@ -268,27 +268,42 @@ def test_run_eval_writes_schema_v1_tracked_results_and_split_performance(
         tmp_path,
         benchmark,
         [_receipt(benchmark.examples[0])],
-        agent_version="spirax-v1.3",
         configuration_dimensions={"prompt_revision": 7, "feature_set": "base"},
     )
 
     assert list(payload) == ["schema_version", "summary", "run", "artifacts"]
     assert payload["schema_version"] == 1
     assert payload["run"]["schema_version"] == 1
-    assert payload["run"]["evaluation_profile"]["profile_id"] == (
+    assert payload["run"]["dimensions"]["evaluation_profile"]["id"] == (
         "spirax-failure-evaluation"
     )
     dimensions = payload["run"]["dimensions"]
+    assert not {
+        "agent_version",
+        "yaml_path",
+        "project_key",
+        "benchmark_name",
+        "benchmark_key",
+        "benchmark_version_id",
+        "benchmark_version_number",
+        "benchmark_published_at",
+        "benchmark_source_state_sha256",
+        "published_contract_schema_version",
+        "benchmark_source",
+        "evidence_source",
+        "evaluation_profile",
+        "runtime",
+        "max_workers",
+        "error_action",
+        "ai_provider",
+        "ai_model",
+        "ai_reasoning_effort",
+        "ai_execution_policies",
+    } & payload["run"].keys()
     assert dimensions["agent"]["agent_version_id"].startswith("av_")
     assert dimensions["agent"]["manifest_sha256"]
-    assert dimensions["agent"]["legacy_label"] == "spirax-v1.3"
-    assert payload["run"]["agent_version"] == {
-        key: value
-        for key, value in dimensions["agent"].items()
-        if key != "legacy_label"
-    }
-    assert payload["run"]["benchmark_name"] == "Phase 1 Benchmark"
-    assert payload["run"]["benchmark_source_state_sha256"] == "d" * 64
+    assert dimensions["benchmark"]["name"] == "Phase 1 Benchmark"
+    assert dimensions["benchmark"]["source_state_sha256"] == "d" * 64
     assert payload["run"]["selected_example_scope_sha256"]
     assert dimensions["model"]["id"] == "azure:gpt-5.6-luna"
     assert dimensions["pipeline"]["content_sha256"]
@@ -781,7 +796,9 @@ def test_eval_can_require_exact_promoted_agent_version(
         agent_version_store_root=version_store_root,
     )
 
-    assert payload["run"]["agent_version"]["lifecycle_state_at_run"] == "promoted"
+    assert payload["run"]["dimensions"]["agent"]["lifecycle_state_at_run"] == (
+        "promoted"
+    )
 
 
 def test_invalid_receipt_path_fails_preflight_before_pipeline_execution(

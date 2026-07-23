@@ -101,9 +101,6 @@ Important fields from the repository-local `mi.ai` source:
 - `provider_options`
 - `backend_options`
 
-The legacy `retries` field is a compatibility override for both transport and
-tool retries. Prefer the split fields in new processors.
-
 Retry and usage semantics:
 - `transport_retries` is the total HTTP-attempt ceiling, including the initial
   attempt, for the built-in Azure, Anthropic, Google, and OpenRouter mappings.

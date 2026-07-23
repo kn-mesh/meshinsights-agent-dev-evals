@@ -204,7 +204,7 @@ class LocalLifecycleCatalog:
                 dimensions = config.get("dimensions", {})
                 benchmark = dimensions.get("benchmark", {})
                 model = dimensions.get("model", {})
-                agent = config.get("agent_version", configured_agent)
+                agent = dimensions.get("agent", configured_agent)
                 records = store.read_attempt_records()
                 review_status = self._review_status(
                     run_dir,
@@ -225,22 +225,13 @@ class LocalLifecycleCatalog:
                         agent_lifecycle_state_at_run=agent.get(
                             "lifecycle_state_at_run"
                         ),
-                        pipeline_path=(
-                            dimensions.get("pipeline", {}).get("path")
-                            or config.get("yaml_path")
-                        ),
-                        benchmark_key=(
-                            benchmark.get("key") or config.get("benchmark_key")
-                        ),
+                        pipeline_path=dimensions.get("pipeline", {}).get("path"),
+                        benchmark_key=benchmark.get("key"),
                         benchmark_version=self._optional_int(
                             benchmark.get("version")
-                            or config.get("benchmark_version_number")
                         ),
-                        model=model.get("id") or config.get("ai_model"),
-                        reasoning_effort=(
-                            model.get("reasoning_effort")
-                            or config.get("ai_reasoning_effort")
-                        ),
+                        model=model.get("id"),
+                        reasoning_effort=model.get("reasoning_effort"),
                         configuration=dict(dimensions.get("configuration", {})),
                         planned_attempts=len(manifest.get("work_items", [])),
                         recorded_attempts=len(records),

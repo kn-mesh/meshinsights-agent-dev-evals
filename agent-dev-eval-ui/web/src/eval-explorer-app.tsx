@@ -23,6 +23,15 @@ type AttemptPayload = {
   review: Record<string, unknown> | null;
   performance: AttemptPerformancePayload;
 };
+type ComparisonEntry = {
+  comparison_id: string;
+  result_path?: string | null;
+  run_ids: string[];
+  varying_dimensions: string[];
+};
+type ComparisonsPayload = { comparisons: ComparisonEntry[] };
+
+const pageSize = 100;
 
 const states = [
   "all",
@@ -40,18 +49,32 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
   const initial = new URL(window.location.href).searchParams;
   const [runId, setRunId] = useState(initial.get("run") ?? "");
   const [executionId, setExecutionId] = useState(initial.get("execution") ?? "");
-  const [state, setState] = useState(initial.get("state") ?? "all");
+  const [state, setState] = useState(states.includes(initial.get("state") ?? "") ? initial.get("state")! : "all");
   const [search, setSearch] = useState(initial.get("search") ?? "");
+  const [field, setField] = useState(initial.get("field") ?? "");
+  const [sliceKey, setSliceKey] = useState(initial.get("slice") ?? "");
+  const [offset, setOffset] = useState(parseOffset(initial.get("offset")));
   const [tab, setTab] = useState(initial.get("tab") ?? "evaluation");
+  const [comparisonId, setComparisonId] = useState(initial.get("comparison") ?? "");
 
   useEffect(() => {
     const url = new URL(window.location.href);
-    for (const [key, value] of Object.entries({ run: runId, execution: executionId, state, search, tab })) {
-      if (value) url.searchParams.set(key, value);
+    for (const [key, value] of Object.entries({
+      run: runId,
+      execution: executionId,
+      state,
+      search,
+      field,
+      slice: sliceKey,
+      offset: offset > 0 ? String(offset) : "",
+      tab,
+      comparison: comparisonId,
+    })) {
+      if (value) url.searchParams.set(key, String(value));
       else url.searchParams.delete(key);
     }
     window.history.replaceState(null, "", url);
-  }, [runId, executionId, state, search, tab]);
+  }, [runId, executionId, state, search, field, sliceKey, offset, tab, comparisonId]);
 
   const runs = useQuery({ queryKey: ["runs"], queryFn: () => api<RunPayload>("/runs") });
   const run = useQuery({
@@ -67,9 +90,9 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
     enabled: Boolean(runId),
   });
   const attempts = useQuery({
-    queryKey: ["attempts", runId, state, search],
+    queryKey: ["attempts", runId, state, search, field, sliceKey, offset],
     queryFn: () => api<AttemptsPayload>(
-      `/runs/${encodeURIComponent(runId)}/attempts?state=${encodeURIComponent(state)}&search=${encodeURIComponent(search)}&limit=1000`,
+      attemptsPath({ runId, state, search, field, sliceKey, offset }),
     ),
     enabled: Boolean(runId),
   });
@@ -88,12 +111,29 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
     enabled: Boolean(runId && detail.data?.row.example_id && tab === "evidence"),
     staleTime: Infinity,
   });
+  const comparisons = useQuery({
+    queryKey: ["comparisons"],
+    queryFn: () => api<ComparisonsPayload>("/comparisons"),
+  });
+  const comparison = useQuery({
+    queryKey: ["comparison", comparisonId],
+    queryFn: () => api<Record<string, unknown>>(`/comparisons/${encodeURIComponent(comparisonId)}`),
+    enabled: Boolean(comparisonId),
+  });
 
   const selectedRun = useMemo(
     () => runs.data?.runs.find((item) => item.run_id === runId),
     [runs.data, runId],
   );
-  const error = runs.error ?? run.error ?? performance.error ?? attempts.error ?? detail.error ?? evidence.error;
+  useEffect(() => {
+    if (!attempts.data) return;
+    const maximum = attempts.data.matched > 0
+      ? Math.floor((attempts.data.matched - 1) / pageSize) * pageSize
+      : 0;
+    if (offset > maximum) setOffset(maximum);
+    if (field && !attempts.data.facets.fields.includes(field)) setField("");
+    if (sliceKey && !attempts.data.facets.slices.includes(sliceKey)) setSliceKey("");
+  }, [attempts.data, field, offset, sliceKey]);
 
   return (
     <div className="app-shell">
@@ -108,6 +148,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
           onChange={(event) => {
             setRunId(event.target.value);
             setExecutionId("");
+            setOffset(0);
           }}
         >
           <option value="">Select an evaluation run…</option>
@@ -119,7 +160,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
         </select>
       </header>
 
-      {error ? <div className="error">{error.message}</div> : null}
+      {runs.error ? <QueryError error={runs.error} /> : null}
       {!runId ? <div className="welcome">Choose a retained schema-v1 run to explore its results and evidence.</div> : null}
 
       {runId ? (
@@ -135,12 +176,22 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
             <summary>Run metrics and configuration</summary>
             <Json value={run.data ?? { loading: true }} />
           </details>
+          {run.error ? <QueryError error={run.error} /> : null}
           <PerformancePanel
             performance={performance.data}
+            error={performance.error}
             onSelectExecution={(value) => {
               setExecutionId(value);
               setTab("performance");
             }}
+          />
+          <ComparisonPanel
+            comparisons={comparisons.data?.comparisons}
+            listError={comparisons.error}
+            comparisonId={comparisonId}
+            onComparisonChange={setComparisonId}
+            comparison={comparison.data}
+            detailError={comparison.error}
           />
 
           <main>
@@ -150,17 +201,41 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                   aria-label="Search attempts"
                   placeholder="Search example, unit, output…"
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setOffset(0);
+                  }}
                 />
-                <select aria-label="Attempt state" value={state} onChange={(event) => setState(event.target.value)}>
+                <select aria-label="Attempt state" value={state} onChange={(event) => {
+                  setState(event.target.value);
+                  setOffset(0);
+                }}>
                   {states.map((item) => (
                     <option key={item} value={item}>
                       {item} ({attempts.data?.facets.states[item] ?? 0})
                     </option>
                   ))}
                 </select>
+                <select aria-label="Evaluation field" value={field} onChange={(event) => {
+                  setField(event.target.value);
+                  setOffset(0);
+                }}>
+                  <option value="">All fields</option>
+                  {attempts.data?.facets.fields.map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
+                <select aria-label="Evaluation slice" value={sliceKey} onChange={(event) => {
+                  setSliceKey(event.target.value);
+                  setOffset(0);
+                }}>
+                  <option value="">All slices</option>
+                  {attempts.data?.facets.slices.map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
               </div>
-              <div className="attempt-count">{attempts.data?.matched ?? 0} matching attempts</div>
+              {attempts.error ? <QueryError error={attempts.error} compact /> : null}
+              <div className="attempt-count">
+                <span>{attempts.data?.matched ?? 0} matching attempts</span>
+                {attempts.data ? <span>{pageRange(attempts.data, offset)}</span> : null}
+              </div>
               <div className="attempt-list">
                 {attempts.data?.rows.map((row) => (
                   <button
@@ -180,10 +255,25 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                   </button>
                 ))}
               </div>
+              <div className="pagination">
+                <button
+                  type="button"
+                  aria-label="Previous attempts"
+                  disabled={offset === 0}
+                  onClick={() => setOffset(Math.max(0, offset - pageSize))}
+                >Previous</button>
+                <button
+                  type="button"
+                  aria-label="Next attempts"
+                  disabled={!attempts.data || offset + attempts.data.rows.length >= attempts.data.matched}
+                  onClick={() => setOffset(offset + pageSize)}
+                >Next</button>
+              </div>
             </aside>
 
             <article>
               {!executionId ? <div className="empty">Select an attempt to inspect.</div> : null}
+              {detail.error ? <QueryError error={detail.error} /> : null}
               {detail.data ? (
                 <>
                   <div className="detail-heading">
@@ -209,6 +299,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                   {tab === "performance" ? <AttemptPerformance performance={detail.data.performance} /> : null}
                   {tab === "evidence" ? (
                     evidence.isPending ? <div className="empty">Loading and verifying frozen evidence…</div> :
+                    evidence.error ? <QueryError error={evidence.error} /> :
                     evidence.data ? <EvidenceDisplay evidence={evidence.data} /> : null
                   ) : null}
                   {tab === "input" ? <ReviewSection review={detail.data.review} row={detail.data.row} section="model_interactions" /> : null}
@@ -226,11 +317,16 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
 
 export function PerformancePanel({
   performance,
+  error,
   onSelectExecution,
 }: {
   performance: PerformancePayload | undefined;
+  error?: Error | null;
   onSelectExecution: (executionId: string) => void;
 }) {
+  if (error) {
+    return <section className="performance-panel"><QueryError error={error} compact /></section>;
+  }
   if (!performance) {
     return <section className="performance-panel"><div className="empty compact-empty">Loading performance observations…</div></section>;
   }
@@ -294,6 +390,40 @@ export function PerformancePanel({
         </div>
       </div>
     </section>
+  );
+}
+
+function ComparisonPanel({
+  comparisons,
+  listError,
+  comparisonId,
+  onComparisonChange,
+  comparison,
+  detailError,
+}: {
+  comparisons: ComparisonEntry[] | undefined;
+  listError: Error | null;
+  comparisonId: string;
+  onComparisonChange: (value: string) => void;
+  comparison: Record<string, unknown> | undefined;
+  detailError: Error | null;
+}) {
+  return (
+    <details className="summary-card comparison-card">
+      <summary>Run comparisons ({comparisons?.length ?? 0})</summary>
+      {listError ? <QueryError error={listError} compact /> : (
+        <select aria-label="Run comparison" value={comparisonId} onChange={(event) => onComparisonChange(event.target.value)}>
+          <option value="">Select a comparison…</option>
+          {comparisons?.map((item) => (
+            <option key={item.comparison_id} value={item.comparison_id} disabled={!item.result_path}>
+              {item.comparison_id} · {item.run_ids.length} runs · {item.varying_dimensions.join(", ") || "no varying dimensions"}
+            </option>
+          ))}
+        </select>
+      )}
+      {detailError ? <QueryError error={detailError} compact /> : null}
+      {comparison ? <Json value={comparison} /> : null}
+    </details>
   );
 }
 
@@ -369,6 +499,46 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 
 function Json({ value }: { value: unknown }) {
   return <pre>{JSON.stringify(value, null, 2)}</pre>;
+}
+
+function QueryError({ error, compact = false }: { error: Error; compact?: boolean }) {
+  return <div className={compact ? "error compact-error" : "error"} role="alert">{error.message}</div>;
+}
+
+function attemptsPath({
+  runId,
+  state,
+  search,
+  field,
+  sliceKey,
+  offset,
+}: {
+  runId: string;
+  state: string;
+  search: string;
+  field: string;
+  sliceKey: string;
+  offset: number;
+}) {
+  const params = new URLSearchParams({
+    state,
+    search,
+    offset: String(offset),
+    limit: String(pageSize),
+  });
+  if (field) params.set("field", field);
+  if (sliceKey) params.set("slice", sliceKey);
+  return `/runs/${encodeURIComponent(runId)}/attempts?${params}`;
+}
+
+function parseOffset(value: string | null) {
+  const parsed = Number(value ?? 0);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+function pageRange(payload: AttemptsPayload, offset: number) {
+  if (payload.matched === 0) return "Showing 0";
+  return `Showing ${offset + 1}–${offset + payload.rows.length}`;
 }
 
 function compact(value: unknown) {

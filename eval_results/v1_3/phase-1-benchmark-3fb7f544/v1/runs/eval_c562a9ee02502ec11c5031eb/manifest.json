@@ -1,0 +1,4316 @@
+{
+  "schema_version": 1,
+  "performance_schema_version": 1,
+  "coordinator_scope": "local_single_host",
+  "run_id": "eval_c562a9ee02502ec11c5031eb",
+  "run_spec_sha256": "c562a9ee02502ec11c5031eb8227738e7ab5480aa677d1fbdffae33c0ea89f3c",
+  "run_spec": {
+    "execution_contract_version": 1,
+    "eval_schema_version": 1,
+    "project_key": "spirax-pulse",
+    "benchmark": {
+      "name": "Phase 1 Benchmark",
+      "key": "phase-1-benchmark-3fb7f544",
+      "version_id": "b8667849-57a4-4a16-b3ca-4db7cfa98da8",
+      "version_number": 1,
+      "published_at": "2026-07-17T16:48:04.237409+00:00",
+      "source_state_sha256": "f3ae4b8824b73df17ded93100d0ff7cff832162de4aff76dab404768fcc5ae7d",
+      "published_contract_schema_version": 2,
+      "label_schemas": [
+        {
+          "schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+          "schema_key": "spirax-steam-trap-label",
+          "version": "v1",
+          "content_sha256": "b3929d13a89f4dab79f986e615d1e8315762af4dc0854f37d48c6620ae336239"
+        }
+      ]
+    },
+    "scope": {
+      "token": "all",
+      "example_ids": [
+        "250000101|2024-11-03T14:00:32",
+        "250000116|2026-03-04T08:01:36",
+        "250000214|2025-10-20T05:25:06",
+        "250000642|2025-05-07T20:56:38",
+        "250001578|2026-01-06T09:34:00",
+        "250001616|2024-04-09T19:33:43",
+        "250002155|2024-12-25T17:55:46",
+        "250002410|2025-01-21T20:41:07",
+        "250002765|2026-02-21T02:11:24",
+        "250002804|2026-03-17T02:33:11",
+        "250003032|2024-06-27T19:23:30",
+        "250003575|2026-03-17T06:48:00",
+        "250003602|2026-03-17T02:30:43",
+        "250003694|2024-10-08T14:37:16",
+        "250003740|2026-03-17T04:42:58",
+        "250003873|2026-03-08T13:24:10",
+        "250003921|2026-03-17T06:53:01",
+        "250003969|2026-03-09T00:13:56",
+        "250004137|2026-02-24T08:29:14",
+        "250004177|2026-02-07T00:14:51",
+        "250004218|2025-10-30T12:59:43",
+        "250004325|2025-04-10T17:11:11",
+        "250004348|2026-01-15T02:24:28",
+        "250004418|2026-03-17T04:42:04",
+        "250004437|2026-01-28T18:48:06",
+        "250004743|2024-08-08T20:38:12",
+        "250004859|2026-03-17T11:09:22",
+        "250004862|2026-03-17T11:08:05",
+        "250004871|2026-03-17T11:07:54",
+        "250004877|2024-08-15T08:48:21",
+        "250005067|2026-01-19T12:48:30",
+        "250005150|2025-10-20T01:34:20",
+        "250005354|2026-03-17T11:06:43",
+        "250005404|2026-03-13T11:55:27",
+        "250005500|2026-03-17T06:47:26",
+        "250005501|2024-09-18T17:07:25",
+        "250005577|2025-01-24T14:25:40",
+        "250005605|2025-10-03T01:08:35",
+        "250005653|2025-10-25T10:09:11",
+        "250005692|2025-10-31T01:39:54",
+        "250005696|2026-01-13T05:36:58",
+        "250005732|2026-02-17T18:22:10",
+        "250005883|2025-11-26T17:38:20",
+        "260000115|2026-03-07T22:07:58",
+        "260000116|2026-01-21T20:14:04",
+        "260000143|2026-03-11T01:39:27",
+        "260000167|2025-03-02T14:55:43",
+        "260000170|2026-02-25T01:43:53",
+        "260000292|2026-03-17T09:02:42",
+        "260000374|2025-04-20T07:04:26",
+        "260000478|2025-10-15T18:45:05",
+        "260000499|2025-03-03T10:50:22",
+        "260000510|2025-10-09T23:50:11",
+        "260000701|2026-03-16T17:55:13",
+        "260000953|2026-02-18T20:16:00",
+        "260001111|2026-03-17T02:35:35",
+        "260001345|2026-01-30T02:44:00",
+        "260001377|2026-03-03T06:04:25",
+        "260001438|2026-03-08T00:24:00",
+        "260001535|2025-12-09T15:37:41",
+        "260001642|2026-03-17T11:12:07",
+        "260001742|2025-10-17T20:23:09",
+        "260002518|2025-11-20T20:16:19",
+        "260002680|2026-03-12T14:21:29",
+        "260002782|2026-02-20T17:32:41",
+        "260002797|2026-02-08T06:26:07",
+        "260002816|2026-03-17T11:08:17",
+        "260003042|2026-03-17T04:39:09",
+        "260003441|2026-03-17T08:58:12",
+        "260003552|2026-03-17T04:38:26"
+      ],
+      "selection": {
+        "example_ids": [],
+        "unit_ids": [],
+        "label_filters": {},
+        "slice_keys": []
+      },
+      "content_sha256": "40650af28a7d5bf5840fe070e824bdfdf54fc4e49c7cbf4891c1da607c00e52f"
+    },
+    "pipeline": {
+      "name": "pulse_alarm_failure_analysis_v1_3",
+      "version": "1.3.0",
+      "content_sha256": "7997e160ff993889c8645f583ad43460a761535c038e6620f982ad300c0eb3d5",
+      "resolved_override_sha256": "54f2e898e18a4c5738af6cc4a4914d7392561896b9e11fbdc5b574339b6e9264"
+    },
+    "agent": {
+      "agent_version_id": "av_926f17ef1b0e35a8da72b272",
+      "manifest_sha256": "926f17ef1b0e35a8da72b2729dd422723da6341f1b7a32d9615cef68c2d57675",
+      "manifest_schema_version": 1,
+      "lifecycle_state_at_run": "candidate",
+      "source_tree_state": "dirty",
+      "resolved_graph_sha256": "bfdc7c12f22e088e76fa9f70134410375b4c6381b27e86965da695c2d8a38cc1",
+      "evidence_recipe_sha256": "5c38faf7a0211e04053b44fb59dca88f0a0ae084925a203f8a16d42dcaf70551",
+      "model_policy_sha256": "e454cbe1aad5932483f2dfbf6fca520af20b0c4ac6462d5d2f38d8aca4d67057"
+    },
+    "model": {
+      "provider": "azure",
+      "id": "azure:gpt-5.6-luna",
+      "api": "openai_responses",
+      "reasoning_effort": "low",
+      "pricing": null
+    },
+    "scoring": {
+      "evaluation_profile_sha256": "21247fd12b0e7c07919d82fb280e6ef8ea43d8a6847486212338cd5d5a821609",
+      "grader_set_sha256": "1705b20c56a1bb41d7d549f8842c57c275a934994665d72e2bcf5cdf273ca612",
+      "slice_definition_sha256": "adc4c85a51051dad17445a981144cbbddb920221db4cb0543a51f65e89149e33",
+      "label_schema_sha256": [
+        "b3929d13a89f4dab79f986e615d1e8315762af4dc0854f37d48c6620ae336239"
+      ],
+      "content_sha256": "e01257f0c36fd81831aecd1dcf3bbc3d6fc958370d72438ef8df05023d56dd19"
+    },
+    "runs_per_example": 1,
+    "execution": {
+      "runtime": "threaded",
+      "max_workers": 4,
+      "error_action": "continue",
+      "ai_execution_policies": [
+        {
+          "processor": "V1_3AlarmClassificationAIWorkflowProcessor",
+          "model": "azure:gpt-5.6-luna",
+          "reasoning_effort": "low",
+          "timeout_seconds_per_attempt": 120,
+          "transport_attempts": 3,
+          "output_retries": 0
+        }
+      ]
+    },
+    "configuration_dimensions": {},
+    "source_manifest": {
+      "schema_version": 1,
+      "files": [
+        {
+          "path": "agent-dev-eval-core/evaluation/__init__.py",
+          "byte_size": 3107,
+          "content_sha256": "c968c9e9c3c8a63884629f32b7bf533fc94d518e8bd2e6ac43652abb842cb255"
+        },
+        {
+          "path": "agent-dev-eval-core/evaluation/execution.py",
+          "byte_size": 13992,
+          "content_sha256": "81f10268f7025bffbfcf603e7d20bdeed63a2b257e21494cf36fe19998efa3d4"
+        },
+        {
+          "path": "agent-dev-eval-core/evaluation/explorer.py",
+          "byte_size": 4041,
+          "content_sha256": "c4654ad99f83c00170da28b7d8b92d085c7dc6da16ffa093c855d4800bcaa201"
+        },
+        {
+          "path": "agent-dev-eval-core/evaluation/graders.py",
+          "byte_size": 6140,
+          "content_sha256": "d0542305d155ef3f0002b21962eb4a61caf4d8ca8b43bf454cec1c9cc99983ff"
+        },
+        {
+          "path": "agent-dev-eval-core/evaluation/identity.py",
+          "byte_size": 1575,
+          "content_sha256": "f3b0c803fd0b44d39eb222480460568bc48c4182cd8f58ff9365dd7e7cadc04b"
+        },
+        {
+          "path": "agent-dev-eval-core/evaluation/metrics.py",
+          "byte_size": 9138,
+          "content_sha256": "5019a0c3b943133f905dae2fedab66b05f66df22b44600e8fb5cecaddfcf6f0d"
+        },
+        {
+          "path": "agent-dev-eval-core/evaluation/models.py",
+          "byte_size": 6089,
+          "content_sha256": "bc9e4e3b763bfda39046251408ca239eab6074ad054bfbaf6e7207a197969567"
+        },
+        {
+          "path": "agent-dev-eval-core/evaluation/receipt_extraction.py",
+          "byte_size": 5220,
+          "content_sha256": "c4b51c9cfc38cd94d3d38a7bc51ac58f0376bb802e5717f89b4001bffdab0823"
+        },
+        {
+          "path": "agent-dev-eval-core/evaluation/result_writer.py",
+          "byte_size": 2016,
+          "content_sha256": "a63ac0097d48b319ebbd8e3dd68364bc65e5339ad4f144d0a59db26fb455ad23"
+        },
+        {
+          "path": "agent-dev-eval-core/evaluation/review.py",
+          "byte_size": 49090,
+          "content_sha256": "07bdbf2ee5bc5ceea53899450e4899b34d2879630b92c183ff69e3eb3638443b"
+        },
+        {
+          "path": "agent-dev-eval-core/evaluation/security.py",
+          "byte_size": 2571,
+          "content_sha256": "62661c6541ff90f7d80c8226f9ce31ec12eed319717d3a3632ad5b1bcdfeff29"
+        },
+        {
+          "path": "agent-dev-eval-core/evaluation/serialization.py",
+          "byte_size": 4365,
+          "content_sha256": "bed58206b6835edbe076da97b9f5d5ccf2129368c6c74bd369f28e91cdf02527"
+        },
+        {
+          "path": "evaluation_configs/spirax-failure-evaluation.eval.yaml",
+          "byte_size": 1743,
+          "content_sha256": "845ec969d1534253e33369278a7b749a998825f801c30c9abcad0f554d6a373f"
+        },
+        {
+          "path": "mi-core/core/src/mi/__init__.py",
+          "byte_size": 473,
+          "content_sha256": "b05861b69f96a21be046f747cd91b86f067bb44bfbfac7530b1d239d385681dd"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/__init__.py",
+          "byte_size": 1521,
+          "content_sha256": "cf0623128f5450b09352388d2840fb3b08ea9ca1bbcf35bb56d939445ba7dc28"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/backends/__init__.py",
+          "byte_size": 257,
+          "content_sha256": "57cadaf89afb5bd389f0fc6606d8da0764233fc8a9ba53f3e2eb7645625df640"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/backends/base.py",
+          "byte_size": 4209,
+          "content_sha256": "e754c9cc10a9f2fbd905e117fee068879137b4a2ea699a077e17448e09230d8f"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/backends/pydantic_ai_backend.py",
+          "byte_size": 44234,
+          "content_sha256": "44bac6c47e4511fdefe555f9154797c80a879f84b060a5c279bd8b0850a157ac"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/backends/resolver.py",
+          "byte_size": 3575,
+          "content_sha256": "ff70f0d0a479f36091b1956cf9b82dc2af4d112e4005c92ee1f50dd3939cdebd"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/capabilities.py",
+          "byte_size": 7626,
+          "content_sha256": "76bea2d74ac45eeb9c0729318e413523a9307bf49d1dbf93937532ddc3255f4a"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/dataframe.py",
+          "byte_size": 2301,
+          "content_sha256": "eff4259734279e0b72a2059f31f1a37f6442e870b800eef8c0d84730dd772f07"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/message.py",
+          "byte_size": 5706,
+          "content_sha256": "db8806e10dda35d92b4f4a1c945608f31c2bef7ffb471edcd99f38f178c2b4a4"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/mixins/__init__.py",
+          "byte_size": 664,
+          "content_sha256": "379f85acb3c8ab22b689ba86f15b15ba032d78821a92a6249729dc37b198460b"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/mixins/agent.py",
+          "byte_size": 5411,
+          "content_sha256": "0ac7067eb92bb8374f7d52d0d573810c96f1d7b95a33e6194729e6737656b517"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/mixins/base.py",
+          "byte_size": 12252,
+          "content_sha256": "c4097324e0ae353361a67bf645265d3b22535e0e0595bc9b39f6a6e1fa58323e"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/mixins/workflow.py",
+          "byte_size": 2779,
+          "content_sha256": "0f55c6198d876fe06cbe0d09956ec63881f81ec5f9f47dc1bb3bdd513aa165e8"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/model_config.py",
+          "byte_size": 5318,
+          "content_sha256": "7b38e20dc27be1d96f46db8603a703d3e81b24f87adf453f4fc807eacfeb5095"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/review.py",
+          "byte_size": 4775,
+          "content_sha256": "ded6008315df6f737883a555471f5a8598f083b5a0c5b5e047e024b1dfb965d3"
+        },
+        {
+          "path": "mi-core/core/src/mi/ai/tools.py",
+          "byte_size": 6143,
+          "content_sha256": "937d4bb95c76dbb9bde4e944b67333c734233168a2be1af4a2cf1bd4e3fbc116"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/__init__.py",
+          "byte_size": 1053,
+          "content_sha256": "3e8ba87e7c12163d89bde94d693b620c89e6222fde49d78aeaa55ef48d8d8da3"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/actions/__init__.py",
+          "byte_size": 442,
+          "content_sha256": "6c68b699deaa41286c94ea5eee0324a4bac85d107a5a85e9906347a24340b04a"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/actions/base_action.py",
+          "byte_size": 4816,
+          "content_sha256": "69158c49cc27cfb57c7e6149ff0960e7b0381cf5bb1a7530729353adb131df62"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/hydrators/__init__.py",
+          "byte_size": 490,
+          "content_sha256": "f9bd1cdbfabc62fbad9ad9c8347a485527e64ff9811c68a87e69f3823e04b2fc"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/hydrators/base_hydrator.py",
+          "byte_size": 5420,
+          "content_sha256": "77c936e78d37bdb4ea22d3b097521d11a4587f291cdc9ac513a8a2c17107d876"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/objects/__init__.py",
+          "byte_size": 691,
+          "content_sha256": "f8dd38b455433ca702de16469de9faa5f088fee4e941cb40ec147e8341cfe6de"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/objects/action_data_object.py",
+          "byte_size": 3309,
+          "content_sha256": "0585d0ad0322a60af0ab22e9d9d561461325a055dbfb24b4cfcc216631fe379e"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/objects/base_data_object.py",
+          "byte_size": 1175,
+          "content_sha256": "990419e8e8dc67fc70d035848c8e429f75bd5625d4427e60e52ec54b4165a626"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/objects/process_data_object.py",
+          "byte_size": 5004,
+          "content_sha256": "791a05e6ad826d45d6bb5f2580208956978a7834cff14e371b13018a652810d0"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/objects/retriever_data_object.py",
+          "byte_size": 3544,
+          "content_sha256": "547c3bcd0de78b0894331285cba51aa8baf00584f992f80e5a1b61a91781f52d"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/pipeline.py",
+          "byte_size": 30427,
+          "content_sha256": "091d41dda11da1d50f720907988fe59c6d49569040983ea1f7613651ac276b61"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/pipeline_builder.py",
+          "byte_size": 32228,
+          "content_sha256": "41a7fdd1d1197a254d5e6a0dba02205cbe5b90f17a7646180aece4c734aca053"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/pipeline_orchestrator.py",
+          "byte_size": 21970,
+          "content_sha256": "4fd3bfc003cc781767518c73acb1351d98f70fbbf45f1d41777d105d7e198b1d"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/pipeline_receipt.py",
+          "byte_size": 6569,
+          "content_sha256": "4c853fd40afd2abeb288a1851416f458e1bbc2cff403bfb4e1ea9456ac2f87e9"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/processors/__init__.py",
+          "byte_size": 413,
+          "content_sha256": "017ee898e3bbec1ec879260440c089fcead5cc0347aec3abfda93a4607254d98"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/processors/base_processor.py",
+          "byte_size": 6047,
+          "content_sha256": "0832318f6d2a167b6bb9c0e8c438baf9e3cc71d8996fdff7d4dc15706f92ca5a"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/registry/__init__.py",
+          "byte_size": 1720,
+          "content_sha256": "11b5e916ce0fddeb7298164d9999cbc62a2c44e2a84c3ebfe767f03b7507f230"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/registry/constants.py",
+          "byte_size": 569,
+          "content_sha256": "fe3ecb136e4751ede90717c864c8f36f3c0bba3873ff5ac764a22ec9331452e8"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/registry/io.py",
+          "byte_size": 4660,
+          "content_sha256": "1167135bd958c08970c0e819cfbe9351cc824c21793cb1493479e57edf49c659"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/registry/loader.py",
+          "byte_size": 3433,
+          "content_sha256": "2e56c88f82e86ce649fd1e245df4bdd7f77a1e8cfc8fc43231196fb77fc319bf"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/registry/models.py",
+          "byte_size": 2675,
+          "content_sha256": "f445d923315b4f9e97e2be4f2f6eb8491f1029aaeccbca9fdfc7997c41c4c3c3"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/registry/scanner.py",
+          "byte_size": 14939,
+          "content_sha256": "6e9441143d5b74e6c9da227483aeb687bec14b80ee25f3562e01771596f68ad2"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/registry/schema.py",
+          "byte_size": 24044,
+          "content_sha256": "a3d18c6017dfeb4312e3280bf1caafb37eff81603b2ad01e4741719881491543"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/registry/utils.py",
+          "byte_size": 5571,
+          "content_sha256": "c07cddbcfbfab053a28d6ef348fcde110da372c9dbc0de8ee30e718e6e0e3350"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/registry/validation.py",
+          "byte_size": 4895,
+          "content_sha256": "0dccbf50626802de8d7227bcbbe604c4dbc0a900be476bc3aea1d042de036d23"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/retrievers/__init__.py",
+          "byte_size": 1457,
+          "content_sha256": "b2ec413b1c5516b10e14aac8fe24a8b970beb88db6c64784f642e4cdd3223c59"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/retrievers/base_retriever.py",
+          "byte_size": 3895,
+          "content_sha256": "170f41fa2f3c059bf68ad617c481a84cdc3c7bffe80734836eac00d4aefe5967"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/retrievers/csv_retriever.py",
+          "byte_size": 11276,
+          "content_sha256": "94422eb4d017002533a223a55b331df2e93794f9a3cb360de849bfcf8ad41843"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/retrievers/json_retriever.py",
+          "byte_size": 9285,
+          "content_sha256": "dac8a27d7f824ebd4c2a2a9d4aa1e811c2a36354628d094bf4bb04b2436d656e"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/utils/__init__.py",
+          "byte_size": 801,
+          "content_sha256": "a9db39f4e0e17c964af400962ee523395dd2ba56e3cb6216e45343185732eb84"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/utils/environment.py",
+          "byte_size": 3066,
+          "content_sha256": "847ded16dd2f708953dfab46843c6f473629d5e8c555d0c7a9f229d8630f26d2"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/utils/telemetry.py",
+          "byte_size": 13938,
+          "content_sha256": "f79cd092abd3e73e4d447b86fedf248eb12967a6fd88c39562660ac72ce7e5de"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/utils/typing.py",
+          "byte_size": 4771,
+          "content_sha256": "f4f7e3b10dc179c1a8cb52141338189c4a7c10501805d2ce273589f5edd40bf4"
+        },
+        {
+          "path": "mi-core/core/src/mi/core/versioning.py",
+          "byte_size": 3532,
+          "content_sha256": "1f98a5801668d0b1a4e565339705a0969d93c8a652354528cd7bc09da9c6607d"
+        },
+        {
+          "path": "mi-core/core/src/mi/utilities/__init__.py",
+          "byte_size": 930,
+          "content_sha256": "d15e2e92c7cf071f633a5b49407fad586bd446a04b6ff0a906031b2851eaff93"
+        },
+        {
+          "path": "mi-core/core/src/mi/utilities/cache_adapter.py",
+          "byte_size": 9076,
+          "content_sha256": "6f7dc4a6248e696b611fec37dbae67038b670ede957269ea8055e763f58733aa"
+        },
+        {
+          "path": "mi-core/core/src/mi/utilities/root_executor.py",
+          "byte_size": 15194,
+          "content_sha256": "e0b22cd51eeb5a58eddb590b19b13b039a4bf83dcbc072fafb8e9e8372764847"
+        },
+        {
+          "path": "model_catalog.py",
+          "byte_size": 7122,
+          "content_sha256": "dd4cd78734e7917541203f86ed89d8f23cf6242601ee0c4a6287c4f5f7c6ed45"
+        },
+        {
+          "path": "models.yaml",
+          "byte_size": 1166,
+          "content_sha256": "b4cd065733ce6e102ec5b5505ae1af7b7a3ed5837875ac698793a473852d9a75"
+        },
+        {
+          "path": "pipeline_configs/v1_3.ppln",
+          "byte_size": 911,
+          "content_sha256": "e990be8f716d96e2bb56d67ea3e8dbfe1cf1e0a2434d9b404ded47e74bf73af2"
+        },
+        {
+          "path": "pyproject.toml",
+          "byte_size": 1637,
+          "content_sha256": "e9c14465bd7c80dd7452223f75f202191e2a322fe260ec789bfd001e3fcfbc5c"
+        },
+        {
+          "path": "src/__init__.py",
+          "byte_size": 242,
+          "content_sha256": "da48e87ee74ec5ed7bb31e52bef45ca70d866134cab7b6714f996a4961de1bc4"
+        },
+        {
+          "path": "src/actions/__init__.py",
+          "byte_size": 137,
+          "content_sha256": "9eacc5e70398d228d33d1b6a567e2485b4a2d8623278a586e2c106dc53b9612e"
+        },
+        {
+          "path": "src/actions/no_op_action.py",
+          "byte_size": 1447,
+          "content_sha256": "6a6ffa131ce8b264bade2cf58bca683748a520c748da7f1c048af15c83459851"
+        },
+        {
+          "path": "src/agent_versions/__init__.py",
+          "byte_size": 705,
+          "content_sha256": "14e1985567b84e8ef82d794cec8de5f10eaca76085faca62f5025c3f590dbe39"
+        },
+        {
+          "path": "src/agent_versions/cli.py",
+          "byte_size": 5015,
+          "content_sha256": "f2f0b2cfc69b86559ce86478b265b1433f8c90a0e47c2af43b7cbdcc11d7c506"
+        },
+        {
+          "path": "src/agent_versions/models.py",
+          "byte_size": 5288,
+          "content_sha256": "cc7595f4a7f674a89b3693590e9cc34b8344672947b010454b3a571ac750f4be"
+        },
+        {
+          "path": "src/agent_versions/resolver.py",
+          "byte_size": 29312,
+          "content_sha256": "5a7f5314400009fcaea42c3d160843450d9dc1c4a2e25d2d36f697e0a05fb750"
+        },
+        {
+          "path": "src/agent_versions/store.py",
+          "byte_size": 16035,
+          "content_sha256": "e73f7f0ad04b6a259f1bfa65e5ffb9d830180fadaa0a7f91d6ff73aab258a695"
+        },
+        {
+          "path": "src/apps/__init__.py",
+          "byte_size": 60,
+          "content_sha256": "5860fa047e89948a177d99bcb1dffc04366824339ce6ed6f8693ef3e8cf52e40"
+        },
+        {
+          "path": "src/apps/eval_explorer.py",
+          "byte_size": 15626,
+          "content_sha256": "7d3830dd0aacdde74947bdc780678c6da82bee2f5d983b5e13e6d2ada1c0ee1d"
+        },
+        {
+          "path": "src/benchmarks/__init__.py",
+          "byte_size": 572,
+          "content_sha256": "db7fd9925e1c2d69e02dc792e8b36f0fdb20e758a93f07d46a785ad68d815a48"
+        },
+        {
+          "path": "src/benchmarks/compatibility.py",
+          "byte_size": 6210,
+          "content_sha256": "abbbadacc534e794c64c9316bd139811955c596935e3cd45b7f12acc1b37647f"
+        },
+        {
+          "path": "src/benchmarks/models.py",
+          "byte_size": 6530,
+          "content_sha256": "b4a620c7570e9fa5bcf0d25dee447247a5c28dea141c73fd3fbddb01c60492d5"
+        },
+        {
+          "path": "src/benchmarks/postgres_repository.py",
+          "byte_size": 14583,
+          "content_sha256": "396d06640194cdc797646fd5ab556f53ddd157aa0ba8e13bd4ac46da3d2f24b6"
+        },
+        {
+          "path": "src/evals/__init__.py",
+          "byte_size": 0,
+          "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "src/evals/cli_support.py",
+          "byte_size": 1373,
+          "content_sha256": "6354be404937bc63cc9fe98cd3eb938c938264c2c86890fff294453f024f402b"
+        },
+        {
+          "path": "src/evals/comparisons.py",
+          "byte_size": 21832,
+          "content_sha256": "1228961844a2ea98dc05663216f26aca19b5e8ac9eab4a579d7eab5d45b2f287"
+        },
+        {
+          "path": "src/evals/eval_orchestration.py",
+          "byte_size": 102777,
+          "content_sha256": "f5fced380ae5dd8840348b0ed5360a7fea1ebd9acf57f22fe51755fcf7e1fbee"
+        },
+        {
+          "path": "src/evals/evaluation_profile.py",
+          "byte_size": 20332,
+          "content_sha256": "97a49b64a5b65b06230304bbdac152f44af8f7b2cdd5b3259bf6e885564000f0"
+        },
+        {
+          "path": "src/evals/graders/__init__.py",
+          "byte_size": 542,
+          "content_sha256": "47a348cc4a9ce9db2b434bab3c2ac581a3daa01285e4c0358a9a0bf05915c6ed"
+        },
+        {
+          "path": "src/evals/inspection.py",
+          "byte_size": 14237,
+          "content_sha256": "5fbb52a61708912b4c030664376591a4410bb3af77545acf1e63018a0ebe12fd"
+        },
+        {
+          "path": "src/evals/inspection_cli.py",
+          "byte_size": 5294,
+          "content_sha256": "c073e697c55fdd5e337011d0c45ac65019432b39c3b2599ac6f80622a2a13bee"
+        },
+        {
+          "path": "src/evals/result_integrity.py",
+          "byte_size": 984,
+          "content_sha256": "66f9cd7359324ee088d9b911e9667f1c91d3aab4737f9f36be22025a46f16ae4"
+        },
+        {
+          "path": "src/evals/run_specs.py",
+          "byte_size": 3201,
+          "content_sha256": "66cf711b211e44da35be5cb7a9f76f843f13ba8912c44c423aca275a04fcfdcd"
+        },
+        {
+          "path": "src/evals/run_store.py",
+          "byte_size": 34783,
+          "content_sha256": "5c94d620824f4f410a279cad4b16b67c70619387a2f626379e7f7bf42634bab7"
+        },
+        {
+          "path": "src/evals/scoring.py",
+          "byte_size": 7717,
+          "content_sha256": "1b3c4fdb82c35a747afb7fd4620a8855ea985821f193935a6bbf90763102a441"
+        },
+        {
+          "path": "src/evidence/__init__.py",
+          "byte_size": 230,
+          "content_sha256": "c360fdf99bc80b09f182840f627e960448c5e0baec2a9c57224261635639b7e2"
+        },
+        {
+          "path": "src/evidence/spirax.py",
+          "byte_size": 7228,
+          "content_sha256": "443c3a30f05249e3022dc7f4ce9a1431f385e35e130e5b9b023a0f8eadea7171"
+        },
+        {
+          "path": "src/hydrators/__init__.py",
+          "byte_size": 418,
+          "content_sha256": "ba9ee23802cb5a1aa3417cd96ac22ff722a9f08c17a1bf940705e86a7bdeede1"
+        },
+        {
+          "path": "src/hydrators/finalize_action_hydrator.py",
+          "byte_size": 2135,
+          "content_sha256": "85aad1595aad58fb62ce1c60ab485d3b0d8ee0bb59dd22a0ee9d8e4101c36ebf"
+        },
+        {
+          "path": "src/hydrators/process_to_action_hydrator.py",
+          "byte_size": 2412,
+          "content_sha256": "d889402e4785d478de0048565f21ec9858e823d89774e58bab080a57e734b1fb"
+        },
+        {
+          "path": "src/hydrators/retrieve_to_process_hydrator.py",
+          "byte_size": 5907,
+          "content_sha256": "2b9622e2e9287e0fd2ca673d3ccc729f818c62970ae917e488afd7f52263be4e"
+        },
+        {
+          "path": "src/lifecycle/__init__.py",
+          "byte_size": 647,
+          "content_sha256": "c0a28a14117fc169b2886d67b567b0a963ce5c952263fbabf34a9fc4fd451e1a"
+        },
+        {
+          "path": "src/lifecycle/catalog.py",
+          "byte_size": 25573,
+          "content_sha256": "e64f73f24d488c77959850164360590db368725f9bdcf47ce1ffd2c833bd1c32"
+        },
+        {
+          "path": "src/lifecycle/cli.py",
+          "byte_size": 5925,
+          "content_sha256": "cc4f7bb3f42d201f18f8784b1baf30e0f71797054a2368c601cf31272e53b57b"
+        },
+        {
+          "path": "src/lifecycle/models.py",
+          "byte_size": 3093,
+          "content_sha256": "abb45690139030ca3134c02df3bf6bfcfa5fa9e6b2541fe80977e757b209ded1"
+        },
+        {
+          "path": "src/lifecycle/store.py",
+          "byte_size": 22676,
+          "content_sha256": "2b2a272ef1734365d1e5e31cd989755e7581913733b1356b3432276c3795ec17"
+        },
+        {
+          "path": "src/objects/__init__.py",
+          "byte_size": 425,
+          "content_sha256": "ddfd4f47473338e067afc2439e6cdaf2e34c91bb7f88b2bd09498ed337159076"
+        },
+        {
+          "path": "src/objects/action_object.py",
+          "byte_size": 790,
+          "content_sha256": "83e10371a9cb5d55ab1f0bcc0d4eec25fd574ed1cf1a1fabdef54ce5677d6e4a"
+        },
+        {
+          "path": "src/objects/pipeline_metadata.py",
+          "byte_size": 829,
+          "content_sha256": "c0283396ae4289a9f8fe7d2daa947f33f26931bb7a1767e1d12843b9aadd80ba"
+        },
+        {
+          "path": "src/objects/process_object.py",
+          "byte_size": 7303,
+          "content_sha256": "de936c323c52a4f44d630794aec4cc092a93e559265161a9f3a462d34825d075"
+        },
+        {
+          "path": "src/pipelines/__init__.py",
+          "byte_size": 46,
+          "content_sha256": "d130c302265a5c2d2bdb9dde4072bb22ebfda72ec0de2ad3a473bb51ceec113c"
+        },
+        {
+          "path": "src/pipelines/pipeline_run_from_yaml.py",
+          "byte_size": 9795,
+          "content_sha256": "b75b05358a54003f5e49b01e6ce14b897a61a6464024d80bbf12d18d713cb703"
+        },
+        {
+          "path": "src/processors/common/__init__.py",
+          "byte_size": 191,
+          "content_sha256": "6edde3e1662369e4efef639b776c3a420f8d8fbb2843b6b3421cfe91e91fb673"
+        },
+        {
+          "path": "src/processors/common/structured_outputs.py",
+          "byte_size": 3142,
+          "content_sha256": "e435848e80b97f282e2a32e12259e22ab58beabbd7b5407c9e4ff0486aa59a4c"
+        },
+        {
+          "path": "src/processors/common/temperature_graphs_three_intervals_processor.py",
+          "byte_size": 13378,
+          "content_sha256": "543c52c151c97f8b6e241710ab74d82b7b606c859198d8000c81b887c8c5e0c5"
+        },
+        {
+          "path": "src/processors/v1_3/__init__.py",
+          "byte_size": 600,
+          "content_sha256": "100c5030ad62b103e7a6e3c037f89238c923f36cf3b443981e8533c24202245c"
+        },
+        {
+          "path": "src/processors/v1_3/v1_3_alarm_classification_ai_workflow_processor.py",
+          "byte_size": 31574,
+          "content_sha256": "66b15459e29ed1f1c9632177fc2b28c60aa46e834daacb3a1f26cd2d73465508"
+        },
+        {
+          "path": "src/processors/v1_3/v1_3_temperature_graphs_processor.py",
+          "byte_size": 13971,
+          "content_sha256": "6a49bbedacd652d665fe399408daa518deb3f9de3d43dd2d184393b7ed707e27"
+        },
+        {
+          "path": "src/project_bootstrap/__init__.py",
+          "byte_size": 318,
+          "content_sha256": "5cb661306bcfc0d1cda48e88c0de20375b086e9810d94375d79da5b17120cc43"
+        },
+        {
+          "path": "src/project_bootstrap/cli.py",
+          "byte_size": 2264,
+          "content_sha256": "f97c5f41e2d1483e20a4818f04d93ce14488b65a573d58e008c6e8b1cb203f6d"
+        },
+        {
+          "path": "src/project_bootstrap/models.py",
+          "byte_size": 5571,
+          "content_sha256": "ee2613a493d97e4dcb0b80be15b87cbdd810a00d9929f0c60ee29d4513dea132"
+        },
+        {
+          "path": "src/project_bootstrap/service.py",
+          "byte_size": 16652,
+          "content_sha256": "21d7bc72fdc7944f965c0f17d932237b2d1e0f7813dbca04fc5af1c95d361c5c"
+        },
+        {
+          "path": "src/retrievers/__init__.py",
+          "byte_size": 300,
+          "content_sha256": "f20fddda252374f17c73d7ee5585d51a18770545d974801d27652b8d31c0aaae"
+        },
+        {
+          "path": "src/retrievers/spirax_frozen_evidence_retriever.py",
+          "byte_size": 14412,
+          "content_sha256": "86cf5d5f496df5474e1449a106fe0c64938726e65b45b6ce0d0a91999d1d3ca6"
+        },
+        {
+          "path": "src/storage/__init__.py",
+          "byte_size": 168,
+          "content_sha256": "563bb2dcdb3ad4a27031e1884ee15a350c6e21775581c1469d17eabbe0bac1e6"
+        },
+        {
+          "path": "src/storage/azure_blob.py",
+          "byte_size": 3342,
+          "content_sha256": "750cf38cbd8241b4a060927921c90fad96f38d944000e53724405fb67fae1cb9"
+        },
+        {
+          "path": "uv.lock",
+          "byte_size": 393178,
+          "content_sha256": "01fa9961f7693d194a7df2eb2b1ffe8751a892c8c2005e77ecd0d6b46da52f1c"
+        }
+      ],
+      "content_sha256": "e70c6f8b982f78b218c1a5478df3b3ef8ec58ccbb12cc10a4827792da5e8bebd",
+      "git_revision": "b3e3d135103006911c03ff1b9d647d8609df4396",
+      "source_tree_state": "dirty"
+    }
+  },
+  "work_items": [
+    {
+      "work_item_id": "041902165b866b5aba7da6b3331a621407132340de9c2024ae2fdc229fc34697",
+      "example_id": "250000101|2024-11-03T14:00:32",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "a31b1369ff7e42986d2b372c9d4776a1258d0c722daf28fe35396099f9221668",
+      "example_id": "250000116|2026-03-04T08:01:36",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "ca871cc1e48aeb608509268680c94ca7745251815c4772e513db0661af24a4fb",
+      "example_id": "250000214|2025-10-20T05:25:06",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "b0f6cd46b342e96187cde8cc0f5251f2aee799a4a520bb3cefe3f4e54f79f6c0",
+      "example_id": "250000642|2025-05-07T20:56:38",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "7106ce3fbfa45ff5239a1de22828aeed397f4f07e21a865549e06ff0a0af769c",
+      "example_id": "250001578|2026-01-06T09:34:00",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "44bfd81e49decca084a40ed6a7fc7a3cadf44f67216329c14f9c01d7dc10845e",
+      "example_id": "250001616|2024-04-09T19:33:43",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "12b1bcc30b1769f545afae3388b3e81a5ce112212f909df27f55166051464437",
+      "example_id": "250002155|2024-12-25T17:55:46",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "4eec0477ad3552f6f9fc3f2bbf3421c7f6d8f1bd598eb60f504e34e0b3dfd747",
+      "example_id": "250002410|2025-01-21T20:41:07",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "8f091a959aaf471e21bcfd87f2bde34ab9b1a4225aa0938332fecc35d91ea457",
+      "example_id": "250002765|2026-02-21T02:11:24",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "2dc97e69b6773fcf38f9a35ca2ab9b1028fb7612de781b615b142ab3e25f5fa3",
+      "example_id": "250002804|2026-03-17T02:33:11",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "f11f42985c627ddad6a0e36f93c05f738deb152a1d575b202daeea3f95c28334",
+      "example_id": "250003032|2024-06-27T19:23:30",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "f7fc3b8399a2358c817792bbc232c9929867afdb5994d6c99aa1b89601bde82d",
+      "example_id": "250003575|2026-03-17T06:48:00",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "c60f7f426152acdd4248799c1e08e6238d44a44a0e248a7dc0c11cc0a94837f3",
+      "example_id": "250003602|2026-03-17T02:30:43",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "4177531f09dfe54fc769ae85503333e89fa24f91935f328bd35ef121500b4a81",
+      "example_id": "250003694|2024-10-08T14:37:16",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "9fb4be6b621867e68d3f7aa34b1a7499bcf8fac1b3c0b2c16f2d8a5e66b4737d",
+      "example_id": "250003740|2026-03-17T04:42:58",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "cae0820f4e757db952286bd94b29e1f21b19df4ce0537f0021b084847d1d29dd",
+      "example_id": "250003873|2026-03-08T13:24:10",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "daa50ccd6107aae7795f7a42de136fe83b296c2b92490779c4172e4c65880ecf",
+      "example_id": "250003921|2026-03-17T06:53:01",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "58cf06aca7ba62a4c9c0c92f81e7176e59ab073cce172d76eb3288361b7c9eef",
+      "example_id": "250003969|2026-03-09T00:13:56",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "ce51b65ae75fa47bbec5f17b57a831d1a688d02c7d8948f95adadf998cf6a348",
+      "example_id": "250004137|2026-02-24T08:29:14",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "a80db23b7c0bbcae150e1a896dd6c9114689297999d3acbac3801cd993791337",
+      "example_id": "250004177|2026-02-07T00:14:51",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "81deb99906535b53d547121fec76cad7e89c8bea31f6774c33167e8560e68460",
+      "example_id": "250004218|2025-10-30T12:59:43",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "344d4b029f28cf4449e3ace22cc3b48b1d3d1aec112128d6b7e61f8bd0ac1fb2",
+      "example_id": "250004325|2025-04-10T17:11:11",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "6ce647a620e9d92765789e3685fac3acf390af45995e4df31ac7d1f2aa63ab96",
+      "example_id": "250004348|2026-01-15T02:24:28",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "a24e755f6c51bd78a67a63fe77d50f8905fff90afaa32d795c6256bbe8f11565",
+      "example_id": "250004418|2026-03-17T04:42:04",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "a0de2de01007489deb140a61b3b257077555c37fc18ba079970bac3e8aa61aa7",
+      "example_id": "250004437|2026-01-28T18:48:06",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "ea86f698ddb8d4239f26570b3e3bcf663eece317eec6bc586c41e571e313788a",
+      "example_id": "250004743|2024-08-08T20:38:12",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "6ef9ecaa0ff7a480dcdf81b4937c65eaf0b511a971a348e55a63cc689cab9fd2",
+      "example_id": "250004859|2026-03-17T11:09:22",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "dcd62708703cc21360c669112072640993b23a431aaa8129b8923e8292b26fc5",
+      "example_id": "250004862|2026-03-17T11:08:05",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "69f0470f3ce1a59c2f0cc6fff200b2389ffb07952a6d8af204cf42e7889c65b5",
+      "example_id": "250004871|2026-03-17T11:07:54",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "080414cf6250bb104b8d0b72d2b8f8e73c618479bce58f2a7ab05b229112fddb",
+      "example_id": "250004877|2024-08-15T08:48:21",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "eabd40747e2455f7fcd1dc7bc2d4d0a046541c84049249d187b2cd2f529badc0",
+      "example_id": "250005067|2026-01-19T12:48:30",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "d157fd9a5a72d6f53f9ee783f458ed415bd0bbde496c6a45a2caa3629daa48d3",
+      "example_id": "250005150|2025-10-20T01:34:20",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "f132b8146e27c8065a4eb41229a02c3b6dd82ddc5392bdb4f05463ebe1d52184",
+      "example_id": "250005354|2026-03-17T11:06:43",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "3c0814404d5be4d28586a380877832c7648f707423f15304b35a33677ef21917",
+      "example_id": "250005404|2026-03-13T11:55:27",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "aae8ec964f4ac0aa603afc47195b2fffc47442f6d90a0370f9944ed57acc2e35",
+      "example_id": "250005500|2026-03-17T06:47:26",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "6b90ecc7d111379caf109a35bc5edd64272ccb4a761f6df879546ba245a6899d",
+      "example_id": "250005501|2024-09-18T17:07:25",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "9131925bc0390f18bc3d5dd8a6f6be7ea5b4cab73016efeca00901e04d779de4",
+      "example_id": "250005577|2025-01-24T14:25:40",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "c89848e542afece1dea75e34c38da8b03d92a3e893716a77869f0233d830cd7c",
+      "example_id": "250005605|2025-10-03T01:08:35",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "4f6a3b8bc97840e46ba680557c039cd83e3ca5603567ef40b7486106be94bddc",
+      "example_id": "250005653|2025-10-25T10:09:11",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "61aeb3dfc61e8a8d3f762e2b348c746409631140756b6c08b266d13744cf1cee",
+      "example_id": "250005692|2025-10-31T01:39:54",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "586999fef47262cb550103397af853c3213fb38a6144530394fbce901a82ca46",
+      "example_id": "250005696|2026-01-13T05:36:58",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "3566712fe42e09b63da655bb156ec1994b68b62ca4529f05d529bf29b617817e",
+      "example_id": "250005732|2026-02-17T18:22:10",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "4495f7c32b0f69e92ed9340cfcde375b578ffd83639f75866ad751a14c2dfacb",
+      "example_id": "250005883|2025-11-26T17:38:20",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "9c6d326dd4ba364156e5b5351b1f54c07400c53452c150782caeb5e17af7cd27",
+      "example_id": "260000115|2026-03-07T22:07:58",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "4ddd259b6619816a8f2cddd17d443072386096b1a83bfed8446033521114e272",
+      "example_id": "260000116|2026-01-21T20:14:04",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "335775ff2443e8b75a1df9e0da6f9a1e051c363d57fa5c4be949f7b86ee6ef66",
+      "example_id": "260000143|2026-03-11T01:39:27",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "8ae6296870fed28215c0562202ad8cb7bdb376364c07263685136cd975791b6a",
+      "example_id": "260000167|2025-03-02T14:55:43",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "e7133be9fe93b1ef028895151924bb35dc6a1aca143c651bd4c4ff94165b0ba6",
+      "example_id": "260000170|2026-02-25T01:43:53",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "c6d48c11c43760473f84d618bec1d61ff46ad00d75d71b266a2656935496b181",
+      "example_id": "260000292|2026-03-17T09:02:42",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "e87fa0836ae2e24ca0d4a2304eec0eecca7f18f0fd9495085b3c1d754a9f0584",
+      "example_id": "260000374|2025-04-20T07:04:26",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "3fdc7b893982eb1784874fc0981ba95b85b5a5ec3c74e8150e8726c76c17e7cd",
+      "example_id": "260000478|2025-10-15T18:45:05",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "5295e49ac253c2ede4839132f8507ddfca01b36273a20803a75810d4f6809ae4",
+      "example_id": "260000499|2025-03-03T10:50:22",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "4e863959bd0b7e2ca5c0181d53b030be9e8d41b5a8282c1d7130c43a63d45ed4",
+      "example_id": "260000510|2025-10-09T23:50:11",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "abd034f65b179f99410e3d4ed7be754b2548f85c8c161a756e3df988c43bd7dd",
+      "example_id": "260000701|2026-03-16T17:55:13",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "d6ac3fa213ca946fd9318d931d8a52d6726bb8e6d0ce32d6fb3eeebc78797f9d",
+      "example_id": "260000953|2026-02-18T20:16:00",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "255efa579731d003f4aec3607e3340270bf817cb80ed46b46e414b0641f1ad01",
+      "example_id": "260001111|2026-03-17T02:35:35",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "0e61c62de72eed75c3903b7ca194a07f76da9d487c40694f88214f463ad4bbf5",
+      "example_id": "260001345|2026-01-30T02:44:00",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "7bd6b4f9f41eb851c96465440db2c6dc9f14a6a7fb05a46f16f6867607a9cbde",
+      "example_id": "260001377|2026-03-03T06:04:25",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "bbce24d9e4e8b5e1b37f503f1c482cab3691c652e6892520829d317a9dc2334b",
+      "example_id": "260001438|2026-03-08T00:24:00",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "7f9ed0895513e226b59799a1c4a7a6227bc86983aea4279ea3c191a01bc12adb",
+      "example_id": "260001535|2025-12-09T15:37:41",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "995368317dadcfc7c8775c35d911812afd28fff70efc2cce4e6816e0eb87942e",
+      "example_id": "260001642|2026-03-17T11:12:07",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "fbec4e1ef8259d36430f37d7328d920e8399bdd08ccee46cd862083333a88445",
+      "example_id": "260001742|2025-10-17T20:23:09",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "52b3df0163525227ca8b138cbd3ceac2757839fd707fb7f54c7cdf425313349c",
+      "example_id": "260002518|2025-11-20T20:16:19",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "94967935d260031324f80a3b0e85bc20e74a22ebd3d170bd9078b6986f44d1bf",
+      "example_id": "260002680|2026-03-12T14:21:29",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "432e0a0d4ea8c69fd7d5a151b92c2aa3379d1f728fb66e3a80ed93537a4bc51c",
+      "example_id": "260002782|2026-02-20T17:32:41",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "29de1db0ecfdcc4693e08bac188c32344d571e65c53fef3872cf8e7e1c6b5c91",
+      "example_id": "260002797|2026-02-08T06:26:07",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "bc2a0d00440c7688e4e483c3d3d67f2265b19d43378dc8b9940cbc74743a696c",
+      "example_id": "260002816|2026-03-17T11:08:17",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "dcc157a4237da6783e227990871ea6bd8e9dc96b615565275c0025657db03b74",
+      "example_id": "260003042|2026-03-17T04:39:09",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "af9656c2259d9a9e6679d52b18f3a7991f4500f8a3769a5e0a6d384c149253ed",
+      "example_id": "260003441|2026-03-17T08:58:12",
+      "repetition_index": 1
+    },
+    {
+      "work_item_id": "f6ecfdc83edd2fc2060012471c6a7467b66ee3e9af08f9065c8043ffb3304c3a",
+      "example_id": "260003552|2026-03-17T04:38:26",
+      "repetition_index": 1
+    }
+  ],
+  "created_at_utc": "2026-07-22T23:36:39.296370+00:00",
+  "eval_contract": {
+    "schema_version": 1,
+    "run": {
+      "schema_version": 1,
+      "label_schemas": [
+        {
+          "schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+          "schema_key": "spirax-steam-trap-label",
+          "version": "v1",
+          "content_sha256": "b3929d13a89f4dab79f986e615d1e8315762af4dc0854f37d48c6620ae336239"
+        }
+      ],
+      "dimensions": {
+        "benchmark": {
+          "project_key": "spirax-pulse",
+          "name": "Phase 1 Benchmark",
+          "key": "phase-1-benchmark-3fb7f544",
+          "version_id": "b8667849-57a4-4a16-b3ca-4db7cfa98da8",
+          "version": 1,
+          "published_at": "2026-07-17T16:48:04.237409+00:00",
+          "source_state_sha256": "f3ae4b8824b73df17ded93100d0ff7cff832162de4aff76dab404768fcc5ae7d",
+          "published_contract_schema_version": 2,
+          "source": "azure_postgres_entra"
+        },
+        "evaluation_profile": {
+          "id": "spirax-failure-evaluation",
+          "version": 1,
+          "schema_version": 1,
+          "path": "evaluation_configs/spirax-failure-evaluation.eval.yaml",
+          "content_sha256": "21247fd12b0e7c07919d82fb280e6ef8ea43d8a6847486212338cd5d5a821609",
+          "grader_set_sha256": "1705b20c56a1bb41d7d549f8842c57c275a934994665d72e2bcf5cdf273ca612",
+          "slice_definition_sha256": "adc4c85a51051dad17445a981144cbbddb920221db4cb0543a51f65e89149e33"
+        },
+        "agent": {
+          "agent_version_id": "av_926f17ef1b0e35a8da72b272",
+          "manifest_sha256": "926f17ef1b0e35a8da72b2729dd422723da6341f1b7a32d9615cef68c2d57675",
+          "manifest_schema_version": 1,
+          "lifecycle_state_at_run": "candidate",
+          "source_tree_state": "dirty",
+          "resolved_graph_sha256": "bfdc7c12f22e088e76fa9f70134410375b4c6381b27e86965da695c2d8a38cc1",
+          "evidence_recipe_sha256": "5c38faf7a0211e04053b44fb59dca88f0a0ae084925a203f8a16d42dcaf70551",
+          "model_policy_sha256": "e454cbe1aad5932483f2dfbf6fca520af20b0c4ac6462d5d2f38d8aca4d67057"
+        },
+        "pipeline": {
+          "path": "pipeline_configs/v1_3.ppln",
+          "content_sha256": "7997e160ff993889c8645f583ad43460a761535c038e6620f982ad300c0eb3d5"
+        },
+        "model": {
+          "provider": "azure",
+          "id": "azure:gpt-5.6-luna",
+          "api": "openai_responses",
+          "reasoning_effort": "low",
+          "pricing": null
+        },
+        "scoring": {
+          "grader_set_sha256": "1705b20c56a1bb41d7d549f8842c57c275a934994665d72e2bcf5cdf273ca612",
+          "slice_definition_sha256": "adc4c85a51051dad17445a981144cbbddb920221db4cb0543a51f65e89149e33",
+          "resolved_contract_sha256": "af0400005344bec540c6afae181ff45471001faea0fd1110a04e0d66c9985d93"
+        },
+        "execution": {
+          "runtime": "threaded",
+          "max_workers": 4,
+          "error_action": "continue",
+          "ai_execution_policies": [
+            {
+              "processor": "V1_3AlarmClassificationAIWorkflowProcessor",
+              "model": "azure:gpt-5.6-luna",
+              "reasoning_effort": "low",
+              "timeout_seconds_per_attempt": 120,
+              "transport_attempts": 3,
+              "output_retries": 0
+            }
+          ]
+        },
+        "configuration": {},
+        "source": {
+          "content_manifest_sha256": "e70c6f8b982f78b218c1a5478df3b3ef8ec58ccbb12cc10a4827792da5e8bebd",
+          "git_revision": "b3e3d135103006911c03ff1b9d647d8609df4396",
+          "tree_state": "dirty"
+        },
+        "evidence": {
+          "benchmark_source_state_sha256": "f3ae4b8824b73df17ded93100d0ff7cff832162de4aff76dab404768fcc5ae7d",
+          "source": "azure_blob"
+        },
+        "harness": {
+          "execution_contract_version": 1,
+          "eval_schema_version": 1
+        }
+      },
+      "graders": [
+        {
+          "id": "core.exact",
+          "version": 1,
+          "config": {}
+        },
+        {
+          "id": "core.exact",
+          "version": 1,
+          "config": {}
+        }
+      ],
+      "slices": [
+        {
+          "key": "healthy",
+          "label": "Healthy",
+          "where": {
+            "equals": {
+              "path": [
+                "benchmark",
+                "labels",
+                "classification"
+              ],
+              "value": "Healthy"
+            }
+          }
+        },
+        {
+          "key": "expected-failure",
+          "label": "Expected Failure",
+          "where": {
+            "equals": {
+              "path": [
+                "benchmark",
+                "labels",
+                "classification"
+              ],
+              "value": "Failure"
+            }
+          }
+        },
+        {
+          "key": "open-failure",
+          "label": "Open Failure",
+          "where": {
+            "equals": {
+              "path": [
+                "benchmark",
+                "labels",
+                "root_cause"
+              ],
+              "value": "Open Failure"
+            }
+          }
+        },
+        {
+          "key": "closed-failure",
+          "label": "Closed Failure",
+          "where": {
+            "equals": {
+              "path": [
+                "benchmark",
+                "labels",
+                "root_cause"
+              ],
+              "value": "Closed Failure"
+            }
+          }
+        },
+        {
+          "key": "unknown-failure",
+          "label": "Unknown Failure",
+          "where": {
+            "equals": {
+              "path": [
+                "benchmark",
+                "labels",
+                "root_cause"
+              ],
+              "value": "Unknown"
+            }
+          }
+        }
+      ],
+      "slice_counts": {
+        "healthy": 26,
+        "expected-failure": 44,
+        "open-failure": 12,
+        "closed-failure": 27,
+        "unknown-failure": 5
+      },
+      "scope": "all",
+      "runs_per_example": 1,
+      "progress_interval_seconds": 30.0,
+      "run_id": "eval_c562a9ee02502ec11c5031eb",
+      "run_spec_sha256": "c562a9ee02502ec11c5031eb8227738e7ab5480aa677d1fbdffae33c0ea89f3c",
+      "run_created_at_utc": "2026-07-22T23:36:39.296370+00:00",
+      "agent_version_resolver_contract_version": 1,
+      "selected_example_scope_sha256": "40650af28a7d5bf5840fe070e824bdfdf54fc4e49c7cbf4891c1da607c00e52f"
+    },
+    "examples": [
+      {
+        "example_id": "250000101|2024-11-03T14:00:32",
+        "unit_id": "250000101",
+        "decision_timestamp": "2024-11-03T14:00:32+00:00",
+        "source_snapshot_id": "spirax_src_27a61fb99fbfb12a",
+        "raw_snapshot_content_sha256": "d09af0bd7f84b8fb23b765a0a1069ea46f71cdfdc9e274c744c7a0b74bbf6e76",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2023-11-04T14:00:32+00:00",
+        "raw_window_end": "2024-11-03T14:00:32+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_27a61fb99fbfb12a/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 332,
+            "content_sha256": "6d9271132038c977b6694a9d66d43d5c311fd49d9909d9587a74da7c7bac1d32"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_27a61fb99fbfb12a/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 468545,
+            "content_sha256": "d0490a6b5149bcc18a0a764f19c63cf0d869ede3f27be17748b41fa872cfb8ac"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250000101",
+          "organization": "Invista Inc. - Maitland, ON",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250000116|2026-03-04T08:01:36",
+        "unit_id": "250000116",
+        "decision_timestamp": "2026-03-04T08:01:36+00:00",
+        "source_snapshot_id": "spirax_src_104b22cf39c2b357",
+        "raw_snapshot_content_sha256": "736bf9a67295a45ec85b5b370e79f341ff968af98d76f306eb7e677a716b9eff",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-04T08:01:36+00:00",
+        "raw_window_end": "2026-03-04T08:01:36+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_104b22cf39c2b357/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 954,
+            "content_sha256": "973572537f3c1ef70435ed629cd4212e6a1bc1f4d92f32e1915a566909d74e1a"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_104b22cf39c2b357/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 660560,
+            "content_sha256": "d6e7e6109481cf299b46d4707480228131844c9df5eb58aa08b8ddff68d0096d"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250000116",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250000214|2025-10-20T05:25:06",
+        "unit_id": "250000214",
+        "decision_timestamp": "2025-10-20T05:25:06+00:00",
+        "source_snapshot_id": "spirax_src_68347e7deb55df4f",
+        "raw_snapshot_content_sha256": "8b576d74b59894e8afe78bc6f42a6f8c75f1f9c51c8fbaf81d2b089fb2784f79",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-10-20T05:25:06+00:00",
+        "raw_window_end": "2025-10-20T05:25:06+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_68347e7deb55df4f/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1206,
+            "content_sha256": "ad62a342ae3a2e396cb7c4f4ab60b7ed808da92d75626b65aa530ed72f6fe21e"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_68347e7deb55df4f/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 712487,
+            "content_sha256": "def8833bce9ae0b48ae3663860a3dafa64c17a99f82467f46bb01321d9320554"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250000214",
+          "organization": "Invista Inc. - Maitland, ON",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250000642|2025-05-07T20:56:38",
+        "unit_id": "250000642",
+        "decision_timestamp": "2025-05-07T20:56:38+00:00",
+        "source_snapshot_id": "spirax_src_fd8347470591ccf4",
+        "raw_snapshot_content_sha256": "67b99eac57522e9cd124f29873b1500eb4618eda9e18e053c1c70cbf70941230",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-05-07T20:56:38+00:00",
+        "raw_window_end": "2025-05-07T20:56:38+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fd8347470591ccf4/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 4501,
+            "content_sha256": "cc3e6d359c78cb4cbd6edcc78b36652d2866af7830bbe3a090c7f74284cdca50"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fd8347470591ccf4/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 684368,
+            "content_sha256": "2d5ea3d2f53a83e5dc5550ed045e8b0ae4ee13a649227a29f862a0b0a522a03f"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250000642",
+          "organization": "Mohawk Medbuy -old",
+          "steam_trap_type": "Inverted Bucket",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250001578|2026-01-06T09:34:00",
+        "unit_id": "250001578",
+        "decision_timestamp": "2026-01-06T09:34:00+00:00",
+        "source_snapshot_id": "spirax_src_3cc45240293007a2",
+        "raw_snapshot_content_sha256": "7cb5236354c3263d618b46ea030643ddb366405c0478a5db20cc523a683a4413",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-01-06T09:34:00+00:00",
+        "raw_window_end": "2026-01-06T09:34:00+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_3cc45240293007a2/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 549,
+            "content_sha256": "387f46b89d80c871fd828e31bbc93b9aaeb466d988603a68ec202602f986ef35"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_3cc45240293007a2/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 600864,
+            "content_sha256": "22b0cda317812533b959ef3c494758c12ed63cb49a972e6d63a1918a5676cbfe"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Open Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "open-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250001578",
+          "steam_trap_type": "None",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250001616|2024-04-09T19:33:43",
+        "unit_id": "250001616",
+        "decision_timestamp": "2024-04-09T19:33:43+00:00",
+        "source_snapshot_id": "spirax_src_4ef781c129dd78bc",
+        "raw_snapshot_content_sha256": "8c0365ecdcf6e12474578d97e3a5d117e119b75e3520c3b46459702c46a10915",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2023-04-10T19:33:43+00:00",
+        "raw_window_end": "2024-04-09T19:33:43+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4ef781c129dd78bc/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 2061,
+            "content_sha256": "ea86979b9b38510528272e1f9242d5241a4e1d47fd725d3df44894a6a64523c3"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4ef781c129dd78bc/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 553531,
+            "content_sha256": "f7aa9edfea5bdba8c013643f8ee39e10a369e534c549eb9e311464ddd3b2409c"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250001616",
+          "organization": "Resilience Biotechnologies",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250002155|2024-12-25T17:55:46",
+        "unit_id": "250002155",
+        "decision_timestamp": "2024-12-25T17:55:46+00:00",
+        "source_snapshot_id": "spirax_src_74406be36368299f",
+        "raw_snapshot_content_sha256": "91f87068e23b09a32c5ee5c1f15c147c5111c5147224a7430a88379ebbd2fbc5",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2023-12-26T17:55:46+00:00",
+        "raw_window_end": "2024-12-25T17:55:46+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_74406be36368299f/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 907,
+            "content_sha256": "c3c1f5bd2d0f2837c47fb69eacde4bbefe88c389ec7723689526aa071cc74ad2"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_74406be36368299f/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 683622,
+            "content_sha256": "148e5c849e09535c5e7a8f8930cd85512cb4bf4377a2ee226646dd487f1d031b"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250002155",
+          "organization": "Cameco Inc.",
+          "steam_trap_type": "TD",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250002410|2025-01-21T20:41:07",
+        "unit_id": "250002410",
+        "decision_timestamp": "2025-01-21T20:41:07+00:00",
+        "source_snapshot_id": "spirax_src_ef3aebae2bb32a6f",
+        "raw_snapshot_content_sha256": "d260d5d69c2f37efebeb0c3ce542c0a37fa2fd86d884f05eebb6cb3aece9c1f4",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-01-22T20:41:07+00:00",
+        "raw_window_end": "2025-01-21T20:41:07+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_ef3aebae2bb32a6f/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1416,
+            "content_sha256": "a7d22c5a48b079b7ef94659159a8885b76705e116972ab777fa964d1ce113ccc"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_ef3aebae2bb32a6f/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 711797,
+            "content_sha256": "8ff64180010db66216b35bbf1265d8bbffaafdacca800f81856d9ee54e1d0044"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Unknown",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "unknown-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250002410",
+          "organization": "Resilience Biotechnologies",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250002765|2026-02-21T02:11:24",
+        "unit_id": "250002765",
+        "decision_timestamp": "2026-02-21T02:11:24+00:00",
+        "source_snapshot_id": "spirax_src_a52cefa12b724d95",
+        "raw_snapshot_content_sha256": "fbee2b3bdd9e26106faf28f14265978e368c9ca969fd8361e7efaaf31a36df6a",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-02-21T02:11:24+00:00",
+        "raw_window_end": "2026-02-21T02:11:24+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a52cefa12b724d95/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1639,
+            "content_sha256": "47aefa0a6df45beba3205967482f821e8f219546dd10298d89a0cd6c75ce64dc"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a52cefa12b724d95/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 543767,
+            "content_sha256": "1d55925b8296cba3f10be2e15746cd69ce6fcc29f45c75ccd5d3d72ee6759a79"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Open Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "open-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250002765",
+          "steam_trap_type": "90BH",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250002804|2026-03-17T02:33:11",
+        "unit_id": "250002804",
+        "decision_timestamp": "2026-03-17T02:33:11+00:00",
+        "source_snapshot_id": "spirax_src_4ef5b97649eb6442",
+        "raw_snapshot_content_sha256": "21f3273c0c16f0aed691476ae45691d576660402c6a7849a83a87d10760a6da3",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T02:33:11+00:00",
+        "raw_window_end": "2026-03-17T02:33:11+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4ef5b97649eb6442/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 8795,
+            "content_sha256": "4f8134cfef59466a43a9959c8ab409e7ada249ca25b16c6785bbdf7b8fb43fa5"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4ef5b97649eb6442/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 627218,
+            "content_sha256": "916b39326bc2b15fa12003590888084acee85e24ce87de1eecb6e182dd2f2ba8"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250002804",
+          "steam_trap_type": "APT 14",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250003032|2024-06-27T19:23:30",
+        "unit_id": "250003032",
+        "decision_timestamp": "2024-06-27T19:23:30+00:00",
+        "source_snapshot_id": "spirax_src_d3e55d6bd6b9f6d1",
+        "raw_snapshot_content_sha256": "1b25a18956554430346215df3e392878ac0241570bac22a11dc3c4ea42e7df85",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2023-06-28T19:23:30+00:00",
+        "raw_window_end": "2024-06-27T19:23:30+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_d3e55d6bd6b9f6d1/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 688,
+            "content_sha256": "b001dac5bb357187b6ec1d9fd62663351d01a969be9ba1216b8d252cfb3a37db"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_d3e55d6bd6b9f6d1/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 747683,
+            "content_sha256": "f8f84601fe327c8436c0471090d6e4f920ae3320f0cafcdd5150cf72fb0247ac"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250003032",
+          "organization": "London Health Science Centre",
+          "steam_trap_type": "Inverted Bucket",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250003575|2026-03-17T06:48:00",
+        "unit_id": "250003575",
+        "decision_timestamp": "2026-03-17T06:48:00+00:00",
+        "source_snapshot_id": "spirax_src_4269da812af95540",
+        "raw_snapshot_content_sha256": "baed778644ab276eb17161baba47779d5ce7b6a025c92903c3008eeeba34f6f3",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T06:48:00+00:00",
+        "raw_window_end": "2026-03-17T06:48:00+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4269da812af95540/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 6518,
+            "content_sha256": "6face286a74298124c9319bb142bf812d752c740d73ffbc0e7eb1d4fd067ae85"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4269da812af95540/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 791967,
+            "content_sha256": "304206a76bb2e56b5d0d2e87e0c95a2d6d888e43bc6a6eb8b9469432bbf09d2d"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250003575",
+          "steam_trap_type": "Inverted Bucket",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250003602|2026-03-17T02:30:43",
+        "unit_id": "250003602",
+        "decision_timestamp": "2026-03-17T02:30:43+00:00",
+        "source_snapshot_id": "spirax_src_fba4fb9647369756",
+        "raw_snapshot_content_sha256": "f42f3c8a476ecec117a5768999c7615b6d19de974cacb94b918d5f4c2318ebb5",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T02:30:43+00:00",
+        "raw_window_end": "2026-03-17T02:30:43+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fba4fb9647369756/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1395,
+            "content_sha256": "39d696246450f10fe2d1ae877374fb1956d5db9cfe99dadd82ccf519ec7ca8af"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fba4fb9647369756/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 707517,
+            "content_sha256": "d2d200efffbecd9bfbd563db11a3116f8a97082915b7a2373bdb7bbe011222a2"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250003602",
+          "organization": "UHN",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250003694|2024-10-08T14:37:16",
+        "unit_id": "250003694",
+        "decision_timestamp": "2024-10-08T14:37:16+00:00",
+        "source_snapshot_id": "spirax_src_98e1e8a55a3f08dd",
+        "raw_snapshot_content_sha256": "89600ebc73ce3d16c9ae8501ef03279f57edbd9c139def4d95c0dd712be0b941",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2023-10-09T14:37:16+00:00",
+        "raw_window_end": "2024-10-08T14:37:16+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_98e1e8a55a3f08dd/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 942,
+            "content_sha256": "f8a6792e7d991b6d68b26a4d89ffba2105293a4b27d1da72d79159f55a2960ae"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_98e1e8a55a3f08dd/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 719831,
+            "content_sha256": "9f5e52ba615a95607d96b18dc32323b0263cf3d37de95ba078df53d624ae8a8a"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250003694",
+          "organization": "UHN",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250003740|2026-03-17T04:42:58",
+        "unit_id": "250003740",
+        "decision_timestamp": "2026-03-17T04:42:58+00:00",
+        "source_snapshot_id": "spirax_src_3b7d7c4cf4c9d38a",
+        "raw_snapshot_content_sha256": "2f77793ef45d1f0b9ffe8841d9798ebc8d885c83273ce0055c479beb5c665f3b",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T04:42:58+00:00",
+        "raw_window_end": "2026-03-17T04:42:58+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_3b7d7c4cf4c9d38a/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 5069,
+            "content_sha256": "42088f453d61a00bc86c6674fc683e78863e766b27a2188ca3828dd4c15ee3b2"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_3b7d7c4cf4c9d38a/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 712168,
+            "content_sha256": "f7323fd4ffa0fee18b80a9e142c52a3485af933d50d2fa8ddca480be9cd4f3c3"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250003740",
+          "organization": "St. Jerome Hospital",
+          "steam_trap_type": "Balanced Pressure",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250003873|2026-03-08T13:24:10",
+        "unit_id": "250003873",
+        "decision_timestamp": "2026-03-08T13:24:10+00:00",
+        "source_snapshot_id": "spirax_src_6f078d3bada018af",
+        "raw_snapshot_content_sha256": "45ff542c48983a140b1992052c7a1639386648595e7a9e6d3b372b89fc97ee66",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-08T13:24:10+00:00",
+        "raw_window_end": "2026-03-08T13:24:10+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6f078d3bada018af/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 2035,
+            "content_sha256": "7a5ce70394f2bb4952e82a7e6a5221aa555261a38f004e4c8100e74b73cb060c"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6f078d3bada018af/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 690806,
+            "content_sha256": "916416f9612713508127c0affd6f0b8b8829fa094b2ec23f1cebab40c6d599d4"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250003873",
+          "steam_trap_type": "N/A",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250003921|2026-03-17T06:53:01",
+        "unit_id": "250003921",
+        "decision_timestamp": "2026-03-17T06:53:01+00:00",
+        "source_snapshot_id": "spirax_src_113d469231f997fb",
+        "raw_snapshot_content_sha256": "290c204270504959486714786976471b2d8ede0e7fa3b18a4b9393c9ffd21ade",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T06:53:01+00:00",
+        "raw_window_end": "2026-03-17T06:53:01+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_113d469231f997fb/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 3340,
+            "content_sha256": "4d26ad22a62d8c9d84aaf7fb684e1579c8bb6400141cb2fd331e161d3297cb20"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_113d469231f997fb/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 714607,
+            "content_sha256": "f25752ceca12bb2a8f12133f71d0a22dc8a13be2c831488abe3ebf1033aa66e1"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250003921",
+          "steam_trap_type": "N/A",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250003969|2026-03-09T00:13:56",
+        "unit_id": "250003969",
+        "decision_timestamp": "2026-03-09T00:13:56+00:00",
+        "source_snapshot_id": "spirax_src_c053b54fbac62f83",
+        "raw_snapshot_content_sha256": "fce21ab4f9708d77ac9a51574dfe10c69c66e5acef57ba41f6640060ae884efc",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-09T00:13:56+00:00",
+        "raw_window_end": "2026-03-09T00:13:56+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c053b54fbac62f83/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 331,
+            "content_sha256": "ec101346c0ada06cd23ba374c2e51ff6801c96baa1e198da58b00bad4a8693d6"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c053b54fbac62f83/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 608969,
+            "content_sha256": "36b71764c11256914a8f5720b8ab0790f5b6e99f617db2ffc78ed439368e0b17"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Unknown",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "unknown-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250003969",
+          "organization": "Gay Lea Foods",
+          "steam_trap_type": "N/A",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250004137|2026-02-24T08:29:14",
+        "unit_id": "250004137",
+        "decision_timestamp": "2026-02-24T08:29:14+00:00",
+        "source_snapshot_id": "spirax_src_05c02737611b75d8",
+        "raw_snapshot_content_sha256": "1c83ae3da18370679100210b868783581ab69aa6b239ef0071972ff4f0e4d6d2",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-02-24T08:29:14+00:00",
+        "raw_window_end": "2026-02-24T08:29:14+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_05c02737611b75d8/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 540,
+            "content_sha256": "16712c17103f7d08e3f6b9a89b03d8f21270b3b5df3b6be2f76baed671136e05"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_05c02737611b75d8/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 711137,
+            "content_sha256": "f7beb27dc62e9a136f2142e2f869cb95ac6216d514eb20488952f5b498bb91ed"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Open Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "open-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250004137",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250004177|2026-02-07T00:14:51",
+        "unit_id": "250004177",
+        "decision_timestamp": "2026-02-07T00:14:51+00:00",
+        "source_snapshot_id": "spirax_src_c479c90239315ee1",
+        "raw_snapshot_content_sha256": "006d55f174a91585676979d16e36156492b93362d495364e06aeda1133e6ec98",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-02-07T00:14:51+00:00",
+        "raw_window_end": "2026-02-07T00:14:51+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c479c90239315ee1/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1127,
+            "content_sha256": "6964834e9878b3fe5d5973c72ea981c3b8d2c3849f3a3b624f13abe28fc456ab"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c479c90239315ee1/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 695518,
+            "content_sha256": "2632e93f25be2942aa148f5546b101d491c7565cdb68f251a39747d1e44ed8f1"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250004177",
+          "steam_trap_type": "TD",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250004218|2025-10-30T12:59:43",
+        "unit_id": "250004218",
+        "decision_timestamp": "2025-10-30T12:59:43+00:00",
+        "source_snapshot_id": "spirax_src_6f107c707ae723ca",
+        "raw_snapshot_content_sha256": "f9c201dbdadada28cdb6af16fe9af6d3360f190dd6ae34ea2a0967b62a4bc8b3",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-10-30T12:59:43+00:00",
+        "raw_window_end": "2025-10-30T12:59:43+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6f107c707ae723ca/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1087,
+            "content_sha256": "542c3310cc12e1a44ed403f8eff356a90d89e4848a83db0a177a5889d1b8a438"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6f107c707ae723ca/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 569114,
+            "content_sha256": "8aa692c8a3ca7b8ca22232812c2a080fbf7eacb4f5a36b67cd4b8baa21da3016"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250004218",
+          "steam_trap_type": "Ball float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250004325|2025-04-10T17:11:11",
+        "unit_id": "250004325",
+        "decision_timestamp": "2025-04-10T17:11:11+00:00",
+        "source_snapshot_id": "spirax_src_816a7ba3df42097e",
+        "raw_snapshot_content_sha256": "f8164bd31da0933cb532bcdca05f4e4271ae6d66bf015a85c6c67f6c15fc25a2",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-04-10T17:11:11+00:00",
+        "raw_window_end": "2025-04-10T17:11:11+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_816a7ba3df42097e/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 750,
+            "content_sha256": "7d264befcdf6de216c4198aa5266054ad6ffc4640c7930403bfc2d8dfff07ed3"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_816a7ba3df42097e/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 457719,
+            "content_sha256": "c75f87419a95c2ec1328dbe9a7a5919b30432b3c1394926cc28a58879786988e"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250004325",
+          "organization": "Laval University",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250004348|2026-01-15T02:24:28",
+        "unit_id": "250004348",
+        "decision_timestamp": "2026-01-15T02:24:28+00:00",
+        "source_snapshot_id": "spirax_src_c2f54490783f01c1",
+        "raw_snapshot_content_sha256": "f2998e0ada2f028e827a1de665aeef7a45ec7203e88917665b35adb2b0339fcf",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-01-15T02:24:28+00:00",
+        "raw_window_end": "2026-01-15T02:24:28+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c2f54490783f01c1/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 4811,
+            "content_sha256": "7655a9f2ae1772529ca8315e92fe69fae8979628d1e7a959d64e7cecb08bd403"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c2f54490783f01c1/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 547802,
+            "content_sha256": "dabe43fef2da437cafe6fe1f30a548bae2c69ee8bb7872353d368d301644a975"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250004348",
+          "steam_trap_type": "TD",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250004418|2026-03-17T04:42:04",
+        "unit_id": "250004418",
+        "decision_timestamp": "2026-03-17T04:42:04+00:00",
+        "source_snapshot_id": "spirax_src_7da6fcb7fecc9534",
+        "raw_snapshot_content_sha256": "2435a9eb523c691c3dd3e7eef89f5edd45e91ed6817ad6368352e7ac5bb870de",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T04:42:04+00:00",
+        "raw_window_end": "2026-03-17T04:42:04+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_7da6fcb7fecc9534/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 8795,
+            "content_sha256": "9daab4b617e77e73ad9ffa8402c37c7a9f4c49a10b6d51907253f695f16035f7"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_7da6fcb7fecc9534/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 676180,
+            "content_sha256": "56a51734becd5507285ec09ec9eebb67e33aea75c925cb6ae9777f5c467868da"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250004418",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250004437|2026-01-28T18:48:06",
+        "unit_id": "250004437",
+        "decision_timestamp": "2026-01-28T18:48:06+00:00",
+        "source_snapshot_id": "spirax_src_a044c0083d169275",
+        "raw_snapshot_content_sha256": "1cfdece1044be9d4529d58465c5ff98454740248a7a7bb810d16ee0c7da79f9d",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-01-28T18:48:06+00:00",
+        "raw_window_end": "2026-01-28T18:48:06+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a044c0083d169275/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1371,
+            "content_sha256": "496d6035c133e329d8d2fa2d8917b85c0a1147a1dd88be408c0952909f0f9585"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a044c0083d169275/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 766564,
+            "content_sha256": "b1cca51df6e319bd3e1f0cbc7fbf3d73b14f1a7bfd07813419ae1356d7a1e54f"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250004437",
+          "steam_trap_type": "FT14HC",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250004743|2024-08-08T20:38:12",
+        "unit_id": "250004743",
+        "decision_timestamp": "2024-08-08T20:38:12+00:00",
+        "source_snapshot_id": "spirax_src_080d8d66279f9c0e",
+        "raw_snapshot_content_sha256": "ce596bb2effdc1aad127e333d5ba444e81a50088affcc35b50ac102f7e57d49b",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2023-08-09T20:38:12+00:00",
+        "raw_window_end": "2024-08-08T20:38:12+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_080d8d66279f9c0e/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 920,
+            "content_sha256": "c5f34b14a5f628389f72aaa949568b4469c2ee20b80d552dc71bc47b3927c050"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_080d8d66279f9c0e/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 664794,
+            "content_sha256": "b96e27cb4cc3084d22c04bf6f3f37a184d639f2599aadc189fe72db6fd4b4c1e"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250004743",
+          "organization": "Ferrero Canada",
+          "steam_trap_type": "Thermodynamic",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250004859|2026-03-17T11:09:22",
+        "unit_id": "250004859",
+        "decision_timestamp": "2026-03-17T11:09:22+00:00",
+        "source_snapshot_id": "spirax_src_e8a1f654c4c7b90b",
+        "raw_snapshot_content_sha256": "09f5015166d406276e839dca40d939d14bafa12c1b61744dba494239905a9559",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T11:09:22+00:00",
+        "raw_window_end": "2026-03-17T11:09:22+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e8a1f654c4c7b90b/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 4448,
+            "content_sha256": "e150ad319534b4df98a088ffa2d768ea8592bbecf21e50588a4d2b3e86b1b70d"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e8a1f654c4c7b90b/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 719943,
+            "content_sha256": "d05fa7762edd21f877f2d23bd8634ceba04e025d4f31ad5dedfec24b010368a4"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250004859",
+          "steam_trap_type": "TD42",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250004862|2026-03-17T11:08:05",
+        "unit_id": "250004862",
+        "decision_timestamp": "2026-03-17T11:08:05+00:00",
+        "source_snapshot_id": "spirax_src_cdbb9451023fb4d5",
+        "raw_snapshot_content_sha256": "ca9ba5b6f4350afcceabfab3a6445fedb19491f14bc988661f2b86abfe6b44a3",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T11:08:05+00:00",
+        "raw_window_end": "2026-03-17T11:08:05+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_cdbb9451023fb4d5/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1136,
+            "content_sha256": "03e02d01dbc604846e02645cf4acd489c13e3d5cfff8951c61a6c815dc9dd232"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_cdbb9451023fb4d5/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 705005,
+            "content_sha256": "27d13053a65fdac0ba0bd4a9a6d0e7b4cabb6e435f8a3e2629c4fc59dd0ce5e0"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250004862",
+          "organization": "Vale",
+          "steam_trap_type": "TD42",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250004871|2026-03-17T11:07:54",
+        "unit_id": "250004871",
+        "decision_timestamp": "2026-03-17T11:07:54+00:00",
+        "source_snapshot_id": "spirax_src_88843d02887447aa",
+        "raw_snapshot_content_sha256": "5650608907e55db6efb4e36c58f53da95365bf0dc3cc2f3a78cc2bd191bd8608",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T11:07:54+00:00",
+        "raw_window_end": "2026-03-17T11:07:54+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_88843d02887447aa/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 6932,
+            "content_sha256": "f6abcc4b6f0206c74b20013421b837e41b8d36639ef55148bdf949dbf2c263e3"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_88843d02887447aa/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 714598,
+            "content_sha256": "7a32fd7e8ef4cdab4a151db004127d3e6b430b33738b2bdd28c22b58ac2ff049"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250004871",
+          "steam_trap_type": "Yarway 711",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250004877|2024-08-15T08:48:21",
+        "unit_id": "250004877",
+        "decision_timestamp": "2024-08-15T08:48:21+00:00",
+        "source_snapshot_id": "spirax_src_589f5cd04c379685",
+        "raw_snapshot_content_sha256": "887119c497f0f4b0fd19b48ebd7f5058e875773b989a8f48260fb92758a8b240",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2023-08-16T08:48:21+00:00",
+        "raw_window_end": "2024-08-15T08:48:21+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_589f5cd04c379685/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 2046,
+            "content_sha256": "b7df03a7c7e17310adc89758786624dbee6687b15fdfddd75d1cca446f00150c"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_589f5cd04c379685/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 753904,
+            "content_sha256": "cc8a6485629e97d9b1e297c54b5eb395c6e303b17fb7500facba20730cd260a8"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250004877",
+          "organization": "Mackenzie Hospital",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250005067|2026-01-19T12:48:30",
+        "unit_id": "250005067",
+        "decision_timestamp": "2026-01-19T12:48:30+00:00",
+        "source_snapshot_id": "spirax_src_6549a0b4486dd95d",
+        "raw_snapshot_content_sha256": "3b20e95ce24e508dcd32019d779661449eb7a8a6d2fd0a8494e8ed8c67952e89",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-01-19T12:48:30+00:00",
+        "raw_window_end": "2026-01-19T12:48:30+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6549a0b4486dd95d/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1246,
+            "content_sha256": "95d6319a89c207c1c91184b734c937358f6d397713f6e793bf8b88495a2583e1"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6549a0b4486dd95d/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 695727,
+            "content_sha256": "aa4016e2d47deda90826bb25ad7e2ea13e8a2181d3713fb78a567f908b5d74ba"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Open Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "open-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250005067",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250005150|2025-10-20T01:34:20",
+        "unit_id": "250005150",
+        "decision_timestamp": "2025-10-20T01:34:20+00:00",
+        "source_snapshot_id": "spirax_src_2f6890d52d28d292",
+        "raw_snapshot_content_sha256": "d09ef41a0f2f85cc4a61ca978bcced57698365195d2227447c12fed8c26c46ca",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-10-20T01:34:20+00:00",
+        "raw_window_end": "2025-10-20T01:34:20+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_2f6890d52d28d292/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 892,
+            "content_sha256": "f4a35169bcdc9deedbca1278bc8efe1ea39dd585a75d12ea0dce0c19a862e5f5"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_2f6890d52d28d292/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 703466,
+            "content_sha256": "592bce171f910f7bfd0f5ec9b10d184799401fb1c8f7184f39aab1f8e52f3b2c"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250005150",
+          "organization": "Teva Canada - Stouffville",
+          "steam_trap_type": "Thermodynamic",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250005354|2026-03-17T11:06:43",
+        "unit_id": "250005354",
+        "decision_timestamp": "2026-03-17T11:06:43+00:00",
+        "source_snapshot_id": "spirax_src_3c5dd903d9de867f",
+        "raw_snapshot_content_sha256": "af6181f08d5e0575d48618709b815c816a7f2959c120601d760d3d13d1e2cecb",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T11:06:43+00:00",
+        "raw_window_end": "2026-03-17T11:06:43+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_3c5dd903d9de867f/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 3827,
+            "content_sha256": "141e586537b0414c17beb3bf3e1ed34b92b74057f7b77787ff8bbe8412dec0d7"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_3c5dd903d9de867f/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 715331,
+            "content_sha256": "8a503bd9b2b6126b8817a7317c7c813aeef8192b3346b5cd8dc1a4d57ae76a05"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250005354",
+          "steam_trap_type": "Thermodynamic",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250005404|2026-03-13T11:55:27",
+        "unit_id": "250005404",
+        "decision_timestamp": "2026-03-13T11:55:27+00:00",
+        "source_snapshot_id": "spirax_src_e7c985d1e1c0385d",
+        "raw_snapshot_content_sha256": "b7791c8a722989af57f04b5dfb1e4196dd4dd18baf71546640b968ca0740fb16",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-13T11:55:27+00:00",
+        "raw_window_end": "2026-03-13T11:55:27+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e7c985d1e1c0385d/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 673,
+            "content_sha256": "dc376f37408ca1d8da4a3497382f96d0c66f0634657e6e3b4122b1099e2a57ab"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e7c985d1e1c0385d/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 637280,
+            "content_sha256": "5801c778ac0aa4290d4004bcf8b10ff4dd33382f07c81f74b2ce4b6dc951055d"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250005404",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250005500|2026-03-17T06:47:26",
+        "unit_id": "250005500",
+        "decision_timestamp": "2026-03-17T06:47:26+00:00",
+        "source_snapshot_id": "spirax_src_b960593702382b10",
+        "raw_snapshot_content_sha256": "945fb98d33006df37edd8eccbbcffe00b47655f824c22c3588f7bac0c6741f99",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T06:47:26+00:00",
+        "raw_window_end": "2026-03-17T06:47:26+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_b960593702382b10/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 741,
+            "content_sha256": "41cf5a63737e06b4c551a311e5d55e795dcae845eede6df9f562cb540c84455b"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_b960593702382b10/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 684310,
+            "content_sha256": "74da07a921972e429c5dc526828f5f65225f9e9d2e715416a47610498e0acd28"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250005500",
+          "steam_trap_type": "Thermodynamic",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250005501|2024-09-18T17:07:25",
+        "unit_id": "250005501",
+        "decision_timestamp": "2024-09-18T17:07:25+00:00",
+        "source_snapshot_id": "spirax_src_36b92e4e6855c9d6",
+        "raw_snapshot_content_sha256": "304a9e1b98c70ae91a30f48d615793b7b75eb3c2066a590591849d670fd52b2b",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2023-09-19T17:07:25+00:00",
+        "raw_window_end": "2024-09-18T17:07:25+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_36b92e4e6855c9d6/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 688,
+            "content_sha256": "e8f9d877a4b9b089e33993576667e9dece277ed63ef3c88111c8b7815108deab"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_36b92e4e6855c9d6/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 726072,
+            "content_sha256": "e6cfaa9c35563bd2f7c1d42fb33d17dc7ec57ec7489f308b00dd74b90119de28"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250005501",
+          "organization": "St. Annes Hospital",
+          "steam_trap_type": "Float & Thermostatic",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250005577|2025-01-24T14:25:40",
+        "unit_id": "250005577",
+        "decision_timestamp": "2025-01-24T14:25:40+00:00",
+        "source_snapshot_id": "spirax_src_cf4ac8f783b8eb2c",
+        "raw_snapshot_content_sha256": "21901325928ed29a77f14b479002b4198b8b19698cc886baeb693583517d697e",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-01-25T14:25:40+00:00",
+        "raw_window_end": "2025-01-24T14:25:40+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_cf4ac8f783b8eb2c/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 334,
+            "content_sha256": "ac1368432395bda42206b2455cdf3ebb357e302e43c225552d88fccc9448d078"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_cf4ac8f783b8eb2c/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 697503,
+            "content_sha256": "d7c9261717af7bf36a5446b548e39c1090036783cccf0095abbd72301af77c55"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250005577",
+          "organization": "Evonik",
+          "steam_trap_type": "N/A",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250005605|2025-10-03T01:08:35",
+        "unit_id": "250005605",
+        "decision_timestamp": "2025-10-03T01:08:35+00:00",
+        "source_snapshot_id": "spirax_src_95fad9f3d35feae6",
+        "raw_snapshot_content_sha256": "ee9794ccacd05ece929811b76b2841f61c1f6546a5bb71408464f3fce6a80b36",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-10-03T01:08:35+00:00",
+        "raw_window_end": "2025-10-03T01:08:35+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_95fad9f3d35feae6/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 750,
+            "content_sha256": "5f922d777ba1f6b836c1ba3e25cad9e00fce656a386750b0019d9d8560134e26"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_95fad9f3d35feae6/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 693131,
+            "content_sha256": "16391261c5a4c91ed17bd1006424cfc22d183efeb0c5621bd9fc54dc45a78ac4"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250005605",
+          "organization": "CRCHUM",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250005653|2025-10-25T10:09:11",
+        "unit_id": "250005653",
+        "decision_timestamp": "2025-10-25T10:09:11+00:00",
+        "source_snapshot_id": "spirax_src_fcac084c0164c19d",
+        "raw_snapshot_content_sha256": "f7fd3853b8ab456016945ef9cb6b9f41d918f859acbf41d209fdcb8763a8bcd6",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-10-25T10:09:11+00:00",
+        "raw_window_end": "2025-10-25T10:09:11+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fcac084c0164c19d/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1135,
+            "content_sha256": "6b567c33de8a103d912f8fbdf3ea17c9b58afa6e05a93e5b8e207dde781c25b8"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fcac084c0164c19d/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 699818,
+            "content_sha256": "c5b08b7eb06492eb7a4c64fc776e4e25f9ce562bce1a245dcec70ba27ba0a58c"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250005653",
+          "steam_trap_type": "Inverted Bucket",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250005692|2025-10-31T01:39:54",
+        "unit_id": "250005692",
+        "decision_timestamp": "2025-10-31T01:39:54+00:00",
+        "source_snapshot_id": "spirax_src_585be3291662cad1",
+        "raw_snapshot_content_sha256": "439d120bf2fc627a7fac33097f8b592375fd138b182e8d97f2896d4186329a8b",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-10-31T01:39:54+00:00",
+        "raw_window_end": "2025-10-31T01:39:54+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_585be3291662cad1/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 541,
+            "content_sha256": "b807e0d6296661e322656d48a5c507648066e6fd2b28adb7764cd0414d6bcf67"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_585be3291662cad1/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 621785,
+            "content_sha256": "25be5d491e233c52f34479dbcff1492092defbf4e22f7614be93adbafccbd09e"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "250005692",
+          "organization": "St. Jerome Hospital",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250005696|2026-01-13T05:36:58",
+        "unit_id": "250005696",
+        "decision_timestamp": "2026-01-13T05:36:58+00:00",
+        "source_snapshot_id": "spirax_src_33de7ad7d265f59f",
+        "raw_snapshot_content_sha256": "9efa40497c72b0adb09f48b4d6b26c830885b419a727b45b91d3ec1435381ee9",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-01-13T05:36:58+00:00",
+        "raw_window_end": "2026-01-13T05:36:58+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_33de7ad7d265f59f/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1609,
+            "content_sha256": "8432a9b7f7a761e53c67895a414a617f2b2cb1ae348f1d92b7defd733be0207c"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_33de7ad7d265f59f/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 718249,
+            "content_sha256": "521179b73b40781ec712638c65eead3d709b14e36bfebdd9d09290b8454ddb14"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Open Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "open-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250005696",
+          "steam_trap_type": "Thermodynamic",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250005732|2026-02-17T18:22:10",
+        "unit_id": "250005732",
+        "decision_timestamp": "2026-02-17T18:22:10+00:00",
+        "source_snapshot_id": "spirax_src_c098612d610607a8",
+        "raw_snapshot_content_sha256": "3f609d788789565df5561bfa0dd7a40efd6951e691a2785d7c98129e1238d019",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-02-17T18:22:10+00:00",
+        "raw_window_end": "2026-02-17T18:22:10+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c098612d610607a8/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 301,
+            "content_sha256": "a41cc732dfdc89c2d1fffc5c7a2bba15ebe397c0bd3e928b0fff424797d26411"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c098612d610607a8/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 702068,
+            "content_sha256": "b4fb3b9396fd969e13b270b4c81a30a116a4c0d4131d7c82013b7699b8fcb8bd"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Open Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "open-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250005732",
+          "steam_trap_type": "Thermodynamic",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "250005883|2025-11-26T17:38:20",
+        "unit_id": "250005883",
+        "decision_timestamp": "2025-11-26T17:38:20+00:00",
+        "source_snapshot_id": "spirax_src_a5f0fba001efa6ec",
+        "raw_snapshot_content_sha256": "16ddd1a9bf5055984a186b22d306158ef3f07684161369cbd4aaa5f9655f4c64",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-11-26T17:38:20+00:00",
+        "raw_window_end": "2025-11-26T17:38:20+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a5f0fba001efa6ec/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1354,
+            "content_sha256": "d0a7365bc9fe1c790cc56b2cd5564194eafd485051203587bd78a4216ee3fdbd"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a5f0fba001efa6ec/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 536045,
+            "content_sha256": "ce0a421ea882ced483175dbcf3a055cd06b1e7f72655fdaa0b029d6c188149d7"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "250005883",
+          "organization": "Providence Health - BC",
+          "steam_trap_type": "Inverted Bucket",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260000115|2026-03-07T22:07:58",
+        "unit_id": "260000115",
+        "decision_timestamp": "2026-03-07T22:07:58+00:00",
+        "source_snapshot_id": "spirax_src_31c1a4847b4dee5f",
+        "raw_snapshot_content_sha256": "3b67f58ec059c957c15f790946a06818f9eb502f008a163da7d4e6c3d7c5e2be",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-07T22:07:58+00:00",
+        "raw_window_end": "2026-03-07T22:07:58+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_31c1a4847b4dee5f/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1339,
+            "content_sha256": "1fe84b1cb444598e216d1ce62eace284bb1a44eee561a77c1ef2a91ff8448c6d"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_31c1a4847b4dee5f/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 622213,
+            "content_sha256": "a2f4abb091772d8fc8f6ca999d3182ac68c44b4c7b2092c91cff3abcef4bc4c9"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Unknown",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "unknown-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260000115",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260000116|2026-01-21T20:14:04",
+        "unit_id": "260000116",
+        "decision_timestamp": "2026-01-21T20:14:04+00:00",
+        "source_snapshot_id": "spirax_src_80ce07423e8c4dbf",
+        "raw_snapshot_content_sha256": "4e69832509780dfbee79e4fb6101852764bfa60b0bc476c1f606bce17d226645",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-01-21T20:14:04+00:00",
+        "raw_window_end": "2026-01-21T20:14:04+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_80ce07423e8c4dbf/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1333,
+            "content_sha256": "dab47d5514cb352200916a4580705edc57406a550ce709ef07f0493b4e6a82a0"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_80ce07423e8c4dbf/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 595599,
+            "content_sha256": "fe5a2dd2790a4d321d4b1d61eb07b9fbf42a2a672717999e40f701dddaa5367e"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Open Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "open-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260000116",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260000143|2026-03-11T01:39:27",
+        "unit_id": "260000143",
+        "decision_timestamp": "2026-03-11T01:39:27+00:00",
+        "source_snapshot_id": "spirax_src_532e96f91f10b948",
+        "raw_snapshot_content_sha256": "fcbde4307782f1bbd17b54b4c3c808410dc2cf90145c22b0f357508c1b3d55e2",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-11T01:39:27+00:00",
+        "raw_window_end": "2026-03-11T01:39:27+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_532e96f91f10b948/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1096,
+            "content_sha256": "ddb62f0f289197f1ad5fba3e11e44d99119d10df8acdac522db23431f5076526"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_532e96f91f10b948/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 601210,
+            "content_sha256": "9239fef86e81d07cc38af6c07ae4b3b4da16176e7d61ef45c69d23f38a03621f"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "260000143",
+          "organization": "Creative Energy",
+          "steam_trap_type": "Inverted Bucket",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260000167|2025-03-02T14:55:43",
+        "unit_id": "260000167",
+        "decision_timestamp": "2025-03-02T14:55:43+00:00",
+        "source_snapshot_id": "spirax_src_6305bd0b7257c86e",
+        "raw_snapshot_content_sha256": "c7eaf8bae64a79b4e9ad53ad47a52d47bbd2a4b0bf5c39e7f221e15d7923a739",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-03-02T14:55:43+00:00",
+        "raw_window_end": "2025-03-02T14:55:43+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6305bd0b7257c86e/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1355,
+            "content_sha256": "ebeb6ab0b27d4241855a249da804bcc3a47b060e8b527cce9f7dbb939fb83cee"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6305bd0b7257c86e/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 580833,
+            "content_sha256": "5ced03aa0c1859260a1c67ede2d176031bbc5e68ae0feb1d84cc61d46d6887b0"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260000167",
+          "organization": "Coca Cola - Fairlife",
+          "steam_trap_type": "Thermodynamic",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260000170|2026-02-25T01:43:53",
+        "unit_id": "260000170",
+        "decision_timestamp": "2026-02-25T01:43:53+00:00",
+        "source_snapshot_id": "spirax_src_fbc77362ea1483e6",
+        "raw_snapshot_content_sha256": "29b289dbaf4dc9b69118fad10fa52a3989953f797be47c1ae7ec67f258cdbd42",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-02-25T01:43:53+00:00",
+        "raw_window_end": "2026-02-25T01:43:53+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fbc77362ea1483e6/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 541,
+            "content_sha256": "2760985e77fb76fa5b5b9f619a66fb7e66df4eaa8d92f4dcd7d15e7dbeabd1a9"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fbc77362ea1483e6/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 582728,
+            "content_sha256": "348b77bc6ce27bf78b36ddf965d66346e14d9964198bd85a27d1d700bbd09cba"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Unknown",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "unknown-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260000170",
+          "steam_trap_type": "N/A",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260000292|2026-03-17T09:02:42",
+        "unit_id": "260000292",
+        "decision_timestamp": "2026-03-17T09:02:42+00:00",
+        "source_snapshot_id": "spirax_src_119a528a8b1bd4d3",
+        "raw_snapshot_content_sha256": "d2ce3d12e1cfd80a44249aa2ec083d6962971d9757a85f2812e8ecd7f7a78b0e",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T09:02:42+00:00",
+        "raw_window_end": "2026-03-17T09:02:42+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_119a528a8b1bd4d3/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 2585,
+            "content_sha256": "819f8b0798547ebdb15de3652121dd9b31440d610a175a41b3c4bdacff2cd82c"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_119a528a8b1bd4d3/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 620948,
+            "content_sha256": "be6529472f904b6c3d685fcb3274484e4efe98ba031fc1b62c790ef54c551620"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "260000292",
+          "steam_trap_type": "Float & Thermostatic",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260000374|2025-04-20T07:04:26",
+        "unit_id": "260000374",
+        "decision_timestamp": "2025-04-20T07:04:26+00:00",
+        "source_snapshot_id": "spirax_src_66af788fb71cf0b0",
+        "raw_snapshot_content_sha256": "a0efecff56582db67d7ba753242f2d622d5649e200c357be718d37bc779b17a1",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-04-20T07:04:26+00:00",
+        "raw_window_end": "2025-04-20T07:04:26+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_66af788fb71cf0b0/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 334,
+            "content_sha256": "4929f33265437558228a9afbf051549e313a1312960579f6e75d90b5ff2d6e80"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_66af788fb71cf0b0/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 632262,
+            "content_sha256": "bcd0cbd8f9af059c0301d5c7ba0156a22fe4683f18c2a790dfa8bc12e561ab28"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260000374",
+          "organization": "Invista Inc. - Maitland, ON",
+          "steam_trap_type": "N/A",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260000478|2025-10-15T18:45:05",
+        "unit_id": "260000478",
+        "decision_timestamp": "2025-10-15T18:45:05+00:00",
+        "source_snapshot_id": "spirax_src_4ddc916fbe26ff1d",
+        "raw_snapshot_content_sha256": "1194d5506daabe71c76ac4e2396d54f2ff7a971bba4a1f72bd5e62dc3ed5139c",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-10-15T18:45:05+00:00",
+        "raw_window_end": "2025-10-15T18:45:05+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4ddc916fbe26ff1d/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 4767,
+            "content_sha256": "1090a86318db257dfc1fa9ac9e0879bb970b5cb85040ca3afc94c626cc031b0a"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4ddc916fbe26ff1d/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 629089,
+            "content_sha256": "7e45f5bd2b30dbc749ce99459cebaaff7d4db5ed53371f6ff9fa7a352b5c485a"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260000478",
+          "organization": "Cortellucci Vaughan Hospital",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260000499|2025-03-03T10:50:22",
+        "unit_id": "260000499",
+        "decision_timestamp": "2025-03-03T10:50:22+00:00",
+        "source_snapshot_id": "spirax_src_54f4ea569590d931",
+        "raw_snapshot_content_sha256": "b6c085ca0a58906dd23baa31194bfb1d497c6242670bf8d4d7374f065f0fdc85",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-03-03T10:50:22+00:00",
+        "raw_window_end": "2025-03-03T10:50:22+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_54f4ea569590d931/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 897,
+            "content_sha256": "660082fc2ceec603d9e80b92c1442df04162273290537a19276a0e2da0e1d454"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_54f4ea569590d931/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 549630,
+            "content_sha256": "998eb2785dbac985a91030de5ad3621a857266770075d69f6f52e8d75c947ace"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260000499",
+          "organization": "Cortellucci Vaughan Hospital",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260000510|2025-10-09T23:50:11",
+        "unit_id": "260000510",
+        "decision_timestamp": "2025-10-09T23:50:11+00:00",
+        "source_snapshot_id": "spirax_src_bf209cc970d2435b",
+        "raw_snapshot_content_sha256": "c036c1b857306dff376a5aaa5bfa105d0112e1edb2695c74c928f5a37b2c9fef",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-10-09T23:50:11+00:00",
+        "raw_window_end": "2025-10-09T23:50:11+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_bf209cc970d2435b/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 3001,
+            "content_sha256": "b6f4d11e4ae7414ba9e5a8e5de3ea45fd10bac3e63c0cb5894477ff4b763eee5"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_bf209cc970d2435b/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 613144,
+            "content_sha256": "e347a35a9d9ef3705841fcb3b968f25f0616a5cce1172f8598c999df779c8a06"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Unknown",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "unknown-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260000510",
+          "organization": "Cortellucci Vaughan Hospital",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260000701|2026-03-16T17:55:13",
+        "unit_id": "260000701",
+        "decision_timestamp": "2026-03-16T17:55:13+00:00",
+        "source_snapshot_id": "spirax_src_e3d98d77c26b829e",
+        "raw_snapshot_content_sha256": "a15df24ab8791897f1567549a425d145a10d1761a6bf7e8f46adc6f2459495b8",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-16T17:55:13+00:00",
+        "raw_window_end": "2026-03-16T17:55:13+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e3d98d77c26b829e/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 336,
+            "content_sha256": "d2a5ee7655d16c04b75cfbc677027a32d0d37f6ccd33714843342530a061e7dd"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e3d98d77c26b829e/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 573131,
+            "content_sha256": "7aa86460e8653822c93c340a4e66bee545ff33e419948b09b9fd5ccf5c9a03ec"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "260000701",
+          "organization": "Invista Inc. - Maitland, ON",
+          "steam_trap_type": "N/A",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260000953|2026-02-18T20:16:00",
+        "unit_id": "260000953",
+        "decision_timestamp": "2026-02-18T20:16:00+00:00",
+        "source_snapshot_id": "spirax_src_b2700826069f71b0",
+        "raw_snapshot_content_sha256": "f9358bf628b5be1ce3a0aaebc972ba98fb2c911e076253ab2748b4734e816459",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-02-18T20:16:00+00:00",
+        "raw_window_end": "2026-02-18T20:16:00+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_b2700826069f71b0/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1206,
+            "content_sha256": "f9e9ed27808b9b3b1743c79a2360cb90a1ad62cc1db1de1e42d72c2fcb9384a8"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_b2700826069f71b0/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 583997,
+            "content_sha256": "158f8fb4848fbcd8854bda2074fbd80ac3f8706456dcafe2dc387ab1df3072d3"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260000953",
+          "steam_trap_type": "Float & Thermostatic",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260001111|2026-03-17T02:35:35",
+        "unit_id": "260001111",
+        "decision_timestamp": "2026-03-17T02:35:35+00:00",
+        "source_snapshot_id": "spirax_src_7f7333fd644cc9ad",
+        "raw_snapshot_content_sha256": "8062c0380f4e63f6704d6e879fe061793f55373c1524676db97dcafd8be2b135",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T02:35:35+00:00",
+        "raw_window_end": "2026-03-17T02:35:35+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_7f7333fd644cc9ad/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 9209,
+            "content_sha256": "0ab43d324972104d29bfee451453417618cffcc90da2c82b491476958e9c67da"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_7f7333fd644cc9ad/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 620451,
+            "content_sha256": "d2f9551ad72aa230b6cccd75e5531fda6c0869d2e81438a65170fe24180e49da"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "260001111",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260001345|2026-01-30T02:44:00",
+        "unit_id": "260001345",
+        "decision_timestamp": "2026-01-30T02:44:00+00:00",
+        "source_snapshot_id": "spirax_src_05401d7173550484",
+        "raw_snapshot_content_sha256": "4cd38be1236b43b42179a7e1559ac9678ca23b64905ec01162cb0f80703c480d",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-01-30T02:44:00+00:00",
+        "raw_window_end": "2026-01-30T02:44:00+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_05401d7173550484/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 743,
+            "content_sha256": "f6d75d0b0efc9a951066647ce38e6216fe1104fb72c19861279c0d6f59a260d5"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_05401d7173550484/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 348003,
+            "content_sha256": "19e50705e66b2215aac397a3025cf8fd31b35debc93a8fde315cc06e12b9e71c"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Open Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "open-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260001345",
+          "steam_trap_type": "Thermodynamic",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260001377|2026-03-03T06:04:25",
+        "unit_id": "260001377",
+        "decision_timestamp": "2026-03-03T06:04:25+00:00",
+        "source_snapshot_id": "spirax_src_f2310494a9461908",
+        "raw_snapshot_content_sha256": "c6e17682228fd05dbc48c4180f71adf300c01100bb9971d8013e3844b14a0e3a",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-03T06:04:25+00:00",
+        "raw_window_end": "2026-03-03T06:04:25+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_f2310494a9461908/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 737,
+            "content_sha256": "f7793dc0562dbdab91eb95cf0ab8636be52f7ac0012e657ee7b2f74d6776f6f1"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_f2310494a9461908/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 395932,
+            "content_sha256": "df559f5911cf617497e4e59118a654771b077620d94e5198112d810d7a1dfa50"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Open Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "open-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260001377",
+          "steam_trap_type": "Thermodynamic",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260001438|2026-03-08T00:24:00",
+        "unit_id": "260001438",
+        "decision_timestamp": "2026-03-08T00:24:00+00:00",
+        "source_snapshot_id": "spirax_src_6e0b0be83e95eff6",
+        "raw_snapshot_content_sha256": "52870a16e19955ed4b520298315ca0c689f654d6d3f10b451368eceb54b8d798",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-08T00:24:00+00:00",
+        "raw_window_end": "2026-03-08T00:24:00+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6e0b0be83e95eff6/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1120,
+            "content_sha256": "6ee83e5c2e52f4351c63af9052de44d3e2c3c6835d9c0b2164cb5c8fbf44ec29"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6e0b0be83e95eff6/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 629781,
+            "content_sha256": "cf28b0fa3cb27ce8e6604b3d7b09dc455d7151c58acac8eb84c1b2639a22ab37"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "260001438",
+          "organization": "Corru-Kraft - Buena Park",
+          "steam_trap_type": "Ball float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260001535|2025-12-09T15:37:41",
+        "unit_id": "260001535",
+        "decision_timestamp": "2025-12-09T15:37:41+00:00",
+        "source_snapshot_id": "spirax_src_8fecd27763fe8699",
+        "raw_snapshot_content_sha256": "10ea06429795547928bc89130cfe7104a530c89625e96bc0c9c74307b1992147",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-12-09T15:37:41+00:00",
+        "raw_window_end": "2025-12-09T15:37:41+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_8fecd27763fe8699/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 729,
+            "content_sha256": "3b07af5cea405a5a34fa6c62925900e7d7b54aa7487e3f3c0c8ea516ca85c0fe"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_8fecd27763fe8699/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 470641,
+            "content_sha256": "90bb8ad7c5883ee7f0a9ab41178fc4cbc80eceae619e8756b91d0937df91556b"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260001535",
+          "steam_trap_type": "Bucket trap",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260001642|2026-03-17T11:12:07",
+        "unit_id": "260001642",
+        "decision_timestamp": "2026-03-17T11:12:07+00:00",
+        "source_snapshot_id": "spirax_src_96aff8c3bd70aec8",
+        "raw_snapshot_content_sha256": "e8cfb129235ad9af70ec6e2c930bed7147c25dec42d8b7686d78baa98667a7b2",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T11:12:07+00:00",
+        "raw_window_end": "2026-03-17T11:12:07+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_96aff8c3bd70aec8/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1147,
+            "content_sha256": "b1196975511d7ed4101fe54a31c80129b029ce6d8cddfe4a4b95e861aa3d163e"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_96aff8c3bd70aec8/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 574799,
+            "content_sha256": "d9deb4028657598538b2e5a22870b2cbda200ba2c1fa999869b9ae1cf35121c6"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "260001642",
+          "steam_trap_type": "Float",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260001742|2025-10-17T20:23:09",
+        "unit_id": "260001742",
+        "decision_timestamp": "2025-10-17T20:23:09+00:00",
+        "source_snapshot_id": "spirax_src_a430b2d0e98f0bf7",
+        "raw_snapshot_content_sha256": "363ec2a0907f9795cb0a8ee8dc67fc53bb80c6d9369efb7767c092de41362d95",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-10-17T20:23:09+00:00",
+        "raw_window_end": "2025-10-17T20:23:09+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a430b2d0e98f0bf7/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 541,
+            "content_sha256": "218a1101ac39acff0deee8b2b5eb38d2fa27f3cf76cfafb4124b62b58cdc31bb"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a430b2d0e98f0bf7/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 360516,
+            "content_sha256": "596ed0ad86167fd082ea54916fa1747a882700a30d57095181015a98dc8d59cd"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Open Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "open-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260001742",
+          "steam_trap_type": "Thermodynamic",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260002518|2025-11-20T20:16:19",
+        "unit_id": "260002518",
+        "decision_timestamp": "2025-11-20T20:16:19+00:00",
+        "source_snapshot_id": "spirax_src_85b07bc14e7e645e",
+        "raw_snapshot_content_sha256": "18c156d53e006c7a1142a375b8ab4294c5c69cfbbe88061793a1d5b7af01fee9",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2024-11-20T20:16:19+00:00",
+        "raw_window_end": "2025-11-20T20:16:19+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_85b07bc14e7e645e/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 303,
+            "content_sha256": "1877a1d90558516daf5c5e91724e2a3a56db7223ce75f44f4535214108a35dee"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_85b07bc14e7e645e/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 250326,
+            "content_sha256": "dd001fb75adde767b825670190796ffb6db6987e5e4ac5e3d15ba864b5d5b3b9"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Open Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "open-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260002518",
+          "steam_trap_type": "Inverted Bucket",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260002680|2026-03-12T14:21:29",
+        "unit_id": "260002680",
+        "decision_timestamp": "2026-03-12T14:21:29+00:00",
+        "source_snapshot_id": "spirax_src_f0a1a4d94df7e1cb",
+        "raw_snapshot_content_sha256": "97348ec2ac92eaf9154812a1b9a5a17fbc79c59546e35a5195ee842d1f661361",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-12T14:21:29+00:00",
+        "raw_window_end": "2026-03-12T14:21:29+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_f0a1a4d94df7e1cb/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 770,
+            "content_sha256": "10246802c4ceb0d265758fe5aa37c87b8950f7374a5e5debe1c0b504c429d4fc"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_f0a1a4d94df7e1cb/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 431952,
+            "content_sha256": "a6168b5db817db268d027bae14d9ad2907ff5aa9922a51fe0240d0b8108e0c16"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "260002680",
+          "steam_trap_type": "Inconnu",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260002782|2026-02-20T17:32:41",
+        "unit_id": "260002782",
+        "decision_timestamp": "2026-02-20T17:32:41+00:00",
+        "source_snapshot_id": "spirax_src_0b7b83aa9fa331c2",
+        "raw_snapshot_content_sha256": "0554258f617b57808e1abf642b88cba8c08b3840c88a2169419422870b6880a4",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-02-20T17:32:41+00:00",
+        "raw_window_end": "2026-02-20T17:32:41+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_0b7b83aa9fa331c2/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 552,
+            "content_sha256": "51c814799f69ef15be37fb6f57947eed9aead6cdf6845d305d3e17b98f47d9a4"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_0b7b83aa9fa331c2/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 401486,
+            "content_sha256": "bb540060e307f0ba13a9b5b911db8b898e3ba9147bc8aca51a0a9de71fbd886a"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Open Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "open-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260002782",
+          "steam_trap_type": "FIO",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260002797|2026-02-08T06:26:07",
+        "unit_id": "260002797",
+        "decision_timestamp": "2026-02-08T06:26:07+00:00",
+        "source_snapshot_id": "spirax_src_8934128bfa059272",
+        "raw_snapshot_content_sha256": "d590213f601425bf801b00bbac22b664333c125bfc724ef837bed6ce1e1898f3",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-02-08T06:26:07+00:00",
+        "raw_window_end": "2026-02-08T06:26:07+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_8934128bfa059272/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1394,
+            "content_sha256": "ad46e97259a335e8cad641d3c119561f598be47de07fa21f72065281c83f87bd"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_8934128bfa059272/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 382628,
+            "content_sha256": "d6f81901ae1e9c152a84a22fcbe3ac48b70e891d45df55264b795cd4ae1c4224"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "Closed Failure",
+          "classification": "Failure"
+        },
+        "slice_keys": [
+          "expected-failure",
+          "closed-failure"
+        ],
+        "metadata": {
+          "sensor_id": "260002797",
+          "steam_trap_type": "Inverted Bucket",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260002816|2026-03-17T11:08:17",
+        "unit_id": "260002816",
+        "decision_timestamp": "2026-03-17T11:08:17+00:00",
+        "source_snapshot_id": "spirax_src_b82766d4a774de77",
+        "raw_snapshot_content_sha256": "86575d86d62d14eadb2939ec278b31aa59a798bdbfd1aa7e82c70c1370cd9709",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T11:08:17+00:00",
+        "raw_window_end": "2026-03-17T11:08:17+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_b82766d4a774de77/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 305,
+            "content_sha256": "424511f2807c24fb32f7f98a1734aa3e702f548da89a5baa8a5e782c1558b20c"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_b82766d4a774de77/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 284902,
+            "content_sha256": "cffc3cae53fcbd0e111dfe4b7b3e6d0e3ee6bab0a9e09c5eeb87ae4aee971ac1"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "260002816",
+          "steam_trap_type": "N/A",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260003042|2026-03-17T04:39:09",
+        "unit_id": "260003042",
+        "decision_timestamp": "2026-03-17T04:39:09+00:00",
+        "source_snapshot_id": "spirax_src_e7c605e5b93dcb86",
+        "raw_snapshot_content_sha256": "8a2915487b5bf020f6bf857963622c1a1faa2610c564be8c46446cecc91f4f29",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T04:39:09+00:00",
+        "raw_window_end": "2026-03-17T04:39:09+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e7c605e5b93dcb86/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 959,
+            "content_sha256": "46d8a9aa5602b34311eae6728f420f688a3ec1097a568d6b71688dafd8ec3f6e"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e7c605e5b93dcb86/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 433197,
+            "content_sha256": "2016bf03be5667203e865e46cc23b51d03dfe12560852f0d3da03591df1f19ab"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "260003042",
+          "steam_trap_type": "Inverted bucket",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260003441|2026-03-17T08:58:12",
+        "unit_id": "260003441",
+        "decision_timestamp": "2026-03-17T08:58:12+00:00",
+        "source_snapshot_id": "spirax_src_53e3b84564cbb2f4",
+        "raw_snapshot_content_sha256": "32cd0927827c168055cca9bf290ad1a58e3c0bf37d2d0636b3af0e196af36e1e",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T08:58:12+00:00",
+        "raw_window_end": "2026-03-17T08:58:12+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_53e3b84564cbb2f4/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 959,
+            "content_sha256": "7de076d431233d1b6371441f676dfa7bd27fe0a4af4dac01d958f889f71a0b1c"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_53e3b84564cbb2f4/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 270147,
+            "content_sha256": "051aa7f1d3129062fb6b2539b0fcc5811b7dfabe0f40d5a1daa52108e9a0d29a"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "260003441",
+          "steam_trap_type": "Inverted bucket",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      },
+      {
+        "example_id": "260003552|2026-03-17T04:38:26",
+        "unit_id": "260003552",
+        "decision_timestamp": "2026-03-17T04:38:26+00:00",
+        "source_snapshot_id": "spirax_src_c51eaa9b7d34feeb",
+        "raw_snapshot_content_sha256": "7dc0a3948eae5a797716b3929a43a6a3b98df0a871513eb452a5a8a1256fda57",
+        "raw_source_kind": "mongo",
+        "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+        "raw_window_start": "2025-03-17T04:38:26+00:00",
+        "raw_window_end": "2026-03-17T04:38:26+00:00",
+        "raw_known_gaps": [],
+        "raw_artifacts": [
+          {
+            "artifact_kind": "alarms",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c51eaa9b7d34feeb/alarms.jsonl",
+            "content_type": "application/x-ndjson",
+            "byte_size": 1550,
+            "content_sha256": "982e760dd37e4763b104db03e7fcbd17cb4f192cc516de11526364bf173f6616"
+          },
+          {
+            "artifact_kind": "telemetry",
+            "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c51eaa9b7d34feeb/telemetry.parquet",
+            "content_type": "application/vnd.apache.parquet",
+            "byte_size": 289641,
+            "content_sha256": "4ee7f37895e2a5adcb9d4d9dffd374e419ce66dd7da0ae03659475d8b489321b"
+          }
+        ],
+        "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "benchmark_labels": {
+          "root_cause": "N/A",
+          "classification": "Healthy"
+        },
+        "slice_keys": [
+          "healthy"
+        ],
+        "metadata": {
+          "sensor_id": "260003552",
+          "steam_trap_type": "Inverted bucket",
+          "source_candidate_list": "reviewed_high_confidence_devices"
+        }
+      }
+    ],
+    "output_fields": [
+      {
+        "key": "classification",
+        "graded": true,
+        "benchmark_label_path": [
+          "classification"
+        ]
+      },
+      {
+        "key": "root_cause",
+        "graded": true,
+        "benchmark_label_path": [
+          "root_cause"
+        ]
+      }
+    ],
+    "slice_keys": [
+      "healthy",
+      "expected-failure",
+      "open-failure",
+      "closed-failure",
+      "unknown-failure"
+    ]
+  }
+}

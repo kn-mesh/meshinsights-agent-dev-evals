@@ -146,18 +146,18 @@ def inspection_summary(run_dir: Path) -> dict[str, Any]:
     ]
     review_state = store.review_state(expected_execution_ids=expected_execution_ids)
     capture = review_state["capture"]
+    dimensions = result.get("run", {}).get("dimensions", {})
+    benchmark = dimensions.get("benchmark", {})
+    model = dimensions.get("model", {})
     return {
         "run_id": store.run_id,
         "run": {
-            key: result.get("run", {}).get(key)
-            for key in (
-                "agent_version",
-                "benchmark_key",
-                "benchmark_version_number",
-                "ai_model",
-                "ai_reasoning_effort",
-                "runs_per_example",
-            )
+            "agent_version": dimensions.get("agent"),
+            "benchmark_key": benchmark.get("key"),
+            "benchmark_version_number": benchmark.get("version"),
+            "ai_model": model.get("id"),
+            "ai_reasoning_effort": model.get("reasoning_effort"),
+            "runs_per_example": result.get("run", {}).get("runs_per_example"),
         },
         "summary": result.get("summary", {}),
         "review": {

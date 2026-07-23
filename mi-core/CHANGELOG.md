@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Upgraded the `mi.ai` backend to pydantic-ai 2.11.0, including the v2 retry and usage APIs while preserving the previous early agent-completion behavior.
 - Split AI transport, tool, and output-validation retry budgets and added opt-in request, token, and tool-call usage limits with unlimited token/tool defaults.
 
+### Removed
+- Removed the legacy combined `retries` processor setting and obsolete internal compatibility helpers; configurations must use the explicit transport, tool, and output retry budgets.
+
 ## [0.5.2] - 2026-04-13
 ### Changed
 - **Architecture and onboarding docs** — refocused the architecture documentation on the framework and CLI shipped by this repo, added a "typical consuming project" view, and updated README/getting-started guidance to point concrete starter implementations at `mesh.insights.templates` instead of missing in-repo examples.

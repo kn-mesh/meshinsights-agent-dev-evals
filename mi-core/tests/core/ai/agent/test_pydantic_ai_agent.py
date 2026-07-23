@@ -241,7 +241,8 @@ class TemperatureHumidityPatternAgentOrchestrator:
             backend="pydantic_ai",
             reasoning_effort=reasoning_effort,
             max_turns=12,
-            retries=2,
+            transport_retries=2,
+            tool_retries=2,
             timeout=120.0,
         )
 

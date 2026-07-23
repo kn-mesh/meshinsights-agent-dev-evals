@@ -246,9 +246,13 @@ def _schema_v1_run(project_root: Path) -> tuple[Path, str, str]:
                 "schema_version": 1,
                 "run_id": run_id,
                 "run_spec_sha256": digest,
-                "benchmark_key": "benchmark",
-                "benchmark_version_id": "benchmark-version-1",
-                "benchmark_version_number": 1,
+                "dimensions": {
+                    "benchmark": {
+                        "key": "benchmark",
+                        "version_id": "benchmark-version-1",
+                        "version": 1,
+                    }
+                },
                 "runs_per_example": 1,
             },
             "examples": [

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from mi.ai.mixins.base import AIProcessorConfig, AIProcessorMixin
 from mi.core.objects import ProcessDataObject
@@ -30,7 +30,6 @@ def test_ai_processor_config_accepts_none_for_optional_fields() -> None:
         attach_usage=None,
         attach_response=None,
         timeout=None,
-        retries=None,
         provider_options=None,
         backend_options=None,
     )
@@ -39,7 +38,6 @@ def test_ai_processor_config_accepts_none_for_optional_fields() -> None:
     assert config.attach_usage is None
     assert config.attach_response is None
     assert config.timeout is None
-    assert config.retries is None
     assert config.provider_options is None
     assert config.backend_options is None
 
@@ -47,7 +45,6 @@ def test_ai_processor_config_accepts_none_for_optional_fields() -> None:
 def test_ai_processor_config_retry_and_usage_limit_defaults() -> None:
     config = AIProcessorConfig(model="azure:gpt-5")
 
-    assert config.retries is None
     assert config.transport_retries == 3
     assert config.tool_retries == 3
     assert config.output_retries is None
@@ -58,19 +55,22 @@ def test_ai_processor_config_retry_and_usage_limit_defaults() -> None:
     assert config.count_tokens_before_request is False
 
 
+def test_ai_processor_config_rejects_removed_retry_field() -> None:
+    with pytest.raises(ValidationError, match="retries"):
+        AIProcessorConfig.model_validate({"model": "azure:gpt-5", "retries": 2})
+
+
 def test_mixin_falls_back_to_defaults_when_optional_fields_are_none() -> None:
     config = AIProcessorConfig(
         model="azure:gpt-5",
         backend=None,
         attach_usage=None,
         attach_response=None,
-        retries=None,
         provider_options=None,
         backend_options=None,
     )
     mixin = _DummyMixin(config)
 
-    assert mixin._get_retries() == 3
     assert mixin._get_transport_retries() == 3
     assert mixin._get_tool_retries() == 3
     assert mixin._get_effective_output_retries() == 3
@@ -89,13 +89,13 @@ def test_mixin_uses_explicit_optional_values_when_provided() -> None:
         model="azure:gpt-5",
         attach_usage=False,
         attach_response=False,
-        retries=7,
+        transport_retries=7,
+        tool_retries=7,
         provider_options={"deployment": "gpt5"},
         backend_options={"model_settings": {"temperature": 0.2}},
     )
     mixin = _DummyMixin(config)
 
-    assert mixin._get_retries() == 7
     assert mixin._get_transport_retries() == 7
     assert mixin._get_tool_retries() == 7
     assert mixin._should_attach_usage() is False

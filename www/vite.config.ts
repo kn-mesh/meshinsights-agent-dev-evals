@@ -9,7 +9,7 @@ export default defineConfig({
       { find: "@eval-ui", replacement: resolve(__dirname, "../agent-dev-eval-ui/web/src") },
       { find: "@use-case", replacement: resolve(__dirname, "src/use_case") },
       { find: "@tanstack/react-query", replacement: resolve(__dirname, "node_modules/@tanstack/react-query") },
-      { find: "plotly.js-dist-min", replacement: resolve(__dirname, "node_modules/plotly.js-dist-min") },
+      { find: "plotly.js-cartesian-dist-min", replacement: resolve(__dirname, "node_modules/plotly.js-cartesian-dist-min") },
       { find: "react-plotly.js/factory", replacement: resolve(__dirname, "node_modules/react-plotly.js/dist/factory.mjs") },
     ],
     dedupe: ["react", "react-dom"],

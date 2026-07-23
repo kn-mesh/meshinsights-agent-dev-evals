@@ -9,12 +9,12 @@
   },
   "scripts": {
     "dev": "vite --port 3000",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node scripts/check-evidence-bundle.mjs",
     "test": "vitest run"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.95.2",
-    "plotly.js-dist-min": "^3.6.0",
+    "plotly.js-cartesian-dist-min": "^3.7.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-plotly.js": "^4.0.0",

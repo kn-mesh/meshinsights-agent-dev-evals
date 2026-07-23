@@ -28,9 +28,8 @@ in this skill.
    `--all-examples` for a full benchmark; absence of filters no longer implies
    all examples in unattended execution. Include `--agent-version-id` and
    repeatable `--dimension KEY=JSON_VALUE` flags whenever those stable
-   comparison identities are known. Do not use the deprecated
-   `--agent-version` display label as exact identity. Avoid interactive profile
-   or benchmark selection unless discovery is the requested task.
+   comparison identities are known. Avoid interactive profile or benchmark
+   selection unless discovery is the requested task.
 4. Treat hosted benchmark availability as mutable operational state. Before a
    live run, confirm the exact key and version through the runbook's discovery
    workflow or a current catalog result from the same environment. A value in

@@ -140,11 +140,8 @@ config = AIProcessorConfig(
 )
 ```
 
-The legacy `retries` option remains available as a compatibility override for
-both `transport_retries` and `tool_retries`. New configurations should use the
-split settings so HTTP failures, tool failures, and output validation have
-independent budgets. Token and tool-call limits are opt-in; `None` means no
-limit.
+Transport, tool, and output-validation retries use independent budgets. Token
+and tool-call limits are opt-in; `None` means no limit.
 
 ### Model Identifiers
 

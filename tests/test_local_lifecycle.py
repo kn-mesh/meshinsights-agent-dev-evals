@@ -75,8 +75,8 @@ def _write_run(
                 "run": {
                     "schema_version": 1,
                     "run_id": run_id,
-                    "agent_version": run_spec["agent"],
                     "dimensions": {
+                        "agent": run_spec["agent"],
                         "pipeline": {"path": "pipeline_configs/test.ppln"},
                         "benchmark": {"key": "benchmark", "version": 1},
                         "model": {"id": model, "reasoning_effort": "low"},

@@ -4,7 +4,7 @@ import type { Data, Layout } from "plotly.js";
 const Plot = lazy(async () => {
   const [{ default: createPlot }, { default: Plotly }] = await Promise.all([
     import("react-plotly.js/factory"),
-    import("plotly.js-dist-min"),
+    import("plotly.js-cartesian-dist-min"),
   ]);
   return { default: createPlot(Plotly) };
 });
@@ -21,11 +21,17 @@ export function TimeseriesChart({
   series,
   yAxisLabel,
   zeroLine = false,
+  alarmTimestamp,
+  yAxisRange,
+  height = 410,
 }: {
   rows: Array<Record<string, unknown>>;
   series: Series[];
   yAxisLabel?: string;
   zeroLine?: boolean;
+  alarmTimestamp?: string;
+  yAxisRange?: [number, number];
+  height?: number;
 }) {
   const data = useMemo<Data[]>(
     () =>
@@ -46,7 +52,7 @@ export function TimeseriesChart({
   );
   const layout: Partial<Layout> = {
     autosize: true,
-    height: 410,
+    height,
     margin: { l: 58, r: 24, t: 16, b: 48 },
     paper_bgcolor: "transparent",
     plot_bgcolor: "transparent",
@@ -58,8 +64,18 @@ export function TimeseriesChart({
       gridcolor: "#e5e7eb",
       zeroline: zeroLine,
       zerolinecolor: "#64748b",
+      range: yAxisRange,
     },
     legend: { orientation: "h", y: 1.12 },
+    shapes: alarmTimestamp ? [{
+      type: "line",
+      x0: alarmTimestamp,
+      x1: alarmTimestamp,
+      y0: 0,
+      y1: 1,
+      yref: "paper",
+      line: { color: "#d97706", width: 1.5, dash: "dot" },
+    }] : undefined,
   };
   return (
     <Suspense fallback={<div className="empty">Loading interactive chart…</div>}>
@@ -67,7 +83,7 @@ export function TimeseriesChart({
         data={data}
         layout={layout}
         config={{ responsive: true, displaylogo: false, scrollZoom: false }}
-        style={{ width: "100%", height: 430 }}
+        style={{ width: "100%", height: height + 20 }}
         useResizeHandler
       />
     </Suspense>

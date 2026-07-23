@@ -339,7 +339,6 @@ def run_eval(
     repository: BenchmarkRepository | None = None,
     benchmark_source: str | None = None,
     grader_registry: GraderRegistry | None = None,
-    agent_version: str | None = None,
     agent_version_id: str | None = None,
     agent_policy_path: Path | None = None,
     require_promoted_agent_version: bool = False,
@@ -389,12 +388,6 @@ def run_eval(
         agent_version_store_root or project_root / "agent_versions"
     )
     requested_version_id = agent_version_id
-    if (
-        requested_version_id is None
-        and agent_version
-        and agent_version.startswith("av_")
-    ):
-        requested_version_id = agent_version
     lifecycle_state = "candidate"
     if requested_version_id is not None or require_promoted_agent_version:
         expected_id = requested_version_id or resolved_agent.manifest.agent_version_id
@@ -505,11 +498,6 @@ def run_eval(
         ai_model=ai_model,
         ai_reasoning_effort=ai_reasoning_effort,
         agent_reference=agent_reference,
-        legacy_agent_label=(
-            agent_version
-            if agent_version and not agent_version.startswith("av_")
-            else None
-        ),
         configuration_dimensions=dimensions,
     )
     run_id, run_spec_sha256 = build_run_identity(run_spec)
@@ -557,11 +545,6 @@ def run_eval(
         ai_model=ai_model,
         ai_reasoning_effort=ai_reasoning_effort,
         agent_reference=agent_reference,
-        legacy_agent_label=(
-            agent_version
-            if agent_version and not agent_version.startswith("av_")
-            else None
-        ),
         configuration_dimensions=dimensions,
         benchmark_source=resolved_benchmark_source,
         completed_at=datetime.fromisoformat(manifest_created_at),
@@ -966,7 +949,6 @@ def _build_resolved_run_spec(
     ai_model: str,
     ai_reasoning_effort: str | None,
     agent_reference: AgentVersionReference,
-    legacy_agent_label: str | None,
     configuration_dimensions: dict[str, JsonScalar],
 ) -> dict[str, Any]:
     """Resolve every semantic execution/scoring input before model calls."""
@@ -1041,7 +1023,6 @@ def _build_resolved_run_spec(
         },
         "agent": {
             **agent_reference.model_dump(mode="json"),
-            "legacy_label": legacy_agent_label,
         },
         "model": {
             "provider": _extract_provider(ai_model),
@@ -1921,7 +1902,6 @@ def _build_run_config(
     ai_model: str | None,
     ai_reasoning_effort: str | None,
     agent_reference: AgentVersionReference,
-    legacy_agent_label: str | None,
     configuration_dimensions: dict[str, JsonScalar],
     benchmark_source: str,
     completed_at: datetime,
@@ -1933,21 +1913,29 @@ def _build_run_config(
         raise ValueError("Pipeline YAML must define a mapping at its root.")
     dimensions = {
         "benchmark": {
+            "project_key": benchmark.project_key,
             "name": benchmark.benchmark_name,
             "key": benchmark.benchmark_key,
             "version_id": benchmark.benchmark_version_id,
             "version": benchmark.version_number,
             "published_at": benchmark.published_at.isoformat(),
             "source_state_sha256": benchmark.source_state_sha256,
+            "published_contract_schema_version": (
+                benchmark.published_contract_schema_version
+            ),
+            "source": benchmark_source,
         },
         "evaluation_profile": {
             "id": profile.profile_id,
             "version": profile.profile_version,
+            "schema_version": profile.schema_version,
+            "path": preflight.profile_path,
             "content_sha256": profile.content_sha256,
+            "grader_set_sha256": profile.grader_set_sha256,
+            "slice_definition_sha256": profile.slice_definition_sha256,
         },
         "agent": {
             **agent_reference.model_dump(mode="json"),
-            "legacy_label": legacy_agent_label,
         },
         "pipeline": {
             "path": str(yaml_path),
@@ -1978,21 +1966,16 @@ def _build_run_config(
             "runtime": runtime,
             "max_workers": max_workers,
             "error_action": error_action,
+            "ai_execution_policies": _ai_execution_policies(
+                yaml_path,
+                ai_model=ai_model,
+                ai_reasoning_effort=ai_reasoning_effort,
+            ),
         },
         "configuration": configuration_dimensions,
     }
     return {
         "schema_version": 1,
-        "agent_version": agent_reference.model_dump(mode="json"),
-        "yaml_path": str(yaml_path),
-        "project_key": benchmark.project_key,
-        "benchmark_name": benchmark.benchmark_name,
-        "benchmark_key": benchmark.benchmark_key,
-        "benchmark_version_id": benchmark.benchmark_version_id,
-        "benchmark_version_number": benchmark.version_number,
-        "benchmark_published_at": benchmark.published_at.isoformat(),
-        "benchmark_source_state_sha256": benchmark.source_state_sha256,
-        "published_contract_schema_version": benchmark.published_contract_schema_version,
         "label_schemas": [
             {
                 "schema_version_id": schema.schema_version_id,
@@ -2002,17 +1985,6 @@ def _build_run_config(
             }
             for schema in benchmark.label_schemas
         ],
-        "benchmark_source": benchmark_source,
-        "evidence_source": "azure_blob",
-        "evaluation_profile": {
-            "profile_id": profile.profile_id,
-            "profile_version": profile.profile_version,
-            "schema_version": profile.schema_version,
-            "path": preflight.profile_path,
-            "content_sha256": profile.content_sha256,
-            "grader_set_sha256": profile.grader_set_sha256,
-            "slice_definition_sha256": profile.slice_definition_sha256,
-        },
         "dimensions": dimensions,
         "graders": [
             field.evaluation.grader.model_dump(mode="json")
@@ -2023,18 +1995,7 @@ def _build_run_config(
         "slice_counts": preflight.slice_counts,
         "scope": scope,
         "runs_per_example": runs_per_example,
-        "runtime": runtime,
-        "max_workers": max_workers,
-        "error_action": error_action,
         "progress_interval_seconds": progress_interval_seconds,
-        "ai_provider": _extract_provider(ai_model),
-        "ai_model": ai_model,
-        "ai_reasoning_effort": ai_reasoning_effort,
-        "ai_execution_policies": _ai_execution_policies(
-            yaml_path,
-            ai_model=ai_model,
-            ai_reasoning_effort=ai_reasoning_effort,
-        ),
         "completed_at_utc": completed_at.isoformat(timespec="seconds"),
     }
 
@@ -2187,17 +2148,8 @@ def _ai_execution_policies(
             "AI" in processor_name or "Agent" in processor_name or "model" in processor
         ):
             continue
-        legacy_retries = processor.get("retries")
-        transport_attempts = (
-            max(1, legacy_retries)
-            if isinstance(legacy_retries, int)
-            else processor.get("transport_retries", 3)
-        )
-        tool_retries = (
-            legacy_retries
-            if isinstance(legacy_retries, int)
-            else processor.get("tool_retries", 3)
-        )
+        transport_attempts = processor.get("transport_retries", 3)
+        tool_retries = processor.get("tool_retries", 3)
         configured_output_retries = processor.get("output_retries")
         policies.append(
             {
@@ -2272,10 +2224,6 @@ def _argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--ai-reasoning-effort", choices=["default", "low", "medium", "high"]
-    )
-    parser.add_argument(
-        "--agent-version",
-        help="Deprecated display label; use --agent-version-id for verification.",
     )
     parser.add_argument("--agent-version-id")
     parser.add_argument("--agent-policy", type=Path)
@@ -2722,7 +2670,6 @@ def main() -> None:
             max_workers=args.max_workers,
             error_action=args.error_action,
             progress_interval_seconds=args.progress_interval_seconds,
-            agent_version=args.agent_version,
             agent_version_id=args.agent_version_id,
             agent_policy_path=args.agent_policy,
             require_promoted_agent_version=(args.require_promoted_agent_version),

@@ -71,8 +71,7 @@ Every run automatically resolves the matching
 `agent_version_configs/<pipeline-stem>.agent.yaml`, creates an immutable
 candidate manifest, and writes it beside the durable run. Use
 `--agent-version-id av_<hash>` or `--require-promoted-agent-version` when a run
-must use content already promoted into the local catalog. `--agent-version` is
-retained only as a deprecated display label and is not identity.
+must use content already promoted into the local catalog.
 
 Promote a useful completed run without resolving the current checkout again:
 
@@ -134,7 +133,6 @@ combined as an intersection.
 - `--slice <slice-key>`: examples in a named slice from the selected evaluation
   profile. Repeat it to select the union of multiple slices.
 - `--agent-version-id av_<hash>`: require an exact resolved candidate identity.
-  `--agent-version` is only a deprecated display label and is not identity.
 - `--dimension 'key=<json-scalar>'`: persist a project-relevant configuration
   dimension such as `--dimension 'prompt_revision=7'`. Repeat for additional
   grouping dimensions; keys must be unique.
@@ -308,7 +306,8 @@ unavailable detail as `disabled`, `capture_failed`, `capture_partial`,
 `purged`, or `absent`, so missing diagnostics are not confused with a failed
 or low-quality agent output.
 
-`run.evaluation_profile` records the profile ID, version, and content hash.
+`run.dimensions.evaluation_profile` records the profile ID, version, and
+content hash.
 `manifest.json` preserves each example's complete published `benchmark_labels`,
 even when the profile grades only a subset. Immutable attempts preserve
 canonical `agent_output`, `evaluations`, usage, cost, contract errors, and
@@ -377,8 +376,9 @@ timeouts, connection failures, rate limits, and retryable server responses.
 The v1_3 pipeline keeps a 120-second timeout per attempt and uses three
 transport attempts.
 
-Persisted `run.ai_execution_policies` records the configured timeout and retry
-policy for every AI processor. Observed request counts, retry availability,
+Persisted `run.dimensions.execution.ai_execution_policies` records the
+configured timeout and retry policy for every AI processor. Observed request
+counts, retry availability,
 model/API durations, and timeout overruns belong to optional
 `performance/summary.json`; configured limits are not observations. Failed
 runs also include

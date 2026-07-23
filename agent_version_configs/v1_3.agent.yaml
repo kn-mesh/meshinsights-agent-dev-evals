@@ -44,6 +44,7 @@ contracts:
 
 non_execution_exclusions:
   - docs/**
+  - mi-core/core/src/mi/docs/**
   - tests/**
   - eval_results/**
   - src/evals/**

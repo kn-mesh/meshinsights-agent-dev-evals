@@ -30,6 +30,8 @@ OutputT = TypeVar("OutputT", bound=BaseModel)
 class AIProcessorConfig(BaseProcessorConfig):
     """Configuration for AI processors."""
 
+    model_config = {"extra": "forbid"}
+
     model: ModelName | None = Field(
         default=None,
         description="Model identifier in provider:model format",
@@ -55,13 +57,6 @@ class AIProcessorConfig(BaseProcessorConfig):
     )
     timeout: float | None = Field(
         default=None, description="Request timeout in seconds"
-    )
-    retries: int | None = Field(
-        default=None,
-        ge=0,
-        description=(
-            "Compatibility override applied to both transport_retries and tool_retries"
-        ),
     )
     transport_retries: int = Field(
         default=3,
@@ -114,16 +109,6 @@ class AIProcessorConfig(BaseProcessorConfig):
         description="Backend-specific adapter options",
     )
 
-    def get_settings(self) -> Any:
-        """Get config settings compatible with legacy pydantic-ai flows."""
-        if self.model is None:
-            return None
-        return {
-            "thinking": self.reasoning_effort.value,
-            "timeout": self.timeout,
-        }
-
-
 class AIProcessorMixin(Generic[PDO, OutputT]):
     """Base mixin shared by workflow and agent processors."""
 
@@ -167,30 +152,13 @@ class AIProcessorMixin(Generic[PDO, OutputT]):
             f"{self.__class__.__name__} must define 'output_schema' class attribute"
         )
 
-    def _get_retries(self) -> int:
-        """Return the legacy retry value as a tool-retry compatibility shim."""
-        return self._get_tool_retries()
-
-    def _get_legacy_retries(self) -> int | None:
-        config = getattr(self, "config", None)
-        if config is None:
-            return None
-        retries = getattr(config, "retries", None)
-        return retries if isinstance(retries, int) else None
-
     def _get_transport_retries(self) -> int:
-        legacy_retries = self._get_legacy_retries()
-        if legacy_retries is not None:
-            return max(1, legacy_retries)
         config = getattr(self, "config", None)
         if config is None:
             return 3
         return getattr(config, "transport_retries", 3)
 
     def _get_tool_retries(self) -> int:
-        legacy_retries = self._get_legacy_retries()
-        if legacy_retries is not None:
-            return legacy_retries
         config = getattr(self, "config", None)
         if config is None:
             return 3
