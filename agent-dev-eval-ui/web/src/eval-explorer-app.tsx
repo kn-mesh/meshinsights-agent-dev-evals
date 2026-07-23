@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
+import { Badge } from "./components/ui/badge";
+import { Button } from "./components/ui/button";
 import type {
-  AttemptPerformancePayload,
   AttemptRow,
-  DurationStats,
   EvidenceView,
-  PerformancePayload,
   RunEntry,
   UseCaseAdapter,
 } from "./contracts";
@@ -21,17 +19,10 @@ type AttemptsPayload = {
 type AttemptPayload = {
   row: AttemptRow;
   review: Record<string, unknown> | null;
-  performance: AttemptPerformancePayload;
 };
-type ComparisonEntry = {
-  comparison_id: string;
-  result_path?: string | null;
-  run_ids: string[];
-  varying_dimensions: string[];
-};
-type ComparisonsPayload = { comparisons: ComparisonEntry[] };
 
 const pageSize = 100;
+const reviewTabs = ["evaluation", "evidence", "execution"] as const;
 
 const states = [
   "all",
@@ -54,8 +45,10 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
   const [field, setField] = useState(initial.get("field") ?? "");
   const [sliceKey, setSliceKey] = useState(initial.get("slice") ?? "");
   const [offset, setOffset] = useState(parseOffset(initial.get("offset")));
-  const [tab, setTab] = useState(initial.get("tab") ?? "evaluation");
-  const [comparisonId, setComparisonId] = useState(initial.get("comparison") ?? "");
+  const initialTab = initial.get("tab");
+  const [tab, setTab] = useState(
+    reviewTabs.includes(initialTab as (typeof reviewTabs)[number]) ? initialTab! : "evaluation",
+  );
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -68,27 +61,14 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
       slice: sliceKey,
       offset: offset > 0 ? String(offset) : "",
       tab,
-      comparison: comparisonId,
     })) {
       if (value) url.searchParams.set(key, String(value));
       else url.searchParams.delete(key);
     }
     window.history.replaceState(null, "", url);
-  }, [runId, executionId, state, search, field, sliceKey, offset, tab, comparisonId]);
+  }, [runId, executionId, state, search, field, sliceKey, offset, tab]);
 
   const runs = useQuery({ queryKey: ["runs"], queryFn: () => api<RunPayload>("/runs") });
-  const run = useQuery({
-    queryKey: ["run", runId],
-    queryFn: () => api<Record<string, unknown>>(`/runs/${encodeURIComponent(runId)}`),
-    enabled: Boolean(runId),
-  });
-  const performance = useQuery({
-    queryKey: ["performance", runId],
-    queryFn: () => api<PerformancePayload>(
-      `/runs/${encodeURIComponent(runId)}/performance`,
-    ),
-    enabled: Boolean(runId),
-  });
   const attempts = useQuery({
     queryKey: ["attempts", runId, state, search, field, sliceKey, offset],
     queryFn: () => api<AttemptsPayload>(
@@ -111,16 +91,6 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
     enabled: Boolean(runId && detail.data?.row.example_id && tab === "evidence"),
     staleTime: Infinity,
   });
-  const comparisons = useQuery({
-    queryKey: ["comparisons"],
-    queryFn: () => api<ComparisonsPayload>("/comparisons"),
-  });
-  const comparison = useQuery({
-    queryKey: ["comparison", comparisonId],
-    queryFn: () => api<Record<string, unknown>>(`/comparisons/${encodeURIComponent(comparisonId)}`),
-    enabled: Boolean(comparisonId),
-  });
-
   const selectedRun = useMemo(
     () => runs.data?.runs.find((item) => item.run_id === runId),
     [runs.data, runId],
@@ -137,27 +107,39 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
 
   return (
     <div className="app-shell">
-      <header>
-        <div>
-          <div className="eyebrow">MeshInsights Agent Workbench</div>
+      <header className="app-header">
+        <div className="brand-lockup">
+          <div className="brand-mark" aria-hidden="true">MI</div>
+          <div>
+            <div className="brand-name">MeshInsights</div>
+            <div className="brand-product">Agent Workbench</div>
+          </div>
+        </div>
+        <div className="header-context">
+          <div className="eyebrow">Spirax Pulse / Evaluation</div>
           <h1>Eval Explorer</h1>
         </div>
-        <select
-          aria-label="Evaluation run"
-          value={runId}
-          onChange={(event) => {
-            setRunId(event.target.value);
-            setExecutionId("");
-            setOffset(0);
-          }}
-        >
-          <option value="">Select an evaluation run…</option>
-          {runs.data?.runs.map((item) => (
-            <option key={item.run_id} value={item.run_id}>
-              {item.pipeline_path ?? "pipeline"} · {item.model ?? "model"} · {item.run_id.slice(0, 20)}
-            </option>
-          ))}
-        </select>
+        <div className="header-actions">
+          <label className="run-select-wrap">
+            <span>Evaluation run</span>
+            <select
+              aria-label="Evaluation run"
+              value={runId}
+              onChange={(event) => {
+                setRunId(event.target.value);
+                setExecutionId("");
+                setOffset(0);
+              }}
+            >
+              <option value="">Select an evaluation run…</option>
+              {runs.data?.runs.map((item) => (
+                <option key={item.run_id} value={item.run_id}>
+                  {item.pipeline_path ?? "pipeline"} · {item.model ?? "model"} · {item.run_id.slice(0, 20)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </header>
 
       {runs.error ? <QueryError error={runs.error} /> : null}
@@ -166,36 +148,15 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
       {runId ? (
         <>
           <section className="run-bar">
-            <strong>{selectedRun?.benchmark_key} v{selectedRun?.benchmark_version}</strong>
-            <span>{selectedRun?.model}</span>
-            <span>{selectedRun?.reasoning_effort}</span>
-            <span>{selectedRun?.recorded_attempts}/{selectedRun?.planned_attempts} attempts</span>
-            <span>review: {selectedRun?.review_status}</span>
+            <RunFact label="Benchmark" value={`${selectedRun?.benchmark_key ?? "Unknown"} v${selectedRun?.benchmark_version ?? "—"}`} />
+            <RunFact label="Model" value={selectedRun?.model ?? "Unknown"} />
+            <RunFact label="Reasoning" value={selectedRun?.reasoning_effort ?? "—"} />
+            <RunFact label="Attempts" value={`${selectedRun?.recorded_attempts ?? 0}/${selectedRun?.planned_attempts ?? 0}`} />
+            <RunFact label="Review" value={selectedRun?.review_status ?? "Unknown"} />
           </section>
-          <details className="summary-card">
-            <summary>Run metrics and configuration</summary>
-            <Json value={run.data ?? { loading: true }} />
-          </details>
-          {run.error ? <QueryError error={run.error} /> : null}
-          <PerformancePanel
-            performance={performance.data}
-            error={performance.error}
-            onSelectExecution={(value) => {
-              setExecutionId(value);
-              setTab("performance");
-            }}
-          />
-          <ComparisonPanel
-            comparisons={comparisons.data?.comparisons}
-            listError={comparisons.error}
-            comparisonId={comparisonId}
-            onComparisonChange={setComparisonId}
-            comparison={comparison.data}
-            detailError={comparison.error}
-          />
 
-          <main>
-            <aside>
+          <main className="explorer-workspace">
+            <aside className="attempt-sidebar">
               <div className="filters">
                 <input
                   aria-label="Search attempts"
@@ -248,30 +209,29 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                       <Status row={row} />
                     </div>
                     <small>{row.example_id} · repetition {row.run_index}</small>
-                    <div className="output-line">
-                      <span>Expected {compact(row.benchmark_labels)}</span>
-                      <span>Actual {compact(row.agent_output)}</span>
-                    </div>
+                    <div className="output-line">AI output · {summarizeOutput(row.agent_output)}</div>
                   </button>
                 ))}
               </div>
               <div className="pagination">
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
+                  size="sm"
                   aria-label="Previous attempts"
                   disabled={offset === 0}
                   onClick={() => setOffset(Math.max(0, offset - pageSize))}
-                >Previous</button>
-                <button
-                  type="button"
+                >Previous</Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   aria-label="Next attempts"
                   disabled={!attempts.data || offset + attempts.data.rows.length >= attempts.data.matched}
                   onClick={() => setOffset(offset + pageSize)}
-                >Next</button>
+                >Next</Button>
               </div>
             </aside>
 
-            <article>
+            <article className="attempt-detail">
               {!executionId ? <div className="empty">Select an attempt to inspect.</div> : null}
               {detail.error ? <QueryError error={detail.error} /> : null}
               {detail.data ? (
@@ -285,26 +245,20 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                   </div>
                   <nav className="tabs">
                     {[
-                      ["evaluation", "Evaluation"],
-                      ["performance", "Performance"],
+                      ["evaluation", "AI output"],
                       ["evidence", "Evidence package"],
-                      ["input", "Agent input"],
-                      ["execution", "Execution & tools"],
-                      ["raw", "Raw"],
+                      ["execution", "Execution details"],
                     ].map(([key, label]) => (
                       <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{label}</button>
                     ))}
                   </nav>
                   {tab === "evaluation" ? <Evaluation row={detail.data.row} /> : null}
-                  {tab === "performance" ? <AttemptPerformance performance={detail.data.performance} /> : null}
                   {tab === "evidence" ? (
                     evidence.isPending ? <div className="empty">Loading and verifying frozen evidence…</div> :
                     evidence.error ? <QueryError error={evidence.error} /> :
                     evidence.data ? <EvidenceDisplay evidence={evidence.data} /> : null
                   ) : null}
-                  {tab === "input" ? <ReviewSection review={detail.data.review} row={detail.data.row} section="model_interactions" /> : null}
                   {tab === "execution" ? <Execution review={detail.data.review} row={detail.data.row} /> : null}
-                  {tab === "raw" ? <Json value={detail.data} /> : null}
                 </>
               ) : null}
             </article>
@@ -315,149 +269,44 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
   );
 }
 
-export function PerformancePanel({
-  performance,
-  error,
-  onSelectExecution,
-}: {
-  performance: PerformancePayload | undefined;
-  error?: Error | null;
-  onSelectExecution: (executionId: string) => void;
-}) {
-  if (error) {
-    return <section className="performance-panel"><QueryError error={error} compact /></section>;
-  }
-  if (!performance) {
-    return <section className="performance-panel"><div className="empty compact-empty">Loading performance observations…</div></section>;
-  }
-  if (performance.availability !== "available") {
-    return (
-      <section className="performance-panel">
-        <div className="performance-heading"><h2>Performance</h2><span className="status">unavailable</span></div>
-        <p className="muted">{performance.reason ?? "Performance observations are unavailable."} Durable quality and evidence remain usable.</p>
-      </section>
-    );
-  }
-  const stages = performance.summary?.stage_duration_seconds ?? {};
-  const modelDuration = performance.model_calls?.duration_seconds;
-  const retries = performance.retries;
-  return (
-    <section className="performance-panel">
-      <div className="performance-heading">
-        <div><div className="eyebrow">Disposable observations</div><h2>Performance</h2></div>
-        <span className="status correct">available</span>
-      </div>
-      <div className="metric-grid">
-        <Metric label="Wall time" value={formatSeconds(performance.summary?.evaluation_wall_time_seconds)} />
-        <Metric label="Throughput" value={formatRate(performance.summary?.throughput_runs_per_minute)} />
-        <Metric label="Executions" value={String(performance.recorded_executions ?? "—")} />
-        <Metric label="Model calls" value={String(performance.model_calls?.count ?? "—")} />
-      </div>
-      <div className="performance-columns">
-        <div>
-          <h3>Median / p95 latency</h3>
-          <div className="latency-table">
-            {Object.entries(stages).map(([name, stats]) => <LatencyRow key={name} name={name} stats={stats} />)}
-            {modelDuration ? <LatencyRow name="model API" stats={modelDuration} /> : null}
-          </div>
-          <p className="muted">
-            Duration boundary: {formatCount(performance.model_calls?.duration_exceeded_configured_timeout_count)}. This does not by itself prove a provider timeout. Long tail at or above p95: {formatCount(performance.model_calls?.long_tail_at_or_above_p95_count)}.
-          </p>
-        </div>
-        <div>
-          <h3>Retry observations</h3>
-          <dl className="observation-list">
-            <dt>Model requests</dt><dd>{retries?.observed_model_requests ?? "unavailable"}</dd>
-            <dt>HTTP attempts</dt><dd>{retries?.observed_transport_attempts ?? "unavailable"}</dd>
-            <dt>Retry categories</dt><dd>{retries?.observed_transport_attempts == null ? "unavailable" : compact(retries.observed_transport_retry_categories ?? {})}</dd>
-          </dl>
-          {retries?.observed_transport_attempts == null ? <p className="muted">The active provider path did not expose adapter-owned HTTP attempts. Configured retry limits are not shown as observations.</p> : null}
-        </div>
-      </div>
-      <div>
-        <h3>Slowest model calls</h3>
-        <div className="slow-call-list">
-          {performance.model_calls?.slowest?.map((call, index) => (
-            <button
-              key={`${call.execution_id ?? "unknown"}-${index}`}
-              disabled={!call.execution_id}
-              onClick={() => call.execution_id && onSelectExecution(call.execution_id)}
-            >
-              <span><strong>{call.unit_id ?? call.example_id ?? call.work_item_id ?? "unknown"}</strong><small>{call.execution_id ?? "execution unavailable"}</small></span>
-              <span>{formatSeconds(call.duration_seconds)}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ComparisonPanel({
-  comparisons,
-  listError,
-  comparisonId,
-  onComparisonChange,
-  comparison,
-  detailError,
-}: {
-  comparisons: ComparisonEntry[] | undefined;
-  listError: Error | null;
-  comparisonId: string;
-  onComparisonChange: (value: string) => void;
-  comparison: Record<string, unknown> | undefined;
-  detailError: Error | null;
-}) {
-  return (
-    <details className="summary-card comparison-card">
-      <summary>Run comparisons ({comparisons?.length ?? 0})</summary>
-      {listError ? <QueryError error={listError} compact /> : (
-        <select aria-label="Run comparison" value={comparisonId} onChange={(event) => onComparisonChange(event.target.value)}>
-          <option value="">Select a comparison…</option>
-          {comparisons?.map((item) => (
-            <option key={item.comparison_id} value={item.comparison_id} disabled={!item.result_path}>
-              {item.comparison_id} · {item.run_ids.length} runs · {item.varying_dimensions.join(", ") || "no varying dimensions"}
-            </option>
-          ))}
-        </select>
-      )}
-      {detailError ? <QueryError error={detailError} compact /> : null}
-      {comparison ? <Json value={comparison} /> : null}
-    </details>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return <div className="metric"><small>{label}</small><strong>{value}</strong></div>;
-}
-
-function LatencyRow({ name, stats }: { name: string; stats: DurationStats }) {
-  return <div><span>{name}</span><span>{formatSeconds(stats.median)} / {formatSeconds(stats.p95)}</span></div>;
-}
-
-export function AttemptPerformance({ performance }: { performance: AttemptPerformancePayload }) {
-  if (performance.availability !== "available") {
-    return <div className="empty">Attempt performance unavailable: {performance.reason ?? "no observation was retained"}. Durable evaluation and evidence remain available.</div>;
-  }
-  return (
-    <div className="stack">
-      <div className="metric-grid">
-        <Metric label="Executor duration" value={formatSeconds(performance.executor_duration_seconds)} />
-        <Metric label="Started" value={performance.started_at_utc ?? "—"} />
-        <Metric label="Completed" value={performance.completed_at_utc ?? "—"} />
-      </div>
-      <Card title="Attempt timing, retries, and model calls"><Json value={performance.metrics ?? { unavailable: true }} /></Card>
-    </div>
-  );
-}
-
 function Evaluation({ row }: { row: AttemptRow }) {
+  const fields = Array.from(new Set([
+    ...Object.keys(row.benchmark_labels),
+    ...Object.keys(row.agent_output),
+  ]));
   return (
-    <div className="grid-cards">
-      <Card title="Expected output"><Json value={row.benchmark_labels} /></Card>
-      <Card title="Actual output"><Json value={row.agent_output} /></Card>
-      <Card title="Field evaluations"><Json value={row.evaluations} /></Card>
-      <Card title="Attempt state"><Json value={{ execution: row.execution_status, output_contract: row.output_contract_status, scoring: row.scoring_status, flaky: row.flaky }} /></Card>
+    <div className="review-stack">
+      <section className="review-intro">
+        <div>
+          <div className="eyebrow">Benchmark review</div>
+          <h3>AI output compared with expected output</h3>
+        </div>
+        <p>Use the evidence package to validate the model’s conclusion and investigate incorrect fields.</p>
+      </section>
+      <section className="output-comparison" aria-label="AI output comparison">
+        <div className="comparison-row comparison-header" aria-hidden="true">
+          <span>Field</span><span>Benchmark</span><span>AI output</span><span>Result</span>
+        </div>
+        {fields.map((fieldName) => {
+          const result = fieldResult(row.evaluations[fieldName]);
+          return (
+            <div className="comparison-row" key={fieldName}>
+              <strong>{humanize(fieldName)}</strong>
+              <span className="review-value">{displayValue(row.benchmark_labels[fieldName])}</span>
+              <AiOutputValue value={row.agent_output[fieldName]} />
+              <Badge variant={result === true ? "success" : result === false ? "destructive" : "neutral"}>
+                {result === true ? "Match" : result === false ? "Mismatch" : "Review"}
+              </Badge>
+            </div>
+          );
+        })}
+      </section>
+      <section className="review-status-strip" aria-label="Attempt status">
+        <ReviewFact label="Execution" value={row.execution_status} />
+        <ReviewFact label="Output contract" value={row.output_contract_status} />
+        <ReviewFact label="Scoring" value={row.scoring_status} />
+        <ReviewFact label="Stability" value={row.flaky ? "Flaky" : "Stable"} />
+      </section>
     </div>
   );
 }
@@ -465,17 +314,34 @@ function Evaluation({ row }: { row: AttemptRow }) {
 function Execution({ review, row }: { review: Record<string, unknown> | null; row: AttemptRow }) {
   if (!review) return <ReviewUnavailable row={row} />;
   return (
-    <div className="stack">
-      <Card title="Model interactions and tool activity"><Json value={review.model_interactions ?? { unavailable: true }} /></Card>
-      <Card title="Pipeline trace"><Json value={review.pipeline ?? { unavailable: true }} /></Card>
-      <Card title="Attempt outcome"><Json value={review.attempt_outcome ?? { unavailable: true }} /></Card>
+    <div className="execution-stack">
+      <p className="secondary-note">Technical trace data is collapsed by default so it does not compete with output and evidence review.</p>
+      <CollapsibleJson title="Model interactions and tool activity" value={review.model_interactions ?? { unavailable: true }} />
+      <CollapsibleJson title="Pipeline trace" value={review.pipeline ?? { unavailable: true }} />
+      <CollapsibleJson title="Attempt outcome" value={review.attempt_outcome ?? { unavailable: true }} />
     </div>
   );
 }
 
-function ReviewSection({ review, row, section }: { review: Record<string, unknown> | null; row: AttemptRow; section: string }) {
-  if (!review) return <ReviewUnavailable row={row} />;
-  return <Json value={review[section] ?? { unavailable: true }} />;
+function CollapsibleJson({ title, value }: { title: string; value: unknown }) {
+  return <details className="technical-disclosure"><summary>{title}</summary><Json value={value} /></details>;
+}
+
+function ReviewFact({ label, value }: { label: string; value: string }) {
+  return <div><small>{label}</small><strong>{humanize(value)}</strong></div>;
+}
+
+function AiOutputValue({ value }: { value: unknown }) {
+  const record = asRecord(value);
+  const confidence = typeof record?.confidence === "string" ? record.confidence : null;
+  const explanation = typeof record?.explanation === "string" ? record.explanation : null;
+  return (
+    <div className="review-value ai-value">
+      <span>{displayValue(value)}</span>
+      {confidence ? <small>{confidence} confidence</small> : null}
+      {explanation ? <details className="rationale"><summary>Model rationale</summary><p>{explanation}</p></details> : null}
+    </div>
+  );
 }
 
 function ReviewUnavailable({ row }: { row: AttemptRow }) {
@@ -490,11 +356,12 @@ function ReviewUnavailable({ row }: { row: AttemptRow }) {
 
 function Status({ row }: { row: AttemptRow }) {
   const value = row.execution_status === "failed" ? "failed" : row.complete_evaluation_correct === true ? "correct" : row.complete_evaluation_correct === false ? "incorrect" : row.scoring_status;
-  return <span className={`status ${value}`}>{value}</span>;
+  const variant = value === "correct" ? "success" : value === "incorrect" || value === "failed" ? "destructive" : "neutral";
+  return <Badge variant={variant} className={`status ${value}`}>{value}</Badge>;
 }
 
-function Card({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="card"><h3>{title}</h3>{children}</section>;
+function RunFact({ label, value }: { label: string; value: string }) {
+  return <div className="run-fact"><small>{label}</small><strong>{value}</strong></div>;
 }
 
 function Json({ value }: { value: unknown }) {
@@ -541,19 +408,36 @@ function pageRange(payload: AttemptsPayload, offset: number) {
   return `Showing ${offset + 1}–${offset + payload.rows.length}`;
 }
 
-function compact(value: unknown) {
-  const text = JSON.stringify(value) ?? String(value);
-  return text.length > 72 ? `${text.slice(0, 69)}…` : text;
+function summarizeOutput(output: Record<string, unknown>) {
+  const entries = Object.entries(output).slice(0, 2);
+  if (!entries.length) return "No structured output";
+  return entries.map(([key, value]) => `${humanize(key)}: ${displayValue(value)}`).join(" · ");
 }
 
-function formatSeconds(value: number | null | undefined) {
-  return value == null ? "unavailable" : `${value.toFixed(value >= 10 ? 1 : 2)} s`;
+function displayValue(value: unknown): string {
+  const record = asRecord(value);
+  const unwrapped = record && "value" in record ? record.value : value;
+  if (unwrapped == null || unwrapped === "") return "—";
+  if (typeof unwrapped === "string" || typeof unwrapped === "number" || typeof unwrapped === "boolean") {
+    return String(unwrapped);
+  }
+  const text = JSON.stringify(unwrapped);
+  return text.length > 180 ? `${text.slice(0, 177)}…` : text;
 }
 
-function formatRate(value: number | null | undefined) {
-  return value == null ? "unavailable" : `${value.toFixed(2)} runs/min`;
+function fieldResult(value: unknown): boolean | null {
+  const record = asRecord(value);
+  if (typeof record?.correct === "boolean") return record.correct;
+  return null;
 }
 
-function formatCount(value: number | null | undefined) {
-  return value == null ? "unavailable" : String(value);
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function humanize(value: string) {
+  if (!value) return "—";
+  return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }

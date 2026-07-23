@@ -14,19 +14,24 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.95.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "plotly.js-cartesian-dist-min": "^3.7.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-plotly.js": "^4.0.0",
+    "tailwind-merge": "^3.0.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
     "@types/plotly.js": "^3.0.10",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@types/react-plotly.js": "^2.6.4",
     "@vitejs/plugin-react": "^5.1.4",
     "jsdom": "^28.1.0",
+    "tailwindcss": "^4.1.18",
     "typescript": "^5.7.2",
     "vite": "^7.3.5",
     "vitest": "^3.2.6"

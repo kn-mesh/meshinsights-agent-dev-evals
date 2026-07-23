@@ -1,9 +1,10 @@
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: [
       { find: "@eval-ui", replacement: resolve(__dirname, "../agent-dev-eval-ui/web/src") },
@@ -13,6 +14,7 @@ export default defineConfig({
       { find: "react-plotly.js/factory", replacement: resolve(__dirname, "node_modules/react-plotly.js/dist/factory.mjs") },
     ],
     dedupe: ["react", "react-dom"],
+    conditions: ["browser", "module", "import", "default"],
   },
   server: {
     proxy: { "/api": "http://127.0.0.1:8765" },

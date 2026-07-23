@@ -26,6 +26,12 @@ Use this source order:
 
 Distinguish current behavior from recommended direction. Existing coherent code is the source of truth unless the user asks to migrate it. When a skill and the implementation differ, explain the difference and follow the implementation for local behavior.
 
+Do not turn current behavior into a product requirement merely because it is
+coherent. For architecture, prioritization, or new-feature guidance, first test
+the request against `docs/product-strategy/` and the FDE job. Describe existing
+mechanics as compatibility constraints only when the requested change touches
+them.
+
 Run repository commands with `uv run ...`. Treat `mi-core/` and `mi.ai` as editable local source under `mi-core/core/src/mi/`, not as opaque installed dependencies.
 
 ## Repository Ownership Boundaries
@@ -61,9 +67,25 @@ Use these locations by default:
 | `agent-dev-eval-ui/` | Reusable local explorer API and React shell |
 | `src/evidence/` | Project-owned frozen-evidence normalization and explorer envelope |
 | `www/src/use_case/` | Project-owned evidence schema and visual composition |
-| `src/lifecycle/` | Derived local catalog, references, quarantine, restore, and purge |
+| `src/lifecycle/` | Optional local artifact-maintenance implementation; not a default product capability |
 
 Treat example files as starting patterns, not required production behavior.
+
+## Gate New Work By FDE Outcome
+
+Before routing or recommending a change, answer:
+
+1. Which FDE job does it complete: create, port, build, evaluate, inspect,
+   improve, package, or hand off?
+2. What is blocked or materially slow in the current path?
+3. What is the simplest existing path that completes the job?
+4. Does it help launch or improve a decision about a unit at a decision point?
+5. What evidence supports making it reusable across use cases?
+6. What adjacent feature should be deferred?
+
+If the request is implementation-specific maintenance, answer from current code.
+If it is a product or architecture choice, prefer the strategy and the smallest
+validated capability over preservation or expansion of current machinery.
 
 ## Route To Specialized Skills
 
@@ -76,8 +98,8 @@ Load the narrowest applicable skill before answering in depth or implementing:
 | Pipeline components, YAML, variants, runners, or receipts | `$pipeline-builder` |
 | Structured AI processors, workflows, agents, tools, capabilities, or Agent Skills | `$ai-processor-builder` |
 | Prepare, execute, or troubleshoot a use-case eval command | `$run-use-case-evals` |
-| Eval orchestration, benchmark contracts, repeated runs, or result apps | `$agent-eval-builder` |
-| Local run/version catalog, quarantine, restore, or deletion lifecycle | `$agent-eval-builder` |
+| Minimum eval capability, benchmark contracts, scoring, comparison, or result apps | `$agent-eval-builder` |
+| Explicit local run/version deletion, quarantine, restore, or purge maintenance | `$agent-eval-builder`; do not propose proactively |
 | Existing eval regressions, comparisons, or error analysis | `$eval-results-analysis` |
 | `.env`, `mi auth`, provider credentials, runtime overrides, or Logfire | `$external-runtime-setup` |
 
@@ -126,6 +148,8 @@ For guidance-only requests:
 1. Answer the question directly.
 2. Cite the relevant repo-relative files or symbols.
 3. State whether the answer describes current behavior, a skill recommendation, or both.
-4. Identify the narrowest next action or specialized skill when useful.
+4. Identify the FDE outcome and current stage gate when the question affects
+   product direction or architecture.
+5. Identify the narrowest next action or specialized skill when useful.
 
 For implementation requests, inspect the same evidence, load the specialized skill, make the requested change, and verify it in proportion to risk.

@@ -83,7 +83,9 @@ Build in this order unless the user explicitly asks to skip ahead:
 - AI stage:
   The AI path runs successfully and its output reaches receipt metadata.
 - Eval stage:
-  The eval orchestrator selects examples, executes repetitions, and materializes the schema-v1 run bundle.
+  The existing eval path selects the intended examples, executes the variant,
+  and produces an inspectable result with benchmark, agent, and configuration
+  identity.
 
 ## Stage 1: Exact-Example Pipeline
 
@@ -213,6 +215,9 @@ Primary goals:
 - persist JSON results for comparison over time.
 
 Do not build eval orchestration before the pipeline can already run successfully and write the relevant final output to the receipt.
+Do not add a new execution mode, persistence layer, identity system, recovery
+mechanism, or artifact-lifecycle feature unless a demonstrated FDE task requires
+it. Use `$agent-eval-builder` to select the minimum stage gate for the outcome.
 
 ## Build The First Agent Or Next Variant
 

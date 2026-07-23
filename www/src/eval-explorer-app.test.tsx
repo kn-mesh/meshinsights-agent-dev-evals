@@ -94,26 +94,37 @@ describe("EvalExplorerApp workflow", () => {
     await waitFor(() => container.textContent?.includes("Frozen evidence unavailable") === true);
     expect(container.querySelector('[role="alert"]')?.textContent).toContain("Frozen evidence unavailable");
 
-    await click(button("Evaluation"));
-    await waitFor(() => container.textContent?.includes("Expected output") === true);
+    await click(button("AI output"));
+    await waitFor(() => container.textContent?.includes("AI output compared with expected output") === true);
     expect(container.textContent).not.toContain("Frozen evidence unavailable");
   });
 
-  it("restores attempt detail, exposes review-unavailable state, and loads comparison detail", async () => {
-    window.history.replaceState(null, "", "/?run=run-a&execution=execution-a.1&tab=input&comparison=cmp-a");
+  it("keeps technical trace secondary and does not request performance data", async () => {
+    window.history.replaceState(null, "", "/?run=run-a&execution=execution-a.1&tab=execution");
+    const requested: string[] = [];
     installFetch((url) => {
+      requested.push(url);
       if (url.endsWith("/attempts/execution-a.1")) {
-        return { row: { ...row, review_status: "unavailable", review_unavailable_reason: { code: "purged" } }, review: null, performance: { availability: "unavailable" } };
+        return { row: { ...row, review_status: "unavailable", review_unavailable_reason: { code: "purged" } }, review: null };
       }
-      if (url === "/api/comparisons") return { comparisons: [{ comparison_id: "cmp-a", result_path: "comparison.json", run_ids: ["run-a", "run-b"], varying_dimensions: ["model.id"] }] };
-      if (url === "/api/comparisons/cmp-a") return { comparison_id: "cmp-a", paired_deltas: [{ complete_evaluation: { delta_rate: 0.1 } }] };
       return route(url);
     });
     await render();
     await waitFor(() => container.textContent?.includes("Detailed review unavailable (purged)") === true);
-    await waitFor(() => container.textContent?.includes('"comparison_id": "cmp-a"') === true);
     expect(new URL(window.location.href).searchParams.get("execution")).toBe("execution-a.1");
-    expect((byLabel("Run comparison") as HTMLSelectElement).value).toBe("cmp-a");
+    expect(requested.some((url) => url.includes("performance"))).toBe(false);
+    expect(container.textContent).not.toContain("Performance diagnostics");
+  });
+
+  it("shows benchmark and AI values without raw JSON walls", async () => {
+    window.history.replaceState(null, "", "/?run=run-a&execution=execution-a.1");
+    installFetch(route);
+    await render();
+    await waitFor(() => container.textContent?.includes("AI output compared with expected output") === true);
+    expect(container.textContent).toContain("Failure");
+    expect(container.textContent).toContain("Healthy");
+    expect(container.textContent).toContain("Mismatch");
+    expect(container.querySelector("pre")).toBeNull();
   });
 });
 
@@ -137,11 +148,8 @@ function installFetch(handler: (url: string) => unknown) {
 
 function route(url: string): unknown {
   if (url === "/api/runs") return { runs: [run], findings: [] };
-  if (url === "/api/comparisons") return { comparisons: [] };
-  if (url === "/api/runs/run-a") return { run_id: "run-a", summary: {}, run: {} };
-  if (url === "/api/runs/run-a/performance") return { run_id: "run-a", availability: "unavailable", reason: "not retained" };
   if (url.startsWith("/api/runs/run-a/attempts?")) return attemptsPayload(row);
-  if (url === "/api/runs/run-a/attempts/execution-a.1") return { row, review: { model_interactions: {} }, performance: { availability: "unavailable" } };
+  if (url === "/api/runs/run-a/attempts/execution-a.1") return { row, review: { model_interactions: {} } };
   if (url.includes("/evidence")) return { example: { example_id: "example-a", unit_id: "unit-a", decision_timestamp: "2026-01-01T00:00:00Z", metadata: {} }, window: { start: "2025-01-01", end: "2026-01-01", basis: "lookback" }, evidence: {}, metadata: {} };
   throw new Error(`Unhandled fetch: ${url}`);
 }

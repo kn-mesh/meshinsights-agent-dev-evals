@@ -1,112 +1,121 @@
 import type { EvidenceView, UseCaseAdapter } from "@eval-ui/contracts";
-import { TimeseriesChart } from "@eval-ui/timeseries-chart";
-import type { ReactNode } from "react";
+import { Button } from "@eval-ui/components/ui/button";
+import {
+  DEFAULT_TIMESERIES_CHART_HEIGHT,
+  TimeseriesChart,
+} from "@eval-ui/timeseries-chart";
+import { useEffect, useState, type ReactNode } from "react";
 import { spiraxEvidenceSchema } from "./evidence.schema";
-
-const dayMs = 24 * 60 * 60 * 1000;
 
 export function SpiraxEvidenceDisplay({ evidence }: { evidence: EvidenceView }) {
   const payload = spiraxEvidenceSchema.parse(evidence.evidence);
-  const exampleMetadata = evidence.example.metadata;
+  const metadata = evidence.example.metadata;
   const alarmTimestamp = evidence.example.decision_timestamp;
-  const windows = buildEvidenceWindows(payload.telemetry, alarmTimestamp);
-  const temperatureRange = numericRange(payload.telemetry, ["steam_temperature", "condensate_temperature"]);
-  const deltaRange = numericRange(payload.telemetry, ["temperature_delta"]);
+  const chartRows = buildEvidenceWindow(
+    payload.telemetry,
+    evidence.window.start,
+    evidence.window.end,
+  );
+  const lookbackDays = typeof evidence.window.lookback_days === "number"
+    ? evidence.window.lookback_days
+    : 365;
+  const historyLabel = `${lookbackDays}-Day History`;
+  const knownGaps = [...new Set([
+    ...payload.known_gaps,
+    ...evidence.metadata.known_gaps,
+  ].filter(Boolean))];
+  const xRange = { start: evidence.window.start, end: evidence.window.end };
+
   return (
     <div className="evidence-stack">
-      <section className="evidence-meta">
-        <Meta label="Sensor ID" value={evidence.example.unit_id} />
-        <Meta label="Alarm" value={evidence.example.decision_timestamp} />
-        <Meta label="Trap type" value={payload.asset.steam_trap_type ?? exampleMetadata.steam_trap_type} />
-        <Meta label="Customer" value={exampleMetadata.organization ?? exampleMetadata.customer} />
-        <Meta label="Source snapshot" value={evidence.metadata.source_snapshot_id} />
-        <Meta label="Evidence recipe" value={evidence.metadata.evidence_recipe_id} />
-      </section>
-      {payload.known_gaps.length ? <div className="warning">Evidence gaps: {payload.known_gaps.join("; ")}</div> : null}
-
-      <section className="evidence-window" aria-label="365-day evidence window">
-        <h3>365-day temperature history</h3>
-        <p className="muted">Four consecutive chronological segments with a shared scale; the alarm is at the right edge of segment 4.</p>
-        <div className="segmented-chart-grid">
-          {windows.year.map((segment, index) => (
-            <Segment key={`temperature-${segment.start}`} label={`Segment ${index + 1} · ${dateLabel(segment.start)}–${dateLabel(segment.end)}`}>
-              <TimeseriesChart
-                rows={segment.rows}
-                series={temperatureSeries}
-                yAxisLabel="Temperature (C)"
-                yAxisRange={temperatureRange}
-                alarmTimestamp={index === windows.year.length - 1 ? alarmTimestamp : undefined}
-                height={270}
-              />
-            </Segment>
-          ))}
-        </div>
-        <div className="segmented-chart-grid">
-          {windows.year.map((segment, index) => (
-            <Segment key={`delta-${segment.start}`} label={`Delta segment ${index + 1}`}>
-              <TimeseriesChart
-                rows={segment.rows}
-                series={deltaSeries}
-                yAxisLabel="Delta (C)"
-                yAxisRange={deltaRange}
-                zeroLine
-                alarmTimestamp={index === windows.year.length - 1 ? alarmTimestamp : undefined}
-                height={230}
-              />
-            </Segment>
-          ))}
+      <section className="evidence-summary">
+        <dl className="evidence-primary-meta">
+          <Meta label="Sensor ID" value={evidence.example.unit_id} />
+          <Meta label="Alarm" value={formatDate(alarmTimestamp)} />
+          <Meta
+            label="Trap type"
+            value={payload.asset.steam_trap_type ?? metadata.steam_trap_type}
+          />
+          <Meta label="Customer" value={metadata.organization ?? metadata.customer} />
+        </dl>
+        <div className="evidence-window-note">
+          <UiIcon name="clock" />
+          <span>{historyLabel} ending at the retained alarm decision.</span>
         </div>
       </section>
 
-      <section className="evidence-window" aria-label="30-day evidence window">
-        <h3>30-day alarm context</h3>
-        <Chart title="Steam & condensate temperature (30-day history)">
+      <details className="provenance-panel">
+        <summary>
+          <UiIcon name="database" />
+          Frozen evidence provenance
+        </summary>
+        <dl className="provenance-grid">
+          <Meta label="Source snapshot" value={evidence.metadata.source_snapshot_id} />
+          <Meta label="Evidence recipe" value={evidence.metadata.evidence_recipe_id} />
+          <Meta label="Schema" value={evidence.metadata.evidence_schema_version} />
+          <Meta label="Source kind" value={evidence.metadata.source_kind} />
+        </dl>
+      </details>
+
+      {knownGaps.length ? (
+        <div className="warning" role="note">
+          <UiIcon name="alert" />
+          <div>
+            <strong>Evidence gaps</strong>
+            <ul>{knownGaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="chart-intro">
+        <div>
+          <div className="eyebrow">Frozen source evidence</div>
+          <h3>Telemetry at the alarm decision</h3>
+        </div>
+        <p>Use the time controls to inspect 1 day, 7 days, 30 days, 6 months, or the complete retained window.</p>
+      </div>
+
+      <ChartPanel title={`Steam & Condensate Temperature (${historyLabel})`} icon="gauge">
+        {({ chartHeight }) => (
           <TimeseriesChart
-            rows={windows.month}
+            height={chartHeight}
+            rows={chartRows}
             series={temperatureSeries}
+            xRange={xRange}
             yAxisLabel="Temperature (C)"
             alarmTimestamp={alarmTimestamp}
+            ariaLabel={`${historyLabel} steam and condensate temperature`}
           />
-        </Chart>
-        <Chart title="Steam − condensate temperature delta (30-day history)">
+        )}
+      </ChartPanel>
+
+      <ChartPanel title={`Steam − Condensate Temperature Delta (${historyLabel})`} icon="activity">
+        {({ chartHeight }) => (
           <TimeseriesChart
-            rows={windows.month}
+            height={chartHeight}
+            rows={chartRows}
             series={deltaSeries}
+            xRange={xRange}
             yAxisLabel="Delta (C)"
             zeroLine
             alarmTimestamp={alarmTimestamp}
+            ariaLabel={`${historyLabel} steam and condensate temperature delta`}
           />
-        </Chart>
-      </section>
+        )}
+      </ChartPanel>
 
-      <section className="evidence-window" aria-label="7-day evidence window">
-        <h3>7-day alarm detail</h3>
-        <Chart title="Steam & condensate temperature (7-day history)">
+      <ChartPanel title={`Front Microphone Acoustic Level (${historyLabel})`} icon="activity">
+        {({ chartHeight }) => (
           <TimeseriesChart
-            rows={windows.week}
-            series={temperatureSeries}
-            yAxisLabel="Temperature (C)"
+            height={chartHeight}
+            rows={chartRows}
+            series={microphoneSeries}
+            xRange={xRange}
             alarmTimestamp={alarmTimestamp}
+            ariaLabel={`${historyLabel} front microphone acoustic level`}
           />
-        </Chart>
-        <Chart title="Steam − condensate temperature delta (7-day history)">
-          <TimeseriesChart
-            rows={windows.week}
-            series={deltaSeries}
-            yAxisLabel="Delta (C)"
-            zeroLine
-            alarmTimestamp={alarmTimestamp}
-          />
-        </Chart>
-      </section>
-
-      <Chart title="Front microphone acoustic level (365-day history)">
-        <TimeseriesChart
-          rows={payload.telemetry}
-          series={[{ key: "front_mic", label: "Front Mic", color: "#00b8c4" }]}
-          alarmTimestamp={alarmTimestamp}
-        />
-      </Chart>
+        )}
+      </ChartPanel>
     </div>
   );
 }
@@ -116,58 +125,35 @@ const temperatureSeries = [
   { key: "condensate_temperature", label: "Condensate", color: "#4a86b8", unit: "C" },
 ];
 const deltaSeries = [
-  { key: "temperature_delta", label: "Steam - Condensate", color: "#7255a3", unit: "C" },
+  { key: "temperature_delta", label: "Steam - Condensate", color: "#00997d", unit: "C" },
+];
+const microphoneSeries = [
+  { key: "front_mic", label: "Front Mic", color: "#00b8c4" },
 ];
 
 type TelemetryRow = ReturnType<typeof spiraxEvidenceSchema.parse>["telemetry"][number];
-type SegmentWindow = { start: string; end: string; rows: TelemetryRow[] };
 
-export function buildEvidenceWindows(rows: TelemetryRow[], alarmTimestamp: string) {
-  const end = Date.parse(alarmTimestamp);
-  if (!Number.isFinite(end)) throw new Error(`Invalid alarm timestamp: ${alarmTimestamp}`);
-  return {
-    year: segmentedRows(rows, end, 365, 4),
-    month: rowsWithin(rows, end - 30 * dayMs, end),
-    week: rowsWithin(rows, end - 7 * dayMs, end),
-  };
-}
-
-function segmentedRows(rows: TelemetryRow[], end: number, days: number, count: number): SegmentWindow[] {
-  const start = end - days * dayMs;
-  const width = (end - start) / count;
-  return Array.from({ length: count }, (_, index) => {
-    const segmentStart = start + width * index;
-    const segmentEnd = index === count - 1 ? end : start + width * (index + 1);
-    return {
-      start: new Date(segmentStart).toISOString(),
-      end: new Date(segmentEnd).toISOString(),
-      rows: rowsWithin(rows, segmentStart, segmentEnd, index === count - 1),
-    };
-  });
-}
-
-function rowsWithin(rows: TelemetryRow[], start: number, end: number, inclusiveEnd = true) {
-  return rows.filter((row) => {
-    const timestamp = Date.parse(row.timestamp);
-    return timestamp >= start && (inclusiveEnd ? timestamp <= end : timestamp < end);
-  });
-}
-
-function numericRange(rows: TelemetryRow[], keys: Array<keyof TelemetryRow>): [number, number] | undefined {
-  const values = rows.flatMap((row) => keys.map((key) => row[key])).filter((value): value is number => typeof value === "number");
-  if (!values.length) return undefined;
-  const minimum = Math.min(...values);
-  const maximum = Math.max(...values);
-  const padding = Math.max((maximum - minimum) * 0.05, 1);
-  return [minimum - padding, maximum + padding];
-}
-
-function dateLabel(value: string) {
-  return value.slice(0, 10);
+export function buildEvidenceWindow(rows: TelemetryRow[], start: string, end: string) {
+  const startTime = Date.parse(start);
+  const endTime = Date.parse(end);
+  if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) {
+    throw new Error(`Invalid evidence window: ${start}–${end}`);
+  }
+  return rows
+    .filter((row) => {
+      const timestamp = Date.parse(row.timestamp);
+      return timestamp >= startTime && timestamp <= endTime;
+    })
+    .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
 }
 
 function Meta({ label, value }: { label: string; value: unknown }) {
-  return <div><small>{label}</small><strong>{displayValue(value)}</strong></div>;
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd title={displayValue(value)}>{displayValue(value)}</dd>
+    </div>
+  );
 }
 
 function displayValue(value: unknown) {
@@ -176,12 +162,94 @@ function displayValue(value: unknown) {
   return "Unknown";
 }
 
-function Chart({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="chart-panel"><h3>{title}</h3>{children}</section>;
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
-function Segment({ label, children }: { label: string; children: ReactNode }) {
-  return <section className="segment-card"><h4>{label}</h4>{children}</section>;
+function ChartPanel({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: IconName;
+  children: ReactNode | ((state: { chartHeight: number }) => ReactNode);
+}) {
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [fullscreenHeight, setFullscreenHeight] = useState(getFullscreenChartHeight);
+
+  useEffect(() => {
+    if (!isMaximized) return;
+    const updateHeight = () => setFullscreenHeight(getFullscreenChartHeight());
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMaximized(false);
+    };
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("resize", updateHeight);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMaximized]);
+
+  const chartHeight = isMaximized ? fullscreenHeight : DEFAULT_TIMESERIES_CHART_HEIGHT;
+  const content = typeof children === "function" ? children({ chartHeight }) : children;
+
+  return (
+    <section className="chart-panel" data-fullscreen={isMaximized}>
+      <div className="chart-panel-heading">
+        <h3>{title}</h3>
+        <div className="chart-panel-actions">
+          <UiIcon name={icon} />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsMaximized((value) => !value)}
+            title={isMaximized ? "Exit full screen" : "Maximize chart"}
+            aria-label={isMaximized ? "Exit full screen" : `Maximize ${title}`}
+          >
+            <UiIcon name={isMaximized ? "minimize" : "maximize"} />
+          </Button>
+        </div>
+      </div>
+      {content}
+    </section>
+  );
+}
+
+function getFullscreenChartHeight() {
+  if (typeof window === "undefined") return 680;
+  return Math.max(560, Math.min(window.innerHeight - 132, 920));
+}
+
+type IconName = "activity" | "alert" | "clock" | "database" | "gauge" | "maximize" | "minimize";
+
+function UiIcon({ name }: { name: IconName }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {name === "activity" ? <path d="M3 12h4l2.5-6 5 12 2.5-6h4" /> : null}
+      {name === "alert" ? <><path d="M10.3 3.7 2.4 18a2 2 0 0 0 1.8 3h15.6a2 2 0 0 0 1.8-3L13.7 3.7a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></> : null}
+      {name === "clock" ? <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></> : null}
+      {name === "database" ? <><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7" /></> : null}
+      {name === "gauge" ? <><path d="M4.9 19a9 9 0 1 1 14.2 0" /><path d="m12 13 4-4M12 19h.01" /></> : null}
+      {name === "maximize" ? <><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" /></> : null}
+      {name === "minimize" ? <><path d="M8 8H3V3M16 8h5V3M8 16H3v5M16 16h5v5" /></> : null}
+    </svg>
+  );
 }
 
 export const projectUseCaseAdapter: UseCaseAdapter = {
