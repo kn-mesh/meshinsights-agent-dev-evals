@@ -30,7 +30,10 @@ processor output must remain compatible with eval orchestration.
 
 - Treat `mi-core/` as editable source in this repository, not as a static imported package.
 - `mi.ai` and `mi.core` live under `mi-core/core/src/mi/`; CLI source lives under `mi-core/cli/src/cli/`.
-- The root `uv` environment installs both as editable local sources. Inspect or modify that source when the task requires framework changes, then run the relevant `mi-core` tests.
+- The root `uv` environment installs both as editable local sources. Inspect it
+  when needed. Before modifying it, explain why the use-case layer is
+  insufficient, identify exact reusable paths and contracts, and obtain
+  explicit user approval; then run the relevant `mi-core` tests.
 
 ## Processor Shapes
 

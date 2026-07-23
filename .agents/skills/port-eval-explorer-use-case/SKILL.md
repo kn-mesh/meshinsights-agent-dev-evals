@@ -36,8 +36,10 @@ Put custom behavior only in:
 - `www/src/use_case/`: schema validation and evidence composition/charts.
 
 If a useful primitive can be configured without understanding the use case,
-promote it to core. If it contains business meaning, artifact names, thresholds,
-or domain-specific layout, keep it in the project.
+propose it as a reusable change and obtain explicit user approval before editing
+the reusable UI or eval packages. If it contains business meaning, artifact
+names, thresholds, or domain-specific layout, keep it in the
+manifest-declared reference paths.
 
 ## 3. Port The Evidence Path
 

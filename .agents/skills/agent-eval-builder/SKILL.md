@@ -22,6 +22,9 @@ reason by itself to expand or reproduce the architecture.
   use-case project. Keep genuinely reusable evaluation mechanics in shared code.
 - Do not add Benchmark Studio write paths, local benchmark truth, production
   hosting, or generic agent-runtime infrastructure.
+- Before modifying reusable evaluation, UI, versioning, bootstrap, or lifecycle
+  code, show why the use-case layer is insufficient, identify the exact shared
+  paths and contracts, and obtain explicit user approval.
 
 ## Start With The FDE Outcome
 
@@ -60,14 +63,21 @@ orchestration.
 
 Add only enough evaluation capability to:
 
-- select the intended examples;
+- select the full benchmark, an explicit unit/example list, or named use-case
+  sections;
 - execute the existing pipeline with an explicit model/configuration;
+- use bounded threaded execution normally and serial execution only for
+  debugging;
+- persist each completed unit and resume only missing work after interruption;
 - distinguish execution failure, invalid output, and incorrect valid output;
-- calculate the requested aggregate and per-field measures; and
+- calculate accuracy, reliability, token totals, total cost, average cost, and
+  P5/P95 per-unit cost with cost-coverage status; and
 - retain enough identity to reproduce or explain the result.
 
-Do not add generalized filtering, execution modes, persistence schemas, or
-recovery machinery unless the requested job depends on them.
+Keep conditional predicates internal to project profiles. Do not add process
+execution, arbitrary operator predicates, generalized rerun policies,
+failure-generation reruns, or comparison orchestration to the supported runner
+workflow.
 
 ### Gate 3: Inspect and compare
 
@@ -95,10 +105,17 @@ same meaning across use cases.
 
 ### Gate 5: Operational hardening
 
-Add concurrency variants, resumability generations, transactional capture,
-content-addressed stores, new retention schemas, catalogs, quarantine, restore,
-purge, or migration machinery only for a demonstrated operational failure or an
-explicitly requested product requirement.
+The supported lifecycle is only:
+
+- rich local working evals;
+- explicit elevation of one complete run and its meaningful agent version into
+  compact retained aggregates;
+- read-only All/Working/Retained review; and
+- exact permanent deletion.
+
+Do not add quarantine, restore, recoverable deletion, archival tiers,
+generalized reachability/garbage collection, migration platforms, UI lifecycle
+mutations, or cloud retention without a new explicit product decision.
 
 Local disk housekeeping and artifact lifecycle management are maintenance
 concerns, not default Agent Workbench product capabilities.

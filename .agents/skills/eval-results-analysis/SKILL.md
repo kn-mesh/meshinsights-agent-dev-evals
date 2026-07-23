@@ -31,14 +31,25 @@ Rules:
 
 1. Confirm scope from the user.
    The user will usually tell you which pipeline versions, runs, or prompt revisions matter. Focus on those runs first instead of diffing every eval folder in the repo.
-2. Start with the bounded inspection summary instead of loading a complete
-   result or review tree:
+2. Resolve lifecycle state before loading detail:
+
+   ```bash
+   uv run python -m src.eval_lifecycle.cli inspect <eval-id> --json
+   ```
+
+   A working eval has rich local attempts/review and optional performance. A
+   retained eval has aggregate `result.json`, `units.json`,
+   `agent-provenance.json`, and `evidence-references.json`; tool traces and
+   performance were intentionally pruned.
+3. For a working eval, start with the bounded inspection summary instead of
+   loading a complete result or review tree:
 
    ```bash
    uv run python -m src.evals.inspection_cli summary --run <run-id>
    ```
 
-3. Identify the main regression or improvement pattern with compact filters:
+4. Identify the main regression or improvement pattern with compact filters.
+   For working evals use:
 
    ```bash
    uv run python -m src.evals.inspection_cli list \
@@ -47,7 +58,9 @@ Rules:
 
    Supported filters include `incorrect`, `invalid`, `failed`, `flaky`,
    `unscored`, and `review-unavailable`.
-4. Inspect only the representative units behind the pattern:
+   For retained evals query the local read-only explorer or select bounded rows
+   from `units.json`. Never treat pruned detail as corruption.
+5. Inspect only the representative units behind the pattern:
 
    ```bash
    uv run python -m src.evals.inspection_cli example \
@@ -60,22 +73,20 @@ Rules:
 
    Exact generated images remain local object references; Benchmark Studio
    source evidence remains a credential-free immutable Azure reference. Review
-   artifacts are temporary and may already be purged, which must be reported
-   rather than reconstructed or guessed. When review is unavailable, report
-   its typed reason (`disabled`, `capture_failed`, `capture_partial`, `purged`,
-   or `absent`) rather than describing the durable eval attempt as failed.
+   working review artifacts are temporary and may be absent, which must be
+   reported rather than reconstructed or guessed. Retained evals deliberately
+   preserve final AI outputs and grading while pruning tool and intermediate
+   traces. When working review is unavailable, report its typed reason
+   (`disabled`, `capture_failed`, `capture_partial`, or `absent`) rather than
+   describing the durable eval attempt as failed.
    Report review integrity separately when the summary marks the bundle
    `invalid`; the disposable inspection index refreshes automatically when
    capture, attempt generations, manifests, objects, or staging changes.
-5. Propose changes before editing anything. Explain the specific prompt,
+6. Propose changes before editing anything. Explain the specific prompt,
    pipeline, or data-shaping changes and why they address the observed pattern.
-6. When the user asks to preserve the analysis, write a compact diagnosis JSON
+7. When the user asks to preserve the analysis, write a compact diagnosis JSON
    with the reviewed run/execution identities and evidence-based hypothesis via
    `src.evals.inspection_cli diagnose`.
-7. Never purge automatically. After explicit user authorization, preview
-   `src.evals.inspection_cli purge --dry-run` and use `--yes` only for the exact
-   reviewed run. Review-only purge retains compact durable results and optional
-   diagnoses.
 
 ## What To Look At
 
@@ -93,20 +104,25 @@ Rules:
   distinct conditions. Use `run.dimensions` when grouping multiple result
   documents by model, agent version, pipeline hash, grader set, or
   project-declared configuration.
-- Reconstructed attempt rows
+- Working reconstructed attempt rows
   Use the bounded inspection commands or `LocalRunStore.evaluation_rows()`;
   rows are not duplicated in `result.json`. Complete frozen benchmark labels
   come from `manifest.json`, while immutable attempt generations supply
   `agent_output`, `evaluations`, contract errors, usage, cost, and failure
   details. Attempts are local and Git-ignored by default, so report detailed
   analysis as unavailable when they were removed after initial analysis; use
-  the retained compact result only for aggregate conclusions in that case.
-- Retained frozen evidence
-  Load charts through the run manifest's selected-example source snapshot and
-  complete raw artifact hash/size contract. Do not re-query the current
-  publication catalog to reconstruct historical evidence. If a legacy run
-  predates that retained contract, report evidence as unavailable and rerun it
-  rather than weakening integrity.
+  the compact result only for aggregate conclusions in that case.
+- Retained unit aggregate
+  `units.json` preserves per-unit expected outputs, full final AI outputs,
+  validation, grading, usage, and cost. State plainly when a question requires
+  tool or intermediate traces that elevation pruned.
+- Frozen evidence
+  Load charts through the working manifest or retained
+  `evidence-references.json` selected-example source snapshot, exact Azure
+  account/container, and complete artifact hash/size contract. Do not re-query
+  current benchmark membership or use an unverified local copy. If a legacy run
+  predates that contract, report evidence as unavailable and rerun it rather
+  than weakening integrity.
 - `performance/summary.json`
   When present, use its `summary`, `model_calls`, and `retries` sections for
   throughput, stage/API latency, slowest execution IDs, timeout observations,
@@ -143,7 +159,8 @@ Rules:
   recovery state.
 - Do not treat disposable performance observations as durable result fields or
   infer unavailable retry counts from configured retry limits.
-- Do not purge a review bundle without explicit user authorization.
+- Use `$eval-lifecycle` for exact permanent deletion; deletion is not
+  recoverable.
 - First present the exact changes you want to make, the evidence behind them, and the expected tradeoffs.
 - If the evidence is mixed, say so clearly instead of forcing a prompt tweak.
 

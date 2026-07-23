@@ -17,17 +17,23 @@ def find_run_directory(run_id: str, *, root: Path = Path("eval_results")) -> Pat
     normalized = run_id.strip()
     if not normalized or "/" in normalized or "\\" in normalized or ".." in normalized:
         raise ValueError(f"Invalid run id: {run_id!r}.")
-    matches = sorted(
-        path.parent for path in root.glob(f"**/runs/{normalized}/manifest.json")
-    )
-    if not matches:
+    matches = {
+        path.parent.resolve()
+        for pattern in (
+            f"working/**/{normalized}/manifest.json",
+            f"**/runs/{normalized}/manifest.json",
+        )
+        for path in root.glob(pattern)
+    }
+    ordered_matches = sorted(matches)
+    if not ordered_matches:
         raise ValueError(f"No local result was found for run {normalized}.")
-    if len(matches) > 1:
+    if len(ordered_matches) > 1:
         raise ValueError(
             f"Run id {normalized} is ambiguous under {root}: "
-            + ", ".join(str(path) for path in matches)
+            + ", ".join(str(path) for path in ordered_matches)
         )
-    return matches[0]
+    return ordered_matches[0]
 
 
 def materialize_review_index(run_dir: Path) -> Path:

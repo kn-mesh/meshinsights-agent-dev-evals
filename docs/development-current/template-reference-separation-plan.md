@@ -2,7 +2,9 @@
 
 ## Status
 
-Proposed feature and skill plan.
+Implemented and validated on 2026-07-23. The ownership/reset manifest, safe
+separate-repository bootstrap, reusable-code approval gate, root bootstrap
+skill, leakage validation, and upstream handoff record are in place.
 
 ## FDE Outcome
 

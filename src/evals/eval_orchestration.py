@@ -9,7 +9,7 @@ import _thread
 import json
 import logging
 import os
-import random
+import shlex
 import signal
 import sys
 import threading
@@ -38,7 +38,6 @@ from evaluation import (
     build_reliability_summary,
     build_run_identity,
     build_work_item_id,
-    build_results_dir_for_pipeline,
     benchmark_source_reference,
     build_scoring_coverage,
     metric_counts,
@@ -78,6 +77,7 @@ from src.benchmarks.compatibility import (
 )
 from src.evals.cli_support import (
     normalize_ai_reasoning_effort,
+    prompt_csv_values,
     prompt_positive_int,
     prompt_select_option,
 )
@@ -91,7 +91,10 @@ from src.evals.evaluation_profile import (
     slice_memberships,
 )
 from src.evals.graders import build_project_grader_registry
-from src.evals.inspection import materialize_review_index
+from src.evals.inspection import (
+    find_run_directory as find_inspection_run_directory,
+    materialize_review_index,
+)
 from src.evals.scoring import score_receipt_metadata
 from src.evals.run_specs import build_source_manifest, repository_root
 from src.evals.run_store import (
@@ -101,6 +104,7 @@ from src.evals.run_store import (
     new_invocation_id,
     utc_now,
 )
+from src.model_configuration import format_model
 from src.pipelines.pipeline_run_from_yaml import run_pipeline
 
 
@@ -499,6 +503,12 @@ def run_eval(
         ai_reasoning_effort=ai_reasoning_effort,
         agent_reference=agent_reference,
         configuration_dimensions=dimensions,
+        evidence_contract={
+            "storage_account_url": project_contract.benchmark_studio.storage_account_url,
+            "storage_container": project_contract.benchmark_studio.storage_container,
+            "evidence_recipe_id": configured_benchmark.evidence_recipe_id,
+            "source_snapshot_contract": configured_benchmark.source_snapshot_contract,
+        },
     )
     run_id, run_spec_sha256 = build_run_identity(run_spec)
     if expected_run_id is not None and expected_run_id != run_id:
@@ -520,10 +530,10 @@ def run_eval(
     ]
     base = output_root or BASE_RESULTS_DIR
     run_dir = (
-        build_results_dir_for_pipeline(base_results_dir=base, yaml_path=yaml_path)
+        base
+        / "working"
         / normalize_filename_token(benchmark.benchmark_key)
         / f"v{benchmark.version_number}"
-        / "runs"
         / run_id
     )
     store = LocalRunStore(run_dir, run_id=run_id)
@@ -826,6 +836,13 @@ def run_eval(
             except Exception as review_error:
                 logger.warning("Review capture finalization failed: %s", review_error)
             interrupted = isinstance(error, KeyboardInterrupt)
+            if interrupted:
+                logger.error(
+                    "INTERRUPTED RUN: %s | state=%s | manifest=%s",
+                    run_id,
+                    store.state_counts(),
+                    store.manifest_path,
+                )
             try:
                 store.write_invocation_event(
                     invocation_id=invocation_id,
@@ -950,6 +967,7 @@ def _build_resolved_run_spec(
     ai_reasoning_effort: str | None,
     agent_reference: AgentVersionReference,
     configuration_dimensions: dict[str, JsonScalar],
+    evidence_contract: dict[str, str],
 ) -> dict[str, Any]:
     """Resolve every semantic execution/scoring input before model calls."""
     pipeline_config = yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {}
@@ -1030,6 +1048,10 @@ def _build_resolved_run_spec(
             "api": model_definition.api,
             "reasoning_effort": ai_reasoning_effort,
             "pricing": (_pricing_snapshot(model_definition)),
+        },
+        "evidence": {
+            **evidence_contract,
+            "benchmark_source_state_sha256": benchmark.source_state_sha256,
         },
         "scoring": resolved_scoring_contract,
         "runs_per_example": runs_per_example,
@@ -1776,6 +1798,7 @@ def _build_cost_summary(attempts: list[EvalAttempt]) -> dict[str, Any]:
     status_counts: dict[str, int] = {}
     actual_by_currency: dict[str, float] = {}
     estimated_by_currency: dict[str, float] = {}
+    complete_unit_costs: dict[str, list[float]] = {}
     for observation in observations:
         status = str(observation.get("status", "unavailable"))
         status_counts[status] = status_counts.get(status, 0) + 1
@@ -1790,13 +1813,59 @@ def _build_cost_summary(attempts: list[EvalAttempt]) -> dict[str, Any]:
             currency = value.get("currency")
             if isinstance(amount, (int, float)) and isinstance(currency, str):
                 totals[currency] = totals.get(currency, 0.0) + float(amount)
+                if status in {"actual", "estimated_complete"}:
+                    complete_unit_costs.setdefault(currency, []).append(float(amount))
+    complete_count = sum(
+        status_counts.get(status, 0) for status in ("actual", "estimated_complete")
+    )
+    partial_count = status_counts.get("estimated_partial", 0)
+    unusable_count = (
+        len(attempts)
+        - len(observations)
+        + status_counts.get("unavailable", 0)
+        + sum(
+            count
+            for status, count in status_counts.items()
+            if status
+            not in {"actual", "estimated_complete", "estimated_partial", "unavailable"}
+        )
+    )
     return {
         "attempts_with_cost_observations": len(observations),
         "recorded_attempts": len(attempts),
+        "units_with_complete_cost_observations": complete_count,
+        "units_with_partial_pricing": partial_count,
+        "units_without_usable_cost_information": unusable_count,
         "status_counts": dict(sorted(status_counts.items())),
         "actual_by_currency": dict(sorted(actual_by_currency.items())),
         "estimated_by_currency": dict(sorted(estimated_by_currency.items())),
+        "complete_unit_cost_by_currency": {
+            currency: _cost_distribution(values)
+            for currency, values in sorted(complete_unit_costs.items())
+        },
     }
+
+
+def _cost_distribution(values: list[float]) -> dict[str, float | int]:
+    """Summarize complete per-unit cost observations with interpolated percentiles."""
+    ordered = sorted(values)
+    return {
+        "count": len(ordered),
+        "total": sum(ordered),
+        "average": sum(ordered) / len(ordered),
+        "p5": _percentile(ordered, 0.05),
+        "p95": _percentile(ordered, 0.95),
+    }
+
+
+def _percentile(ordered: list[float], quantile: float) -> float:
+    if not ordered:
+        raise ValueError("A percentile requires at least one observation.")
+    position = (len(ordered) - 1) * quantile
+    lower = int(position)
+    upper = min(lower + 1, len(ordered) - 1)
+    fraction = position - lower
+    return ordered[lower] + (ordered[upper] - ordered[lower]) * fraction
 
 
 def _build_retry_summary(attempts: list[EvalAttempt]) -> dict[str, Any]:
@@ -2028,9 +2097,7 @@ def _bind_run_config_to_manifest(
                 "tree_state": run_spec["source_manifest"]["source_tree_state"],
             },
             "evidence": {
-                "benchmark_source_state_sha256": run_spec["benchmark"][
-                    "source_state_sha256"
-                ],
+                **run_spec["evidence"],
                 "source": "azure_blob",
             },
             "harness": {
@@ -2201,6 +2268,16 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--example-ids", nargs="*")
     parser.add_argument("--unit-ids", nargs="*")
     parser.add_argument(
+        "--section",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help=(
+            "Select a named use-case section from the evaluation profile; "
+            "repeat to include more than one."
+        ),
+    )
+    parser.add_argument(
         "--all-examples",
         action="store_true",
         help="Explicitly select every example in the published benchmark version.",
@@ -2210,14 +2287,24 @@ def _argument_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         metavar="PATH=JSON_VALUE",
-        help="Filter immutable benchmark labels; repeat for multiple values.",
+        help=argparse.SUPPRESS,
     )
-    parser.add_argument("--slice", action="append", default=[])
-    parser.add_argument("--runs-per-example", type=int)
-    parser.add_argument("--runtime", choices=["serial", "threaded", "process"])
+    parser.add_argument(
+        "--slice", action="append", default=[], help=argparse.SUPPRESS
+    )
+    parser.add_argument("--runs-per-example", type=int, default=1)
+    parser.add_argument(
+        "--runtime",
+        choices=["threaded", "serial"],
+        default="threaded",
+        help="Use threaded execution normally or serial execution for debugging.",
+    )
     parser.add_argument("--max-workers", type=int, default=4)
     parser.add_argument(
-        "--error-action", choices=["stop", "continue"], default="continue"
+        "--error-action",
+        choices=["stop", "continue"],
+        default="continue",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument("--progress-interval-seconds", type=float, default=30.0)
     parser.add_argument(
@@ -2231,7 +2318,7 @@ def _argument_parser() -> argparse.ArgumentParser:
         "--compare-model",
         action="append",
         default=[],
-        help="Run an additional catalog model under identical non-model conditions.",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--ai-reasoning-effort", choices=["default", "low", "medium", "high"]
@@ -2247,14 +2334,14 @@ def _argument_parser() -> argparse.ArgumentParser:
         "--resume-mode",
         choices=["missing", "missing-or-cancelled", "failed", "missing-or-failed"],
         default="missing",
-        help="Select durable logical work without duplicating completed attempts.",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--rerun-failure-type",
         action="append",
         default=[],
         choices=[item.value for item in FailureType],
-        help="With a failed resume mode, select one normalized failure type.",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--run-id",
@@ -2268,7 +2355,7 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--materialize-only",
         action="store_true",
-        help="Rebuild result.json from durable attempts without executing work.",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--status-run-id",
@@ -2279,21 +2366,23 @@ def _argument_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         type=Path,
-        help="Build a validated comparison from two or more result.json files.",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--varying-dimension",
         action="append",
         default=[],
-        help="Declare a dimension allowed to differ across --compare-result inputs.",
+        help=argparse.SUPPRESS,
     )
-    parser.add_argument("--comparison-output-dir", type=Path)
+    parser.add_argument(
+        "--comparison-output-dir", type=Path, help=argparse.SUPPRESS
+    )
     parser.add_argument(
         "--dimension",
         action="append",
         default=[],
         metavar="KEY=JSON_VALUE",
-        help="Persist a project-relevant grouping dimension; repeat as needed.",
+        help=argparse.SUPPRESS,
     )
     return parser
 
@@ -2416,20 +2505,28 @@ def _resolve_cli_model(
 ) -> str:
     if args.ai_model:
         try:
-            return resolve_model(args.ai_model, catalog)
+            selected = resolve_model(args.ai_model, catalog)
         except ValueError as error:
             parser.error(str(error))
+        print(f"Selected model: {format_model(catalog.get(selected), default_model=catalog.default_model)}")
+        return selected
     if args.compare_model:
         try:
-            return resolve_model(args.compare_model[0], catalog)
+            selected = resolve_model(args.compare_model[0], catalog)
         except ValueError as error:
             parser.error(str(error))
+        print(f"Selected model: {format_model(catalog.get(selected), default_model=catalog.default_model)}")
+        return selected
     if not sys.stdin.isatty():
         parser.error("--ai-model or --compare-model is required non-interactively.")
-    return prompt_select_option(
+    choices = {
+        format_model(model, default_model=catalog.default_model): model.id
+        for model in catalog.models
+    }
+    return choices[prompt_select_option(
         f"Choose an AI model (project default: {catalog.default_model}):",
-        list(catalog.model_ids),
-    )
+        list(choices),
+    )]
 
 
 def _resolve_cli_reasoning_effort(
@@ -2467,48 +2564,92 @@ def _resolve_cli_scope(
     parser: argparse.ArgumentParser,
 ) -> tuple[list[str] | None, list[str] | None, dict[str, list[JsonScalar]], list[str]]:
     label_filters = _parse_label_filters(args.label_filter, parser)
+    section_keys = _resolve_section_keys(args.section, profile=profile, parser=parser)
     if args.all_examples:
-        if args.example_ids or args.unit_ids or label_filters or args.slice:
+        if (
+            args.example_ids
+            or args.unit_ids
+            or section_keys
+            or label_filters
+            or args.slice
+        ):
             parser.error("--all-examples cannot be combined with scope filters.")
         return None, None, {}, []
-    if args.example_ids or args.unit_ids or label_filters or args.slice:
-        return args.example_ids, args.unit_ids, label_filters, args.slice
+    supported_choices = sum(
+        bool(value) for value in (args.example_ids, args.unit_ids, section_keys)
+    )
+    if supported_choices > 1:
+        parser.error(
+            "Choose one scope: --all-examples, --example-ids, --unit-ids, "
+            "or --section."
+        )
+    if supported_choices:
+        if label_filters or args.slice:
+            parser.error(
+                "Named or explicit scopes cannot be combined with maintenance filters."
+            )
+        return args.example_ids, args.unit_ids, {}, section_keys
+    if label_filters or args.slice:
+        return None, None, label_filters, args.slice
     if not sys.stdin.isatty():
         parser.error(
             "An explicit scope is required: --all-examples, --example-ids, "
-            "--unit-ids, --label-filter, or --slice."
+            "--unit-ids, or --section."
         )
-    options = [
-        "All examples",
-        *[f"Slice: {item.label}" for item in profile.slices],
-        "Single example (random)",
-    ]
+    options = ["Full benchmark", "Explicit unit/example list"]
+    if profile.slices:
+        options.append("Named use-case section")
     selected = prompt_select_option(
-        "Which benchmark examples should be analyzed?", options
+        "Which benchmark scope should be evaluated?", options
     )
-    if selected == "All examples":
+    if selected == "Full benchmark":
         return None, None, {}, []
-    if selected == "Single example (random)":
-        example = random.choice(benchmark.examples)
-        print(
-            f"Randomly selected example: {example.example_id} (unit {example.unit_id})."
+    if selected == "Explicit unit/example list":
+        identity_kind = prompt_select_option(
+            "Which identifiers are you entering?", ["Example IDs", "Unit IDs"]
         )
-        return [example.example_id], None, {}, []
-    label = selected.removeprefix("Slice: ")
-    slice_key = next(item.key for item in profile.slices if item.label == label)
-    return None, None, {}, [slice_key]
+        values = prompt_csv_values(f"Enter comma-separated {identity_kind.lower()}")
+        return (values, None, {}, []) if identity_kind == "Example IDs" else (
+            None,
+            values,
+            {},
+            [],
+        )
+    labels = {item.label: item.key for item in profile.slices}
+    section = prompt_select_option("Choose a named use-case section:", list(labels))
+    return None, None, {}, [labels[section]]
+
+
+def _resolve_section_keys(
+    values: list[str],
+    *,
+    profile: EvaluationProfile,
+    parser: argparse.ArgumentParser,
+) -> list[str]:
+    """Resolve user-facing section keys or labels to profile slice keys."""
+    if not values:
+        return []
+    lookup = {
+        alias.casefold(): item.key
+        for item in profile.slices
+        for alias in (item.key, item.label)
+    }
+    resolved: list[str] = []
+    for value in values:
+        key = lookup.get(value.strip().casefold())
+        if key is None:
+            choices = ", ".join(item.label for item in profile.slices) or "(none)"
+            parser.error(f"Unknown use-case section {value!r}. Choose one of: {choices}")
+        if key not in resolved:
+            resolved.append(key)
+    return resolved
 
 
 def _resolve_cli_runtime(
     args: argparse.Namespace, *, parser: argparse.ArgumentParser
 ) -> RuntimeType:
-    if args.runtime is not None:
-        return args.runtime
-    if not sys.stdin.isatty():
-        parser.error("--runtime is required non-interactively.")
-    return prompt_select_option(
-        "Choose evaluation runtime:", ["serial", "threaded", "process"]
-    )  # type: ignore[return-value]
+    del parser
+    return args.runtime
 
 
 def _configure_cli_logging() -> None:
@@ -2525,28 +2666,68 @@ def _configure_cli_logging() -> None:
 
 def _print_cli_outcome(path: Path) -> bool:
     payload = json.loads(path.read_text(encoding="utf-8"))
-    reliability = payload["summary"]["reliability"]
-    coverage = payload["summary"]["scoring_coverage"]
+    summary = payload["summary"]
+    reliability = summary["reliability"]
+    coverage = summary["scoring_coverage"]
     planned = int(reliability["planned_runs"])
     scored = int(coverage["scored_runs"])
     failures = planned - scored
     print(f"COMPLETE: {scored}/{planned} attempts scored; {failures} not scored.")
+    usage = summary.get("usage", {})
+    totals = usage.get("totals") if isinstance(usage, dict) else None
+    if isinstance(totals, dict):
+        print(
+            "TOKENS: "
+            f"input={totals.get('input_tokens', 0)}, "
+            f"output={totals.get('output_tokens', 0)}, "
+            f"total={totals.get('total_tokens', 0)}, "
+            f"cached-input={totals.get('cached_input_tokens', 0)}, "
+            f"reasoning={totals.get('reasoning_tokens', 0)}."
+        )
+    cost = summary.get("cost", {})
+    if isinstance(cost, dict):
+        currencies = sorted(
+            set(cost.get("actual_by_currency", {}))
+            | set(cost.get("estimated_by_currency", {}))
+        )
+        for currency in currencies:
+            actual = cost.get("actual_by_currency", {}).get(currency, 0.0)
+            estimated = cost.get("estimated_by_currency", {}).get(currency, 0.0)
+            print(
+                f"COST TOTALS ({currency}): actual={actual:.6f}, "
+                f"estimated={estimated:.6f}."
+            )
+        for currency, distribution in cost.get(
+            "complete_unit_cost_by_currency", {}
+        ).items():
+            print(
+                f"COST ({currency}): total={distribution['total']:.6f}, "
+                f"avg/unit={distribution['average']:.6f}, "
+                f"P5={distribution['p5']:.6f}, "
+                f"P95={distribution['p95']:.6f} "
+                f"across {distribution['count']} complete observations."
+            )
+        print(
+            "COST COVERAGE: "
+            f"complete={cost.get('units_with_complete_cost_observations', 0)}, "
+            f"partial={cost.get('units_with_partial_pricing', 0)}, "
+            "unavailable="
+            f"{cost.get('units_without_usable_cost_information', 0)}."
+        )
     print(f"Results written to: {path}")
     return failures > 0
 
 
-def _find_run_directory(run_id: str, *, root: Path = BASE_RESULTS_DIR) -> Path:
-    matches = sorted(
-        path.parent for path in root.glob(f"**/runs/{run_id}/manifest.json")
+def _resume_command(argv: list[str]) -> str:
+    """Return a shell-safe command that resolves the same immutable run."""
+    return shlex.join(
+        [sys.executable, "-m", "src.evals.eval_orchestration", *argv]
     )
-    if not matches:
-        raise ValueError(f"No local result was found for run {run_id}.")
-    if len(matches) > 1:
-        raise ValueError(
-            f"Run id {run_id} is ambiguous under {root}: "
-            + ", ".join(str(path) for path in matches)
-        )
-    return matches[0]
+
+
+def _find_run_directory(run_id: str, *, root: Path = BASE_RESULTS_DIR) -> Path:
+    """Resolve a working run through the shared new/legacy layout contract."""
+    return find_inspection_run_directory(run_id, root=root)
 
 
 def _print_run_status(run_dir: Path) -> None:
@@ -2728,7 +2909,8 @@ def main() -> None:
                 )
             ]
     except KeyboardInterrupt:
-        print("INTERRUPTED: completed attempts are durable; resume the same run.")
+        print("INTERRUPTED: completed attempts are durable and the run is incomplete.")
+        print(f"Resume missing units with: {_resume_command(sys.argv[1:])}")
         raise SystemExit(130) from None
     except RunStoreIntegrityError as error:
         print(f"STORAGE INTEGRITY FAILURE: {error}")

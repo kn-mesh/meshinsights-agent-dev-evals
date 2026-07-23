@@ -130,6 +130,10 @@ uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1_3.ppln
 # Eval orchestration CLI
 uv run python -m src.evals.eval_orchestration --help
 
+# Project model and frozen-pricing configuration
+uv run python -m src.model_configuration list
+uv run python -m src.model_configuration upsert --help
+
 # Local-only ephemeral eval review CLI
 uv run python -m src.evals.inspection_cli --help
 
@@ -137,8 +141,8 @@ uv run python -m src.evals.inspection_cli --help
 APP_PROJECT_KEY=<benchmark-studio-project-key> \
   uv run python -m src.apps.eval_explorer
 
-# Derived local catalog and recoverable lifecycle operations
-uv run python -m src.lifecycle.cli --help
+# Working/retained elevation, verification, and permanent deletion
+uv run python -m src.eval_lifecycle.cli --help
 ```
 
 See [`EvalRunbook.md`](EvalRunbook.md) for the explicit, reproducible eval
@@ -207,76 +211,77 @@ Initialization refuses to overlay a non-empty destination and excludes source
 Git state, `.env`, credentials, virtual environments, caches, local eval
 results, and promoted agent-version data.
 
+`workbench.template.json` is the versioned ownership and reference-reset
+contract. It keeps `mi-core/`, the reusable eval packages, and generic Workbench
+mechanics distinct while declaring the exact reference-use-case paths that are
+cleared in a new repository. Root skills remain under `.agents/skills/`.
+Validation rejects reference identifiers in generated project-facing paths.
+
+Reusable source remains editable during MVP development, but coding agents must
+explain the shared change and obtain user approval before modifying it. An
+approved reusable fix made in a use-case repository must include an upstream
+template or library handoff before it is considered complete.
+
 After initialization, enter the new repository, run `uv sync`, then configure
 credentials with `uv run mi auth` or a local `.env`. The generated
 `.env.example` contains placeholders only. Populate
 `docs/use_case/PROJECT_CONTEXT.md` before using the separate Codex-guided
 pipeline-port workflow.
 
-## Immutable Agent Versions
+## Agent Candidate Provenance
 
-Every new eval resolves a content-addressed candidate agent version before the
-first model call. The manifest freezes the resolved pipeline graph, source and
-dirty overlay, prompts, skills, tools, schemas, evidence/action contracts,
-dependency lock, and the model override policy in
+Every new eval resolves a lightweight candidate before the first model call.
+The run-local manifest freezes Git revision, relevant dirty/untracked overlay,
+the resolved pipeline graph, prompts, skills, tools, schemas, evidence/action
+contracts, dependency lock, and the model override policy in
 `agent_version_configs/<pipeline>.agent.yaml`.
 
-Resolve or promote explicitly:
+Resolve explicitly when diagnosing provenance:
 
 ```bash
 uv run python -m src.agent_versions.cli --json resolve \
   --pipeline pipeline_configs/v1_3.ppln \
   --dirty-policy capture
-
-uv run python -m src.agent_versions.cli promote \
-  --from-run eval_<run-id> \
-  --alias pulse-v1-3-1
 ```
 
-Clean promotion uses the Git revision without copying tracked source. Dirty
-promotion must use `--dirty-policy capture` and retains exact changed bytes in
-the local content-addressed store. Global `agent_versions/` remains local-only;
-run-local candidate manifests and required objects are durable evaluation
-evidence and can be retained with their run in Git.
+The supported meaningful-version workflow is full-run elevation through
+`src.eval_lifecycle.cli`. It retains the candidate's Git identity,
+configuration hashes, and relevant patch together with the compact retained
+eval; it does not copy the complete source tree.
 
 ## Local Version And Result Lifecycle
 
-The lifecycle catalog is rebuilt from managed schema-v1 run manifests,
-run-local candidates, comparisons, promoted manifests, aliases, and promotion
-events. It does not create a mutable catalog database and does not read legacy
-standalone result JSON.
+Every new eval is a rich, disposable working eval. Elevation is an explicit
+full-run operation for a meaningful result and agent version. Retained evals
+use aggregate artifacts, prune performance/tool-trace detail, and keep exact
+Azure evidence references rather than local evidence copies.
 
 ```bash
-uv run python -m src.lifecycle.cli catalog --json
-uv run python -m src.lifecycle.cli verify --json
-
-# Preview, then quarantine one exact entity
-uv run python -m src.lifecycle.cli delete run eval_<run-id> --dry-run --json
-uv run python -m src.lifecycle.cli delete run eval_<run-id> --yes --json
-
-# The same flow applies to promoted versions and comparisons
-uv run python -m src.lifecycle.cli delete version av_<version-id> --dry-run --json
-uv run python -m src.lifecycle.cli delete comparison cmp_<id> --dry-run --json
-
-# Recover or permanently remove a quarantined operation
-uv run python -m src.lifecycle.cli restore del_<operation-id> --yes --json
-uv run python -m src.lifecycle.cli purge del_<operation-id> --yes --json
+uv run python -m src.eval_lifecycle.cli list --state all --json
+uv run python -m src.eval_lifecycle.cli elevate eval_<run-id> --dry-run --json
+uv run python -m src.eval_lifecycle.cli elevate eval_<run-id> --yes --json
+uv run python -m src.eval_lifecycle.cli verify ret_<retained-id> --json
+uv run python -m src.eval_lifecycle.cli delete working eval_<run-id> --yes --json
+uv run python -m src.eval_lifecycle.cli delete retained ret_<retained-id> \
+  --confirm-retained ret_<retained-id> --json
 ```
 
-Deletion previews report exact paths, bytes, and retained references. Confirmed
-deletion first moves data into ignored local quarantine under
-`.workbench/lifecycle/`; permanent removal is a separate confirmed purge.
-Review-only purge remains available through `src.evals.inspection_cli` and does
-not delete the durable run.
+Deletion is permanent and not recoverable. Retained deletion preserves a
+shared meaningful agent version while another retained eval still references
+it. The local review app remains read-only and offers All, Working, and Retained
+filters; elevation and deletion are command/skill workflows only.
 
 ## AI Model Catalog
 
 The project-owned model catalog is [`models.yaml`](models.yaml). It is the only
-place this project enumerates selectable model identifiers and declares the
-default used by non-interactive runs. Each entry also declares the API family
-required to invoke it. Update that root file as provider models evolve;
-`mi-core` validates generic `provider:model` identifiers without owning an
-application model list.
+place this project enumerates selectable model identifiers, declares the
+interactive default, and stores reviewed non-secret pricing snapshots. Each
+entry also declares the API family required to invoke it. Use
+`src.model_configuration` to validate and atomically update model identity,
+input/output rates, optional cached-input/reasoning rates, pricing version,
+effective date, currency, and source. Eval runs freeze the selected pricing
+snapshot; they never fetch or silently refresh prices. `mi-core` validates
+generic `provider:model` identifiers without owning an application model list.
 
 ## Working With Codex
 
@@ -290,6 +295,7 @@ Use `$project-guide` for repository orientation, architecture, customization, li
 | Build or evolve a staged pipeline | `$pipeline-builder` |
 | Build an `mi.ai` workflow, agent, toolset, capability, or skill | `$ai-processor-builder` |
 | Prepare, run, or troubleshoot a use-case eval | `$run-use-case-evals` |
+| Elevate, verify, or permanently delete exact evals | `$eval-lifecycle` |
 | Build evaluation orchestration or result contracts | `$agent-eval-builder` |
 | Analyze existing evaluation results | `$eval-results-analysis` |
 | Configure auth, providers, runtime overrides, or tracing | `$external-runtime-setup` |
@@ -311,17 +317,23 @@ agent-dev-eval-core/
   tests/
 data/
 eval_results/
-  <pipeline>/<benchmark>/v<version>/runs/<run-id>/
+  working/<benchmark>/v<version>/<run-id>/
     manifest.json
-    attempts/
+    agent-version.json
+    attempts/                  # rich local per-unit results
     result.json
-    performance/               # disposable timings/retries, optional
-    review/                    # disposable local prompts/images/traces
-    diagnosis/                 # optional compact retained analysis
+    performance/               # disposable timings/retries
+    review/                    # local prompts/tools/traces
+  retained/<benchmark>/v<version>/<retained-eval-id>/
+    manifest.json
+    result.json
+    units.json
+    agent-provenance.json
+    evidence-references.json
+    agent.patch                # only for relevant dirty/untracked content
+  retained/agent_versions/<agent-version-id>/
 agent_version_configs/
   v1_3.agent.yaml
-agent_versions/               # local promoted manifests and CAS (gitignored)
-.workbench/lifecycle/         # local quarantine and operation receipts
 docs/
   development-current/
   product-strategy/
@@ -343,16 +355,15 @@ src/
   retrievers/
   pipelines/
   evals/
-  lifecycle/
+  eval_lifecycle/
+  lifecycle/                  # frozen legacy quarantine/recovery code
 ```
 
-Schema-v1 keeps three retention classes separate: `manifest.json`,
-`agent-version.json`, and compact `result.json` are retained in Git for important
-runs; immutable `attempts/` are detailed local evidence kept through initial
-analysis; and `performance/` plus `review/` are disposable local diagnostics.
-Deleting attempts gives up resume, rematerialization, and detailed inspection,
-while deleting performance or review does not affect those operations. Use
-`EvalRunbook.md` for exact execution and verification commands.
+Working evals retain rich debugging detail through the active improvement loop.
+Retained evals keep a small number of aggregate files with full final AI
+outputs, expected outputs, grading, usage, cost, provenance, and immutable
+evidence references. Use `EvalRunbook.md` for execution and `$eval-lifecycle`
+for formal preservation or deletion.
 
 ## Notes
 

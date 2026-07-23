@@ -292,3 +292,26 @@ def test_reachable_dirty_mi_core_path_is_captured(
     assert any(
         role["role"] == "version_surface_guard" for role in matching_assets[0]["roles"]
     )
+
+
+def test_workbench_management_code_is_not_agent_execution_surface(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    management_paths = (
+        ("src/eval_lifecycle/__init__.py", True),
+        ("src/model_configuration.py", True),
+    )
+    monkeypatch.setattr(
+        agent_version_resolver,
+        "_dirty_runtime_paths",
+        lambda root: management_paths,
+    )
+
+    resolved = resolve_agent_version(
+        ROOT / "pipeline_configs/v1_3.ppln", dirty_policy="capture"
+    )
+
+    asset_paths = {
+        asset["path"] for asset in resolved.manifest.identity["assets"]
+    }
+    assert not asset_paths.intersection(path for path, _ in management_paths)

@@ -52,6 +52,11 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
   const [offset, setOffset] = useState(parseOffset(initial.get("offset")));
   const [modelFilter, setModelFilter] = useState(initial.get("model") ?? "");
   const [reasoningFilter, setReasoningFilter] = useState(initial.get("reasoning") ?? "");
+  const [lifecycleFilter, setLifecycleFilter] = useState(
+    ["working", "retained"].includes(initial.get("lifecycle") ?? "")
+      ? initial.get("lifecycle")!
+      : "",
+  );
   const [runSearch, setRunSearch] = useState(initial.get("q") ?? "");
   const [runSort, setRunSort] = useState(initial.get("sort") ?? defaultRunSort);
   const initialTab = initial.get("tab");
@@ -84,6 +89,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
       ...detailState,
       model: modelFilter,
       reasoning: reasoningFilter,
+      lifecycle: lifecycleFilter,
       q: runSearch,
       sort: runSort === defaultRunSort ? "" : runSort,
     })) {
@@ -91,7 +97,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
       else url.searchParams.delete(key);
     }
     window.history.replaceState(null, "", url);
-  }, [runId, executionId, state, search, field, sliceKey, offset, tab, modelFilter, reasoningFilter, runSearch, runSort]);
+  }, [runId, executionId, state, search, field, sliceKey, offset, tab, modelFilter, reasoningFilter, lifecycleFilter, runSearch, runSort]);
 
   const runs = useQuery({ queryKey: ["runs"], queryFn: () => api<RunPayload>("/runs") });
   const attempts = useQuery({
@@ -163,10 +169,12 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
           runs={runs.data.runs}
           modelFilter={modelFilter}
           reasoningFilter={reasoningFilter}
+          lifecycleFilter={lifecycleFilter}
           search={runSearch}
           sort={runSort}
           onModelFilter={setModelFilter}
           onReasoningFilter={setReasoningFilter}
+          onLifecycleFilter={setLifecycleFilter}
           onSearch={setRunSearch}
           onSort={setRunSort}
           onSelectRun={selectRun}
@@ -188,6 +196,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
             <RunFact label="Reasoning" value={selectedRun?.reasoning_effort ?? "—"} />
             <RunFact label="Attempts" value={`${selectedRun?.recorded_attempts ?? 0}/${selectedRun?.planned_attempts ?? 0}`} />
             <RunFact label="Review" value={selectedRun?.review_status ?? "Unknown"} />
+            <RunFact label="Lifecycle" value={selectedRun?.lifecycle_state ?? "Unknown"} />
           </section>
           {selectedRun?.accuracy ? (
             <RunAccuracySummary
@@ -332,10 +341,12 @@ function ResultsOverview({
   runs,
   modelFilter,
   reasoningFilter,
+  lifecycleFilter,
   search,
   sort,
   onModelFilter,
   onReasoningFilter,
+  onLifecycleFilter,
   onSearch,
   onSort,
   onSelectRun,
@@ -344,10 +355,12 @@ function ResultsOverview({
   runs: RunEntry[];
   modelFilter: string;
   reasoningFilter: string;
+  lifecycleFilter: string;
   search: string;
   sort: string;
   onModelFilter: (value: string) => void;
   onReasoningFilter: (value: string) => void;
+  onLifecycleFilter: (value: string) => void;
   onSearch: (value: string) => void;
   onSort: (value: string) => void;
   onSelectRun: (runId: string) => void;
@@ -361,16 +374,17 @@ function ResultsOverview({
   const filteredRuns = sortRuns(runs
     .filter((run) => !modelFilter || run.model === modelFilter)
     .filter((run) => !reasoningFilter || run.reasoning_effort === reasoningFilter)
+    .filter((run) => !lifecycleFilter || run.lifecycle_state === lifecycleFilter)
     .filter((run) => !normalizedSearch || runSearchText(run).includes(normalizedSearch)), activeSort, metricColumns);
-  const controlsChanged = Boolean(modelFilter || reasoningFilter || search || activeSort !== defaultRunSort);
+  const controlsChanged = Boolean(modelFilter || reasoningFilter || lifecycleFilter || search || activeSort !== defaultRunSort);
 
   return (
     <main className="results-overview">
       <section className="overview-heading">
         <div>
-          <div className="eyebrow">Published evaluation runs</div>
+          <div className="eyebrow">Working and retained evals</div>
           <h2>Overall evaluation results</h2>
-          <p>Compare accuracy across retained runs, then open a run to investigate individual attempts and evidence.</p>
+          <p>Review working detail or compare meaningful retained results, then open a run to inspect units and evidence.</p>
         </div>
         <div className="overview-run-count">
           <strong>{filteredRuns.length}</strong>
@@ -395,6 +409,14 @@ function ResultsOverview({
               value={search}
               onChange={(event) => onSearch(event.target.value)}
             />
+          </label>
+          <label>
+            <span>Lifecycle</span>
+            <select aria-label="Filter by lifecycle" value={lifecycleFilter} onChange={(event) => onLifecycleFilter(event.target.value)}>
+              <option value="">All evals</option>
+              <option value="working">Working</option>
+              <option value="retained">Retained</option>
+            </select>
           </label>
           <label>
             <span>Model</span>
@@ -424,6 +446,7 @@ function ResultsOverview({
                 onSearch("");
                 onModelFilter("");
                 onReasoningFilter("");
+                onLifecycleFilter("");
                 onSort(defaultRunSort);
               }}
             >Reset</Button>
@@ -458,6 +481,9 @@ function ResultsOverview({
                       <td>
                         <div className="run-inputs">
                           <strong>{run.model ?? "Unknown model"}</strong>
+                          <Badge variant={run.lifecycle_state === "retained" ? "primary" : "neutral"}>
+                            {humanize(run.lifecycle_state)}
+                          </Badge>
                           <span>{humanize(run.reasoning_effort ?? "unspecified")} reasoning</span>
                           <small>{formatRunDate(run.created_at_utc)} · {run.recorded_attempts}/{run.planned_attempts} attempts</small>
                           <code title={run.run_id}>{shortRunId(run.run_id)}</code>

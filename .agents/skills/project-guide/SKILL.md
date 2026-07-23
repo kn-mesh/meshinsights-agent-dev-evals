@@ -32,18 +32,35 @@ the request against `docs/product-strategy/` and the FDE job. Describe existing
 mechanics as compatibility constraints only when the requested change touches
 them.
 
-Run repository commands with `uv run ...`. Treat `mi-core/` and `mi.ai` as editable local source under `mi-core/core/src/mi/`, not as opaque installed dependencies.
+Run repository commands with `uv run ...`. Treat `mi-core/` and `mi.ai` as
+inspectable editable local source under `mi-core/core/src/mi/`, not as opaque
+installed dependencies. Editable does not imply authority to change it.
 
 ## Repository Ownership Boundaries
 
 | Layer | Owns |
 |---|---|
 | `mi-core/` | Reusable runtime mechanics, component APIs, registry behavior, pipeline orchestration, and general framework docs |
-| This root project | Use-case implementation, data integrations, pipeline variants, prompts, business rules, evals, and operator/debug tooling |
+| Reusable Workbench paths | Eval mechanics, review shell, bootstrap, versioning, generic orchestration, and operator tooling |
+| Reference use-case paths | Use-case implementation, data integrations, pipeline variants, prompts, business rules, and UI composition |
 | `docs/use_case/` | Durable business context, input/output meaning, benchmark semantics, and domain terminology |
 | `.agents/skills/` | Concise Codex playbooks for repository-specific development and analysis workflows |
 
-Modify `mi-core/` directly when requested behavior is generally reusable framework behavior. Keep use-case-specific rules, data shaping, prompts, and source-system knowledge in the root project. Do not add a root-project workaround solely because framework code was once external.
+Use `workbench.template.json` as the versioned ownership and replaceable-reference
+map. Keep use-case-specific rules, data shaping, prompts, and source-system
+knowledge in manifest-declared reference paths.
+
+Before modifying `mi-core/`, reusable eval or UI packages, bootstrap,
+agent-version mechanics, generic orchestration, or lifecycle code:
+
+1. show why a correct use-case-local change is insufficient;
+2. identify the exact reusable paths and contracts;
+3. explain the cross-use-case meaning and focused tests; and
+4. obtain explicit user approval.
+
+When an approved reusable fix is made in a use-case repository, record the
+canonical template or library target and upstream issue, PR, commit, or pending
+action before calling the work complete.
 
 Do not modify `src/experimental_core/` without explicit user permission.
 
@@ -63,11 +80,14 @@ Use these locations by default:
 | `src/actions/` | Final side effects or intentionally no-op terminal actions |
 | `src/pipelines/` | Runnable pipeline entry points and runner CLIs |
 | `src/evals/` | Evaluation orchestration and result handling |
+| `model_catalog.py`, `src/model_configuration.py` | Reusable model identity and frozen-pricing configuration |
 | `agent-dev-eval-core/` | Reusable eval execution, result, review, and explorer-query mechanics |
 | `agent-dev-eval-ui/` | Reusable local explorer API and React shell |
 | `src/evidence/` | Project-owned frozen-evidence normalization and explorer envelope |
 | `www/src/use_case/` | Project-owned evidence schema and visual composition |
-| `src/lifecycle/` | Optional local artifact-maintenance implementation; not a default product capability |
+| `src/project_bootstrap/`, `bootstrap_configs/` | Reusable initialization and project bootstrap inputs |
+| `src/eval_lifecycle/` | Supported working/retained elevation, verification, and exact permanent deletion |
+| `src/lifecycle/` | Frozen legacy quarantine/recovery implementation; not a supported product workflow |
 
 Treat example files as starting patterns, not required production behavior.
 
@@ -93,13 +113,15 @@ Load the narrowest applicable skill before answering in depth or implementing:
 
 | Question or task | Skill |
 |---|---|
+| Create a separate use-case repository from the template | `$create-use-case-project` |
 | Initial port of a Benchmark Studio evidence pipeline into a clean project | `$benchmark-pipeline-port` |
 | Port Benchmark Studio evidence into the local eval explorer | `$port-eval-explorer-use-case` |
 | Pipeline components, YAML, variants, runners, or receipts | `$pipeline-builder` |
 | Structured AI processors, workflows, agents, tools, capabilities, or Agent Skills | `$ai-processor-builder` |
 | Prepare, execute, or troubleshoot a use-case eval command | `$run-use-case-evals` |
 | Minimum eval capability, benchmark contracts, scoring, comparison, or result apps | `$agent-eval-builder` |
-| Explicit local run/version deletion, quarantine, restore, or purge maintenance | `$agent-eval-builder`; do not propose proactively |
+| Project model catalog, frozen pricing, credentials, or provider compatibility | `$external-runtime-setup` |
+| Elevate, verify, or permanently delete an exact working/retained eval | `$eval-lifecycle` |
 | Existing eval regressions, comparisons, or error analysis | `$eval-results-analysis` |
 | `.env`, `mi auth`, provider credentials, runtime overrides, or Logfire | `$external-runtime-setup` |
 
@@ -107,7 +129,8 @@ Use multiple skills only when the request genuinely spans their domains.
 
 ## Guide Template Customization
 
-When turning the template into a consumer project, recommend and, when asked, perform this sequence:
+When turning the template into a new use-case repository, use
+`$create-use-case-project`, then perform this sequence:
 
 1. Capture durable domain context in `docs/use_case/`.
 2. Update `pyproject.toml` with the real project identity and dependencies.
@@ -120,7 +143,10 @@ When turning the template into a consumer project, recommend and, when asked, pe
 7. Replace example `.ppln` files with project-specific pipeline variants.
 8. Add eval and operator tooling after the output contract is stable enough to compare.
 
-Keep application prompts, business rules, source-system joins, domain labels, and operational guidance in the consumer project. Keep framework mechanics generic in `mi-core/`.
+Keep application prompts, business rules, source-system joins, domain labels,
+and operational guidance in manifest-declared use-case paths. Keep `mi-core/`
+as the distinct forked pipeline/runtime library; do not use it as a catch-all
+for unrelated reusable Workbench mechanics.
 
 ## Recommend The Development Sequence
 

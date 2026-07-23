@@ -41,8 +41,10 @@ from src.evals.run_specs import repository_root
 _DEFAULT_NON_EXECUTION_EXCLUSIONS = (
     "src/agent_versions/**",
     "src/benchmarks/**",
+    "src/eval_lifecycle/**",
     "src/evals/**",
     "src/lifecycle/**",
+    "src/model_configuration.py",
     "src/pipelines/**",
     "src/project_bootstrap/**",
 )

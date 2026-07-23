@@ -2,8 +2,10 @@
 
 ## Status
 
-Proposed implementation program derived from
-`docs/product-strategy/mvp-scope.md`.
+Implemented and validated on 2026-07-23. The three bounded plans are complete;
+the full Python/static/frontend verification passed, clean-project bootstrap
+was exercised from the current source, and a live 70-example published
+benchmark run completed through the protected workflow.
 
 This plan is self-contained implementation guidance. The durable product
 authority is `docs/product-strategy/mvp-scope.md`; no temporary review document

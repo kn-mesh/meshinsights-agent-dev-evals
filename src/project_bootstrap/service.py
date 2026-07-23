@@ -22,6 +22,7 @@ from src.project_bootstrap.models import (
     BootstrapSpec,
     ProjectContract,
     ProjectPaths,
+    TemplateOwnershipManifest,
     TemplateProvenance,
 )
 
@@ -30,10 +31,12 @@ DEFAULT_TEMPLATE_SOURCE = (
     "https://github.com/Mesh-Systems-Eng/mesh.insights.templates.git"
 )
 PROJECT_CONTRACT_FILE = "workbench.project.json"
+TEMPLATE_MANIFEST_FILE = "workbench.template.json"
 
 _EXCLUDED_PARTS = frozenset(
     {
         ".docker",
+        ".ds_store",
         ".git",
         ".venv",
         ".pytest_cache",
@@ -41,9 +44,14 @@ _EXCLUDED_PARTS = frozenset(
         ".mypy_cache",
         ".logfire",
         ".insights",
+        ".coverage",
         "__pycache__",
         "agent_versions",
+        "build",
+        "dist",
         "eval_results",
+        "htmlcov",
+        "node_modules",
     }
 )
 _REQUIRED_DIRECTORIES = (
@@ -53,12 +61,15 @@ _REQUIRED_DIRECTORIES = (
     "agent_version_configs",
     "eval_results",
     "src/actions",
+    "src/evidence",
     "src/hydrators",
     "src/objects",
     "src/processors",
     "src/retrievers",
     "src/pipelines",
     "src/evals",
+    "www/src/use_case",
+    "tests",
 )
 
 
@@ -104,6 +115,8 @@ def initialize_project(
             explicit_revision=template_revision,
         ) as (template_root, provenance, tracked_only):
             _copy_template(template_root, staging, tracked_only=tracked_only)
+        manifest = _load_template_manifest(staging)
+        _reset_reference_use_case(staging, manifest)
         contract = _render_project(staging, spec=spec, provenance=provenance)
         if initialize_git:
             _run_git(["init", "--initial-branch=main"], cwd=staging)
@@ -152,6 +165,7 @@ def validate_project(project_root: Path) -> dict[str, Any]:
     ]
     if missing:
         raise ValueError("Generated project is missing: " + ", ".join(missing))
+    manifest = _load_template_manifest(root)
     with (root / "pyproject.toml").open("rb") as handle:
         pyproject = tomllib.load(handle)
     actual_name = pyproject.get("project", {}).get("name")
@@ -178,6 +192,7 @@ def validate_project(project_root: Path) -> dict[str, Any]:
         raise ValueError("Default benchmark is absent from the published catalog.")
     if not contract.template.revision.strip():
         raise ValueError("Template revision provenance is required.")
+    _validate_reference_leaks(root, manifest)
 
     return {
         "status": "valid",
@@ -190,6 +205,7 @@ def validate_project(project_root: Path) -> dict[str, Any]:
         },
         "default_model": contract.model_catalog.default_model,
         "template_revision": contract.template.revision,
+        "template_manifest_schema_version": manifest.schema_version,
     }
 
 
@@ -268,6 +284,58 @@ def _copy_template(source: Path, destination: Path, *, tracked_only: bool) -> No
         shutil.copy2(source_path, target)
 
 
+def _load_template_manifest(root: Path) -> TemplateOwnershipManifest:
+    """Load the versioned ownership and reference-reset contract."""
+    path = root / TEMPLATE_MANIFEST_FILE
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as error:
+        raise ValueError(f"Standard template must contain {TEMPLATE_MANIFEST_FILE}.") from error
+    except json.JSONDecodeError as error:
+        raise ValueError(f"Template ownership manifest is invalid JSON: {error}") from error
+    return TemplateOwnershipManifest.model_validate(payload)
+
+
+def _reset_reference_use_case(
+    root: Path, manifest: TemplateOwnershipManifest
+) -> None:
+    """Clear only manifest-declared reference content in a copied template."""
+    reset = manifest.reference_reset
+    for relative in reset.clear_directories:
+        path = _template_target(root, relative)
+        if path.is_symlink():
+            raise ValueError(f"Reference reset refuses symlink: {relative}")
+        if path.exists():
+            if not path.is_dir():
+                raise ValueError(f"Reference reset expected a directory: {relative}")
+            shutil.rmtree(path)
+        path.mkdir(parents=True)
+    for relative in reset.remove_directories:
+        path = _template_target(root, relative)
+        if path.is_symlink():
+            raise ValueError(f"Reference reset refuses symlink: {relative}")
+        if path.exists():
+            if not path.is_dir():
+                raise ValueError(f"Reference reset expected a directory: {relative}")
+            shutil.rmtree(path)
+    for relative in reset.remove_files:
+        path = _template_target(root, relative)
+        if path.is_symlink():
+            raise ValueError(f"Reference reset refuses symlink: {relative}")
+        if path.exists():
+            if not path.is_file():
+                raise ValueError(f"Reference reset expected a file: {relative}")
+            path.unlink()
+
+
+def _template_target(root: Path, relative: str) -> Path:
+    """Resolve one manifest path without allowing project-root escape."""
+    target = (root / relative).resolve()
+    if not target.is_relative_to(root.resolve()) or target == root.resolve():
+        raise ValueError(f"Template manifest path escapes the project root: {relative}")
+    return target
+
+
 def _tracked_files(source: Path) -> tuple[Path, ...]:
     """List files tracked at the checked-out template revision."""
     output = _run_git(["ls-files", "-z"], cwd=source)
@@ -288,6 +356,8 @@ def _excluded(relative: Path) -> bool:
     pure = PurePosixPath(relative.as_posix())
     if any(part.lower() in _EXCLUDED_PARTS for part in pure.parts):
         return True
+    if any(part.lower().endswith(".egg-info") for part in pure.parts):
+        return True
     if pure.name.lower() in {".env.example", ".env.template"}:
         return False
     return is_sensitive_path(pure)
@@ -305,6 +375,7 @@ def _render_project(
         raise ValueError("Standard template must contain pyproject.toml.")
     _rewrite_pyproject(pyproject_path, spec)
     _rewrite_readme(root / "README.md", spec)
+    _write_eval_runbook(root / "EvalRunbook.md", spec)
 
     for relative in _REQUIRED_DIRECTORIES:
         directory = root / relative
@@ -314,11 +385,14 @@ def _render_project(
             "evaluation_configs",
             "agent_version_configs",
             "eval_results",
+            "www/src/use_case",
+            "tests",
         } and not any(directory.iterdir()):
             (directory / ".gitkeep").touch()
     for directory in _REQUIRED_DIRECTORIES:
         if directory.startswith("src/"):
             (root / directory / "__init__.py").touch(exist_ok=True)
+    _write_use_case_placeholders(root)
 
     contract = ProjectContract(
         schema_version=1,
@@ -372,24 +446,56 @@ def _rewrite_pyproject(path: Path, spec: BootstrapSpec) -> None:
 
 
 def _rewrite_readme(path: Path, spec: BootstrapSpec) -> None:
-    """Give the generated README a project identity and bootstrap pointer."""
+    """Replace reference README content with a project-owned on-ramp."""
     if not path.exists():
         raise ValueError("Standard template must contain README.md.")
-    lines = path.read_text(encoding="utf-8").splitlines()
-    if lines and lines[0].startswith("# "):
-        lines[0] = f"# {spec.project.name}"
-    else:
-        lines.insert(0, f"# {spec.project.name}")
-    notice = [
-        "",
-        (
-            "This Agent Workbench project was initialized from the standard "
-            "template. Its non-secret project, benchmark, and runtime identities "
-            "are recorded in `workbench.project.json`."
-        ),
-    ]
-    lines[1:1] = notice
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    path.write_text(
+        f"""# {spec.project.name}
+
+{spec.project.description}
+
+This repository is a Mesh Agent Workbench project initialized from an exact
+template revision. Non-secret project, benchmark, evidence, and model identities
+are recorded in `workbench.project.json`.
+
+## Start Here
+
+1. Document durable domain context in `docs/use_case/PROJECT_CONTEXT.md`.
+2. Port the published-benchmark evidence pipeline into the replaceable use-case
+   paths declared by `workbench.template.json`.
+3. Add project pipeline, evaluation, and agent-version configurations.
+4. Run one exact benchmark example before a broader evaluation.
+5. Use `EvalRunbook.md` and the root skills under `.agents/skills/`.
+
+Run repository commands through `uv run`. Reusable libraries are editable local
+source, but coding agents must obtain user approval before modifying them.
+""",
+        encoding="utf-8",
+    )
+
+
+def _write_eval_runbook(path: Path, spec: BootstrapSpec) -> None:
+    """Write a project-neutral runbook that points to configured identities."""
+    path.write_text(
+        f"""# {spec.project.name} Eval Runbook
+
+The project default is benchmark `{spec.benchmarks.default.key}` version
+`{spec.benchmarks.default.version}` with model
+`{spec.model_catalog.default_model}`.
+
+Before running an eval:
+
+1. finish the use-case pipeline and evaluation profile;
+2. validate `workbench.project.json` and `models.yaml`;
+3. authenticate to the configured read-only Benchmark Studio data plane; and
+4. use `$run-use-case-evals` to select the full benchmark, explicit units, or a
+   named use-case section.
+
+The concrete pipeline and evaluation-profile paths are created while porting the
+use case. Do not copy commands from the reference implementation.
+""",
+        encoding="utf-8",
+    )
 
 
 def _environment_template(spec: BootstrapSpec) -> str:
@@ -440,6 +546,77 @@ Document durable, reviewed context here before porting or building pipelines:
 
 Do not use this file as an implementation log.
 """
+
+
+def _write_use_case_placeholders(root: Path) -> None:
+    """Write import-safe extension points for the not-yet-ported use case."""
+    (root / "src/evidence/__init__.py").write_text(
+        '''"""Project-owned evidence adapter extension point."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, Protocol
+
+from src.benchmarks.models import BenchmarkExample
+
+
+class ProjectEvidenceAdapter(Protocol):
+    def build_view(
+        self,
+        *,
+        benchmark_key: str,
+        benchmark_version_id: str,
+        version_number: int,
+        example: BenchmarkExample,
+    ) -> dict[str, Any]: ...
+
+
+def create_project_evidence_adapter(project_root: Path) -> ProjectEvidenceAdapter:
+    raise RuntimeError(
+        "Port the use-case evidence adapter before starting the eval explorer."
+    )
+''',
+        encoding="utf-8",
+    )
+
+
+def _validate_reference_leaks(
+    root: Path, manifest: TemplateOwnershipManifest
+) -> None:
+    """Reject reference identifiers in generated project-facing paths."""
+    findings: list[str] = []
+    suffixes = {".json", ".md", ".py", ".toml", ".ts", ".tsx", ".yaml", ".yml"}
+    for relative in manifest.reference_reset.leak_scan_paths:
+        path = _template_target(root, relative)
+        if not path.exists():
+            continue
+        candidates = (path,) if path.is_file() else tuple(path.rglob("*"))
+        for candidate in candidates:
+            if (
+                not candidate.is_file()
+                or candidate.is_symlink()
+                or candidate.suffix.lower() not in suffixes
+            ):
+                continue
+            try:
+                content = candidate.read_text(encoding="utf-8").lower()
+            except UnicodeDecodeError:
+                continue
+            matched = [
+                term
+                for term in manifest.reference_reset.forbidden_terms
+                if term in content
+            ]
+            if matched:
+                findings.append(
+                    f"{candidate.relative_to(root)} ({', '.join(sorted(matched))})"
+                )
+    if findings:
+        raise ValueError(
+            "Generated project retains reference identifiers: "
+            + "; ".join(sorted(findings))
+        )
 
 
 def _run_git(

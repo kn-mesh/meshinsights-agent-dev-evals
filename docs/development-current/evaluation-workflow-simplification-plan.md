@@ -2,7 +2,10 @@
 
 ## Status
 
-Proposed feature and skill plan.
+Implemented and validated on 2026-07-23. The supported scope/runtime/resume
+surface, model/pricing configuration, token and cost summaries, operator docs,
+and skills are in place. A live 70-example Terra/low run completed with all
+attempts valid and scored.
 
 ## FDE Outcome
 

@@ -53,11 +53,13 @@ def test_eval_skills_cover_current_artifact_boundaries() -> None:
 def test_git_retention_boundary_matches_operator_contract() -> None:
     gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
 
+    assert "/eval_results/working/" in gitignore
     assert "/eval_results/**/attempts/" in gitignore
     assert "/eval_results/**/performance/" in gitignore
     assert "/eval_results/**/review/" in gitignore
     assert "/eval_results/**/manifest.json" not in gitignore
     assert "/eval_results/**/agent-version.json" not in gitignore
+    assert "/eval_results/retained/" not in gitignore
 
 
 def test_runbook_explicit_eval_flags_match_current_cli_help() -> None:
@@ -81,14 +83,26 @@ def test_runbook_explicit_eval_flags_match_current_cli_help() -> None:
         "--benchmark-version",
         "--all-examples",
         "--example-ids",
+        "--unit-ids",
+        "--section",
         "--ai-model",
         "--ai-reasoning-effort",
         "--runs-per-example",
         "--runtime",
         "--max-workers",
-        "--error-action",
         "--review-capture",
     )
     for flag in required_flags:
         assert flag in runbook
         assert flag in completed.stdout
+    for maintenance_only in (
+        "--label-filter",
+        "--slice",
+        "--resume-mode",
+        "--rerun-failure-type",
+        "--materialize-only",
+        "--compare-model",
+        "--compare-result",
+        "--error-action",
+    ):
+        assert maintenance_only not in completed.stdout

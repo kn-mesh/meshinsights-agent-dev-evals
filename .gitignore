@@ -33,8 +33,11 @@ wheels/
 # Local immutable agent-version manifests and content-addressed objects
 /agent_versions/
 
-# Retain compact run identity and summaries in Git. Detailed attempt, performance,
-# and review evidence remains local by default and may be removed after analysis.
+# Working evals are rich, disposable, and local. Explicitly elevated aggregate
+# artifacts under eval_results/retained remain visible to Git.
+/eval_results/working/
+
+# Legacy/local detailed run evidence remains ignored.
 /eval_results/**/performance/
 /eval_results/**/review/
 /eval_results/**/attempts/
@@ -43,5 +46,5 @@ wheels/
 /eval_results/**/.DS_Store
 
 
-# Recoverable lifecycle quarantine remains machine-local.
+# Frozen legacy lifecycle state remains machine-local and unsupported.
 /.workbench/

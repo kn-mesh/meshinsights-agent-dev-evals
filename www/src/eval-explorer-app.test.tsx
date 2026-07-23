@@ -9,6 +9,7 @@ import type { EvidenceView, UseCaseAdapter } from "@eval-ui/contracts";
 
 const run = {
   run_id: "run-a",
+  lifecycle_state: "working" as const,
   result_status: "materialized",
   agent_version_id: "av-a",
   pipeline_path: "pipeline.ppln",
@@ -127,6 +128,7 @@ describe("EvalExplorerApp workflow", () => {
     const secondRun = {
       ...run,
       run_id: "run-b",
+      lifecycle_state: "retained" as const,
       model: "provider:other-model",
       reasoning_effort: "high",
       created_at_utc: "2026-07-22T10:00:00Z",
@@ -153,6 +155,12 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).toContain("Root cause classification · Low");
     expect(container.querySelector(".metric-cards")).toBeNull();
     expect(container.querySelectorAll("tbody tr")).toHaveLength(2);
+
+    await select(byLabel("Filter by lifecycle"), "retained");
+    await waitFor(() => container.querySelectorAll("tbody tr").length === 1);
+    expect(container.textContent).toContain("Retained");
+    expect(new URL(window.location.href).searchParams.get("lifecycle")).toBe("retained");
+    await select(byLabel("Filter by lifecycle"), "");
 
     await select(byLabel("Sort evaluation runs"), "field:classification:asc");
     await waitFor(() => container.querySelector("tbody tr")?.getAttribute("aria-label")?.includes("run-b") === true);

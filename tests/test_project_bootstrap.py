@@ -14,6 +14,9 @@ from src.project_bootstrap.models import BootstrapSpec
 from src.project_bootstrap.service import initialize_project, validate_project
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
 def _spec_payload() -> dict[str, object]:
     """Return one complete valid bootstrap input."""
     return {
@@ -49,7 +52,16 @@ def _spec_payload() -> dict[str, object]:
         "model_catalog": {
             "default_model": "azure:gpt-test",
             "models": [
-                {"id": "azure:gpt-test", "api": "openai_responses"},
+                {
+                    "id": "azure:gpt-test",
+                    "api": "openai_responses",
+                    "pricing": {
+                        "version": "reviewed-2026-07",
+                        "currency": "USD",
+                        "input_per_million_tokens": 1.25,
+                        "output_per_million_tokens": 5.0,
+                    },
+                },
                 {"id": "google:gemini-test", "api": "google_generate_content"},
             ],
         },
@@ -80,8 +92,53 @@ build-backend = "setuptools.build_meta"
         encoding="utf-8",
     )
     (root / "README.md").write_text("# Workbench Template\n", encoding="utf-8")
+    (root / "workbench.template.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "ownership": [
+                    {
+                        "path": "mi-core",
+                        "owner": "reusable_library",
+                        "description": "Reusable pipeline library",
+                    },
+                    {
+                        "path": ".agents/skills",
+                        "owner": "root_infrastructure",
+                        "description": "Root skills",
+                    },
+                    {
+                        "path": "docs/use_case",
+                        "owner": "reference_use_case",
+                        "description": "Replaceable reference context",
+                    },
+                ],
+                "reference_reset": {
+                    "clear_directories": ["docs/use_case"],
+                    "remove_directories": [],
+                    "remove_files": [],
+                    "root_skills_with_project_defaults": [],
+                    "leak_scan_paths": ["README.md", "docs/use_case"],
+                    "forbidden_terms": ["spirax", "steam trap"],
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     (root / "src").mkdir()
     (root / "src/__init__.py").touch()
+    (root / "mi-core").mkdir()
+    (root / "mi-core/keep.py").write_text("REUSABLE = True\n", encoding="utf-8")
+    (root / ".agents/skills/project-guide").mkdir(parents=True)
+    (root / ".agents/skills/project-guide/SKILL.md").write_text(
+        "---\nname: project-guide\ndescription: Test guide.\n---\n",
+        encoding="utf-8",
+    )
+    (root / "docs/use_case").mkdir(parents=True)
+    (root / "docs/use_case/reference.md").write_text(
+        "Spirax steam trap reference\n", encoding="utf-8"
+    )
     (root / ".env").write_text("REAL_SECRET=do-not-copy\n", encoding="utf-8")
     (root / ".env.local").write_text("OTHER_SECRET=do-not-copy\n", encoding="utf-8")
     (root / "credentials.json").write_text("{}\n", encoding="utf-8")
@@ -89,11 +146,18 @@ build-backend = "setuptools.build_meta"
     (root / "client-secret.pem").write_text("private-key\n", encoding="utf-8")
     (root / "id_rsa").write_text("private-key\n", encoding="utf-8")
     (root / ".netrc").write_text("machine example.test password secret\n")
+    (root / ".DS_Store").write_text("generated\n")
     (root / ".ssh").mkdir()
     (root / ".ssh/id_custom").write_text("private-key\n", encoding="utf-8")
     (root / ".env.example").write_text("OLD=<placeholder>\n", encoding="utf-8")
     (root / "eval_results").mkdir()
     (root / "eval_results/result.json").write_text("{}\n", encoding="utf-8")
+    (root / "www/node_modules/pkg").mkdir(parents=True)
+    (root / "www/node_modules/pkg/index.js").write_text("generated\n")
+    (root / "www/dist").mkdir()
+    (root / "www/dist/index.html").write_text("generated\n")
+    (root / "src/example.egg-info").mkdir()
+    (root / "src/example.egg-info/PKG-INFO").write_text("generated\n")
 
 
 def _git_template(root: Path) -> str:
@@ -163,9 +227,20 @@ def test_non_git_bootstrap_renders_and_validates_safe_project(tmp_path: Path) ->
     assert not (destination / "client-secret.pem").exists()
     assert not (destination / "id_rsa").exists()
     assert not (destination / ".netrc").exists()
+    assert not (destination / ".DS_Store").exists()
     assert not (destination / ".ssh").exists()
     assert not (destination / "eval_results/result.json").exists()
+    assert not (destination / "www/node_modules").exists()
+    assert not (destination / "www/dist").exists()
+    assert not (destination / "src/example.egg-info").exists()
     assert (destination / "eval_results/.gitkeep").exists()
+    assert (destination / "mi-core/keep.py").is_file()
+    assert (destination / ".agents/skills/project-guide/SKILL.md").is_file()
+    assert not (destination / "docs/use_case/reference.md").exists()
+    assert (destination / "workbench.template.json").is_file()
+    assert (destination / "EvalRunbook.md").is_file()
+    assert (destination / "www/src/use_case/.gitkeep").is_file()
+    assert (destination / "tests/.gitkeep").is_file()
     assert "APP_PROJECT_KEY=acme-pumps" in (destination / ".env.example").read_text()
     assert (
         (destination / "README.md").read_text().startswith("# Acme Pump Reliability\n")
@@ -266,6 +341,57 @@ def test_validation_accepts_local_root_environment_file(tmp_path: Path) -> None:
     )
 
     assert validate_project(destination)["status"] == "valid"
+
+
+def test_validation_rejects_reference_identity_leak(tmp_path: Path) -> None:
+    template = tmp_path / "template"
+    _write_template(template)
+    destination = tmp_path / "project"
+    initialize_project(
+        destination,
+        spec_path=_write_spec(tmp_path),
+        template_source=str(template),
+        template_revision="fixture-v1",
+        initialize_git=False,
+    )
+    (destination / "docs/use_case/leak.md").write_text(
+        "Copied from Spirax.", encoding="utf-8"
+    )
+
+    with pytest.raises(ValueError, match="retains reference identifiers"):
+        validate_project(destination)
+
+
+def test_template_manifest_rejects_unsafe_reset_path(tmp_path: Path) -> None:
+    template = tmp_path / "template"
+    _write_template(template)
+    manifest_path = template / "workbench.template.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["reference_reset"]["clear_directories"] = ["../outside"]
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="normalized and relative"):
+        initialize_project(
+            tmp_path / "project",
+            spec_path=_write_spec(tmp_path),
+            template_source=str(template),
+            template_revision="fixture-v1",
+            initialize_git=False,
+        )
+
+
+def test_template_manifest_covers_reusable_mvp_workbench_surfaces() -> None:
+    manifest = json.loads(
+        (ROOT / "workbench.template.json").read_text(encoding="utf-8")
+    )
+    ownership = {
+        item["path"]: item["owner"] for item in manifest["ownership"]
+    }
+
+    assert ownership["bootstrap_configs"] == "root_infrastructure"
+    assert ownership["model_catalog.py"] == "reusable_workbench"
+    assert ownership["src/model_configuration.py"] == "reusable_workbench"
+    assert ownership["src/eval_lifecycle"] == "reusable_workbench"
 
 
 def test_cli_emits_machine_readable_success(

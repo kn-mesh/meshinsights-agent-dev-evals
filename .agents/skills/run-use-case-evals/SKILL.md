@@ -1,6 +1,6 @@
 ---
 name: run-use-case-evals
-description: Prepare, execute, or troubleshoot published-benchmark evaluation commands for the Spirax Pulse use case in this repository. Use when a developer or coding agent asks how to run an eval, wants a smoke or full benchmark run, needs to avoid the slow interactive benchmark lookup, or needs help selecting explicit pipeline, benchmark, model, scope, repetition, and runtime flags. Do not use for changing eval orchestration contracts or analyzing accuracy regressions.
+description: Prepare, execute, or troubleshoot published-benchmark evaluation commands for the current Agent Workbench use case. Use when a developer or coding agent asks how to run an eval, wants a smoke or full benchmark run, needs current project defaults, or needs help selecting the pipeline, model, scope, repetition, and supported runtime. Do not use for changing eval orchestration contracts or analyzing accuracy regressions.
 ---
 
 # Run Use-Case Evals
@@ -23,13 +23,13 @@ in this skill.
    retain the runbook's `<provider:model>` placeholder instead of inserting the
    catalog default.
 3. Prefer the fully explicit command from `EvalRunbook.md`. Supply evaluation
-   profile, benchmark key, benchmark version, model, reasoning effort, run
-   count, runtime, worker count, error action, and an explicit scope. Use
-   `--all-examples` for a full benchmark; absence of filters no longer implies
-   all examples in unattended execution. Include `--agent-version-id` and
-   repeatable `--dimension KEY=JSON_VALUE` flags whenever those stable
-   comparison identities are known. Avoid interactive profile or benchmark
-   selection unless discovery is the requested task.
+   profile, benchmark key, benchmark version, model, reasoning effort, worker
+   count, and exactly one supported scope: `--all-examples`, an explicit
+   `--example-ids`/`--unit-ids` list, or one or more named `--section` values.
+   Use threaded execution normally and `--runtime serial --max-workers 1` only
+   for debugging. A run count of one and threaded execution are defaults, but
+   keep them explicit in reproducible handoffs. Avoid interactive profile or
+   benchmark selection unless discovery is the requested task.
 4. Treat hosted benchmark availability as mutable operational state. Before a
    live run, confirm the exact key and version through the runbook's discovery
    workflow or a current catalog result from the same environment. A value in
@@ -44,10 +44,10 @@ in this skill.
    compatibility has not already been established.
 6. When authorized to execute, monitor the run through completion and report
    the deterministic run ID and exact `result.json` path. If interrupted,
-   rerun the identical explicit command with `--resume-mode missing`; completed
-   work is already durable. Diagnose the first substantive error; do not
-   mistake successful Blob `206` logs or thread-shutdown noise for the root
-   cause.
+   use the exact resume command printed by the runner; it reruns only missing
+   work for the same immutable identity and completed work is already durable.
+   Diagnose the first substantive error; do not mistake successful Blob `206`
+   logs or thread-shutdown noise for the root cause.
 7. Verify durable and optional artifacts separately:
    - load and integrity-check `result.json`; confirm `run` matches the requested
      evaluation profile identity/hash, benchmark, model, reasoning effort,
@@ -65,11 +65,14 @@ in this skill.
      are disposable; absence or invalid telemetry is supported and must not be
      described as missing durable eval evidence or a failed eval.
 8. Expect the schema-v1 run bundle under
-   `eval_results/<pipeline>/<benchmark-key>/v<version>/runs/<run-id>/`. Report
-   the exact `result.json` and do not reconstruct identity from display labels.
-9. Use `--compare-model` for multiple models under identical conditions. For
-   existing results, use `--compare-result` plus every allowed
-   `--varying-dimension`; undeclared differences intentionally fail closed.
+   `eval_results/working/<benchmark-key>/v<version>/<run-id>/`. Every new run
+   is a rich, disposable working eval. Report the exact `result.json` and do not
+   reconstruct identity from display labels. If the completed run represents a
+   meaningful agent version, hand it to `$eval-lifecycle` for explicit
+   full-run elevation; do not infer retention from score or age.
+9. Treat comparison as review of completed evals through Codex,
+   `$eval-results-analysis`, or the local read-only explorer. Do not make
+   comparison a runner phase.
 
 ## Boundaries
 
@@ -77,7 +80,12 @@ in this skill.
   schemas, or executor behavior.
 - Use `$eval-results-analysis` to explain accuracy changes in completed result
   files.
+- Use `$eval-lifecycle` to list, elevate, verify, or permanently delete an
+  exact working or retained eval.
 - Use `$external-runtime-setup` for provider credentials or telemetry setup.
+- Do not teach process execution, arbitrary label filters/predicates, failure
+  generation reruns, materialization-only operations, or comparison flags as
+  normal eval workflow.
 - Never print secrets or commit `.env` values.
 - Never infer a benchmark key for a real run. Discover it in the current
   environment or obtain an exact identity from the user. A prior result may be

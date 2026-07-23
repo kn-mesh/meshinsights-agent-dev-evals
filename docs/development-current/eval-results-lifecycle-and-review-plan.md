@@ -2,7 +2,10 @@
 
 ## Status
 
-Proposed feature and skill plan.
+Implemented and validated on 2026-07-23. New working results use the explicit
+working root; complete runs can be elevated to compact retained artifacts; exact
+permanent deletion, immutable Azure evidence references, formal lifecycle
+skills, and read-only Working/Retained explorer filters are in place.
 
 ## FDE Outcome
 

@@ -15,8 +15,16 @@ import pytest
 import yaml
 
 from model_catalog import ModelDefinition, ModelPricing
-from evaluation import FieldGrade, GraderRegistry, ScoringStatus
+from evaluation import (
+    EvalAttempt,
+    ExecutionStatus,
+    FieldGrade,
+    GraderRegistry,
+    OutputContractStatus,
+    ScoringStatus,
+)
 from src.agent_versions import AgentVersionStore, resolve_agent_version
+from src.apps.eval_explorer import ProjectExplorerBackend
 
 from src.benchmarks import (
     BenchmarkExample,
@@ -30,6 +38,7 @@ from src.benchmarks import (
 from src.evals import eval_orchestration
 from src.evals.result_integrity import ResultIntegrityError, load_verified_result
 from src.evals.run_store import LocalRunStore
+from src.eval_lifecycle import EvalLifecycleError, EvalLifecycleService
 
 
 PROFILE_PATH = Path("evaluation_configs/spirax-failure-evaluation.eval.yaml")
@@ -236,7 +245,7 @@ def _run(
 
 
 def _run_dir(root: Path) -> Path:
-    return next(root.glob("**/runs/eval_*"))
+    return next(root.glob("**/working/**/eval_*"))
 
 
 def _rows(root: Path) -> list[dict[str, Any]]:
@@ -366,6 +375,24 @@ def test_disposable_performance_can_be_deleted_without_invalidating_results(
     }
 
 
+def test_status_resolver_finds_new_working_layout(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    payload = _run(
+        monkeypatch,
+        tmp_path,
+        benchmark,
+        [_receipt(benchmark.examples[0])],
+    )
+    run_dir = _run_dir(tmp_path)
+
+    assert eval_orchestration._find_run_directory(  # noqa: SLF001
+        payload["run"]["run_id"],
+        root=tmp_path,
+    ) == run_dir.resolve()
+
+
 @pytest.mark.parametrize(
     ("method_name", "warning_text"),
     [
@@ -416,7 +443,7 @@ def test_result_integrity_rejects_any_materialized_content_edit(
         benchmark,
         [_receipt(benchmark.examples[0])],
     )
-    result_path = next(tmp_path.glob("**/runs/eval_*/result.json"))
+    result_path = next(tmp_path.glob("**/working/**/eval_*/result.json"))
     assert load_verified_result(result_path) == original
 
     mutations = (
@@ -522,7 +549,7 @@ def test_review_capture_can_be_disabled_without_changing_result_contract(
 
     assert payload["summary"]["scoring_coverage"]["scored_runs"] == 1
     assert payload["run"]["run_id"] == captured["run"]["run_id"]
-    run_dir = next((tmp_path / "off").glob("**/runs/eval_*"))
+    run_dir = next((tmp_path / "off").glob("**/working/**/eval_*"))
     assert not (run_dir / "review").exists()
 
 
@@ -1229,6 +1256,58 @@ def test_configuration_dimensions_require_unique_json_scalars() -> None:
         eval_orchestration._parse_configuration_dimensions(["feature_set={}"], parser)
 
 
+def test_normal_cli_exposes_only_three_scope_forms_and_supported_runtimes() -> None:
+    parser = eval_orchestration._argument_parser()
+    help_text = parser.format_help()
+
+    assert "--all-examples" in help_text
+    assert "--example-ids" in help_text
+    assert "--unit-ids" in help_text
+    assert "--section" in help_text
+    assert "--runtime {threaded,serial}" in help_text
+    for hidden in (
+        "--label-filter",
+        "--slice",
+        "--resume-mode",
+        "--rerun-failure-type",
+        "--materialize-only",
+        "--compare-model",
+        "--compare-result",
+        "process",
+    ):
+        assert hidden not in help_text
+
+    defaults = parser.parse_args([])
+    assert defaults.runtime == "threaded"
+    assert defaults.runs_per_example == 1
+    assert eval_orchestration._resolve_cli_runtime(defaults, parser=parser) == "threaded"
+
+
+def test_named_section_resolves_label_and_explicit_list_is_distinct() -> None:
+    parser = eval_orchestration._argument_parser()
+    profile = eval_orchestration.load_evaluation_profile(PROFILE_PATH)
+    benchmark = _benchmark()
+
+    named = parser.parse_args(["--section", "Open Failure"])
+    assert eval_orchestration._resolve_cli_scope(
+        named, benchmark=benchmark, profile=profile, parser=parser
+    ) == (None, None, {}, ["open-failure"])
+
+    explicit = parser.parse_args(["--unit-ids", "250000116"])
+    assert eval_orchestration._resolve_cli_scope(
+        explicit, benchmark=benchmark, profile=profile, parser=parser
+    ) == (None, ["250000116"], {}, [])
+
+
+def test_resume_command_is_shell_safe() -> None:
+    command = eval_orchestration._resume_command(
+        ["pipeline configs/agent.ppln", "--all-examples"]
+    )
+
+    assert "'pipeline configs/agent.ppln'" in command
+    assert command.endswith("--all-examples")
+
+
 def test_cost_estimate_uses_frozen_model_pricing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1256,6 +1335,257 @@ def test_cost_estimate_uses_frozen_model_pricing(
     assert cost["status"] == "estimated_complete"
     assert cost["estimated"]["amount"] == 3.0
     assert cost["actual"] is None
+
+
+def test_run_identity_freezes_selected_pricing_snapshot(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    pricing = ModelPricing(
+        version="reviewed-2026-07",
+        currency="USD",
+        input_per_million_tokens=1.25,
+        output_per_million_tokens=5.0,
+        effective_date="2026-07-01",
+        source="reviewed price sheet",
+    )
+    monkeypatch.setattr(
+        eval_orchestration,
+        "resolve_model_definition",
+        lambda model: ModelDefinition(
+            id=str(model), api="openai_responses", pricing=pricing
+        ),
+    )
+    manifest = eval_orchestration.run_eval(
+        Path("pipeline_configs/v1_3.ppln"),
+        evaluation_profile_path=PROFILE_PATH,
+        benchmark_key=_benchmark().benchmark_key,
+        repository=_Repository(_benchmark()),
+        ai_model="azure:gpt-5.6-terra",
+        runtime="serial",
+        dry_run=True,
+        output_root=tmp_path,
+    )
+
+    selected = json.loads(manifest.read_text())["run_spec"]["model"]["pricing"]
+    assert selected["version"] == "reviewed-2026-07"
+    assert selected["input_per_million_tokens"] == 1.25
+    assert len(selected["content_sha256"]) == 64
+
+
+def test_cost_summary_reports_complete_partial_and_unavailable_unit_coverage() -> None:
+    def attempt(cost: dict[str, Any] | None) -> EvalAttempt:
+        return EvalAttempt(
+            execution_status=ExecutionStatus.COMPLETED,
+            output_contract_status=OutputContractStatus.VALID,
+            scoring_status=ScoringStatus.NO_APPLICABLE_TARGETS,
+            artifacts={} if cost is None else {"cost": cost},
+        )
+
+    summary = eval_orchestration._build_cost_summary(
+        [
+            attempt(
+                {
+                    "status": "actual",
+                    "actual": {"amount": 1.0, "currency": "USD"},
+                    "estimated": None,
+                }
+            ),
+            attempt(
+                {
+                    "status": "estimated_complete",
+                    "actual": None,
+                    "estimated": {"amount": 3.0, "currency": "USD"},
+                }
+            ),
+            attempt(
+                {
+                    "status": "estimated_partial",
+                    "actual": None,
+                    "estimated": {"amount": 0.5, "currency": "USD"},
+                }
+            ),
+            attempt(
+                {
+                    "status": "unavailable",
+                    "actual": None,
+                    "estimated": None,
+                }
+            ),
+            attempt(None),
+        ]
+    )
+
+    assert summary["units_with_complete_cost_observations"] == 2
+    assert summary["units_with_partial_pricing"] == 1
+    assert summary["units_without_usable_cost_information"] == 2
+    assert summary["actual_by_currency"] == {"USD": 1.0}
+    assert summary["estimated_by_currency"] == {"USD": 3.5}
+    assert summary["complete_unit_cost_by_currency"]["USD"] == {
+        "count": 2,
+        "total": 4.0,
+        "average": 2.0,
+        "p5": 1.1,
+        "p95": 2.9,
+    }
+
+
+def test_complete_working_eval_elevates_to_compact_verified_retained_artifacts(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    eval_root = tmp_path / "eval_results"
+    payload = _run(
+        monkeypatch,
+        eval_root,
+        benchmark,
+        [_receipt(benchmark.examples[0])],
+    )
+    run_id = payload["run"]["run_id"]
+    service = EvalLifecycleService(tmp_path)
+
+    preview = service.preview_elevation(run_id)
+    elevated = service.elevate(run_id, confirmed=True)
+    retained_dir = tmp_path / elevated["path"]
+
+    assert preview["source_run_id"] == run_id
+    assert preview["prunes"] == [
+        "per-attempt files",
+        "performance, speed, latency, retry, and invocation detail",
+        "tool traces and intermediate review objects",
+        "local copies of Azure evidence",
+    ]
+    assert elevated["verified"] is True
+    assert {path.name for path in retained_dir.iterdir()} == {
+        "manifest.json",
+        "result.json",
+        "units.json",
+        "agent-provenance.json",
+        "evidence-references.json",
+        *(["agent.patch"] if (retained_dir / "agent.patch").exists() else []),
+    }
+    assert not any(path.is_dir() for path in retained_dir.iterdir())
+    units = json.loads((retained_dir / "units.json").read_text())
+    assert units["units"][0]["agent_output"]["classification"]["value"] == "Failure"
+    assert units["units"][0]["benchmark_labels"]["classification"] == "Failure"
+    assert units["units"][0]["evaluations"]["classification"]["correct"] is True
+    assert "usage" in units["units"][0]
+    assert "cost" in units["units"][0]
+    assert units["units"][0]["review_status"] == "retained_compact"
+    evidence = json.loads((retained_dir / "evidence-references.json").read_text())
+    assert evidence["storage"]["account_url"].startswith("https://")
+    assert evidence["examples"][0]["raw_artifacts"][0]["content_sha256"]
+    provenance = json.loads((retained_dir / "agent-provenance.json").read_text())
+    if provenance["git"]["tree_state"] == "dirty":
+        assert (retained_dir / "agent.patch").read_text(encoding="utf-8")
+    else:
+        assert not (retained_dir / "agent.patch").exists()
+
+    class _EvidenceAdapter:
+        def build_view(self, **kwargs: Any) -> dict[str, Any]:
+            return {
+                "verified": True,
+                "example_id": kwargs["example"].example_id,
+            }
+
+    backend = ProjectExplorerBackend(
+        tmp_path,
+        evidence_adapter=_EvidenceAdapter(),  # type: ignore[arg-type]
+    )
+    listed = backend.list_runs()["runs"]
+    assert {item["lifecycle_state"] for item in listed} == {"working", "retained"}
+    retained_id = elevated["retained_eval_id"]
+    attempts = backend.list_attempts(
+        retained_id,
+        state="all",
+        search="",
+        field=None,
+        slice_key=None,
+        offset=0,
+        limit=100,
+    )
+    assert attempts["rows"][0]["agent_output"]["classification"]["value"] == "Failure"
+    detail = backend.get_attempt(
+        retained_id, attempts["rows"][0]["execution_id"]
+    )
+    assert detail["review"] is None
+    assert detail["performance"]["availability"] == "unavailable"
+    assert (
+        backend.get_evidence(retained_id, benchmark.examples[0].example_id)[
+            "verified"
+        ]
+        is True
+    )
+    unexpected = retained_dir / "unexpected"
+    unexpected.mkdir()
+    with pytest.raises(EvalLifecycleError, match="non-file"):
+        service.verify(retained_id)
+    unexpected.rmdir()
+
+
+def test_incomplete_working_eval_refuses_elevation(
+    tmp_path: Path,
+) -> None:
+    benchmark = _benchmark()
+    manifest = eval_orchestration.run_eval(
+        Path("pipeline_configs/v1_3.ppln"),
+        evaluation_profile_path=PROFILE_PATH,
+        benchmark_key=benchmark.benchmark_key,
+        repository=_Repository(benchmark),
+        runtime="serial",
+        dry_run=True,
+        output_root=tmp_path,
+    )
+    service = EvalLifecycleService(tmp_path, eval_root=tmp_path)
+
+    with pytest.raises(EvalLifecycleError, match="incomplete"):
+        service.preview_elevation(manifest.parent.name)
+
+
+def test_permanent_delete_preserves_shared_retained_agent_until_last_reference(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    benchmark = _benchmark()
+    first = _run(
+        monkeypatch,
+        tmp_path,
+        benchmark,
+        [_receipt(benchmark.examples[0])],
+    )
+    second = _run(
+        monkeypatch,
+        tmp_path,
+        benchmark,
+        [_receipt(benchmark.examples[0]), _receipt(benchmark.examples[0])],
+        runs_per_example=2,
+    )
+    service = EvalLifecycleService(tmp_path, eval_root=tmp_path)
+    retained_a = service.elevate(first["run"]["run_id"], confirmed=True)
+    retained_b = service.elevate(second["run"]["run_id"], confirmed=True)
+    assert retained_a["agent_version_id"] == retained_b["agent_version_id"]
+    agent_dir = (
+        tmp_path / "retained" / "agent_versions" / retained_a["agent_version_id"]
+    )
+
+    removed_a = service.delete_retained(
+        retained_a["retained_eval_id"],
+        confirmation=retained_a["retained_eval_id"],
+    )
+    assert removed_a["recoverable"] is False
+    assert removed_a["agent_version_removed"] is False
+    assert agent_dir.is_dir()
+
+    removed_b = service.delete_retained(
+        retained_b["retained_eval_id"],
+        confirmation=retained_b["retained_eval_id"],
+    )
+    assert removed_b["agent_version_removed"] is True
+    assert not agent_dir.exists()
+
+    removed_working = service.delete_working(
+        first["run"]["run_id"], confirmed=True
+    )
+    assert removed_working["permanent"] is True
+    assert removed_working["recoverable"] is False
 
 
 def test_progress_tracker_reports_healthy_failure_and_running(

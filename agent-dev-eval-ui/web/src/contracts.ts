@@ -58,6 +58,8 @@ export interface SourceVerificationSchema {
 
 export interface RunEntry {
   run_id: string;
+  lifecycle_state: "working" | "retained";
+  source_run_id?: string;
   result_status: string;
   agent_version_id: string;
   pipeline_path?: string | null;

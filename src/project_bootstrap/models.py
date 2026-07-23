@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 ModelApi = Literal[
@@ -13,6 +13,13 @@ ModelApi = Literal[
     "google_generate_content",
     "openai_chat_completions",
     "openai_responses",
+]
+OwnershipKind = Literal[
+    "reusable_library",
+    "reusable_workbench",
+    "reference_use_case",
+    "root_infrastructure",
+    "generated_local",
 ]
 
 
@@ -92,11 +99,25 @@ class BenchmarkCatalogSpec(StrictModel):
         return self
 
 
+class ModelPricingSpec(StrictModel):
+    """Optional frozen non-secret rates copied into the project catalog."""
+
+    version: str = Field(min_length=1)
+    currency: str = Field(min_length=1)
+    input_per_million_tokens: float | None = Field(default=None, ge=0)
+    output_per_million_tokens: float | None = Field(default=None, ge=0)
+    cached_input_per_million_tokens: float | None = Field(default=None, ge=0)
+    reasoning_per_million_tokens: float | None = Field(default=None, ge=0)
+    effective_date: str | None = None
+    source: str | None = None
+
+
 class ModelSpec(StrictModel):
     """One project-supported model and its required provider API family."""
 
     id: str = Field(pattern=r"^[^:\s]+:[^\s]+$")
     api: ModelApi
+    pricing: ModelPricingSpec | None = None
 
 
 class ModelCatalogSpec(StrictModel):
@@ -156,3 +177,91 @@ class ProjectContract(StrictModel):
     benchmarks: BenchmarkCatalogSpec
     model_catalog: ModelCatalogSpec
     paths: ProjectPaths
+
+
+class OwnershipEntry(StrictModel):
+    """One explicit repository path and its template ownership."""
+
+    path: str
+    owner: OwnershipKind
+    description: str = Field(min_length=1)
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, value: str) -> str:
+        return _relative_template_path(value)
+
+
+class ReferenceResetSpec(StrictModel):
+    """Exact reference content cleared when creating a new use-case repo."""
+
+    clear_directories: tuple[str, ...] = ()
+    remove_directories: tuple[str, ...] = ()
+    remove_files: tuple[str, ...] = ()
+    root_skills_with_project_defaults: tuple[str, ...] = ()
+    leak_scan_paths: tuple[str, ...] = ()
+    forbidden_terms: tuple[str, ...] = ()
+
+    @field_validator(
+        "clear_directories",
+        "remove_directories",
+        "remove_files",
+        "root_skills_with_project_defaults",
+        "leak_scan_paths",
+    )
+    @classmethod
+    def validate_paths(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        normalized = tuple(_relative_template_path(value) for value in values)
+        if len(normalized) != len(set(normalized)):
+            raise ValueError("Template reset paths must be unique.")
+        return normalized
+
+    @field_validator("forbidden_terms")
+    @classmethod
+    def validate_terms(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        normalized = tuple(value.strip().lower() for value in values)
+        if any(not value for value in normalized):
+            raise ValueError("Forbidden reference terms cannot be empty.")
+        if len(normalized) != len(set(normalized)):
+            raise ValueError("Forbidden reference terms must be unique.")
+        return normalized
+
+
+class TemplateOwnershipManifest(StrictModel):
+    """Versioned ownership and reference-reset contract for the template."""
+
+    schema_version: Literal[1]
+    ownership: tuple[OwnershipEntry, ...] = Field(min_length=1)
+    reference_reset: ReferenceResetSpec
+
+    @model_validator(mode="after")
+    def validate_manifest(self) -> TemplateOwnershipManifest:
+        paths = tuple(item.path for item in self.ownership)
+        if len(paths) != len(set(paths)):
+            raise ValueError("Template ownership paths must be unique.")
+        overlap = set(self.reference_reset.clear_directories).intersection(
+            self.reference_reset.remove_directories
+        )
+        if overlap:
+            raise ValueError(
+                "Template directories cannot be both cleared and removed: "
+                + ", ".join(sorted(overlap))
+            )
+        return self
+
+
+def _relative_template_path(value: str) -> str:
+    """Return one normalized safe project-relative POSIX path."""
+    from pathlib import PurePosixPath
+
+    normalized = value.strip().replace("\\", "/")
+    path = PurePosixPath(normalized)
+    if (
+        not normalized
+        or normalized == "."
+        or path.is_absolute()
+        or ".." in path.parts
+        or normalized != path.as_posix()
+    ):
+        raise ValueError(f"Template path must be normalized and relative: {value!r}")
+    return normalized

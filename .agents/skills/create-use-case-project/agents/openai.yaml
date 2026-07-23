@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Use-Case Project"
+  short_description: "Bootstrap a clean Agent Workbench repository"
+  default_prompt: "Use $create-use-case-project to create and validate a new Agent Workbench use-case repository from the exact template revision."

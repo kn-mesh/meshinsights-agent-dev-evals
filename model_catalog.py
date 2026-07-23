@@ -16,7 +16,7 @@ ModelApi: TypeAlias = Literal[
     "openai_chat_completions",
     "openai_responses",
 ]
-_MODEL_APIS: frozenset[str] = frozenset(
+MODEL_APIS: frozenset[str] = frozenset(
     {
         "anthropic_messages",
         "google_generate_content",
@@ -127,8 +127,8 @@ def _model_definition(value: object, index: int) -> ModelDefinition:
         raise ValueError(f"Model catalog '{field}' must be a mapping with id and api.")
     model_id = _model_identifier(value.get("id"), f"{field}.id")
     raw_api = value.get("api")
-    if not isinstance(raw_api, str) or raw_api not in _MODEL_APIS:
-        choices = ", ".join(sorted(_MODEL_APIS))
+    if not isinstance(raw_api, str) or raw_api not in MODEL_APIS:
+        choices = ", ".join(sorted(MODEL_APIS))
         raise ValueError(
             f"Model catalog '{field}.api' must be one of: {choices}; got {raw_api!r}."
         )

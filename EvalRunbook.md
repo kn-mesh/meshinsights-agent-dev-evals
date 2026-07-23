@@ -29,7 +29,6 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --runs-per-example 1 \
   --runtime threaded \
   --max-workers 4 \
-  --error-action continue \
   --review-capture full
 ```
 
@@ -59,7 +58,6 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --runs-per-example <count> \
   --runtime threaded \
   --max-workers <count> \
-  --error-action continue \
   --review-capture <full|off>
 ```
 
@@ -87,14 +85,32 @@ promoted version. Promotion defaults to a clean version surface; pass
 
 `models.yaml` currently declares `azure:gpt-5.6-luna` as the interactive
 default model and routes it through the `openai_responses` API family.
-Non-interactive execution requires `--ai-model` (or `--compare-model`) and an
-explicit reasoning setting, including `default` when provider defaults are
-intentional.
+Non-interactive execution requires `--ai-model` and an explicit reasoning
+setting, including `default` when provider defaults are intentional.
 
 Do not replace `<provider:model>` with the catalog default merely because it is
 listed. Confirm that the current runtime adapter supports the entry's `api`
 family first. Models marked `openai_responses` are routed through Azure's
 Responses API rather than Chat Completions.
+
+List configured prices or create/edit a selectable model with:
+
+```bash
+uv run python -m src.model_configuration list
+uv run python -m src.model_configuration upsert <provider:model> \
+  --api <api-family> \
+  --currency USD \
+  --pricing-version <reviewed-version> \
+  --effective-date <YYYY-MM-DD> \
+  --source <reviewed-source> \
+  --input-price <per-million-tokens> \
+  --output-price <per-million-tokens>
+```
+
+Optional `--cached-input-price` and `--reasoning-price` values cover those
+token classes when known. This catalog is non-secret; provider credentials
+remain in `.env`. Prices are never fetched or silently refreshed during an
+eval. The selected pricing record is frozen into run identity and results.
 
 ## Recommended First Run
 
@@ -111,8 +127,7 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --ai-reasoning-effort medium \
   --runs-per-example 1 \
   --runtime serial \
-  --max-workers 1 \
-  --error-action stop
+  --max-workers 1
 ```
 
 Example IDs can contain `|`, so quote them. After the smoke run succeeds,
@@ -121,23 +136,18 @@ for the full benchmark.
 
 ## Scope Options
 
-Use only the filters needed for the intended scope. Multiple filter types are
-combined as an intersection.
+Choose exactly one of the three supported scope forms:
 
 - `--example-ids <id> [<id> ...]`: exact immutable benchmark examples.
 - `--unit-ids <id> [<id> ...]`: every selected example for those units.
-- `--label-filter 'path=<json-scalar>'`: examples whose immutable benchmark
-  label at `path` matches the JSON value. Repeat it to accept multiple values
-  for one path. Quote string values, for example
-  `--label-filter 'root_cause="Open Failure"'`.
-- `--slice <slice-key>`: examples in a named slice from the selected evaluation
-  profile. Repeat it to select the union of multiple slices.
-- `--agent-version-id av_<hash>`: require an exact resolved candidate identity.
-- `--dimension 'key=<json-scalar>'`: persist a project-relevant configuration
-  dimension such as `--dimension 'prompt_revision=7'`. Repeat for additional
-  grouping dimensions; keys must be unique.
+- `--section <key-or-label>`: examples in a named use-case section from the
+  selected evaluation profile. Repeat it to select the union of named sections.
 - `--all-examples`: every example in the selected benchmark version. The
-  non-interactive CLI requires this flag or one of the filters above.
+  non-interactive CLI requires this flag or one of the choices above.
+
+`--example-ids` and `--unit-ids` are the explicit-list form and must not be
+combined with each other or a named section. Profile predicates remain an
+internal implementation detail; operators select a named section.
 
 For example, run every approved Open Failure example once with the catalog
 default model after substituting a key and version confirmed by discovery:
@@ -148,13 +158,12 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --project-key spirax-pulse \
   --benchmark-key <published-benchmark-key> \
   --benchmark-version <version-number> \
-  --slice open-failure \
+  --section 'Open Failure' \
   --ai-model azure:gpt-5.6-luna \
   --ai-reasoning-effort medium \
   --runs-per-example 1 \
   --runtime threaded \
-  --max-workers 4 \
-  --error-action continue
+  --max-workers 4
 ```
 
 ## Benchmark Discovery And Availability
@@ -210,7 +219,7 @@ The command prints the exact result file when it completes. For `v1_3`, files
 are written under:
 
 ```text
-eval_results/v1_3/<benchmark-key>/v<version>/runs/<run-id>/
+eval_results/working/<benchmark-key>/v<version>/<run-id>/
   manifest.json
   agent-version.json
   attempts/<prefix>/<work-item-id>.<generation>.json  # detailed, local, Git-ignored
@@ -227,21 +236,18 @@ eval_results/v1_3/<benchmark-key>/v<version>/runs/<run-id>/
   diagnosis/                       # optional compact retained review notes
 ```
 
-The run ID deterministically hashes the resolved source-content manifest,
+Every new run is a working eval. The run ID deterministically hashes the resolved source-content manifest,
 pipeline, benchmark, profile/graders, model, reasoning, scope, repetitions,
 runtime, worker limit, error policy, and configuration dimensions. Running the
 identical command again resumes that run and does not duplicate completed work.
 
-`manifest.json`, `agent-version.json`, and the atomically rebuilt `result.json`
-are the compact schema-v1 artifacts intended to be retained in Git for important
-runs. Immutable attempt generations are detailed local evidence and are ignored
-by Git by default; retain them through initial analysis and any resume,
-rematerialization, or per-attempt inspection work. Confirm `run` records the
-intended run ID and conditions and use `run.dimensions` for exact comparison
-identities. The manifest also retains every selected example's complete frozen
-source-snapshot window, known gaps, and raw artifact object key, byte size, and
-SHA-256 contract so historical evidence inspection does not depend on the
-current publication catalog.
+Working `manifest.json`, `agent-version.json`, immutable attempts,
+`result.json`, review, and performance detail support immediate debugging and
+resume. A meaningful complete run is preserved through `$eval-lifecycle`,
+which creates compact aggregate retained artifacts and the linked meaningful
+agent version. The working manifest retains every selected example's complete
+frozen source-snapshot window, Azure storage identity, recipe, known gaps, and
+raw artifact object key, byte size, and SHA-256 contract.
 
 Result schema version 1 separates durable evaluation evidence from disposable
 performance diagnostics. Its summary contains `accuracy`, `reliability`,
@@ -259,6 +265,12 @@ execution generations, and selected reruns. `summary.usage` and `summary.cost`
 retain availability explicitly. Current receipts preserve
 model requests, input/output/cache/reasoning tokens, tool calls, and direct
 workflow output attempts when reported.
+
+The CLI reports total input, output, cached-input, reasoning, and overall
+tokens. Cost summary preserves actual, complete-estimate, partial-estimate, and
+unavailable status. For each currency it reports total, average per completed
+unit, P5, and P95 calculated from complete per-unit observations, plus counts
+of units with complete, partial, or unusable cost information.
 
 `performance/summary.json` contains short-lived wall time, throughput, stage
 timings, retry telemetry, and model/API-call durations, including the exact
@@ -286,9 +298,8 @@ model transcripts, tool activity, and validation history are content-addressed
 and de-duplicated only within the run. No review artifact is uploaded to Azure.
 
 Review capture defaults to `full` for executed attempts. Use
-`--review-capture off` when detailed local review is not needed. Dry-run,
-status, comparison-only, and materialize-only operations do not capture new
-review content.
+`--review-capture off` when detailed local review is not needed. Dry-run and
+status operations do not capture new review content.
 
 Each execution capture is journaled before local objects are promoted. Startup
 recovers interrupted transactions, retaining objects only when the exact
@@ -300,11 +311,10 @@ does not invalidate the durable eval result.
 
 Capture state is evidence-based: `in_progress` while executions are being
 recorded, then `complete`, `partial`, or `failed` after reconciliation with the
-durable attempt IDs; explicit deletion records `purged`. A capture failure is
-nonfatal to the durable eval result. The inspection CLI and explorer identify
-unavailable detail as `disabled`, `capture_failed`, `capture_partial`,
-`purged`, or `absent`, so missing diagnostics are not confused with a failed
-or low-quality agent output.
+durable attempt IDs. A capture failure is nonfatal to the durable eval result.
+The inspection CLI and explorer identify unavailable detail as `disabled`,
+`capture_failed`, `capture_partial`, `pruned`, or `absent`, so missing
+diagnostics are not confused with a failed or low-quality agent output.
 
 `run.dimensions.evaluation_profile` records the profile ID, version, and
 content hash.
@@ -325,7 +335,7 @@ uv run python -m src.evals.eval_orchestration --status-run-id eval_<hash>
 uv run python -m src.evals.inspection_cli summary --run eval_<hash>
 
 # Optional disposable performance observations
-eval_run_dir='eval_results/<pipeline>/<benchmark>/v<version>/runs/eval_<hash>'
+eval_run_dir='eval_results/working/<benchmark>/v<version>/eval_<hash>'
 if test -f "$eval_run_dir/performance/summary.json"; then
   uv run python -m json.tool "$eval_run_dir/performance/summary.json" >/dev/null
 else
@@ -335,7 +345,8 @@ fi
 
 Absence of `performance/summary.json` means timing and retry diagnosis is
 unavailable; it does not invalidate the durable result. Review capture may
-independently be `in_progress`, `complete`, `partial`, `failed`, or `purged`.
+independently be `in_progress`, `complete`, `partial`, or `failed`; elevated
+retained evals report detailed review as `pruned`.
 
 CLI exit codes are `0` for a fully scored completion, `2` for argument/preflight
 errors, `3` when durable execution completes with terminal unscored work, `4`
@@ -354,14 +365,15 @@ cd ..
 APP_PROJECT_KEY=spirax-pulse uv run python -m src.apps.eval_explorer
 ```
 
-Open `http://127.0.0.1:8765`. Select a retained run to filter attempts and
+Open `http://127.0.0.1:8765`. Select a working run to filter attempts and
 inspect expected/actual outputs, grading, model interactions, pipeline/tool
-activity, and raw review data. The Evidence package tab reads the selected
-example's frozen-artifact contract from the retained run manifest, verifies the
-exact immutable Azure objects, and renders the normalized Spirax charts used by
-Benchmark Studio. A legacy run without that retained artifact contract fails
-closed and must be rerun with the current writer.
-If review capture was off, failed, partial, purged, or absent, compact result
+activity, and raw review data. Select a retained eval to inspect its compact
+full outputs and grading; tool traces and performance detail are intentionally
+unavailable. The Evidence package tab reads the selected eval's exact Azure
+artifact references, verifies the immutable objects, and renders the normalized
+Spirax charts used by Benchmark Studio. A legacy run without that artifact
+contract fails closed and must be rerun with the current writer.
+If review capture was off, failed, partial, pruned, or absent, compact result
 rows remain available and the detailed tabs state the specific reason the
 review is unavailable.
 
@@ -389,26 +401,17 @@ separate `timeout`, `transport_error`, `provider_error`, pipeline,
 `output_partial`, and `grader_error` outcomes. All remain excluded from
 valid-run accuracy.
 
-## Resume And Selective Rerun
+## Interruption And Resume
 
-Every terminal attempt is committed immediately. After interruption, rerun the
-same explicit command: default `--resume-mode missing` executes only logical
-slots without a terminal generation.
+Every terminal attempt is committed immediately. On `Ctrl-C` or another
+cooperative interruption, the runner reports the incomplete run ID, current
+state counts, manifest path, and an exact shell-safe resume command. Run that
+command unchanged: completed units keep their durable results and only missing
+units execute for the same immutable run identity.
 
-- `--resume-mode missing-or-cancelled` includes stop-on-error cancellations.
-- `--resume-mode failed` creates a new immutable generation only for failed or
-  cancelled slots.
-- `--resume-mode missing-or-failed` recovers all unhealthy/incomplete slots.
-- `--rerun-failure-type provider_error` narrows a failed mode to one category.
-- `--run-id eval_<hash>` fails if resolved conditions do not match that run.
-
-A valid but incorrect answer is completed model work and is never selected by a
-failed rerun. Earlier generations remain immutable; only the latest generation
-represents that logical repetition in result metrics.
-
-Use `--dry-run` for full identity/preflight/work selection without model
-execution. Use the original explicit settings plus `--materialize-only` to
-rebuild `result.json` without executing work.
+Failed, invalid, and incorrect terminal results remain inspectable completed
+work. Selective failure reruns are not part of the supported MVP workflow.
+Deleted runs cannot be resumed.
 
 Inspect local durable state without Azure or provider bootstrap:
 
@@ -417,48 +420,12 @@ uv run python -m src.evals.eval_orchestration \
   --status-run-id eval_<hash>
 ```
 
-## Model And Configuration Comparison
+## Compare Completed Results
 
-Add one or more `--compare-model` flags to an explicit command to execute child
-runs with identical non-model conditions and create a comparison manifest:
-
-```bash
-uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
-  --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
-  --project-key spirax-pulse \
-  --benchmark-key <published-benchmark-key> \
-  --benchmark-version <version-number> \
-  --all-examples \
-  --ai-model azure:gpt-5.6-luna \
-  --compare-model azure:gpt-5.6-terra \
-  --compare-model azure:gpt-5.6-sol \
-  --ai-reasoning-effort high \
-  --runs-per-example 3 \
-  --runtime threaded \
-  --max-workers 4 \
-  --error-action continue
-```
-
-Comparisons are written under `v<version>/comparisons/`. Undeclared dimension
-changes, mismatched scope, and mismatched repetition counts fail closed.
-
-Compare existing deterministic results with explicitly allowed differences:
-
-```bash
-uv run python -m src.evals.eval_orchestration \
-  --compare-result <first-result.json> \
-  --compare-result <second-result.json> \
-  --varying-dimension model.id
-```
-
-Declare every allowed difference, such as `model.provider`,
-`model.reasoning_effort`, `pipeline.content_sha256`, or
-`configuration.<key>`. This prevents prompt, evidence, tool, scoring, runtime,
-or harness changes from being presented as model-only comparisons.
-
-Comparison results include the aligned example, work-item, and execution IDs
-behind improvements, regressions, changed incorrect outputs, new failures, and
-recoveries. Use those execution IDs for paired review drill-down.
+Comparison happens after evals complete. Use Codex with
+`$eval-results-analysis` or select retained runs in the local read-only
+explorer. Keep execution focused on producing one durable result per explicit
+agent/model/scope configuration.
 
 ## Ephemeral Coding-Agent Review
 
@@ -501,65 +468,41 @@ uv run python -m src.evals.inspection_cli diagnose \
   --markdown diagnosis.md
 ```
 
-After review, preview and explicitly purge only the disposable review bundle:
+## Working And Retained Lifecycle
+
+List explicit lifecycle state:
 
 ```bash
-uv run python -m src.evals.inspection_cli purge \
-  --run eval_<hash> \
-  --dry-run
-
-uv run python -m src.evals.inspection_cli purge \
-  --run eval_<hash> \
-  --yes
+uv run python -m src.eval_lifecycle.cli list --state all --json
+uv run python -m src.eval_lifecycle.cli inspect eval_<hash> --json
 ```
 
-Review-only purge retains `manifest.json`, immutable attempts, `result.json`,
-candidate agent linkage, comparisons, and `diagnosis/`. Whole-run deletion is a
-separate lifecycle operation. Purge validates one exact run and refuses broad,
-ambiguous, or path-escaping targets.
-
-## Local Catalog And Whole-Entity Deletion
-
-List and verify managed schema-v1 runs, comparisons, and candidate/promoted
-agent versions without contacting Azure:
+Preview and explicitly elevate a meaningful complete full run:
 
 ```bash
-uv run python -m src.lifecycle.cli catalog --json
-uv run python -m src.lifecycle.cli verify --json
-uv run python -m src.lifecycle.cli inspect run eval_<hash> --json
-uv run python -m src.lifecycle.cli inspect version av_<hash> --json
+uv run python -m src.eval_lifecycle.cli elevate eval_<hash> --dry-run --json
+uv run python -m src.eval_lifecycle.cli elevate eval_<hash> --yes --json
+uv run python -m src.eval_lifecycle.cli verify ret_<hash> --json
 ```
 
-The catalog is derived from immutable local records. Historical standalone
-result JSON is unsupported; `eval_results/` contains only the managed
-`runs/<run-id>/` and `comparisons/` layouts.
+The retained folder contains `manifest.json`, `result.json`, aggregate
+`units.json`, `agent-provenance.json`, `evidence-references.json`, and optional
+`agent.patch`. It preserves full final AI outputs, expected outputs, validation,
+grading, accuracy, usage, and cost. It prunes performance, invocation, tool,
+and intermediate review detail and never copies Azure evidence locally.
 
-Use one flow for runs, comparisons, and promoted versions. Always inspect the
-reference warnings in the preview before confirmation:
+Permanently delete exact evals only after explicit confirmation:
 
 ```bash
-uv run python -m src.lifecycle.cli delete run eval_<hash> --dry-run --json
-uv run python -m src.lifecycle.cli delete run eval_<hash> --yes --json
-uv run python -m src.lifecycle.cli delete comparison cmp_<hash> --dry-run --json
-uv run python -m src.lifecycle.cli delete version av_<hash> --dry-run --json
+uv run python -m src.eval_lifecycle.cli delete working eval_<hash> --yes --json
+uv run python -m src.eval_lifecycle.cli delete retained ret_<hash> \
+  --confirm-retained ret_<hash> --json
 ```
 
-Confirmed deletion moves the exact paths into recoverable, Git-ignored local
-quarantine. Restore while the original paths remain absent, or permanently
-purge the quarantine with a second explicit confirmation:
-
-```bash
-uv run python -m src.lifecycle.cli restore del_<operation-id> --dry-run --json
-uv run python -m src.lifecycle.cli restore del_<operation-id> --yes --json
-uv run python -m src.lifecycle.cli purge del_<operation-id> --dry-run --json
-uv run python -m src.lifecycle.cli purge del_<operation-id> --yes --json
-```
-
-Candidate-only versions live inside their eval runs and are removed by deleting
-those runs. Deleting a promoted version includes its global manifest, aliases,
-promotion events, and only CAS objects no retained promoted manifest uses.
-Active runs, corrupt managed records, symlinks, ambiguous IDs, and broad paths
-fail closed. Lifecycle operations never write to Azure or Benchmark Studio.
+Deletion is immediate and not recoverable. A deleted working run cannot resume.
+Retained deletion preserves a shared agent version until no retained eval
+references it. The local app only filters and reviews All, Working, and
+Retained; it has no elevate or delete actions.
 
 ## Fast Diagnosis
 

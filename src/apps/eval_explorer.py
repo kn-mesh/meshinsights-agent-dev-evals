@@ -17,16 +17,15 @@ import uvicorn
 from src.benchmarks.models import BenchmarkExample
 from src.evals.inspection import (
     all_inspection_rows,
-    find_run_directory,
     inspect_execution,
     inspection_summary,
 )
 from src.evals.result_integrity import load_verified_result
 from src.evals.run_specs import repository_root
 from src.evals.run_store import LocalRunStore
-from src.evidence import SpiraxEvidenceAdapter
+from src.evidence import ProjectEvidenceAdapter, create_project_evidence_adapter
+from src.eval_lifecycle import EvalLifecycleService
 from src.lifecycle.catalog import LocalLifecycleCatalog
-from src.storage.azure_blob import AzureBlobEvidenceStore
 
 
 _ATTEMPT_STATES = {
@@ -48,33 +47,46 @@ class ProjectExplorerBackend:
         self,
         project_root: Path,
         *,
-        evidence_adapter: SpiraxEvidenceAdapter | None = None,
+        evidence_adapter: ProjectEvidenceAdapter | None = None,
     ) -> None:
         self.project_root = project_root.resolve()
         self.eval_root = self.project_root / "eval_results"
+        self.lifecycle = EvalLifecycleService(self.project_root)
         self._evidence_adapter = evidence_adapter
+        self._evidence_adapters: dict[
+            tuple[str | None, str | None], ProjectEvidenceAdapter
+        ] = {}
 
     def list_runs(self) -> dict[str, Any]:
-        catalog = LocalLifecycleCatalog(self.project_root).build()
-        runs = []
-        for item in catalog.runs:
-            entry = item.model_dump(mode="json")
-            if item.result_status == "materialized":
-                result_path = self.project_root / item.path / "result.json"
-                result = load_verified_result(result_path)
-                summary = result.get("summary", {})
-                accuracy = summary.get("accuracy") if isinstance(summary, dict) else None
-                entry["accuracy"] = accuracy if isinstance(accuracy, dict) else None
-            else:
-                entry["accuracy"] = None
-            runs.append(entry)
-        return {
-            "runs": runs,
-            "findings": [item.model_dump(mode="json") for item in catalog.findings],
-        }
+        return {"runs": self.lifecycle.list_evals(), "findings": []}
 
     def get_run(self, run_id: str) -> dict[str, Any]:
+        entry = self.lifecycle.inspect(run_id)
         run_dir = self._run_dir(run_id)
+        if entry["lifecycle_state"] == "retained":
+            self.lifecycle.verify(run_id)
+            result = json.loads((run_dir / "result.json").read_text(encoding="utf-8"))
+            units = self._retained_units(run_dir)
+            return {
+                "run_id": run_id,
+                "source_run_id": entry["source_run_id"],
+                "lifecycle_state": "retained",
+                "path": str(run_dir.relative_to(self.project_root)),
+                "summary": result.get("summary", {}),
+                "run": result.get("run", {}),
+                "example_ids": sorted(
+                    {str(row["example_id"]) for row in units}
+                ),
+                "inspection": {
+                    "review": {
+                        "status": "retained_compact",
+                        "reason": (
+                            "Full final AI outputs and grading are retained; tool "
+                            "traces and performance detail were pruned on elevation."
+                        ),
+                    }
+                },
+            }
         result = load_verified_result(run_dir / "result.json")
         inspection = inspection_summary(run_dir)
         review = dict(inspection.get("review", {}))
@@ -82,6 +94,8 @@ class ProjectExplorerBackend:
         inspection["review"] = review
         return {
             "run_id": run_id,
+            "source_run_id": run_id,
+            "lifecycle_state": "working",
             "path": str(run_dir.relative_to(self.project_root)),
             "summary": result.get("summary", {}),
             "run": result.get("run", {}),
@@ -94,6 +108,13 @@ class ProjectExplorerBackend:
 
     def get_performance(self, run_id: str) -> dict[str, Any]:
         """Return optional disposable performance with attempt correlation."""
+        entry = self.lifecycle.inspect(run_id)
+        if entry["lifecycle_state"] == "retained":
+            return {
+                "run_id": run_id,
+                "availability": "unavailable",
+                "reason": "Performance detail was pruned when this eval was retained.",
+            }
         run_dir = self._run_dir(run_id)
         path = run_dir / "performance" / "summary.json"
         if not path.is_file():
@@ -150,7 +171,13 @@ class ProjectExplorerBackend:
     ) -> dict[str, Any]:
         if state not in _ATTEMPT_STATES:
             raise ValueError(f"Unsupported attempt state: {state}.")
-        rows = all_inspection_rows(self._run_dir(run_id))
+        entry = self.lifecycle.inspect(run_id)
+        run_dir = self._run_dir(run_id)
+        rows = (
+            self._retained_units(run_dir)
+            if entry["lifecycle_state"] == "retained"
+            else all_inspection_rows(run_dir)
+        )
         payload = query_attempt_rows(
             rows,
             AttemptQuery(
@@ -165,21 +192,36 @@ class ProjectExplorerBackend:
         return {"run_id": run_id, **payload}
 
     def get_attempt(self, run_id: str, execution_id: str) -> dict[str, Any]:
+        entry = self.lifecycle.inspect(run_id)
         run_dir = self._run_dir(run_id)
-        rows = all_inspection_rows(run_dir)
+        rows = (
+            self._retained_units(run_dir)
+            if entry["lifecycle_state"] == "retained"
+            else all_inspection_rows(run_dir)
+        )
         matching = [row for row in rows if row.get("execution_id") == execution_id]
         if len(matching) != 1:
             raise FileNotFoundError(
                 f"Expected one attempt {execution_id}; found {len(matching)}."
             )
         review = None
-        if matching[0].get("review_status") != "unavailable":
+        if (
+            entry["lifecycle_state"] == "working"
+            and matching[0].get("review_status") != "unavailable"
+        ):
             review = inspect_execution(
                 run_dir, execution_id=execution_id, resolve_text=True
             )
-        performance = self._attempt_performance(run_dir, execution_id=execution_id)
-        benchmark_context = self._benchmark_context(
-            run_dir, example_id=str(matching[0]["example_id"])
+        performance = (
+            {
+                "availability": "unavailable",
+                "reason": "Performance detail was pruned during elevation.",
+            }
+            if entry["lifecycle_state"] == "retained"
+            else self._attempt_performance(run_dir, execution_id=execution_id)
+        )
+        benchmark_context = self._benchmark_context_for_entry(
+            entry, run_dir, example_id=str(matching[0]["example_id"])
         )
         return {
             "run_id": run_id,
@@ -190,7 +232,12 @@ class ProjectExplorerBackend:
         }
 
     def get_evidence(self, run_id: str, example_id: str) -> dict[str, Any]:
+        entry = self.lifecycle.inspect(run_id)
         run_dir = self._run_dir(run_id)
+        if entry["lifecycle_state"] == "retained":
+            return self._retained_evidence(
+                run_id, run_dir=run_dir, example_id=example_id
+            )
         store = LocalRunStore(run_dir, run_id=run_id)
         manifest = store.read_manifest()
         contract = manifest.get("eval_contract")
@@ -232,9 +279,12 @@ class ProjectExplorerBackend:
                 "with the current schema-v1 writer."
             ) from error
 
-        if self._evidence_adapter is None:
-            self._evidence_adapter = _azure_evidence_adapter(self.project_root)
-        return self._evidence_adapter.build_view(
+        run_evidence = manifest.get("run_spec", {}).get("evidence", {})
+        adapter = self._evidence_adapter_for(
+            account_url=run_evidence.get("storage_account_url"),
+            container=run_evidence.get("storage_container"),
+        )
+        return adapter.build_view(
             benchmark_key=benchmark_key,
             benchmark_version_id=benchmark_version_id,
             version_number=version,
@@ -265,7 +315,99 @@ class ProjectExplorerBackend:
         return payload
 
     def _run_dir(self, run_id: str) -> Path:
-        return find_run_directory(run_id, root=self.eval_root)
+        entry = self.lifecycle.inspect(run_id)
+        path = (self.project_root / entry["path"]).resolve()
+        if not path.is_relative_to(self.eval_root.resolve()):
+            raise ValueError("Eval path escapes the eval-results root.")
+        return path
+
+    @staticmethod
+    def _retained_units(run_dir: Path) -> list[dict[str, Any]]:
+        payload = json.loads((run_dir / "units.json").read_text(encoding="utf-8"))
+        units = payload.get("units")
+        if not isinstance(units, list) or not all(
+            isinstance(item, dict) for item in units
+        ):
+            raise ValueError("Retained units artifact is invalid.")
+        return units
+
+    def _retained_evidence(
+        self, run_id: str, *, run_dir: Path, example_id: str
+    ) -> dict[str, Any]:
+        self.lifecycle.verify(run_id)
+        references = json.loads(
+            (run_dir / "evidence-references.json").read_text(encoding="utf-8")
+        )
+        matches = [
+            item
+            for item in references.get("examples", [])
+            if isinstance(item, dict) and item.get("example_id") == example_id
+        ]
+        unit_matches = [
+            item
+            for item in self._retained_units(run_dir)
+            if item.get("example_id") == example_id
+        ]
+        if len(matches) != 1 or not unit_matches:
+            raise FileNotFoundError(
+                f"Expected one retained evidence reference for {example_id}."
+            )
+        example_payload = {
+            **matches[0],
+            "benchmark_labels": unit_matches[0].get("benchmark_labels"),
+        }
+        example = _retained_benchmark_example(example_payload)
+        result = json.loads((run_dir / "result.json").read_text(encoding="utf-8"))
+        benchmark = result["run"]["dimensions"]["benchmark"]
+        storage = references.get("storage", {})
+        adapter = self._evidence_adapter_for(
+            account_url=storage.get("account_url"),
+            container=storage.get("container"),
+        )
+        return adapter.build_view(
+            benchmark_key=str(benchmark["key"]),
+            benchmark_version_id=str(benchmark["version_id"]),
+            version_number=int(benchmark["version"]),
+            example=example,
+        )
+
+    def _evidence_adapter_for(
+        self, *, account_url: str | None, container: str | None
+    ) -> ProjectEvidenceAdapter:
+        if self._evidence_adapter is not None:
+            return self._evidence_adapter
+        key = (account_url, container)
+        if key not in self._evidence_adapters:
+            self._evidence_adapters[key] = (
+                _project_evidence_adapter(
+                    self.project_root,
+                    account_url=account_url,
+                    container=container,
+                )
+                if account_url is not None and container is not None
+                else _project_evidence_adapter(self.project_root)
+            )
+        return self._evidence_adapters[key]
+
+    def _benchmark_context_for_entry(
+        self, entry: dict[str, Any], run_dir: Path, *, example_id: str
+    ) -> dict[str, Any]:
+        if entry["lifecycle_state"] == "working":
+            return self._benchmark_context(run_dir, example_id=example_id)
+        matches = [
+            item
+            for item in self._retained_units(run_dir)
+            if item.get("example_id") == example_id
+        ]
+        if not matches:
+            raise FileNotFoundError(f"Retained example not found: {example_id}")
+        context = matches[0].get("published_review_context")
+        if not isinstance(context, dict):
+            return {
+                "availability": "unavailable",
+                "reason": "Published benchmark review context was not available.",
+            }
+        return {"availability": "available", **context}
 
     @staticmethod
     def _benchmark_context(
@@ -358,28 +500,15 @@ class ProjectExplorerBackend:
             }
 
 
-def _azure_evidence_adapter(project_root: Path) -> SpiraxEvidenceAdapter:
-    """Use project-owned non-secret Blob identity with local Azure credentials."""
-    project_path = project_root / "workbench.project.json"
-    try:
-        project = json.loads(project_path.read_text(encoding="utf-8"))
-        benchmark_studio = project["benchmark_studio"]
-        account_url = str(benchmark_studio["storage_account_url"]).strip()
-        container = str(benchmark_studio["storage_container"]).strip()
-    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as error:
-        raise ValueError(
-            "workbench.project.json must declare Benchmark Studio Blob account "
-            "and container identities for evidence retrieval."
-        ) from error
-    if not account_url or not container:
-        raise ValueError(
-            "Benchmark Studio Blob account and container identities must not be empty."
-        )
-    return SpiraxEvidenceAdapter(
-        evidence_store=AzureBlobEvidenceStore(
-            account_url=account_url,
-            container=container,
-        )
+def _project_evidence_adapter(
+    project_root: Path,
+    *,
+    account_url: str | None = None,
+    container: str | None = None,
+) -> ProjectEvidenceAdapter:
+    """Load the use-case adapter through the project-owned extension point."""
+    return create_project_evidence_adapter(
+        project_root, account_url=account_url, container=container
     )
 
 

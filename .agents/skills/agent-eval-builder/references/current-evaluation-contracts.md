@@ -42,8 +42,10 @@ it into another use case.
   inspection.
 - `src/apps/eval_explorer.py`, `agent-dev-eval-ui/`, and `www/` implement the
   local human explorer.
-- `src/lifecycle/` implements the optional local catalog and recoverable
-  deletion workflow.
+- `src/eval_lifecycle/` implements the supported working/retained lifecycle,
+  compact elevation, retained verification, and permanent exact deletion.
+- `src/lifecycle/` is frozen legacy quarantine/recovery code. It is not part of
+  the supported product workflow.
 
 ## Current Execution Path
 
@@ -111,10 +113,14 @@ Current eval schema version 1 retains compact top-level `result.json` keys:
 3. `run`
 4. `artifacts`
 
-The current layout separates:
+Every new run begins under:
 
-- `manifest.json`, `agent-version.json`, and `result.json` as compact retained
-  identity and summary artifacts;
+- `eval_results/working/<benchmark>/v<version>/<run-id>/`
+
+The rich working layout separates:
+
+- `manifest.json`, `agent-version.json`, and `result.json` as durable identity
+  and summary artifacts;
 - `attempts/` as immutable detailed local execution evidence;
 - `performance/` as disposable invocation and timing observations; and
 - `review/` as disposable prompt, model-response, tool, and multimodal detail.
@@ -124,9 +130,20 @@ and retained attempt generations. Removing attempts gives up resume,
 rematerialization, detailed inspection, and attempt verification while leaving
 the compact result.
 
-The explorer reconstructs evidence from each run manifest's retained frozen
-artifact identity. It does not re-query the current publication catalog for a
-historical run.
+Complete full runs may be elevated to:
+
+- `eval_results/retained/<benchmark>/v<version>/<retained-eval-id>/`
+
+Each retained eval is a compact aggregate containing `manifest.json`,
+`result.json`, `units.json`, `agent-provenance.json`,
+`evidence-references.json`, and an optional `agent.patch`. Retained evals never
+contain per-unit files, performance detail, review objects, or local copies of
+Azure evidence. Shared meaningful agent-version records live under
+`eval_results/retained/agent_versions/`.
+
+The explorer reconstructs evidence from each working run manifest or retained
+eval's exact Azure storage references. It does not re-query the current
+publication catalog for a historical run.
 
 ## Review Capture
 
@@ -157,15 +174,21 @@ to solve a presentation or filtering task.
 
 ## Local Lifecycle Maintenance
 
-`src/lifecycle/` derives a catalog of managed runs, comparisons, promoted
-versions, aliases, promotions, references, and CAS reachability. Its CLI can
-preview deletion, move exact paths into local quarantine, restore them, and
-permanently purge a quarantined operation. It includes active-lock and path or
-symlink safety checks.
+`src/eval_lifecycle/` is the supported MVP lifecycle. It lists explicit working
+and retained evals, previews and performs full-run elevation, verifies compact
+retained artifacts, and permanently deletes an exact working or retained eval.
+Elevation preserves the benchmark and agent identities, aggregate results,
+full final AI outputs, grading, usage/cost, relevant Git provenance, and exact
+Azure evidence references while pruning disposable detail.
 
-This is an optional maintenance subsystem. Do not route ordinary evaluation,
-inspection, packaging, or FDE iteration work through it. Change it only for an
-explicit lifecycle request or a demonstrated retention failure.
+Deletion is immediate and unrecoverable. Retained deletion requires the exact
+retained ID twice, and a shared agent version remains until its last retained
+eval reference is deleted. The read-only explorer may filter and inspect both
+lifecycle states but must not elevate, delete, edit, or annotate them.
+
+`src/lifecycle/` remains only as frozen legacy compatibility code. Do not route
+ordinary evaluation, inspection, elevation, deletion, packaging, or FDE
+iteration work through it.
 
 ## Hosted Inputs
 
@@ -199,7 +222,8 @@ Select tests based on the contract being changed:
 - Review: only capture, transaction recovery, object integrity, or purge behavior
   touched by the task.
 - Comparison: declared dimensions and paired logical work items.
-- Lifecycle: catalog, references, quarantine, restore, purge, lock, and path
-  safety only for explicit lifecycle work.
-- Use case: the Spirax `agent_output` handoff when shared changes could affect the
-  current reference pipeline.
+- Lifecycle: working/retained discovery, complete-run elevation, compact
+  artifact integrity, exact evidence references, permanent deletion, shared
+  agent references, active-run locks, and path safety.
+- Use case: the current reference pipeline's `agent_output` handoff when shared
+  changes could affect project-owned behavior.

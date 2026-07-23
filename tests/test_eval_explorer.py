@@ -7,7 +7,6 @@ import io
 import json
 from pathlib import Path
 import shutil
-from types import SimpleNamespace
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -27,7 +26,7 @@ from evaluation import (
 )
 from src.apps.eval_explorer import (
     ProjectExplorerBackend,
-    _azure_evidence_adapter,
+    _project_evidence_adapter,
     build_app,
 )
 from src.benchmarks.models import BenchmarkExample, SourceArtifact
@@ -96,23 +95,13 @@ def test_static_app_serves_the_spa_without_shadowing_unknown_api(
 def test_project_run_catalog_includes_verified_accuracy_summaries(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    class _RunEntry:
-        run_id = "run-a"
-        path = "eval_results/run-a"
-        result_status = "materialized"
-
-        def model_dump(self, *, mode: str) -> dict[str, Any]:
-            assert mode == "json"
-            return {"run_id": self.run_id, "result_status": self.result_status}
-
     monkeypatch.setattr(
-        "src.apps.eval_explorer.LocalLifecycleCatalog.build",
-        lambda self: SimpleNamespace(runs=(_RunEntry(),), findings=()),
-    )
-    monkeypatch.setattr(
-        "src.apps.eval_explorer.load_verified_result",
-        lambda path: {
-            "summary": {
+        "src.apps.eval_explorer.EvalLifecycleService.list_evals",
+        lambda self: [
+            {
+                "run_id": "run-a",
+                "result_status": "materialized",
+                "lifecycle_state": "working",
                 "accuracy": {
                     "complete_evaluation": {
                         "accuracy": 0.75,
@@ -120,9 +109,9 @@ def test_project_run_catalog_includes_verified_accuracy_summaries(
                         "evaluated_runs": 4,
                     },
                     "by_field": {},
-                }
+                },
             }
-        },
+        ],
     )
 
     payload = ProjectExplorerBackend(tmp_path).list_runs()
@@ -584,7 +573,7 @@ def test_project_backend_reuses_default_evidence_adapter(
         creations.append(project_root)
         return evidence_adapter
 
-    monkeypatch.setattr("src.apps.eval_explorer._azure_evidence_adapter", create)
+    monkeypatch.setattr("src.apps.eval_explorer._project_evidence_adapter", create)
     backend = ProjectExplorerBackend(tmp_path)
 
     backend.get_evidence(run_id, "example-a")
@@ -644,9 +633,9 @@ def test_default_evidence_adapter_uses_project_blob_identity(
         def __init__(self, **kwargs: Any) -> None:
             observed.update(kwargs)
 
-    monkeypatch.setattr("src.apps.eval_explorer.AzureBlobEvidenceStore", _Store)
+    monkeypatch.setattr("src.evidence.AzureBlobEvidenceStore", _Store)
 
-    adapter = _azure_evidence_adapter(tmp_path)
+    adapter = _project_evidence_adapter(tmp_path)
 
     assert isinstance(adapter, SpiraxEvidenceAdapter)
     assert observed == {
@@ -678,6 +667,11 @@ def test_project_backend_pages_and_resolves_attempts_beyond_ten_thousand(
         "src.apps.eval_explorer.all_inspection_rows", lambda run_dir: rows
     )
     monkeypatch.setattr(backend, "_run_dir", lambda run_id: tmp_path / run_id)
+    monkeypatch.setattr(
+        backend.lifecycle,
+        "inspect",
+        lambda run_id: {"run_id": run_id, "lifecycle_state": "working"},
+    )
     monkeypatch.setattr(
         backend,
         "_benchmark_context",

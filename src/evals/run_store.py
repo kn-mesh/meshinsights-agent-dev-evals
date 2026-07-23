@@ -454,6 +454,7 @@ class LocalRunStore:
             completed_at_utc=completed_at_utc,
             latest_invocation_id=latest_invocation_id,
         )
+        _preserve_additive_legacy_summary_shape(payload, expected)
         if canonical_json_bytes(payload) != canonical_json_bytes(expected):
             raise RunStoreIntegrityError(
                 "Evaluation result content does not match its canonical materialization."
@@ -488,7 +489,6 @@ class LocalRunStore:
                 "attempts": "attempts/",
             },
         }
-
     def evaluation_rows(self) -> list[dict[str, Any]]:
         """Return an on-demand detailed eval view without persisting duplication."""
         return list(self._evaluation_state()["rows"])
@@ -631,6 +631,24 @@ class LocalRunStore:
         }
         _write_json_atomic(self.performance_summary_path, payload)
         return self.performance_summary_path
+
+
+def _preserve_additive_legacy_summary_shape(
+    stored: dict[str, Any], expected: dict[str, Any]
+) -> None:
+    """Allow verified pre-extension schema-v1 results to retain their old shape."""
+    stored_cost = stored.get("summary", {}).get("cost")
+    expected_cost = expected.get("summary", {}).get("cost")
+    if not isinstance(stored_cost, dict) or not isinstance(expected_cost, dict):
+        return
+    additive_fields = {
+        "units_with_complete_cost_observations",
+        "units_with_partial_pricing",
+        "units_without_usable_cost_information",
+        "complete_unit_cost_by_currency",
+    }
+    for field in additive_fields - set(stored_cost):
+        expected_cost.pop(field, None)
 
 
 def _attempt_metadata(

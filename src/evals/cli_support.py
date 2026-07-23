@@ -36,3 +36,13 @@ def prompt_positive_int(prompt: str, *, default: int) -> int:
         if raw.isdigit() and int(raw) > 0:
             return int(raw)
         print("Please enter a positive integer.")
+
+
+def prompt_csv_values(prompt: str) -> list[str]:
+    """Prompt for a non-empty comma-separated identifier list."""
+    while True:
+        values = [item.strip() for item in input(f"{prompt}: ").split(",")]
+        selected = [item for item in values if item]
+        if selected:
+            return selected
+        print("Please enter at least one identifier.")

@@ -17,6 +17,8 @@ credentials.
 
 - The target is a freshly initialized Agent Workbench repository with no
   customer-specific pipeline code to preserve.
+- The target passed `$create-use-case-project` validation and its
+  `workbench.template.json` declares the exact replaceable paths.
 - The developer supplies the relevant Benchmark Studio repository or pipeline
   path.
 - Record the source repository remote, commit, and whether relevant pipeline
@@ -74,9 +76,11 @@ Port or adapt use-case behavior needed downstream:
 - use-case dependencies; and
 - focused tests and safe synthetic fixtures.
 
-Reuse target or `mi-core` components when they already own the behavior. Keep
+Reuse target or `mi-core` components when they already own the behavior. Do not
+edit reusable source without explaining the need and obtaining explicit user
+approval. Keep
 use-case-specific artifact names, decoding, transforms, and business rules in
-the target project rather than generalizing them prematurely.
+manifest-declared reference paths rather than generalizing them prematurely.
 
 Do not port:
 
@@ -186,6 +190,8 @@ database, or content-addressed port subsystem.
 
 - Source repository and commit are recorded.
 - Ported files contain only target-owned use-case and pipeline behavior.
+- Ported files are confined to manifest-declared replaceable paths; reusable
+  paths are unchanged unless the user explicitly approved a shared fix.
 - Published frozen evidence is retrieved and integrity-checked read-only.
 - Identity, cutoff, evidence-recipe, and reviewer-evidence semantics are
   preserved.

@@ -28,7 +28,10 @@ Use this skill alongside:
 
 - Treat `mi-core/` as editable source in this repository, not as a static imported package.
 - Runtime source lives under `mi-core/core/src/mi/`, and CLI source lives under `mi-core/cli/src/cli/`.
-- The root `uv` environment installs both as editable local sources. Inspect or modify that source when runtime or CLI behavior itself must change, then run the relevant `mi-core` tests.
+- The root `uv` environment installs both as editable local sources. Inspect it
+  when runtime or CLI behavior matters. Before modifying it, identify the exact
+  reusable paths, explain why project configuration is insufficient, and
+  obtain explicit user approval; then run the relevant `mi-core` tests.
 
 ## What Belongs Here
 
@@ -39,6 +42,7 @@ Use this skill when the user asks you to:
 - wire provider credential checks into a runner,
 - configure Logfire or AI tracing,
 - debug AI startup failures caused by missing auth, env bootstrap, or telemetry setup.
+- list or update project-selectable models and their non-secret frozen prices.
 
 Do not put auth or telemetry setup logic inside processors.
 
@@ -64,7 +68,8 @@ Rules:
 
 ## Published Benchmark And Evidence Access
 
-The active Spirax operator CLI uses hosted data access as follows:
+The project operator CLI uses the non-secret identities rendered from
+`workbench.project.json` as follows:
 
 | Input | Purpose |
 |---|---|
@@ -143,6 +148,30 @@ Examples:
 Rules:
 - Keep provider support and credential mapping in runner validation, not in processor business logic.
 - Do not use unsupported `openai:*` identifiers.
+
+## Model Catalog And Pricing
+
+Credentials remain in `.env`; selectable model identities and frozen
+non-secret prices live in `models.yaml`. Use the project workflow:
+
+```bash
+uv run python -m src.model_configuration list
+uv run python -m src.model_configuration upsert <provider:model> \
+  --api <api-family> \
+  --currency USD \
+  --pricing-version <reviewed-version> \
+  --effective-date <YYYY-MM-DD> \
+  --source <reviewed-source> \
+  --input-price <per-million-tokens> \
+  --output-price <per-million-tokens>
+uv run python -m src.model_configuration set-default <provider:model>
+```
+
+Add `--cached-input-price` and `--reasoning-price` only when those rates are
+known. Rates must be non-negative. Never fetch or silently refresh vendor
+prices while executing an eval. The runner shows configured prices at model
+selection and freezes the selected pricing record into run identity so a
+historical cost estimate does not change when `models.yaml` changes later.
 
 ## Provider Credential Mapping
 
