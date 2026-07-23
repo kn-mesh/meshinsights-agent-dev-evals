@@ -122,6 +122,7 @@ def _example(
         raw_captured_at=datetime(2026, 3, 5, tzinfo=timezone.utc),
         raw_window_start=datetime(2025, 3, 4, tzinfo=timezone.utc),
         raw_window_end=datetime(2026, 3, 4, 8, 1, 36, tzinfo=timezone.utc),
+        published_review_context=PublishedReviewContext(),
         raw_artifacts=artifacts,
     )
 
@@ -684,13 +685,11 @@ def test_failed_execution_preserves_observed_telemetry(
 
     failed = _rows(tmp_path)[0]["runs"][0]
     assert failed["usage"]["requests"] == 2
-    assert failed["cost"] == {
-        "status": "unavailable",
-        "actual": None,
-        "estimated": None,
-        "unpriced_usage": {},
-        "reason": "No frozen pricing record is configured for this model.",
-    }
+    assert failed["cost"]["status"] == "estimated_complete"
+    assert failed["cost"]["actual"] is None
+    assert failed["cost"]["estimated"]["currency"] == "USD"
+    assert failed["cost"]["estimated"]["amount"] == pytest.approx(0.00022)
+    assert failed["cost"]["unpriced_usage"] == {}
     slowest = _performance(tmp_path)["model_calls"]["slowest"][0]
     assert slowest["work_item_id"] == failed["work_item_id"]
     assert slowest["execution_id"] == failed["execution_id"]
@@ -1493,6 +1492,7 @@ def test_complete_working_eval_elevates_to_compact_verified_retained_artifacts(
     )
     listed = backend.list_runs()["runs"]
     assert {item["lifecycle_state"] for item in listed} == {"working", "retained"}
+    assert all(item["cost"] == payload["summary"]["cost"] for item in listed)
     retained_id = elevated["retained_eval_id"]
     attempts = backend.list_attempts(
         retained_id,

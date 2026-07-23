@@ -103,7 +103,7 @@ class BenchmarkExample(BaseModel):
     raw_window_end: datetime | None = None
     raw_known_gaps: tuple[Any, ...] = ()
     raw_artifacts: tuple[SourceArtifact, ...]
-    published_review_context: PublishedReviewContext | None = None
+    published_review_context: PublishedReviewContext
 
     @field_validator("approved_label_payload")
     @classmethod

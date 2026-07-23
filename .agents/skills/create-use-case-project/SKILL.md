@@ -35,7 +35,8 @@ libraries by hand.
    - manifest-declared reference paths were cleared;
    - local evals, retained versions, credentials, caches, and build output were
      not copied;
-   - `README.md`, `EvalRunbook.md`, `.env.example`, `models.yaml`, and
+   - `README.md`, `EvalRunbook.md`, `.env.example`, `models.yaml`,
+     `model_pricing.yaml`, and
      `workbench.project.json` contain the new project identity; and
    - validation reports no reference-identity leakage.
 6. Capture durable domain context in `docs/use_case/PROJECT_CONTEXT.md`.

@@ -1,4 +1,4 @@
-"""Load the project-owned AI model catalog from the repository root."""
+"""Load project model choices and reusable model-pricing snapshots."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import yaml
 
 
 MODEL_CATALOG_PATH = Path(__file__).with_name("models.yaml")
+MODEL_PRICING_PATH = Path(__file__).with_name("model_pricing.yaml")
 ModelApi: TypeAlias = Literal[
     "anthropic_messages",
     "google_generate_content",
@@ -28,16 +29,17 @@ MODEL_APIS: frozenset[str] = frozenset(
 
 @dataclass(frozen=True, slots=True)
 class ModelDefinition:
-    """One project-selectable model and the API family it requires."""
+    """One project-selectable model, its API family, and resolved pricing."""
 
     id: str
     api: ModelApi
+    pricing_key: str | None = None
     pricing: "ModelPricing | None" = None
 
 
 @dataclass(frozen=True, slots=True)
 class ModelPricing:
-    """Versioned project-owned rates used only for labeled cost estimates."""
+    """Versioned reusable rates used only for labeled cost estimates."""
 
     version: str
     currency: str
@@ -82,8 +84,11 @@ class ModelCatalog:
         raise ValueError(f"Unknown model '{model_id}'. Choose one of: {choices}")
 
 
-def load_model_catalog(path: Path = MODEL_CATALOG_PATH) -> ModelCatalog:
-    """Load and validate a project model catalog."""
+def load_model_catalog(
+    path: Path = MODEL_CATALOG_PATH,
+    pricing_path: Path | None = None,
+) -> ModelCatalog:
+    """Load model choices and resolve reusable pricing references."""
     payload: Any = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError(f"Model catalog must be a mapping: {path}")
@@ -93,8 +98,15 @@ def load_model_catalog(path: Path = MODEL_CATALOG_PATH) -> ModelCatalog:
     if not isinstance(raw_models, list) or not raw_models:
         raise ValueError(f"Model catalog 'models' must be a non-empty list: {path}")
 
+    selected_pricing_path = pricing_path or path.with_name(MODEL_PRICING_PATH.name)
+    pricing = (
+        load_model_pricing(selected_pricing_path)
+        if selected_pricing_path.exists()
+        else {}
+    )
     models = tuple(
-        _model_definition(value, index) for index, value in enumerate(raw_models)
+        _model_definition(value, index, pricing=pricing)
+        for index, value in enumerate(raw_models)
     )
     model_ids = tuple(model.id for model in models)
     if len(set(model_ids)) != len(model_ids):
@@ -104,6 +116,31 @@ def load_model_catalog(path: Path = MODEL_CATALOG_PATH) -> ModelCatalog:
             f"Model catalog default '{default_model}' is not present in models: {path}"
         )
     return ModelCatalog(default_model=default_model, models=models)
+
+
+def load_model_pricing(path: Path = MODEL_PRICING_PATH) -> dict[str, ModelPricing]:
+    """Load the reusable, versioned pricing records keyed by billing identity."""
+    payload: Any = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"Model pricing catalog must be a mapping: {path}")
+    if payload.get("schema_version") != 1:
+        raise ValueError(f"Model pricing catalog schema_version must be 1: {path}")
+    raw_rates = payload.get("rates")
+    if not isinstance(raw_rates, dict) or not raw_rates:
+        raise ValueError(f"Model pricing catalog 'rates' must be a mapping: {path}")
+
+    rates: dict[str, ModelPricing] = {}
+    for raw_key, value in raw_rates.items():
+        if not isinstance(raw_key, str) or not raw_key.strip():
+            raise ValueError(f"Model pricing catalog contains an invalid rate key: {path}")
+        key = raw_key.strip()
+        if key in rates:
+            raise ValueError(f"Model pricing catalog contains duplicate key '{key}': {path}")
+        resolved = _pricing_definition(value, field=f"rates.{key}", catalog="pricing")
+        if resolved is None:
+            raise ValueError(f"Model pricing catalog rate '{key}' cannot be null.")
+        rates[key] = resolved
+    return rates
 
 
 def resolve_model(model: str | None, catalog: ModelCatalog | None = None) -> str:
@@ -120,7 +157,12 @@ def resolve_model_definition(
     return selected_catalog.get(selected)
 
 
-def _model_definition(value: object, index: int) -> ModelDefinition:
+def _model_definition(
+    value: object,
+    index: int,
+    *,
+    pricing: dict[str, ModelPricing],
+) -> ModelDefinition:
     """Validate one structured model catalog entry."""
     field = f"models[{index}]"
     if not isinstance(value, dict):
@@ -132,24 +174,48 @@ def _model_definition(value: object, index: int) -> ModelDefinition:
         raise ValueError(
             f"Model catalog '{field}.api' must be one of: {choices}; got {raw_api!r}."
         )
+    raw_pricing_key = value.get("pricing_key")
+    if raw_pricing_key is not None and (
+        not isinstance(raw_pricing_key, str) or not raw_pricing_key.strip()
+    ):
+        raise ValueError(f"Model catalog '{field}.pricing_key' must be a string.")
+    pricing_key = raw_pricing_key.strip() if isinstance(raw_pricing_key, str) else None
+    inline_pricing = _pricing_definition(value.get("pricing"), field=field)
+    if pricing_key is not None and inline_pricing is not None:
+        raise ValueError(
+            f"Model catalog '{field}' cannot define both pricing_key and pricing."
+        )
+    if pricing_key is not None and pricing_key not in pricing:
+        raise ValueError(
+            f"Model catalog '{field}.pricing_key' references unknown reusable "
+            f"pricing '{pricing_key}'."
+        )
     return ModelDefinition(
         id=model_id,
         api=cast(ModelApi, raw_api),
-        pricing=_pricing_definition(value.get("pricing"), field=field),
+        pricing_key=pricing_key,
+        pricing=pricing.get(pricing_key) if pricing_key is not None else inline_pricing,
     )
 
 
-def _pricing_definition(value: object, *, field: str) -> ModelPricing | None:
+def _pricing_definition(
+    value: object,
+    *,
+    field: str,
+    catalog: str = "model",
+) -> ModelPricing | None:
+    label = "Model pricing catalog" if catalog == "pricing" else "Model catalog"
     if value is None:
         return None
     if not isinstance(value, dict):
-        raise ValueError(f"Model catalog '{field}.pricing' must be a mapping.")
+        suffix = "" if catalog == "pricing" else ".pricing"
+        raise ValueError(f"{label} '{field}{suffix}' must be a mapping.")
     version = value.get("version")
     currency = value.get("currency")
     if not isinstance(version, str) or not version.strip():
-        raise ValueError(f"Model catalog '{field}.pricing.version' is required.")
+        raise ValueError(f"{label} '{field}.version' is required.")
     if not isinstance(currency, str) or not currency.strip():
-        raise ValueError(f"Model catalog '{field}.pricing.currency' is required.")
+        raise ValueError(f"{label} '{field}.currency' is required.")
     rate_names = (
         "input_per_million_tokens",
         "output_per_million_tokens",
@@ -169,7 +235,7 @@ def _pricing_definition(value: object, *, field: str) -> ModelPricing | None:
             rates[name] = float(raw_rate)
         else:
             raise ValueError(
-                f"Model catalog '{field}.pricing.{name}' must be non-negative."
+                f"{label} '{field}.{name}' must be non-negative."
             )
     return ModelPricing(
         version=version.strip(),

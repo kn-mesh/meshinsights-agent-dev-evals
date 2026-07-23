@@ -254,6 +254,7 @@ function UiIcon({ name }: { name: IconName }) {
 
 export const projectUseCaseAdapter: UseCaseAdapter = {
   EvidenceDisplay: SpiraxEvidenceDisplay,
+  contextLabel: "Spirax Pulse / Evaluation",
   evaluationFieldLabels: {
     classification: "Failure classification",
     root_cause: "Root cause classification",

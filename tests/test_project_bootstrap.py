@@ -55,12 +55,7 @@ def _spec_payload() -> dict[str, object]:
                 {
                     "id": "azure:gpt-test",
                     "api": "openai_responses",
-                    "pricing": {
-                        "version": "reviewed-2026-07",
-                        "currency": "USD",
-                        "input_per_million_tokens": 1.25,
-                        "output_per_million_tokens": 5.0,
-                    },
+                    "pricing_key": "azure:gpt-test-standard",
                 },
                 {"id": "google:gemini-test", "api": "google_generate_content"},
             ],
@@ -92,6 +87,16 @@ build-backend = "setuptools.build_meta"
         encoding="utf-8",
     )
     (root / "README.md").write_text("# Workbench Template\n", encoding="utf-8")
+    (root / "model_pricing.yaml").write_text(
+        "schema_version: 1\n"
+        "rates:\n"
+        "  azure:gpt-test-standard:\n"
+        "    version: fixture-v1\n"
+        "    currency: USD\n"
+        "    input_per_million_tokens: 1.25\n"
+        "    output_per_million_tokens: 5.0\n",
+        encoding="utf-8",
+    )
     (root / "workbench.template.json").write_text(
         json.dumps(
             {

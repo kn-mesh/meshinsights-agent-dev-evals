@@ -14,7 +14,8 @@ in this skill.
 
 1. Determine whether the user wants a command, a live run, or troubleshooting.
    Do not execute an eval when the user only asks for guidance.
-2. Read `models.yaml`; confirm the requested model exists and note its `api`
+2. Read `models.yaml` and resolve its `pricing_key` through
+   `model_pricing.yaml`; confirm the requested model exists and note its `api`
    family. Catalog membership proves selectability, not runtime compatibility.
    When the user explicitly requests the default model, resolve `default_model`
    from the catalog and pass that concrete model explicitly after confirming its

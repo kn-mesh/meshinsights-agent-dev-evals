@@ -29,7 +29,6 @@ from src.evals.inspection import (
     materialize_review_index,
 )
 from src.evals.run_store import LocalRunStore
-from src.lifecycle.catalog import LocalLifecycleCatalog
 
 
 def _run_fixture(tmp_path: Path) -> tuple[Path, str, str]:
@@ -38,7 +37,7 @@ def _run_fixture(tmp_path: Path) -> tuple[Path, str, str]:
         "runs_per_example": 2,
     }
     run_id, digest = build_run_identity(run_spec)
-    run_dir = tmp_path / "pipeline" / "benchmark" / "v1" / "runs" / run_id
+    run_dir = tmp_path / "working" / "benchmark" / "v1" / run_id
     run_dir.mkdir(parents=True)
     work_items = [
         {
@@ -333,7 +332,7 @@ def test_inspection_refreshes_index_for_manifest_commit_and_review_purge(
     )
 
 
-def test_lifecycle_marks_review_with_orphaned_objects_invalid(tmp_path: Path) -> None:
+def test_review_store_marks_orphaned_objects_invalid(tmp_path: Path) -> None:
     run_dir, run_id, digest = _run_fixture(tmp_path)
     store = LocalReviewStore(run_dir, run_id=run_id)
     store.initialize(run_spec_sha256=digest)
@@ -348,8 +347,8 @@ def test_lifecycle_marks_review_with_orphaned_objects_invalid(tmp_path: Path) ->
     ]
 
     assert (
-        LocalLifecycleCatalog._review_status(
-            run_dir, expected_execution_ids=execution_ids
-        )
+        store.review_state(expected_execution_ids=execution_ids)["integrity"][
+            "status"
+        ]
         == "invalid"
     )

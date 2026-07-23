@@ -2143,16 +2143,8 @@ def _build_examples(
                 "benchmark_labels": result.example.approved_label_payload,
                 "slice_keys": list(result.slice_keys),
                 "metadata": result.example.example_metadata,
-                **(
-                    {
-                        "published_review_context": (
-                            result.example.published_review_context.model_dump(
-                                mode="json"
-                            )
-                        )
-                    }
-                    if result.example.published_review_context is not None
-                    else {}
+                "published_review_context": (
+                    result.example.published_review_context.model_dump(mode="json")
                 ),
             }
         )
@@ -2726,7 +2718,7 @@ def _resume_command(argv: list[str]) -> str:
 
 
 def _find_run_directory(run_id: str, *, root: Path = BASE_RESULTS_DIR) -> Path:
-    """Resolve a working run through the shared new/legacy layout contract."""
+    """Resolve a current working run."""
     return find_inspection_run_directory(run_id, root=root)
 
 

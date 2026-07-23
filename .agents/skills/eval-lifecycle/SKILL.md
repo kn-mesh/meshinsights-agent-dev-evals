@@ -5,9 +5,8 @@ description: Manage the formal local lifecycle of Agent Workbench evaluation res
 
 # Eval Lifecycle
 
-Use the supported `src.eval_lifecycle.cli` workflow. Do not route normal
-elevation or deletion through `src.lifecycle`, quarantine, restore, recovery,
-or generalized reachability.
+Use the supported `src.eval_lifecycle.cli` workflow. Deletion is permanent;
+there is no quarantine, restore, recovery, or generalized reachability layer.
 
 ## Lifecycle Contract
 
@@ -27,10 +26,6 @@ or generalized reachability.
 - Elevation prunes attempt files, performance/latency detail, tool traces, and
   intermediate review objects from the retained representation.
 - Deletion is permanent and not recoverable.
-
-Legacy pre-lifecycle runs remain readable as working evals but may refuse
-elevation when required evidence or provenance identity is absent. Do not
-invent or backfill immutable identity.
 
 ## Workflow
 

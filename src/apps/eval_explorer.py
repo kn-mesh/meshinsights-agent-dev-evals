@@ -10,7 +10,7 @@ import webbrowser
 from typing import Any
 
 from agent_eval_ui import create_app
-from evaluation import AttemptQuery, query_attempt_rows
+from evaluation import AttemptQuery, build_comparison_identity, query_attempt_rows
 from mi.core import bootstrap_environment
 import uvicorn
 
@@ -25,7 +25,6 @@ from src.evals.run_specs import repository_root
 from src.evals.run_store import LocalRunStore
 from src.evidence import ProjectEvidenceAdapter, create_project_evidence_adapter
 from src.eval_lifecycle import EvalLifecycleService
-from src.lifecycle.catalog import LocalLifecycleCatalog
 
 
 _ATTEMPT_STATES = {
@@ -270,14 +269,7 @@ class ProjectExplorerBackend:
             raise FileNotFoundError(
                 f"Expected one retained example {example_id}; found {len(matches)}."
             )
-        try:
-            example = _retained_benchmark_example(matches[0])
-        except (TypeError, ValueError) as error:
-            raise ValueError(
-                "This run predates retained frozen-evidence manifests and cannot "
-                "render evidence without weakening integrity. Re-run the evaluation "
-                "with the current schema-v1 writer."
-            ) from error
+        example = _retained_benchmark_example(matches[0])
 
         run_evidence = manifest.get("run_spec", {}).get("evidence", {})
         adapter = self._evidence_adapter_for(
@@ -292,27 +284,65 @@ class ProjectExplorerBackend:
         )
 
     def list_comparisons(self) -> dict[str, Any]:
-        catalog = LocalLifecycleCatalog(self.project_root).build()
-        return {
-            "comparisons": [
-                item.model_dump(mode="json") for item in catalog.comparisons
-            ]
-        }
+        return {"comparisons": self._comparison_entries()}
 
     def get_comparison(self, comparison_id: str) -> dict[str, Any]:
-        catalog = LocalLifecycleCatalog(self.project_root).build()
         matches = [
-            item for item in catalog.comparisons if item.comparison_id == comparison_id
+            item
+            for item in self._comparison_entries()
+            if item["comparison_id"] == comparison_id
         ]
-        if len(matches) != 1 or matches[0].result_path is None:
+        if len(matches) != 1 or matches[0]["result_path"] is None:
             raise FileNotFoundError(f"Comparison result not found: {comparison_id}.")
-        path = (self.project_root / matches[0].result_path).resolve()
+        path = (self.project_root / str(matches[0]["result_path"])).resolve()
         if not path.is_relative_to(self.project_root):
             raise ValueError("Comparison path escapes the project root.")
         payload = json.loads(path.read_text(encoding="utf-8"))
         if payload.get("comparison_id") != comparison_id:
             raise ValueError("Comparison payload has the wrong identity.")
         return payload
+
+    def _comparison_entries(self) -> list[dict[str, Any]]:
+        entries: list[dict[str, Any]] = []
+        working_root = self.eval_root / "working"
+        if not working_root.exists():
+            return entries
+        for path in sorted(
+            working_root.glob("**/comparisons/cmp_*.manifest.json")
+        ):
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            spec = payload.get("comparison_spec")
+            if not isinstance(spec, dict):
+                raise ValueError(f"Comparison manifest is malformed: {path}")
+            comparison_id, digest = build_comparison_identity(spec)
+            if (
+                path.name != f"{comparison_id}.manifest.json"
+                or payload.get("comparison_id") != comparison_id
+                or payload.get("comparison_spec_sha256") != digest
+            ):
+                raise ValueError(f"Comparison identity is invalid: {path}")
+            result_path = path.with_name(f"{comparison_id}.json")
+            entries.append(
+                {
+                    "comparison_id": comparison_id,
+                    "manifest_path": path.relative_to(
+                        self.project_root
+                    ).as_posix(),
+                    "result_path": (
+                        result_path.relative_to(self.project_root).as_posix()
+                        if result_path.is_file()
+                        else None
+                    ),
+                    "run_ids": [
+                        str(item) for item in spec.get("run_ids", [])
+                    ],
+                    "varying_dimensions": [
+                        str(item)
+                        for item in spec.get("varying_dimensions", [])
+                    ],
+                }
+            )
+        return entries
 
     def _run_dir(self, run_id: str) -> Path:
         entry = self.lifecycle.inspect(run_id)
@@ -403,10 +433,7 @@ class ProjectExplorerBackend:
             raise FileNotFoundError(f"Retained example not found: {example_id}")
         context = matches[0].get("published_review_context")
         if not isinstance(context, dict):
-            return {
-                "availability": "unavailable",
-                "reason": "Published benchmark review context was not available.",
-            }
+            raise ValueError("Retained eval is missing published review context.")
         return {"availability": "available", **context}
 
     @staticmethod
@@ -426,13 +453,7 @@ class ProjectExplorerBackend:
             )
         context = matches[0].get("published_review_context")
         if not isinstance(context, dict):
-            return {
-                "availability": "unavailable",
-                "reason": (
-                    "This run predates retained benchmark labeler notes and "
-                    "verification provenance."
-                ),
-            }
+            raise ValueError("Working eval is missing published review context.")
         return {"availability": "available", **context}
 
     @staticmethod

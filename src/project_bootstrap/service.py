@@ -17,6 +17,7 @@ from typing import Any
 
 import yaml
 from evaluation import is_sensitive_path
+from model_catalog import load_model_catalog
 
 from src.project_bootstrap.models import (
     BootstrapSpec,
@@ -157,6 +158,7 @@ def validate_project(project_root: Path) -> dict[str, Any]:
             "pyproject.toml",
             "README.md",
             "models.yaml",
+            "model_pricing.yaml",
             ".env.example",
             "docs/use_case/PROJECT_CONTEXT.md",
             *_REQUIRED_DIRECTORIES,
@@ -176,9 +178,13 @@ def validate_project(project_root: Path) -> dict[str, Any]:
         )
 
     catalog = yaml.safe_load((root / contract.paths.model_catalog).read_text())
-    expected_catalog = contract.model_catalog.model_dump(mode="json")
+    expected_catalog = contract.model_catalog.model_dump(mode="json", exclude_none=True)
     if catalog != expected_catalog:
         raise ValueError("models.yaml does not match the generated project contract.")
+    load_model_catalog(
+        root / contract.paths.model_catalog,
+        root / "model_pricing.yaml",
+    )
 
     default_identity = (
         contract.benchmarks.default.key,
@@ -410,7 +416,7 @@ def _render_project(
     )
     (root / "models.yaml").write_text(
         yaml.safe_dump(
-            spec.model_catalog.model_dump(mode="json"),
+            spec.model_catalog.model_dump(mode="json", exclude_none=True),
             sort_keys=False,
             allow_unicode=True,
         ),

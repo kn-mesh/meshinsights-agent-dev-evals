@@ -38,7 +38,8 @@
     "models": [
       {
         "id": "azure:gpt-5.6-terra",
-        "api": "openai_responses"
+        "api": "openai_responses",
+        "pricing_key": "azure:gpt-5.6-terra-standard-global"
       }
     ]
   }

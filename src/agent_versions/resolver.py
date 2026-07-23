@@ -288,12 +288,14 @@ def resolve_agent_version(
         project_root / "pyproject.toml",
         project_root / "uv.lock",
         project_root / "models.yaml",
+        project_root / "model_pricing.yaml",
         project_root / "model_catalog.py",
         project_root / "mi-core/core/pyproject.toml",
         project_root / "agent-dev-eval-core/pyproject.toml",
     )
     for path in dependency_paths:
-        _add_file_role(file_roles, path, role="dependency", logical_name=path.name)
+        if path.is_file():
+            _add_file_role(file_roles, path, role="dependency", logical_name=path.name)
 
     git_identity = _git_identity(project_root)
     deleted_surface_paths: list[str] = []

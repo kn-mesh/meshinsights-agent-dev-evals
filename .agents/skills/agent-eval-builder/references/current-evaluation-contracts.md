@@ -44,8 +44,6 @@ it into another use case.
   local human explorer.
 - `src/eval_lifecycle/` implements the supported working/retained lifecycle,
   compact elevation, retained verification, and permanent exact deletion.
-- `src/lifecycle/` is frozen legacy quarantine/recovery code. It is not part of
-  the supported product workflow.
 
 ## Current Execution Path
 
@@ -185,10 +183,6 @@ Deletion is immediate and unrecoverable. Retained deletion requires the exact
 retained ID twice, and a shared agent version remains until its last retained
 eval reference is deleted. The read-only explorer may filter and inspect both
 lifecycle states but must not elevate, delete, edit, or annotate them.
-
-`src/lifecycle/` remains only as frozen legacy compatibility code. Do not route
-ordinary evaluation, inspection, elevation, deletion, packaging, or FDE
-iteration work through it.
 
 ## Hosted Inputs
 

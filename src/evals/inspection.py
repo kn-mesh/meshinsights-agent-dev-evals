@@ -19,11 +19,7 @@ def find_run_directory(run_id: str, *, root: Path = Path("eval_results")) -> Pat
         raise ValueError(f"Invalid run id: {run_id!r}.")
     matches = {
         path.parent.resolve()
-        for pattern in (
-            f"working/**/{normalized}/manifest.json",
-            f"**/runs/{normalized}/manifest.json",
-        )
-        for path in root.glob(pattern)
+        for path in root.glob(f"working/**/{normalized}/manifest.json")
     }
     ordered_matches = sorted(matches)
     if not ordered_matches:

@@ -130,7 +130,7 @@ uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1_3.ppln
 # Eval orchestration CLI
 uv run python -m src.evals.eval_orchestration --help
 
-# Project model and frozen-pricing configuration
+# Model selection and frozen-pricing configuration
 uv run python -m src.model_configuration list
 uv run python -m src.model_configuration upsert --help
 
@@ -273,15 +273,13 @@ filters; elevation and deletion are command/skill workflows only.
 
 ## AI Model Catalog
 
-The project-owned model catalog is [`models.yaml`](models.yaml). It is the only
-place this project enumerates selectable model identifiers, declares the
-interactive default, and stores reviewed non-secret pricing snapshots. Each
-entry also declares the API family required to invoke it. Use
-`src.model_configuration` to validate and atomically update model identity,
-input/output rates, optional cached-input/reasoning rates, pricing version,
-effective date, currency, and source. Eval runs freeze the selected pricing
-snapshot; they never fetch or silently refresh prices. `mi-core` validates
-generic `provider:model` identifiers without owning an application model list.
+The project-owned [`models.yaml`](models.yaml) enumerates selectable model
+identifiers, declares the interactive default and API family, and references
+reusable billing identities. Reviewed non-secret rates live separately in the
+Workbench-owned [`model_pricing.yaml`](model_pricing.yaml), so vendor pricing is
+not re-entered for every use case. Eval runs resolve and freeze the selected
+pricing snapshot; they never fetch or silently refresh prices. `mi-core`
+validates generic `provider:model` identifiers without owning either catalog.
 
 ## Working With Codex
 
@@ -356,7 +354,6 @@ src/
   pipelines/
   evals/
   eval_lifecycle/
-  lifecycle/                  # frozen legacy quarantine/recovery code
 ```
 
 Working evals retain rich debugging detail through the active improvement loop.

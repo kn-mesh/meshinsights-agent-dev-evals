@@ -15,6 +15,7 @@ from src.benchmarks.models import (
     BenchmarkExample,
     BenchmarkVersion,
     PublishedLabelSchema,
+    PublishedReviewContext,
     SourceArtifact,
 )
 from src.evals.eval_orchestration import _select_examples
@@ -50,6 +51,7 @@ def _published() -> tuple[BenchmarkVersion, BenchmarkExample]:
         raw_captured_at=datetime(2026, 7, 1, 13, tzinfo=timezone.utc),
         raw_window_start=datetime(2026, 6, 1, tzinfo=timezone.utc),
         raw_window_end=datetime(2026, 7, 1, 12, tzinfo=timezone.utc),
+        published_review_context=PublishedReviewContext(),
         raw_artifacts=(
             SourceArtifact(
                 artifact_kind="vibration-spectrum",

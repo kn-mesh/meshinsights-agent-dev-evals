@@ -38,15 +38,12 @@ Use these commitments when evaluating the findings:
 
 ## 1. Local Artifact Lifecycle Versus Portable Handoff
 
-**Status:** Resolved at the product-scope level. Implementation alignment
-remains.
+**Status:** Resolved and implementation-aligned.
 
 ### Observation
 
-The MVP backlog marks local version/result cataloging, intentional retention,
-recoverable deletion, restore, and purge as complete. The implementation includes
-a derived reference graph, content-addressed reachability, deletion plans,
-quarantine operations, locks, recovery, and permanent purge.
+The supported implementation now contains only rich working evals, explicit
+compact retention, verification, and exact permanent deletion.
 
 Portable agent packaging, Microsoft Foundry translation, production-feedback
 routing, and selective cloud publication remain post-MVP.
@@ -54,7 +51,6 @@ routing, and selective cloud publication remain post-MVP.
 Relevant evidence:
 
 - `docs/development-backlog/features.md`, MVP boundary and checklist
-- `src/lifecycle/`
 - `src/agent_versions/`
 - `docs/development-backlog/features.md`, Portable Agent Package
 - Product strategy sections "Strategic Point Of View" and "Product Strategy"
@@ -90,18 +86,14 @@ deferred.
 
 See `docs/product-strategy/mvp-scope.md` for the durable decision.
 
-### Required Alignment
+### Implemented Alignment
 
-- Freeze lifecycle capabilities outside the decided boundary at safe
-  maintenance.
-- Make working-run deletion simple and permanent.
-- Protect explicitly retained evals and meaningful agent versions from casual
+- Working-run deletion is simple and permanent.
+- Explicitly retained evals and meaningful agent versions are protected from
   working-run cleanup.
-- Prefer compact aggregate JSON artifacts for retained evals.
-- Do not treat existing quarantine, restore, purge recovery, generalized
-  reachability, or multi-user safety machinery as required product behavior.
-- Evaluate the implementation separately before deciding whether excess
-  machinery should be removed, bypassed, or merely left unsupported.
+- Retained evals use compact aggregate JSON artifacts.
+- No quarantine, restore, purge-recovery, or generalized reachability
+  subsystem remains.
 
 ## 2. Evaluation Harness Becoming A Generic Platform
 
@@ -171,15 +163,17 @@ deleted-run recovery, which is not required.
 
 Every eval records token and cost summaries. Required statistics include input,
 output, and total tokens; total cost; average cost per unit; P5 and P95 cost per
-unit; and cost-coverage information. The model configuration experience must
-support input and output prices, and the eval must retain the pricing snapshot
-used for its estimates.
+unit; and cost-coverage information. Standard vendor prices are reusable
+Workbench configuration in `model_pricing.yaml`, referenced from the
+use-case's model selection in `models.yaml`. The eval must retain the resolved
+pricing snapshot used for its estimates.
 
-The repository already contains project-owned model pricing and cost-estimation
+The repository already contains reusable model pricing and cost-estimation
 contracts in `model_catalog.py` and `src/evals/eval_orchestration.py`. The
-identified product gap is that the model configuration selector does not
-collect or maintain those prices, and the current aggregate cost summary does
-not expose all required per-unit percentile statistics.
+shared catalog is populated for all currently selectable models. The remaining
+product gap is ensuring model-selection experiences display resolved prices;
+the aggregate cost summary already exposes the required per-unit percentile
+statistics.
 
 ### Required Alignment
 

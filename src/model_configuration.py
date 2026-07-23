@@ -1,4 +1,4 @@
-"""Project-owned model and frozen-pricing configuration workflow."""
+"""Model selection and reusable frozen-pricing configuration workflow."""
 
 from __future__ import annotations
 
@@ -43,7 +43,8 @@ def format_model(model: ModelDefinition, *, default_model: str) -> str:
             f"{model.pricing.currency}/1M tokens ({', '.join(rates)}; "
             f"version={model.pricing.version})"
         )
-    return f"{model.id}{marker} | api={model.api} | {pricing}"
+    reference = f" | pricing_key={model.pricing_key}" if model.pricing_key else ""
+    return f"{model.id}{marker} | api={model.api}{reference} | {pricing}"
 
 
 def upsert_model(
@@ -83,7 +84,9 @@ def _write_catalog(path: Path, catalog: ModelCatalog) -> None:
                 "id": model.id,
                 "api": model.api,
                 **(
-                    {"pricing": model.pricing.to_dict()}
+                    {"pricing_key": model.pricing_key}
+                    if model.pricing_key is not None
+                    else {"pricing": model.pricing.to_dict()}
                     if model.pricing is not None
                     else {}
                 ),
@@ -110,7 +113,7 @@ def _rate(value: float | None) -> str:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="List or edit project-owned model and frozen pricing settings."
+        description="List or edit model selection and frozen pricing settings."
     )
     parser.add_argument("--catalog", type=Path, default=MODEL_CATALOG_PATH)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -120,7 +123,8 @@ def _parser() -> argparse.ArgumentParser:
     )
     default.add_argument("model_id")
     upsert = subparsers.add_parser(
-        "upsert", help="Create or edit a model and its frozen pricing record."
+        "upsert",
+        help="Create or edit a model with an inline custom pricing override.",
     )
     upsert.add_argument("model_id")
     upsert.add_argument("--api", required=True, choices=sorted(MODEL_APIS))

@@ -154,7 +154,12 @@
     {
       "path": "models.yaml",
       "owner": "root_infrastructure",
-      "description": "Project-owned model catalog"
+      "description": "Project-owned model selection and reusable pricing references"
+    },
+    {
+      "path": "model_pricing.yaml",
+      "owner": "reusable_workbench",
+      "description": "Reusable reviewed provider pricing snapshots"
     },
     {
       "path": "workbench.project.json",

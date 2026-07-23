@@ -7,6 +7,8 @@ import type {
   AccuracyMetric,
   AttemptRow,
   BenchmarkContext,
+  CostDistribution,
+  CostSummary,
   EvidenceView,
   RunEntry,
   SourceVerificationSchema,
@@ -100,19 +102,23 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
   }, [runId, executionId, state, search, field, sliceKey, offset, tab, modelFilter, reasoningFilter, lifecycleFilter, runSearch, runSort]);
 
   const runs = useQuery({ queryKey: ["runs"], queryFn: () => api<RunPayload>("/runs") });
+  const selectedRun = useMemo(
+    () => runs.data?.runs.find((item) => item.run_id === runId),
+    [runs.data, runId],
+  );
   const attempts = useQuery({
     queryKey: ["attempts", runId, state, search, field, sliceKey, offset],
     queryFn: () => api<AttemptsPayload>(
       attemptsPath({ runId, state, search, field, sliceKey, offset }),
     ),
-    enabled: Boolean(runId),
+    enabled: Boolean(runId && selectedRun),
   });
   const detail = useQuery({
     queryKey: ["attempt", runId, executionId],
     queryFn: () => api<AttemptPayload>(
       `/runs/${encodeURIComponent(runId)}/attempts/${encodeURIComponent(executionId)}`,
     ),
-    enabled: Boolean(runId && executionId),
+    enabled: Boolean(runId && selectedRun && executionId),
   });
   const evidence = useQuery({
     queryKey: ["evidence", runId, detail.data?.row.example_id],
@@ -122,10 +128,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
     enabled: Boolean(runId && detail.data?.row.example_id && tab === "evidence"),
     staleTime: Infinity,
   });
-  const selectedRun = useMemo(
-    () => runs.data?.runs.find((item) => item.run_id === runId),
-    [runs.data, runId],
-  );
+  const runUnavailable = Boolean(runId && runs.isSuccess && !selectedRun);
   const selectRun = (selectedRunId: string) => {
     setRunId(selectedRunId);
     setExecutionId("");
@@ -145,6 +148,15 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
     if (field && !attempts.data.facets.fields.includes(field)) setField("");
     if (sliceKey && !attempts.data.facets.slices.includes(sliceKey)) setSliceKey("");
   }, [attempts.data, field, offset, sliceKey]);
+  useEffect(() => {
+    if (!executionId && attempts.data?.rows.length) {
+      setExecutionId(attempts.data.rows[0].execution_id);
+    }
+  }, [attempts.data, executionId]);
+  const resetAttemptSelection = () => {
+    setExecutionId("");
+    setOffset(0);
+  };
 
   return (
     <div className="app-shell">
@@ -157,12 +169,13 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
           </div>
         </div>
         <div className="header-context">
-          <div className="eyebrow">Spirax Pulse / Evaluation</div>
+          <div className="eyebrow">{adapter.contextLabel ?? "Evaluation review"}</div>
           <h1>{runId ? "Run analysis" : "Evaluation results"}</h1>
         </div>
       </header>
 
       {runs.error ? <QueryError error={runs.error} /> : null}
+      {runs.isPending ? <LoadingState label="Loading evaluation runs…" /> : null}
       {!runId && runs.data ? (
         <ResultsOverview
           adapter={adapter}
@@ -181,45 +194,88 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
         />
       ) : null}
 
-      {runId ? (
+      {runUnavailable ? (
+        <main className="unavailable-page">
+          <div className="empty">
+            <strong>Evaluation run unavailable</strong>
+            <span>This run does not exist locally or may have been permanently deleted.</span>
+            <Button variant="outline" onClick={showOverview}>Back to evaluation results</Button>
+          </div>
+        </main>
+      ) : null}
+
+      {runId && runs.isSuccess && !runUnavailable ? (
         <>
-          <nav className="run-navigation" aria-label="Run navigation">
-            <button type="button" aria-label="Back to evaluation results" onClick={showOverview}>
-              <span aria-hidden="true">←</span>
-              <span>Back to evaluation results</span>
-            </button>
-            <span className="run-navigation-current">Run details · {shortRunId(runId)}</span>
-          </nav>
-          <section className="run-bar">
-            <RunFact label="Benchmark" value={`${selectedRun?.benchmark_key ?? "Unknown"} v${selectedRun?.benchmark_version ?? "—"}`} />
-            <RunFact label="Model" value={selectedRun?.model ?? "Unknown"} />
-            <RunFact label="Reasoning" value={selectedRun?.reasoning_effort ?? "—"} />
-            <RunFact label="Attempts" value={`${selectedRun?.recorded_attempts ?? 0}/${selectedRun?.planned_attempts ?? 0}`} />
-            <RunFact label="Review" value={selectedRun?.review_status ?? "Unknown"} />
-            <RunFact label="Lifecycle" value={selectedRun?.lifecycle_state ?? "Unknown"} />
+          <section className="run-page-header">
+            <div className="run-page-heading">
+              <button type="button" aria-label="Back to evaluation results" onClick={showOverview}>
+                <UiIcon name="arrow-left" />
+                <span>Evaluation results</span>
+              </button>
+              <div>
+                <div className="eyebrow">Evaluation run</div>
+                <h2>{selectedRun?.benchmark_key ?? "Benchmark"} <span>v{selectedRun?.benchmark_version ?? "—"}</span></h2>
+              </div>
+            </div>
+            <div className="run-page-meta">
+              <RunFact label="Model" value={selectedRun?.model ?? "Unknown"} />
+              <RunFact label="Reasoning" value={selectedRun?.reasoning_effort ?? "—"} />
+              <RunFact label="Attempts" value={`${selectedRun?.recorded_attempts ?? 0}/${selectedRun?.planned_attempts ?? 0}`} />
+            </div>
           </section>
-          {selectedRun?.accuracy ? (
-            <RunAccuracySummary
-              run={selectedRun}
-              fieldLabels={adapter.evaluationFieldLabels}
-            />
+          {selectedRun?.accuracy || selectedRun?.cost ? (
+            <details className="run-summary">
+              <summary>
+                <span><UiIcon name="chart" /> Run metrics</span>
+                <div className="run-summary-highlights">
+                  {selectedRun.accuracy ? (
+                    <span>
+                      <strong>{formatAccuracy(selectedRun.accuracy.complete_evaluation)}</strong>
+                      <small>overall accuracy</small>
+                    </span>
+                  ) : null}
+                  <CostHighlight cost={selectedRun.cost} />
+                </div>
+                <UiIcon name="chevron" />
+              </summary>
+              <div className="run-metrics-detail">
+                {selectedRun.accuracy ? (
+                  <RunAccuracySummary
+                    run={selectedRun}
+                    fieldLabels={adapter.evaluationFieldLabels}
+                  />
+                ) : null}
+                <RunCostSummary cost={selectedRun.cost} />
+              </div>
+            </details>
           ) : null}
 
           <main className="explorer-workspace">
             <aside className="attempt-sidebar">
+              <div className="attempt-sidebar-heading">
+                <div>
+                  <h2>Attempts</h2>
+                  <span>{attempts.data?.matched ?? 0} results</span>
+                </div>
+                <span className="attempt-state-label">{state === "all" ? "All states" : humanize(state)}</span>
+              </div>
               <div className="filters">
-                <input
-                  aria-label="Search attempts"
-                  placeholder="Search example, unit, output…"
-                  value={search}
-                  onChange={(event) => {
-                    setSearch(event.target.value);
-                    setOffset(0);
-                  }}
-                />
+                <label className="search-field">
+                  <span className="sr-only">Search attempts</span>
+                  <UiIcon name="search" />
+                  <input
+                    aria-label="Search attempts"
+                    placeholder="Search unit or output"
+                    value={search}
+                    onChange={(event) => {
+                      setSearch(event.target.value);
+                      resetAttemptSelection();
+                    }}
+                  />
+                </label>
                 <select aria-label="Attempt state" value={state} onChange={(event) => {
                   setState(event.target.value);
-                  setOffset(0);
+                  resetAttemptSelection();
                 }}>
                   {states.map((item) => (
                     <option key={item} value={item}>
@@ -229,14 +285,14 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                 </select>
                 <select aria-label="Evaluation field" value={field} onChange={(event) => {
                   setField(event.target.value);
-                  setOffset(0);
+                  resetAttemptSelection();
                 }}>
                   <option value="">All fields</option>
                   {attempts.data?.facets.fields.map((item) => <option key={item} value={item}>{item}</option>)}
                 </select>
                 <select aria-label="Evaluation slice" value={sliceKey} onChange={(event) => {
                   setSliceKey(event.target.value);
-                  setOffset(0);
+                  resetAttemptSelection();
                 }}>
                   <option value="">All slices</option>
                   {attempts.data?.facets.slices.map((item) => <option key={item} value={item}>{item}</option>)}
@@ -244,15 +300,20 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
               </div>
               {attempts.error ? <QueryError error={attempts.error} compact /> : null}
               <div className="attempt-count">
-                <span>{attempts.data?.matched ?? 0} matching attempts</span>
+                <span>Attempt queue</span>
                 {attempts.data ? <span>{pageRange(attempts.data, offset)}</span> : null}
               </div>
               <div className="attempt-list">
+                {attempts.isPending ? <LoadingState label="Loading attempts…" compact /> : null}
+                {attempts.data && !attempts.data.rows.length ? (
+                  <div className="empty compact-empty">No attempts match these filters.</div>
+                ) : null}
                 {attempts.data?.rows.map((row) => (
                   <button
                     className={row.execution_id === executionId ? "attempt active" : "attempt"}
                     key={row.execution_id}
                     onClick={() => setExecutionId(row.execution_id)}
+                    aria-current={row.execution_id === executionId ? "true" : undefined}
                   >
                     <div className="attempt-title">
                       <span>{row.unit_id}</span>
@@ -269,37 +330,50 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                   size="sm"
                   aria-label="Previous attempts"
                   disabled={offset === 0}
-                  onClick={() => setOffset(Math.max(0, offset - pageSize))}
+                  onClick={() => {
+                    setExecutionId("");
+                    setOffset(Math.max(0, offset - pageSize));
+                  }}
                 >Previous</Button>
                 <Button
                   variant="outline"
                   size="sm"
                   aria-label="Next attempts"
                   disabled={!attempts.data || offset + attempts.data.rows.length >= attempts.data.matched}
-                  onClick={() => setOffset(offset + pageSize)}
+                  onClick={() => {
+                    setExecutionId("");
+                    setOffset(offset + pageSize);
+                  }}
                 >Next</Button>
               </div>
             </aside>
 
             <article className="attempt-detail">
-              {!executionId ? <div className="empty">Select an attempt to inspect.</div> : null}
+              {!executionId && !attempts.isPending ? <div className="empty">No attempt is selected.</div> : null}
+              {detail.isPending && executionId ? <LoadingState label="Loading attempt review…" /> : null}
               {detail.error ? <QueryError error={detail.error} /> : null}
               {detail.data ? (
                 <>
                   <div className="detail-heading">
                     <div>
-                      <div className="eyebrow">{detail.data.row.example_id}</div>
-                      <h2>{detail.data.row.unit_id} · repetition {detail.data.row.run_index}</h2>
+                      <div className="eyebrow">Attempt review</div>
+                      <h2>{detail.data.row.unit_id}</h2>
+                      <p>{detail.data.row.example_id} · repetition {detail.data.row.run_index}</p>
                     </div>
                     <Status row={detail.data.row} />
                   </div>
-                  <nav className="tabs">
+                  <nav className="tabs" aria-label="Attempt review sections">
                     {[
                       ["evaluation", "AI output"],
-                      ["evidence", "Evidence package"],
-                      ["execution", "Execution details"],
+                      ["evidence", "Evidence"],
+                      ["execution", "Execution"],
                     ].map(([key, label]) => (
-                      <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{label}</button>
+                      <button
+                        key={key}
+                        className={tab === key ? "active" : ""}
+                        aria-current={tab === key ? "page" : undefined}
+                        onClick={() => setTab(key)}
+                      >{label}</button>
                     ))}
                   </nav>
                   {tab === "evaluation" ? (
@@ -382,9 +456,9 @@ function ResultsOverview({
     <main className="results-overview">
       <section className="overview-heading">
         <div>
-          <div className="eyebrow">Working and retained evals</div>
+          <div className="eyebrow">Evaluation runs</div>
           <h2>Overall evaluation results</h2>
-          <p>Review working detail or compare meaningful retained results, then open a run to inspect units and evidence.</p>
+          <p>Review recent detail or compare meaningful elevated results, then open a run to inspect units and evidence.</p>
         </div>
         <div className="overview-run-count">
           <strong>{filteredRuns.length}</strong>
@@ -414,8 +488,8 @@ function ResultsOverview({
             <span>Lifecycle</span>
             <select aria-label="Filter by lifecycle" value={lifecycleFilter} onChange={(event) => onLifecycleFilter(event.target.value)}>
               <option value="">All evals</option>
-              <option value="working">Working</option>
-              <option value="retained">Retained</option>
+              <option value="working">Not elevated</option>
+              <option value="retained">Elevated</option>
             </select>
           </label>
           <label>
@@ -454,11 +528,12 @@ function ResultsOverview({
         </section>
         {filteredRuns.length ? (
             <div className="run-results-scroll">
-              <table className="run-results-table">
+              <table className="run-results-table" aria-label="Evaluation runs and metrics">
                 <thead>
                   <tr>
                     <th>Run inputs</th>
                     {metricColumns.map((column) => <th key={column.key}>{column.label}</th>)}
+                    <th>Cost</th>
                     <th><span className="sr-only">Open run</span></th>
                   </tr>
                 </thead>
@@ -467,29 +542,29 @@ function ResultsOverview({
                     <tr
                       key={run.run_id}
                       className="selectable-run"
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Open evaluation run ${run.run_id}`}
                       onClick={() => onSelectRun(run.run_id)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          onSelectRun(run.run_id);
-                        }
-                      }}
                     >
                       <td>
                         <div className="run-inputs">
-                          <strong>{run.model ?? "Unknown model"}</strong>
-                          <Badge variant={run.lifecycle_state === "retained" ? "primary" : "neutral"}>
-                            {humanize(run.lifecycle_state)}
-                          </Badge>
+                          <button
+                            type="button"
+                            className="run-open-button"
+                            aria-label={`Open evaluation run ${run.run_id}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onSelectRun(run.run_id);
+                            }}
+                          >{run.model ?? "Unknown model"}</button>
+                          {run.lifecycle_state === "retained" ? (
+                            <Badge variant="primary">Elevated</Badge>
+                          ) : null}
                           <span>{humanize(run.reasoning_effort ?? "unspecified")} reasoning</span>
                           <small>{formatRunDate(run.created_at_utc)} · {run.recorded_attempts}/{run.planned_attempts} attempts</small>
                           <code title={run.run_id}>{shortRunId(run.run_id)}</code>
                         </div>
                       </td>
                       {metricColumns.map((column) => <MetricCell key={column.key} metric={column.get(run)} />)}
+                      <CostCell cost={run.cost} />
                       <td className="run-row-action" aria-hidden="true">›</td>
                     </tr>
                   ))}
@@ -497,7 +572,9 @@ function ResultsOverview({
               </table>
             </div>
         ) : (
-          <div className="empty table-empty">No evaluation runs match these controls.</div>
+          <div className="empty table-empty">
+            {runs.length ? "No evaluation runs match these controls." : "No evaluation runs are available yet."}
+          </div>
         )}
       </section>
     </main>
@@ -509,6 +586,33 @@ function MetricCell({ metric }: { metric: AccuracyMetric | null }) {
     <td className="metric-cell">
       <strong>{formatAccuracy(metric)}</strong>
       <small>{metric ? `${metric.correct_runs}/${metric.evaluated_runs}` : "No data"}</small>
+    </td>
+  );
+}
+
+function CostCell({ cost }: { cost?: CostSummary | null }) {
+  const rows = costRows(cost);
+  if (!cost || !rows.length) {
+    return (
+      <td className="metric-cell cost-cell">
+        <strong>—</strong>
+        <small>Unavailable</small>
+      </td>
+    );
+  }
+  return (
+    <td className="metric-cell cost-cell">
+      {rows.map((row) => (
+        <div key={row.currency}>
+          <strong>{formatCost(row.total, row.currency)}</strong>
+          <small>
+            Mean {formatCost(row.distribution?.average, row.currency)}
+            {" · "}P5 {formatCost(row.distribution?.p5, row.currency)}
+            {" · "}P95 {formatCost(row.distribution?.p95, row.currency)}
+          </small>
+        </div>
+      ))}
+      <small>{costCoverageLabel(cost)}</small>
     </td>
   );
 }
@@ -544,6 +648,103 @@ function RunAccuracySummary({
       </div>
     </section>
   );
+}
+
+function CostHighlight({ cost }: { cost?: CostSummary | null }) {
+  const rows = costRows(cost);
+  if (!rows.length) return null;
+  const primary = rows[0];
+  return (
+    <span>
+      <strong>{formatCost(primary.total, primary.currency)}</strong>
+      <small>{rows.length === 1 ? "eval cost" : `eval cost · ${rows.length} currencies`}</small>
+    </span>
+  );
+}
+
+function RunCostSummary({ cost }: { cost?: CostSummary | null }) {
+  const rows = costRows(cost);
+  return (
+    <section className="run-cost" aria-label="Run cost summary">
+      <div className="run-accuracy-heading">
+        <div>
+          <div className="eyebrow">Pricing statistics</div>
+          <h2>Run cost</h2>
+        </div>
+        <span>{cost ? costCoverageLabel(cost) : "Cost information unavailable"}</span>
+      </div>
+      {rows.length ? (
+        <div className="run-cost-currencies">
+          {rows.map((row) => (
+            <section key={row.currency} className="run-cost-currency">
+              <div className="run-cost-currency-heading">
+                <strong>{row.currency}</strong>
+                <span className="run-cost-status">{costStatus(cost)}</span>
+              </div>
+              <div className="run-cost-grid">
+                <CostMetric label="Overall eval" value={formatCost(row.total, row.currency)} />
+                <CostMetric label="Mean / unit" value={formatCost(row.distribution?.average, row.currency)} />
+                <CostMetric label="P5 / unit" value={formatCost(row.distribution?.p5, row.currency)} />
+                <CostMetric label="P95 / unit" value={formatCost(row.distribution?.p95, row.currency)} />
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <div className="run-cost-unavailable">
+          No usable cost observations were stored for this run.
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CostMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="run-cost-metric">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+type CostCurrencyRow = {
+  currency: string;
+  total: number;
+  distribution?: CostDistribution;
+};
+
+function costRows(cost?: CostSummary | null): CostCurrencyRow[] {
+  if (!cost) return [];
+  const currencies = Array.from(new Set([
+    ...Object.keys(cost.complete_unit_cost_by_currency ?? {}),
+    ...Object.keys(cost.actual_by_currency ?? {}),
+    ...Object.keys(cost.estimated_by_currency ?? {}),
+  ])).sort();
+  return currencies.flatMap((currency) => {
+    const distribution = cost.complete_unit_cost_by_currency?.[currency];
+    const fallbackTotal = (cost.actual_by_currency?.[currency] ?? 0)
+      + (cost.estimated_by_currency?.[currency] ?? 0);
+    const total = distribution?.total ?? fallbackTotal;
+    return Number.isFinite(total) ? [{ currency, total, distribution }] : [];
+  });
+}
+
+function costCoverageLabel(cost: CostSummary) {
+  const complete = cost.units_with_complete_cost_observations ?? 0;
+  const recorded = cost.recorded_attempts ?? 0;
+  const partial = cost.units_with_partial_pricing ?? 0;
+  if (!recorded) return "No attempts";
+  if (complete === recorded) return `${complete}/${recorded} units fully priced`;
+  if (partial) return `${complete}/${recorded} fully priced · ${partial} partial`;
+  return `${complete}/${recorded} units fully priced`;
+}
+
+function costStatus(cost?: CostSummary | null) {
+  if (!cost || !cost.recorded_attempts) return "Unavailable";
+  if (cost.units_with_complete_cost_observations === cost.recorded_attempts) return "Complete";
+  if (cost.units_with_complete_cost_observations || cost.units_with_partial_pricing) return "Partial";
+  return "Unavailable";
 }
 
 function buildMetricColumns(runs: RunEntry[], labels: Record<string, string> = {}): MetricColumn[] {
@@ -650,10 +851,10 @@ function Evaluation({
     <div className="review-stack">
       <section className="review-intro">
         <div>
-          <div className="eyebrow">Benchmark review</div>
-          <h3>AI output compared with expected output</h3>
+          <div className="eyebrow">Evaluation</div>
+          <h3>Expected and actual output</h3>
         </div>
-        <p>Use the evidence package to validate the model’s conclusion and investigate incorrect fields.</p>
+        <p>Compare scored fields, then open the evidence when a result needs investigation.</p>
       </section>
       <section className="output-comparison" aria-label="AI output comparison">
         <div className="comparison-row comparison-header" aria-hidden="true">
@@ -666,9 +867,9 @@ function Evaluation({
               <strong>{humanize(fieldName)}</strong>
               <span className="review-value">{displayValue(row.benchmark_labels[fieldName])}</span>
               <AiOutputValue value={row.agent_output[fieldName]} />
-              <Badge variant={result === true ? "success" : result === false ? "destructive" : "neutral"}>
+              <span className={`comparison-result ${result === true ? "match" : result === false ? "mismatch" : "review"}`}>
                 {result === true ? "Match" : result === false ? "Mismatch" : "Review"}
-              </Badge>
+              </span>
             </div>
           );
         })}
@@ -679,12 +880,6 @@ function Evaluation({
         fieldLabels={adapter.evaluationFieldLabels}
         verificationSchemas={adapter.sourceVerificationSchemas ?? []}
       />
-      <section className="review-status-strip" aria-label="Attempt status">
-        <ReviewFact label="Execution" value={row.execution_status} />
-        <ReviewFact label="Output contract" value={row.output_contract_status} />
-        <ReviewFact label="Scoring" value={row.scoring_status} />
-        <ReviewFact label="Stability" value={row.flaky ? "Flaky" : "Stable"} />
-      </section>
     </div>
   );
 }
@@ -700,34 +895,23 @@ function BenchmarkContextPanel({
   fieldLabels?: Record<string, string>;
   verificationSchemas: SourceVerificationSchema[];
 }) {
-  if (context.availability === "unavailable") {
-    return (
-      <section className="benchmark-context">
-        <div className="benchmark-context-heading">
-          <div>
-            <div className="eyebrow">Published benchmark context</div>
-            <h3>Labeler notes and customer verification</h3>
-          </div>
-        </div>
-        <div className="benchmark-context-unavailable">
-          <strong>Context was not retained for this run.</strong>
-          <span>{context.reason}</span>
-        </div>
-      </section>
-    );
-  }
-
   const notes = context.labeler_notes.filter((note) => note.explanation.trim());
   const verification = context.verification;
   return (
-    <section className="benchmark-context">
-      <div className="benchmark-context-heading">
+    <details className="benchmark-context">
+      <summary className="benchmark-context-heading">
         <div>
-          <div className="eyebrow">Published benchmark context</div>
-          <h3>Labeler notes and customer verification</h3>
+          <UiIcon name="note" />
+          <div>
+            <div className="eyebrow">Supporting context</div>
+            <h3>Labeler notes and verification</h3>
+          </div>
         </div>
-        {verification ? <Badge variant="success">Verified</Badge> : <Badge variant="neutral">Not verified</Badge>}
-      </div>
+        <span>
+          {verification ? <span className="context-status">Verified</span> : null}
+          <UiIcon name="chevron" />
+        </span>
+      </summary>
 
       <div className="benchmark-context-grid">
         <section className="benchmark-context-section">
@@ -740,7 +924,7 @@ function BenchmarkContextPanel({
                     <strong>{note.reviewer_display_name}</strong>
                     <span>{humanize(note.reviewer_project_role)} · {formatRunDate(note.submitted_at)}</span>
                   </div>
-                  {note.selected_for_publication ? <Badge variant="neutral">Selected label</Badge> : null}
+                  {note.selected_for_publication ? <span className="label-note-status">Selected label</span> : null}
                   <p>{note.explanation}</p>
                 </article>
               ))}
@@ -772,7 +956,7 @@ function BenchmarkContextPanel({
           )}
         </section>
       </div>
-    </section>
+    </details>
   );
 }
 
@@ -821,6 +1005,12 @@ function Execution({ review, row }: { review: Record<string, unknown> | null; ro
   if (!review) return <ReviewUnavailable row={row} />;
   return (
     <div className="execution-stack">
+      <section className="review-status-strip" aria-label="Attempt status">
+        <ReviewFact label="Execution" value={row.execution_status} />
+        <ReviewFact label="Output contract" value={row.output_contract_status} />
+        <ReviewFact label="Scoring" value={row.scoring_status} />
+        <ReviewFact label="Stability" value={row.flaky ? "Flaky" : "Stable"} />
+      </section>
       <p className="secondary-note">Technical trace data is collapsed by default so it does not compete with output and evidence review.</p>
       <CollapsibleJson title="Model interactions and tool activity" value={review.model_interactions ?? { unavailable: true }} />
       <CollapsibleJson title="Pipeline trace" value={review.pipeline ?? { unavailable: true }} />
@@ -862,12 +1052,33 @@ function ReviewUnavailable({ row }: { row: AttemptRow }) {
 
 function Status({ row }: { row: AttemptRow }) {
   const value = row.execution_status === "failed" ? "failed" : row.complete_evaluation_correct === true ? "correct" : row.complete_evaluation_correct === false ? "incorrect" : row.scoring_status;
-  const variant = value === "correct" ? "success" : value === "incorrect" || value === "failed" ? "destructive" : "neutral";
-  return <Badge variant={variant} className={`status ${value}`}>{value}</Badge>;
+  return <span className={`status-text ${value}`}>{value}</span>;
 }
 
 function RunFact({ label, value }: { label: string; value: string }) {
   return <div className="run-fact"><small>{label}</small><strong>{value}</strong></div>;
+}
+
+type UiIconName = "arrow-left" | "chart" | "chevron" | "note" | "search";
+
+function UiIcon({ name }: { name: UiIconName }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {name === "arrow-left" ? <><path d="m15 18-6-6 6-6" /><path d="M9 12h10" /></> : null}
+      {name === "chart" ? <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /></> : null}
+      {name === "chevron" ? <path d="m9 18 6-6-6-6" /> : null}
+      {name === "note" ? <><path d="M14 2H6a2 2 0 0 0-2 2v16l4-4h10a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M8 11h8M8 7h2" /></> : null}
+      {name === "search" ? <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></> : null}
+    </svg>
+  );
 }
 
 function Json({ value }: { value: unknown }) {
@@ -876,6 +1087,15 @@ function Json({ value }: { value: unknown }) {
 
 function QueryError({ error, compact = false }: { error: Error; compact?: boolean }) {
   return <div className={compact ? "error compact-error" : "error"} role="alert">{error.message}</div>;
+}
+
+function LoadingState({ label, compact = false }: { label: string; compact?: boolean }) {
+  return (
+    <div className={compact ? "loading-state compact-loading" : "loading-state"} role="status">
+      <span className="loading-spinner" aria-hidden="true" />
+      <span>{label}</span>
+    </div>
+  );
 }
 
 function attemptsPath({
@@ -964,6 +1184,22 @@ function formatAccuracy(metric: AccuracyMetric | null) {
     style: "percent",
     maximumFractionDigits: 1,
   }).format(metric.accuracy);
+}
+
+function formatCost(value: number | null | undefined, currency: string) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  const absolute = Math.abs(value);
+  const fractionDigits = absolute === 0 ? 2 : absolute < 0.01 ? 6 : absolute < 1 ? 4 : 2;
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    }).format(value);
+  } catch {
+    return `${currency} ${value.toFixed(fractionDigits)}`;
+  }
 }
 
 function formatRunDate(value: string | null | undefined) {

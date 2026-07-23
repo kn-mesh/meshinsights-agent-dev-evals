@@ -37,9 +37,7 @@ def test_cli_exposes_only_supported_permanent_lifecycle_commands() -> None:
     assert set(commands) == {"list", "inspect", "elevate", "verify", "delete"}
 
 
-def test_inspection_resolves_new_working_and_legacy_run_layouts(
-    tmp_path: Path,
-) -> None:
+def test_inspection_resolves_only_current_working_layout(tmp_path: Path) -> None:
     run_id = "eval_" + "a" * 24
     working = tmp_path / "working/benchmark/v1" / run_id
     working.mkdir(parents=True)
@@ -47,12 +45,13 @@ def test_inspection_resolves_new_working_and_legacy_run_layouts(
 
     assert find_run_directory(run_id, root=tmp_path) == working.resolve()
 
-    legacy_id = "eval_" + "b" * 24
-    legacy = tmp_path / "pipeline/benchmark/v1/runs" / legacy_id
-    legacy.mkdir(parents=True)
-    (legacy / "manifest.json").write_text("{}\n", encoding="utf-8")
+    unsupported_id = "eval_" + "b" * 24
+    unsupported = tmp_path / "pipeline/benchmark/v1/runs" / unsupported_id
+    unsupported.mkdir(parents=True)
+    (unsupported / "manifest.json").write_text("{}\n", encoding="utf-8")
 
-    assert find_run_directory(legacy_id, root=tmp_path) == legacy.resolve()
+    with pytest.raises(ValueError, match="No local result"):
+        find_run_directory(unsupported_id, root=tmp_path)
 
 
 def test_agent_patch_preserves_tracked_and_relevant_untracked_text(

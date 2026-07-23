@@ -54,15 +54,17 @@ inside execution.
 
 ## Feature 1: Model Configuration And Pricing
 
-Add one project-owned model configuration workflow that:
+Use the Workbench-owned reusable pricing catalog and project model-selection
+workflow to:
 
 - lists configured provider/model identifiers;
 - creates or edits a selectable model;
-- captures API family, currency, pricing version, effective date, and source;
-- captures input and output price per million tokens;
-- optionally captures cached-input and reasoning-token prices;
+- reference a reusable billing identity from each selected model;
+- capture currency, pricing version, effective date, source, and input/output
+  rates in `model_pricing.yaml`;
+- optionally capture cached-input and reasoning-token prices there;
 - validates non-negative rates;
-- writes the existing `models.yaml` contract;
+- keep `models.yaml` limited to project selection, API family, and pricing keys;
 - displays configured prices when the model is selected for an eval; and
 - freezes the selected pricing snapshot into the run identity and result.
 

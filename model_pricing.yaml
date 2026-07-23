@@ -1,0 +1,112 @@
+schema_version: 1
+
+# Reusable Workbench pricing snapshots. These are standard, pay-as-you-go,
+# per-million-token rates in USD. Eval runs freeze the resolved record, so
+# changing this file never changes the cost estimate for an existing run.
+rates:
+  anthropic:claude-haiku-4-5-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    input_per_million_tokens: 1.0
+    output_per_million_tokens: 5.0
+    cached_input_per_million_tokens: 0.1
+    effective_date: 2026-07-23
+    source: https://platform.claude.com/docs/en/about-claude/pricing
+
+  anthropic:claude-sonnet-4-5-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    input_per_million_tokens: 3.0
+    output_per_million_tokens: 15.0
+    cached_input_per_million_tokens: 0.3
+    effective_date: 2026-07-23
+    source: https://platform.claude.com/docs/en/about-claude/pricing
+
+  anthropic:claude-sonnet-4-6-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    input_per_million_tokens: 3.0
+    output_per_million_tokens: 15.0
+    cached_input_per_million_tokens: 0.3
+    effective_date: 2026-07-23
+    source: https://platform.claude.com/docs/en/about-claude/pricing
+
+  anthropic:claude-opus-4-5-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    input_per_million_tokens: 5.0
+    output_per_million_tokens: 25.0
+    cached_input_per_million_tokens: 0.5
+    effective_date: 2026-07-23
+    source: https://platform.claude.com/docs/en/about-claude/pricing
+
+  anthropic:claude-opus-4-6-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    input_per_million_tokens: 5.0
+    output_per_million_tokens: 25.0
+    cached_input_per_million_tokens: 0.5
+    effective_date: 2026-07-23
+    source: https://platform.claude.com/docs/en/about-claude/pricing
+
+  google:gemini-3.1-flash-lite-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    input_per_million_tokens: 0.25
+    output_per_million_tokens: 1.5
+    cached_input_per_million_tokens: 0.025
+    effective_date: 2026-07-23
+    source: https://ai.google.dev/gemini-api/docs/pricing
+
+  google:gemini-3.5-flash-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    input_per_million_tokens: 1.5
+    output_per_million_tokens: 9.0
+    cached_input_per_million_tokens: 0.15
+    effective_date: 2026-07-23
+    source: https://ai.google.dev/gemini-api/docs/pricing
+
+  google:gemini-3.6-flash-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    input_per_million_tokens: 1.5
+    output_per_million_tokens: 7.5
+    cached_input_per_million_tokens: 0.15
+    effective_date: 2026-07-23
+    source: https://ai.google.dev/gemini-api/docs/pricing
+
+  openrouter:google-gemini-3.5-flash-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    input_per_million_tokens: 1.5
+    output_per_million_tokens: 9.0
+    effective_date: 2026-07-23
+    source: https://openrouter.ai/google/gemini-3.5-flash
+
+  azure:gpt-5.6-luna-standard-global:
+    version: azure-retail-2026-07-01
+    currency: USD
+    input_per_million_tokens: 1.0
+    output_per_million_tokens: 6.0
+    cached_input_per_million_tokens: 0.1
+    effective_date: 2026-07-01
+    source: https://prices.azure.com/api/retail/prices
+
+  azure:gpt-5.6-terra-standard-global:
+    version: azure-retail-2026-07-01
+    currency: USD
+    input_per_million_tokens: 2.5
+    output_per_million_tokens: 15.0
+    cached_input_per_million_tokens: 0.25
+    effective_date: 2026-07-01
+    source: https://prices.azure.com/api/retail/prices
+
+  azure:gpt-5.6-sol-standard-global:
+    version: azure-retail-2026-07-01
+    currency: USD
+    input_per_million_tokens: 5.0
+    output_per_million_tokens: 30.0
+    cached_input_per_million_tokens: 0.5
+    effective_date: 2026-07-01
+    source: https://prices.azure.com/api/retail/prices

@@ -15,6 +15,7 @@ from src.benchmarks.models import (
     BenchmarkExample,
     BenchmarkVersion,
     PublishedLabelSchema,
+    PublishedReviewContext,
     SourceArtifact,
 )
 from src.pipelines.pipeline_run_from_yaml import (
@@ -61,6 +62,7 @@ def _benchmark() -> tuple[BenchmarkVersion, BenchmarkExample]:
         raw_captured_at=datetime(2026, 3, 18, tzinfo=timezone.utc),
         raw_window_start=datetime(2025, 3, 17, tzinfo=timezone.utc),
         raw_window_end=datetime(2026, 3, 17, 12, 0, tzinfo=timezone.utc),
+        published_review_context=PublishedReviewContext(),
         raw_artifacts=artifacts,
     )
     benchmark = BenchmarkVersion(

@@ -42,7 +42,7 @@ class EvalLifecycleService:
         self._require_within(self.eval_root)
 
     def list_evals(self, state: str = "all") -> list[dict[str, Any]]:
-        """Return explicit lifecycle entries, including read-only legacy working runs."""
+        """Return current working and retained eval entries."""
         if state not in {"all", "working", "retained"}:
             raise ValueError("Lifecycle state must be all, working, or retained.")
         entries: list[dict[str, Any]] = []
@@ -372,11 +372,11 @@ class EvalLifecycleService:
         }
 
     def _working_entries(self) -> list[dict[str, Any]]:
-        paths: set[Path] = set()
-        if self.working_root.exists():
-            paths.update(self.working_root.glob("**/eval_*/manifest.json"))
-        if self.eval_root.exists():
-            paths.update(self.eval_root.glob("**/runs/eval_*/manifest.json"))
+        paths = (
+            set(self.working_root.glob("**/eval_*/manifest.json"))
+            if self.working_root.exists()
+            else set()
+        )
         entries = []
         for path in sorted(paths):
             run_dir = path.parent
@@ -406,7 +406,6 @@ class EvalLifecycleService:
                         "run_id": run_dir.name,
                         "source_run_id": run_dir.name,
                         "lifecycle_state": "working",
-                        "legacy_layout": not run_dir.is_relative_to(self.working_root),
                         "path": self._relative(run_dir),
                         "created_at_utc": manifest.get("created_at_utc"),
                         "result_status": (
@@ -428,6 +427,11 @@ class EvalLifecycleService:
                         "bytes": byte_count,
                         "accuracy": (
                             result.get("summary", {}).get("accuracy")
+                            if result is not None
+                            else None
+                        ),
+                        "cost": (
+                            result.get("summary", {}).get("cost")
                             if result is not None
                             else None
                         ),
@@ -457,7 +461,6 @@ class EvalLifecycleService:
                         "run_id": retained_dir.name,
                         "source_run_id": manifest["source_run_id"],
                         "lifecycle_state": "retained",
-                        "legacy_layout": False,
                         "path": self._relative(retained_dir),
                         "created_at_utc": manifest.get("created_at_utc"),
                         "result_status": "materialized",
@@ -474,6 +477,7 @@ class EvalLifecycleService:
                         "file_count": file_count,
                         "bytes": byte_count,
                         "accuracy": result.get("summary", {}).get("accuracy"),
+                        "cost": result.get("summary", {}).get("cost"),
                     }
                 )
             except (OSError, ValueError, KeyError, json.JSONDecodeError):

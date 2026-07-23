@@ -93,24 +93,17 @@ listed. Confirm that the current runtime adapter supports the entry's `api`
 family first. Models marked `openai_responses` are routed through Azure's
 Responses API rather than Chat Completions.
 
-List configured prices or create/edit a selectable model with:
+List selectable models and their resolved reusable prices with:
 
 ```bash
 uv run python -m src.model_configuration list
-uv run python -m src.model_configuration upsert <provider:model> \
-  --api <api-family> \
-  --currency USD \
-  --pricing-version <reviewed-version> \
-  --effective-date <YYYY-MM-DD> \
-  --source <reviewed-source> \
-  --input-price <per-million-tokens> \
-  --output-price <per-million-tokens>
 ```
 
-Optional `--cached-input-price` and `--reasoning-price` values cover those
-token classes when known. This catalog is non-secret; provider credentials
-remain in `.env`. Prices are never fetched or silently refreshed during an
-eval. The selected pricing record is frozen into run identity and results.
+`models.yaml` owns project model selection; `model_pricing.yaml` owns reusable,
+reviewed rates and may be referenced by multiple provider aliases. Both are
+non-secret; provider credentials remain in `.env`. Prices are never fetched or
+silently refreshed during an eval. The resolved pricing record is frozen into
+run identity and results.
 
 ## Recommended First Run
 
@@ -371,8 +364,8 @@ activity, and raw review data. Select a retained eval to inspect its compact
 full outputs and grading; tool traces and performance detail are intentionally
 unavailable. The Evidence package tab reads the selected eval's exact Azure
 artifact references, verifies the immutable objects, and renders the normalized
-Spirax charts used by Benchmark Studio. A legacy run without that artifact
-contract fails closed and must be rerun with the current writer.
+Spirax charts used by Benchmark Studio. Every supported run is required to
+contain the current frozen evidence and published review-context contracts.
 If review capture was off, failed, partial, pruned, or absent, compact result
 rows remain available and the detailed tabs state the specific reason the
 review is unavailable.

@@ -120,9 +120,8 @@ Rules:
   Load charts through the working manifest or retained
   `evidence-references.json` selected-example source snapshot, exact Azure
   account/container, and complete artifact hash/size contract. Do not re-query
-  current benchmark membership or use an unverified local copy. If a legacy run
-  predates that contract, report evidence as unavailable and rerun it rather
-  than weakening integrity.
+  current benchmark membership or use an unverified local copy. A run missing
+  that required contract is invalid and unsupported.
 - `performance/summary.json`
   When present, use its `summary`, `model_calls`, and `retries` sections for
   throughput, stage/API latency, slowest execution IDs, timeout observations,

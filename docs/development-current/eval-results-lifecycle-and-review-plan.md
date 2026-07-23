@@ -24,13 +24,9 @@ The current schema-v1 run layout already separates:
 - detailed `review/` content-addressed model artifacts.
 
 `src/agent_versions/` resolves every run into a content-addressed candidate and
-promotes selected candidates into a separate local store. `src/lifecycle/`
-derives a reference graph and implements quarantine, restore, recovery, and
-purge. The explorer reads run manifests and detailed review objects but does not
-model the decided working-versus-retained lifecycle.
-
-The target should reuse useful current contracts where they fit, but it must not
-route the new product workflow through quarantine or generalized reachability.
+promotes selected candidates into a separate local store. `src/eval_lifecycle/`
+owns the complete working-versus-retained lifecycle. The explorer reads both
+states without exposing mutations.
 
 ## Target Lifecycle
 
@@ -192,21 +188,11 @@ filters. Show lifecycle state on each run. The app must:
 Do not add elevate, delete, edit, annotate, or lifecycle mutation actions to the
 MVP UI.
 
-## Feature 7: Freeze Excess Lifecycle Machinery
+## Feature 7: Remove Excess Lifecycle Machinery
 
-After the new supported commands are working:
-
-- remove quarantine, restore, and purge-recovery commands from normal docs and
-  skills;
-- stop routing ordinary run discovery or deletion through the generalized
-  lifecycle subsystem;
-- identify which reference/path checks are still required by exact deletion;
-  and
-- leave unused machinery dormant or remove it only when focused tests prove
-  removal is safe.
-
-Do not preserve product commitments merely because current code implements
-them.
+Completed. The quarantine, restore, purge-recovery, and generalized catalog
+subsystem was removed after current working/retained discovery, comparison
+reads, and exact permanent deletion were covered by focused tests.
 
 ## Agent Skill Deliverables
 

@@ -151,27 +151,22 @@ Rules:
 
 ## Model Catalog And Pricing
 
-Credentials remain in `.env`; selectable model identities and frozen
-non-secret prices live in `models.yaml`. Use the project workflow:
+Credentials remain in `.env`. Selectable model identities and reusable pricing
+references live in `models.yaml`; reviewed non-secret vendor rates live in
+`model_pricing.yaml`. Use the project workflow:
 
 ```bash
 uv run python -m src.model_configuration list
-uv run python -m src.model_configuration upsert <provider:model> \
-  --api <api-family> \
-  --currency USD \
-  --pricing-version <reviewed-version> \
-  --effective-date <YYYY-MM-DD> \
-  --source <reviewed-source> \
-  --input-price <per-million-tokens> \
-  --output-price <per-million-tokens>
 uv run python -m src.model_configuration set-default <provider:model>
 ```
 
-Add `--cached-input-price` and `--reasoning-price` only when those rates are
-known. Rates must be non-negative. Never fetch or silently refresh vendor
-prices while executing an eval. The runner shows configured prices at model
-selection and freezes the selected pricing record into run identity so a
-historical cost estimate does not change when `models.yaml` changes later.
+Do not ask an FDE to re-enter standard vendor rates for each use case. Add or
+update a reviewed reusable record in `model_pricing.yaml`, then reference its
+key from `models.yaml`. Rates must be non-negative. Never fetch or silently
+refresh vendor prices while executing an eval. The runner shows configured
+prices at model selection and freezes the selected pricing record into run
+identity so a historical cost estimate does not change when either catalog
+changes later.
 
 ## Provider Credential Mapping
 

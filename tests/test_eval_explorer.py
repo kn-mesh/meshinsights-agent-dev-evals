@@ -29,7 +29,11 @@ from src.apps.eval_explorer import (
     _project_evidence_adapter,
     build_app,
 )
-from src.benchmarks.models import BenchmarkExample, SourceArtifact
+from src.benchmarks.models import (
+    BenchmarkExample,
+    PublishedReviewContext,
+    SourceArtifact,
+)
 from src.evals.run_store import LocalRunStore
 from src.evidence.spirax import SpiraxEvidenceAdapter, build_spirax_evidence_view
 
@@ -139,6 +143,7 @@ def test_spirax_projection_preserves_reviewer_evidence_semantics() -> None:
         raw_window_start=datetime(2026, 2, 17, 12, tzinfo=timezone.utc),
         raw_window_end=decision,
         raw_known_gaps=("two-hour outage",),
+        published_review_context=PublishedReviewContext(),
         raw_artifacts=(
             SourceArtifact(
                 artifact_kind="telemetry",
@@ -242,18 +247,15 @@ class _FrozenEvidenceStore:
         raise AssertionError(f"Unexpected artifact: {artifact.artifact_kind}")
 
 
-def _schema_v1_run(
-    project_root: Path, *, retain_review_context: bool = False
-) -> tuple[Path, str, str]:
+def _schema_v1_run(project_root: Path) -> tuple[Path, str, str]:
     run_spec = {"scope": {"example_ids": ["example-a"]}, "runs_per_example": 1}
     run_id, digest = build_run_identity(run_spec)
     run_dir = (
         project_root
         / "eval_results"
-        / "pipeline"
+        / "working"
         / "benchmark"
         / "v1"
-        / "runs"
         / run_id
     )
     run_dir.mkdir(parents=True)
@@ -320,39 +322,33 @@ def _schema_v1_run(
                     "benchmark_labels": {"classification": "Healthy"},
                     "slice_keys": [],
                     "metadata": {"sensor_id": "7"},
-                    **(
-                        {
-                            "published_review_context": {
-                                "labeler_notes": [
-                                    {
-                                        "review_event_id": "review-event-a",
-                                        "reviewer_display_name": "Alex Labeler",
-                                        "reviewer_project_role": "domain_reviewer",
-                                        "submitted_at": "2026-01-01T00:00:00Z",
-                                        "explanation": (
-                                            "Telemetry supports the published label."
-                                        ),
-                                        "selected_for_publication": True,
-                                    }
-                                ],
-                                "verification": {
-                                    "source": "operator_feedback",
-                                    "note": "Confirmed by customer.",
-                                    "recorded_at": "2026-01-02T00:00:00Z",
-                                    "source_content_sha256": "d" * 64,
-                                    "context_schema_key": (
-                                        "spirax_customer_verification"
-                                    ),
-                                    "context_schema_version": "1",
-                                    "source_fields": {
-                                        "failure_cause": "Trap failed closed"
-                                    },
-                                },
+                    "published_review_context": {
+                        "labeler_notes": [
+                            {
+                                "review_event_id": "review-event-a",
+                                "reviewer_display_name": "Alex Labeler",
+                                "reviewer_project_role": "domain_reviewer",
+                                "submitted_at": "2026-01-01T00:00:00Z",
+                                "explanation": (
+                                    "Telemetry supports the published label."
+                                ),
+                                "selected_for_publication": True,
                             }
-                        }
-                        if retain_review_context
-                        else {}
-                    ),
+                        ],
+                        "verification": {
+                            "source": "operator_feedback",
+                            "note": "Confirmed by customer.",
+                            "recorded_at": "2026-01-02T00:00:00Z",
+                            "source_content_sha256": "d" * 64,
+                            "context_schema_key": (
+                                "spirax_customer_verification"
+                            ),
+                            "context_schema_version": "1",
+                            "source_fields": {
+                                "failure_cause": "Trap failed closed"
+                            },
+                        },
+                    },
                 }
             ],
             "output_fields": [
@@ -475,13 +471,10 @@ def test_project_backend_exposes_optional_correlated_performance(
     attempt = backend.get_attempt(run_id, execution_id)
     assert attempt["performance"]["availability"] == "available"
     assert attempt["performance"]["metrics"]["duration_seconds"] == 12.0
-    assert attempt["benchmark_context"] == {
-        "availability": "unavailable",
-        "reason": (
-            "This run predates retained benchmark labeler notes and "
-            "verification provenance."
-        ),
-    }
+    assert attempt["benchmark_context"]["availability"] == "available"
+    assert attempt["benchmark_context"]["labeler_notes"][0]["review_event_id"] == (
+        "review-event-a"
+    )
     evidence = backend.get_evidence(run_id, "example-a")
     assert evidence == {
         "verified": True,
@@ -514,9 +507,7 @@ def test_project_backend_exposes_optional_correlated_performance(
 def test_project_backend_exposes_retained_published_review_context(
     tmp_path: Path,
 ) -> None:
-    _, run_id, execution_id = _schema_v1_run(
-        tmp_path, retain_review_context=True
-    )
+    _, run_id, execution_id = _schema_v1_run(tmp_path)
     backend = ProjectExplorerBackend(tmp_path)
 
     context = backend.get_attempt(run_id, execution_id)["benchmark_context"]
@@ -582,7 +573,7 @@ def test_project_backend_reuses_default_evidence_adapter(
     assert creations == [tmp_path.resolve()]
 
 
-def test_project_backend_rejects_legacy_manifest_without_frozen_evidence(
+def test_project_backend_rejects_manifest_without_required_frozen_evidence(
     tmp_path: Path,
 ) -> None:
     run_dir, run_id, _ = _schema_v1_run(tmp_path)
@@ -594,7 +585,7 @@ def test_project_backend_rejects_legacy_manifest_without_frozen_evidence(
         evidence_adapter=_EvidenceAdapter(),  # type: ignore[arg-type]
     )
 
-    with pytest.raises(ValueError, match="predates retained frozen-evidence"):
+    with pytest.raises(ValueError, match="raw_artifacts"):
         backend.get_evidence(run_id, "example-a")
 
 

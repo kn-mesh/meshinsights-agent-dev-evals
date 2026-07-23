@@ -80,14 +80,13 @@ Use these locations by default:
 | `src/actions/` | Final side effects or intentionally no-op terminal actions |
 | `src/pipelines/` | Runnable pipeline entry points and runner CLIs |
 | `src/evals/` | Evaluation orchestration and result handling |
-| `model_catalog.py`, `src/model_configuration.py` | Reusable model identity and frozen-pricing configuration |
+| `model_catalog.py`, `model_pricing.yaml`, `src/model_configuration.py` | Reusable model identity and frozen-pricing configuration |
 | `agent-dev-eval-core/` | Reusable eval execution, result, review, and explorer-query mechanics |
 | `agent-dev-eval-ui/` | Reusable local explorer API and React shell |
 | `src/evidence/` | Project-owned frozen-evidence normalization and explorer envelope |
 | `www/src/use_case/` | Project-owned evidence schema and visual composition |
 | `src/project_bootstrap/`, `bootstrap_configs/` | Reusable initialization and project bootstrap inputs |
 | `src/eval_lifecycle/` | Supported working/retained elevation, verification, and exact permanent deletion |
-| `src/lifecycle/` | Frozen legacy quarantine/recovery implementation; not a supported product workflow |
 
 Treat example files as starting patterns, not required production behavior.
 

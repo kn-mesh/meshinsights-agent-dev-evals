@@ -17,6 +17,7 @@ _SOURCE_GLOBS = (
 )
 _SOURCE_FILES = (
     "model_catalog.py",
+    "model_pricing.yaml",
     "models.yaml",
     "pyproject.toml",
     "uv.lock",

@@ -44,6 +44,25 @@ const run = {
       },
     },
   },
+  cost: {
+    attempts_with_cost_observations: 1201,
+    recorded_attempts: 1201,
+    units_with_complete_cost_observations: 1201,
+    units_with_partial_pricing: 0,
+    units_without_usable_cost_information: 0,
+    status_counts: { estimated_complete: 1201 },
+    actual_by_currency: {},
+    estimated_by_currency: { USD: 12.3456 },
+    complete_unit_cost_by_currency: {
+      USD: {
+        count: 1201,
+        total: 12.3456,
+        average: 0.010279,
+        p5: 0.004321,
+        p95: 0.023456,
+      },
+    },
+  },
 };
 
 const row = {
@@ -65,6 +84,7 @@ const row = {
 
 const adapter: UseCaseAdapter = {
   EvidenceDisplay: ({ evidence }: { evidence: EvidenceView }) => <div>Evidence for {evidence.example.example_id}</div>,
+  contextLabel: "Reference use case / Evaluation",
   evaluationFieldLabels: {
     classification: "Failure classification",
     root_cause: "Root cause classification",
@@ -153,17 +173,23 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).toContain("Failure classification");
     expect(container.textContent).toContain("Failure classification · High");
     expect(container.textContent).toContain("Root cause classification · Low");
+    expect(container.textContent).toContain("$12.35");
+    expect(container.textContent).toContain("Mean $0.0103");
+    expect(container.textContent).toContain("P5 $0.004321");
+    expect(container.textContent).toContain("P95 $0.0235");
+    expect(container.textContent).toContain("1201/1201 units fully priced");
     expect(container.querySelector(".metric-cards")).toBeNull();
     expect(container.querySelectorAll("tbody tr")).toHaveLength(2);
 
     await select(byLabel("Filter by lifecycle"), "retained");
     await waitFor(() => container.querySelectorAll("tbody tr").length === 1);
-    expect(container.textContent).toContain("Retained");
+    expect(container.textContent).toContain("Elevated");
     expect(new URL(window.location.href).searchParams.get("lifecycle")).toBe("retained");
     await select(byLabel("Filter by lifecycle"), "");
+    expect(container.querySelector('[aria-label="Open evaluation run run-a"]')?.parentElement?.textContent).not.toContain("Working");
 
     await select(byLabel("Sort evaluation runs"), "field:classification:asc");
-    await waitFor(() => container.querySelector("tbody tr")?.getAttribute("aria-label")?.includes("run-b") === true);
+    await waitFor(() => container.querySelector("tbody tr button")?.getAttribute("aria-label")?.includes("run-b") === true);
     expect(new URL(window.location.href).searchParams.get("sort")).toBe("field:classification:asc");
 
     await fill(byLabel("Search evaluation runs"), "run-a");
@@ -174,8 +200,11 @@ describe("EvalExplorerApp workflow", () => {
     const selectedRow = container.querySelector("tbody tr");
     if (!selectedRow) throw new Error("Missing selectable run row.");
     await click(selectedRow);
-    await waitFor(() => container.textContent?.includes("Select an attempt to inspect.") === true);
+    await waitFor(() => container.textContent?.includes("Expected and actual output") === true);
     expect(new URL(window.location.href).searchParams.get("run")).toBe("run-a");
+    expect(new URL(window.location.href).searchParams.get("execution")).toBe("execution-a.1");
+    expect(container.textContent).toContain("Reference use case / Evaluation");
+    expect(container.textContent).not.toContain("Spirax Pulse / Evaluation");
     expect(container.querySelector('[aria-label="Evaluation run"]')).toBeNull();
 
     await click(byLabel("Back to evaluation results"));
@@ -192,6 +221,13 @@ describe("EvalExplorerApp workflow", () => {
       if (url.startsWith("/api/runs/run-a/attempts?")) {
         const offset = Number(new URL(url, "http://local").searchParams.get("offset"));
         return attemptsPayload(offset >= 1000 ? { ...row, example_id: "example-after-1000", execution_id: "execution-after-1000.1" } : row);
+      }
+      if (url.endsWith("/attempts/execution-after-1000.1")) {
+        return {
+          row: { ...row, example_id: "example-after-1000", execution_id: "execution-after-1000.1" },
+          review: { model_interactions: {} },
+          benchmark_context: benchmarkContext,
+        };
       }
       return route(url);
     });
@@ -219,7 +255,7 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.querySelector('[role="alert"]')?.textContent).toContain("Frozen evidence unavailable");
 
     await click(button("AI output"));
-    await waitFor(() => container.textContent?.includes("AI output compared with expected output") === true);
+    await waitFor(() => container.textContent?.includes("Expected and actual output") === true);
     expect(container.textContent).not.toContain("Frozen evidence unavailable");
   });
 
@@ -248,41 +284,103 @@ describe("EvalExplorerApp workflow", () => {
     window.history.replaceState(null, "", "/?run=run-a&execution=execution-a.1");
     installFetch(route);
     await render();
-    await waitFor(() => container.textContent?.includes("AI output compared with expected output") === true);
+    await waitFor(() => container.textContent?.includes("Expected and actual output") === true);
     expect(container.textContent).toContain("Failure");
     expect(container.textContent).toContain("Healthy");
     expect(container.textContent).toContain("Mismatch");
     expect(container.textContent).toContain("Run accuracy");
     expect(container.textContent).toContain("Failure classification · High");
     expect(container.textContent).toContain("87.5%");
+    expect(container.textContent).toContain("Run cost");
+    expect(container.textContent).toContain("Overall eval");
+    expect(container.textContent).toContain("Mean / unit");
+    expect(container.textContent).toContain("P5 / unit");
+    expect(container.textContent).toContain("P95 / unit");
+    expect(container.textContent).toContain("$12.35");
     expect(container.textContent).toContain("Alex Labeler");
     expect(container.textContent).toContain("Pressure decay and the downstream alarm");
     expect(container.textContent).toContain("Customer verified");
     expect(container.textContent).toContain("Selected label");
     expect(container.textContent).toContain("Trap failed closed");
     expect(container.textContent).toContain("Replaced the trap");
+    expect(container.querySelector(".run-summary")?.hasAttribute("open")).toBe(false);
+    expect(container.querySelector(".benchmark-context")?.hasAttribute("open")).toBe(false);
     expect(container.querySelector("pre")).toBeNull();
   });
 
-  it("explains when an older run did not retain published review context", async () => {
-    window.history.replaceState(null, "", "/?run=run-a&execution=execution-a.1");
+  it("labels partial pricing coverage without presenting missing percentiles", async () => {
+    const partialRun = {
+      ...run,
+      cost: {
+        ...run.cost,
+        units_with_complete_cost_observations: 0,
+        units_with_partial_pricing: 1201,
+        status_counts: { estimated_partial: 1201 },
+        estimated_by_currency: { USD: 8.5 },
+        complete_unit_cost_by_currency: {},
+      },
+    };
+    window.history.replaceState(null, "", "/?run=run-a");
+    installFetch((url) => url === "/api/runs"
+      ? { runs: [partialRun], findings: [] }
+      : route(url));
+    await render();
+    await waitFor(() => container.textContent?.includes("Run cost") === true);
+
+    expect(container.textContent).toContain("$8.50");
+    expect(container.textContent).toContain("0/1201 fully priced · 1201 partial");
+    expect(container.textContent).toContain("Partial");
+    expect(container.querySelector('[aria-label="Run cost summary"]')?.textContent).toContain("P95 / unit—");
+  });
+
+  it("shows cost as unavailable for historical runs without usable observations", async () => {
+    const unavailableRun = {
+      ...run,
+      cost: {
+        ...run.cost,
+        attempts_with_cost_observations: 1201,
+        units_with_complete_cost_observations: 0,
+        units_with_partial_pricing: 0,
+        units_without_usable_cost_information: 1201,
+        status_counts: { unavailable: 1201 },
+        estimated_by_currency: {},
+        complete_unit_cost_by_currency: {},
+      },
+    };
+    window.history.replaceState(null, "", "/?run=run-a");
+    installFetch((url) => url === "/api/runs"
+      ? { runs: [unavailableRun], findings: [] }
+      : route(url));
+    await render();
+    await waitFor(() => container.textContent?.includes("Run cost") === true);
+
+    expect(container.textContent).toContain("No usable cost observations were stored for this run.");
+    expect(container.textContent).toContain("0/1201 units fully priced");
+  });
+
+  it("shows a clear recovery state for an invalid run deep link", async () => {
+    window.history.replaceState(null, "", "/?run=missing-run");
+    const requested: string[] = [];
     installFetch((url) => {
-      if (url === "/api/runs/run-a/attempts/execution-a.1") {
-        return {
-          row,
-          review: { model_interactions: {} },
-          benchmark_context: {
-            availability: "unavailable",
-            reason: "This run predates retained benchmark labeler notes and verification provenance.",
-          },
-        };
-      }
+      requested.push(url);
       return route(url);
     });
     await render();
-    await waitFor(() => container.textContent?.includes("Context was not retained for this run.") === true);
-    expect(container.textContent).toContain("predates retained benchmark labeler notes");
+    await waitFor(() => container.textContent?.includes("Evaluation run unavailable") === true);
+
+    expect(container.textContent).toContain("may have been permanently deleted");
+    expect(requested.some((url) => url.includes("missing-run"))).toBe(false);
+    await click(button("Back to evaluation results"));
+    await waitFor(() => container.textContent?.includes("Overall evaluation results") === true);
   });
+
+  it("shows a distinct empty state when no evals exist", async () => {
+    installFetch((url) => url === "/api/runs" ? { runs: [], findings: [] } : route(url));
+    await render();
+    await waitFor(() => container.textContent?.includes("No evaluation runs are available yet.") === true);
+    expect(container.textContent).not.toContain("No evaluation runs match these controls.");
+  });
+
 });
 
 async function render() {

@@ -117,7 +117,15 @@ class ModelSpec(StrictModel):
 
     id: str = Field(pattern=r"^[^:\s]+:[^\s]+$")
     api: ModelApi
+    pricing_key: str | None = Field(default=None, min_length=1)
     pricing: ModelPricingSpec | None = None
+
+    @model_validator(mode="after")
+    def validate_pricing_reference(self) -> ModelSpec:
+        """Allow a reusable reference or legacy inline pricing, but not both."""
+        if self.pricing_key is not None and self.pricing is not None:
+            raise ValueError("A model cannot define both pricing_key and pricing.")
+        return self
 
 
 class ModelCatalogSpec(StrictModel):

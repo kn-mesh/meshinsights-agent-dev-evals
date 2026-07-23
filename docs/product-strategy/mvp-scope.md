@@ -221,10 +221,16 @@ result should include:
 - the number of units with complete, partial, or unavailable cost information.
 
 Cost estimates require a pricing snapshot for the selected model, including at
-least input-token and output-token rates. The model configuration experience
-must allow these rates to be entered or maintained when configuring a
-selectable model. The run must retain the pricing snapshot used so later price
-changes do not rewrite the historical estimate.
+least input-token and output-token rates. Vendor pricing is reusable Workbench
+configuration, not use-case configuration: `models.yaml` selects models and
+references billing identities, while reviewed rates live in
+`model_pricing.yaml` and can be shared by multiple provider aliases. The run
+must retain the resolved pricing snapshot so later price changes do not rewrite
+the historical estimate.
+
+The read-only eval-results app displays the stored overall eval cost, mean cost
+per unit, P5/P95 per-unit cost, currency, and complete/partial/unavailable
+pricing coverage. It does not recalculate or refresh historical costs.
 
 ## Decision 3: Eval Provenance, Elevation, And Preservation
 

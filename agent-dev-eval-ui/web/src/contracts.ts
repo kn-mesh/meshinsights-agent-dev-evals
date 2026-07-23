@@ -15,6 +15,26 @@ export interface AccuracySummary {
   by_field: Record<string, FieldAccuracyMetric>;
 }
 
+export interface CostDistribution {
+  count: number;
+  total: number;
+  average: number;
+  p5: number;
+  p95: number;
+}
+
+export interface CostSummary {
+  attempts_with_cost_observations: number;
+  recorded_attempts: number;
+  units_with_complete_cost_observations: number;
+  units_with_partial_pricing: number;
+  units_without_usable_cost_information: number;
+  status_counts: Record<string, number>;
+  actual_by_currency: Record<string, number>;
+  estimated_by_currency: Record<string, number>;
+  complete_unit_cost_by_currency: Record<string, CostDistribution>;
+}
+
 export interface PublishedLabelerNote {
   review_event_id: string;
   reviewer_display_name: string;
@@ -34,16 +54,11 @@ export interface PublishedVerification {
   source_fields?: Record<string, unknown> | null;
 }
 
-export type BenchmarkContext =
-  | {
-      availability: "available";
-      labeler_notes: PublishedLabelerNote[];
-      verification: PublishedVerification | null;
-    }
-  | {
-      availability: "unavailable";
-      reason: string;
-    };
+export interface BenchmarkContext {
+  availability: "available";
+  labeler_notes: PublishedLabelerNote[];
+  verification: PublishedVerification | null;
+}
 
 export interface SourceVerificationSchema {
   schema_key: string;
@@ -73,6 +88,7 @@ export interface RunEntry {
   review_status: string;
   created_at_utc?: string | null;
   accuracy?: AccuracySummary | null;
+  cost?: CostSummary | null;
 }
 
 export interface AttemptRow {
@@ -123,6 +139,7 @@ export interface EvidenceView<T = unknown> {
 
 export interface UseCaseAdapter {
   EvidenceDisplay: ComponentType<{ evidence: EvidenceView }>;
+  contextLabel?: string;
   evaluationFieldLabels?: Record<string, string>;
   sourceVerificationSchemas?: SourceVerificationSchema[];
 }
