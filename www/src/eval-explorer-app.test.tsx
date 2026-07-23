@@ -308,20 +308,17 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).toContain("Failure");
     expect(container.textContent).toContain("Healthy");
     expect(container.textContent).toContain("Mismatch");
-    expect(container.textContent).toContain("Run accuracy");
-    expect(container.textContent).toContain("Failure classification · High");
+    expect(container.textContent).toContain("Run summary");
+    expect(container.textContent).toContain("Failure classification accuracy");
+    expect(container.textContent).toContain("High confidence");
     expect(container.textContent).toContain("87.5%");
-    expect(container.textContent).toContain("Run cost");
-    expect(container.textContent).toContain("Overall eval");
-    expect(container.textContent).toContain("Mean / unit");
-    expect(container.textContent).toContain("P5 / unit");
-    expect(container.textContent).toContain("P95 / unit");
+    expect(container.textContent).toContain("Total run cost");
+    expect(container.textContent).toContain("Per unit: mean");
+    expect(container.textContent).toContain("P5");
+    expect(container.textContent).toContain("P95");
     expect(container.textContent).toContain("$12.35");
-    expect(container.textContent).toContain("Run duration");
-    expect(container.textContent).toContain("Elapsed eval");
-    expect(container.textContent).toContain("Mean / run");
-    expect(container.textContent).toContain("P5 / run");
-    expect(container.textContent).toContain("P95 / run");
+    expect(container.textContent).toContain("Total run duration");
+    expect(container.textContent).toContain("Per run: mean");
     expect(container.textContent).toContain("6m 44s");
     expect(container.textContent).toContain("18.9 s");
     expect(container.textContent).toContain("2m 10s");
@@ -331,7 +328,7 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).toContain("Selected label");
     expect(container.textContent).toContain("Trap failed closed");
     expect(container.textContent).toContain("Replaced the trap");
-    expect(container.querySelector(".run-summary")?.hasAttribute("open")).toBe(false);
+    expect(container.querySelector('[aria-label="Run metrics"]')).not.toBeNull();
     expect(container.querySelector(".benchmark-context")?.hasAttribute("open")).toBe(true);
     expect(container.querySelector("pre")).toBeNull();
   });
@@ -353,12 +350,12 @@ describe("EvalExplorerApp workflow", () => {
       ? { runs: [partialRun], findings: [] }
       : route(url));
     await render();
-    await waitFor(() => container.textContent?.includes("Run cost") === true);
+    await waitFor(() => container.textContent?.includes("Total run cost") === true);
 
     expect(container.textContent).toContain("$8.50");
     expect(container.textContent).toContain("0/1201 fully priced · 1201 partial");
     expect(container.textContent).toContain("Partial");
-    expect(container.querySelector('[aria-label="Run cost summary"]')?.textContent).toContain("P95 / unit—");
+    expect(container.querySelector('[aria-label="Run cost summary"]')?.textContent).toContain("P95 —");
   });
 
   it("shows cost as unavailable for historical runs without usable observations", async () => {
@@ -380,7 +377,7 @@ describe("EvalExplorerApp workflow", () => {
       ? { runs: [unavailableRun], findings: [] }
       : route(url));
     await render();
-    await waitFor(() => container.textContent?.includes("Run cost") === true);
+    await waitFor(() => container.textContent?.includes("Total run cost") === true);
 
     expect(container.textContent).toContain("No usable cost observations were stored for this run.");
     expect(container.textContent).toContain("0/1201 units fully priced");

@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ArrowLeft,
-  BarChart3,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -274,18 +273,14 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
             </div>
           </section>
           {selectedRun ? (
-            <details className="run-summary group border-b bg-muted/40">
-              <summary className="flex min-h-[2.65rem] cursor-pointer list-none items-center gap-2.5 px-5 py-2.5 text-[13px] text-muted-foreground [&::-webkit-details-marker]:hidden">
-                <span className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
-                  <BarChart3 className="size-[0.95rem]" />
-                  Run metrics
-                </span>
-                <div className="ml-auto flex items-center gap-5">
-                  <CostHighlight cost={selectedRun.cost} />
-                </div>
-                <ChevronRight className="ml-1 size-[0.95rem] shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
-              </summary>
-              <div className="grid border-t">
+            <section
+              aria-label="Run metrics"
+              className="border-b bg-card px-5 py-4"
+            >
+              <h2 className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                Run summary
+              </h2>
+              <div className="mt-3 grid grid-cols-4 gap-x-10 gap-y-5 max-[1100px]:grid-cols-2 max-[620px]:grid-cols-1">
                 {selectedRun.accuracy ? (
                   <RunAccuracySummary
                     run={selectedRun}
@@ -299,7 +294,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                   error={performance.error}
                 />
               </div>
-            </details>
+            </section>
           ) : null}
 
           <main className="mx-5 my-4 grid min-h-[calc(100vh-11rem)] grid-cols-[340px_minmax(0,1fr)] overflow-clip rounded-xl border bg-card shadow-sm max-[900px]:grid-cols-1">
@@ -761,87 +756,85 @@ function RunAccuracySummary({
   run: RunEntry;
   fieldLabels?: Record<string, string>;
 }) {
-  const metrics = buildMetricColumns([run], fieldLabels);
+  const fields = Object.entries(run.accuracy?.by_field ?? {});
   return (
-    <section aria-label="Run accuracy summary" className="border-b bg-muted/30 px-5 py-4">
-      <div className="mb-2.5 flex items-end justify-between gap-4">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Evaluation statistics</div>
-          <h2 className="mt-0.5 text-sm font-semibold tracking-tight">Run accuracy</h2>
-        </div>
-        <span className="text-[0.65rem] text-muted-foreground">Correct / evaluated</span>
-      </div>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] overflow-hidden rounded-lg border bg-card">
-        {metrics.map((column) => {
-          const metric = column.get(run);
+    <section
+      aria-label="Run accuracy summary"
+      className="contents"
+    >
+      {fields.length
+        ? fields.map(([key, metric]) => {
+          const confidences = Object.entries(metric.by_confidence ?? {})
+            .sort(([left], [right]) => confidenceOrder(left, right));
           return (
-            <div className="grid min-w-0 gap-1 border-r px-3.5 py-3 last:border-r-0" key={column.key}>
-              <span className="min-h-[2.2em] text-[0.65rem] font-semibold uppercase leading-tight text-muted-foreground">{column.label}</span>
-              <strong className="font-heading text-[1.1rem]">{formatAccuracy(metric)}</strong>
-              <small className="text-[0.625rem] text-muted-foreground">{metric ? `${metric.correct_runs} / ${metric.evaluated_runs}` : "No data"}</small>
+            <div className="min-w-0" key={key}>
+              <div className="text-[0.7rem] font-medium text-muted-foreground">
+                {fieldLabels?.[key] ?? humanize(key)} accuracy
+              </div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <strong className="font-heading text-xl leading-none">{formatAccuracy(metric)}</strong>
+                <span className="text-[0.7rem] text-muted-foreground">
+                  {metric.correct_runs} of {metric.evaluated_runs} correct
+                </span>
+              </div>
+              {confidences.length ? (
+                <p className="mt-2 text-[0.7rem] leading-relaxed text-muted-foreground">
+                  {confidences.map(([confidence, confidenceMetric], index) => (
+                    <span key={confidence}>
+                      {index > 0 ? <span aria-hidden="true"> · </span> : null}
+                      {humanize(confidence)} confidence{" "}
+                      <span className="font-medium text-foreground/75">{formatAccuracy(confidenceMetric)}</span>
+                    </span>
+                  ))}
+                </p>
+              ) : null}
             </div>
           );
-        })}
-      </div>
+        })
+        : <p className="text-[0.75rem] text-muted-foreground">No accuracy data recorded for this run.</p>}
     </section>
-  );
-}
-
-function CostHighlight({ cost }: { cost?: CostSummary | null }) {
-  const rows = costRows(cost);
-  if (!rows.length) return null;
-  const primary = rows[0];
-  return (
-    <span className="grid gap-0.5 text-right">
-      <strong className="font-heading text-[0.85rem] text-foreground">{formatCost(primary.total, primary.currency)}</strong>
-      <small className="text-[0.625rem] text-muted-foreground">{rows.length === 1 ? "eval cost" : `eval cost · ${rows.length} currencies`}</small>
-    </span>
   );
 }
 
 function RunCostSummary({ cost }: { cost?: CostSummary | null }) {
   const rows = costRows(cost);
   return (
-    <section aria-label="Run cost summary" className="bg-muted/20 px-5 py-4">
-      <div className="mb-2.5 flex items-end justify-between gap-4">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pricing statistics</div>
-          <h2 className="mt-0.5 text-sm font-semibold tracking-tight">Run cost</h2>
-        </div>
-        <span className="text-[0.65rem] text-muted-foreground">{cost ? costCoverageLabel(cost) : "Cost information unavailable"}</span>
-      </div>
+    <section aria-label="Run cost summary" className="min-w-0">
       {rows.length ? (
         <div className="grid gap-2.5">
           {rows.map((row) => (
-            <section key={row.currency} className="overflow-hidden rounded-lg border bg-card">
-              <div className="flex items-center justify-between border-b px-3.5 py-2.5">
-                <strong className="text-[0.7rem] tracking-wide">{row.currency}</strong>
-                <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">{costStatus(cost)}</span>
+            <div key={row.currency}>
+              <div className="text-[0.7rem] font-medium text-muted-foreground">
+                Total run cost{rows.length > 1 ? ` (${row.currency})` : ""}
               </div>
-              <div className="grid grid-cols-4 max-[560px]:grid-cols-1">
-                <CostMetric label="Overall eval" value={formatCost(row.total, row.currency)} />
-                <CostMetric label="Mean / unit" value={formatCost(row.distribution?.average, row.currency)} />
-                <CostMetric label="P5 / unit" value={formatCost(row.distribution?.p5, row.currency)} />
-                <CostMetric label="P95 / unit" value={formatCost(row.distribution?.p95, row.currency)} />
+              <div className="mt-1 flex items-baseline gap-2">
+                <strong className="font-heading text-xl leading-none">{formatCost(row.total, row.currency)}</strong>
+                <span className="text-[0.7rem] text-muted-foreground">
+                  {cost ? `${costCoverageLabel(cost)} · ${costStatus(cost)}` : "Unavailable"}
+                </span>
               </div>
-            </section>
+              <p className="mt-2 text-[0.7rem] leading-relaxed text-muted-foreground">
+                Per unit: mean <span className="font-medium text-foreground/75">{formatCost(row.distribution?.average, row.currency)}</span>
+                {" · "}P5 <span className="font-medium text-foreground/75">{formatCost(row.distribution?.p5, row.currency)}</span>
+                {" · "}P95 <span className="font-medium text-foreground/75">{formatCost(row.distribution?.p95, row.currency)}</span>
+              </p>
+            </div>
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed px-3.5 py-3 text-[0.75rem] text-muted-foreground">
-          No usable cost observations were stored for this run.
-        </div>
+        <>
+          <div className="text-[0.7rem] font-medium text-muted-foreground">Total run cost</div>
+          <p className="mt-1 text-[0.75rem] text-muted-foreground">
+            No usable cost observations were stored for this run.
+          </p>
+          {cost ? (
+            <p className="mt-2 text-[0.7rem] text-muted-foreground">
+              {costCoverageLabel(cost)} · {costStatus(cost)}
+            </p>
+          ) : null}
+        </>
       )}
     </section>
-  );
-}
-
-function CostMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid gap-1 border-r px-3.5 py-3 last:border-r-0 max-[560px]:border-b max-[560px]:border-r-0 max-[560px]:last:border-b-0">
-      <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
-      <strong className="font-heading text-[1rem]">{value}</strong>
-    </div>
   );
 }
 
@@ -859,40 +852,44 @@ function RunDurationSummary({
     : null;
   const coverage = performance?.availability === "available"
     ? `${distribution?.count ?? 0}/${performance.recorded_executions} runs timed`
-    : "Timing information unavailable";
+    : "Unavailable";
 
   return (
-    <section aria-label="Run duration summary" className="border-t bg-muted/20 px-5 py-4">
-      <div className="mb-2.5 flex items-end justify-between gap-4">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Performance statistics</div>
-          <h2 className="mt-0.5 text-sm font-semibold tracking-tight">Run duration</h2>
-        </div>
-        <span className="text-[0.65rem] text-muted-foreground">{coverage}</span>
-      </div>
+    <section aria-label="Run duration summary" className="min-w-0">
       {isPending ? (
-        <div className="rounded-lg border border-dashed px-3.5 py-3 text-[0.75rem] text-muted-foreground">
-          Loading duration observations…
-        </div>
+        <>
+          <div className="text-[0.7rem] font-medium text-muted-foreground">Total run duration</div>
+          <p className="mt-1 text-[0.75rem] text-muted-foreground">Loading duration observations…</p>
+        </>
       ) : error ? (
-        <div className="rounded-lg border border-dashed px-3.5 py-3 text-[0.75rem] text-muted-foreground">
-          Duration information could not be loaded.
-        </div>
+        <>
+          <div className="text-[0.7rem] font-medium text-muted-foreground">Total run duration</div>
+          <p className="mt-1 text-[0.75rem] text-muted-foreground">Duration information could not be loaded.</p>
+        </>
       ) : performance?.availability === "available" && distribution?.count ? (
-        <div className="overflow-hidden rounded-lg border bg-card">
-          <div className="grid grid-cols-4 max-[560px]:grid-cols-1">
-            <CostMetric label="Elapsed eval" value={formatDuration(performance.summary.evaluation_wall_time_seconds)} />
-            <CostMetric label="Mean / run" value={formatDuration(distribution.mean)} />
-            <CostMetric label="P5 / run" value={formatDuration(distribution.p5)} />
-            <CostMetric label="P95 / run" value={formatDuration(distribution.p95)} />
+        <>
+          <div className="text-[0.7rem] font-medium text-muted-foreground">Total run duration</div>
+          <div className="mt-1 flex items-baseline gap-2">
+            <strong className="font-heading text-xl leading-none">
+              {formatDuration(performance.summary.evaluation_wall_time_seconds)}
+            </strong>
+            <span className="text-[0.7rem] text-muted-foreground">{coverage}</span>
           </div>
-        </div>
+          <p className="mt-2 text-[0.7rem] leading-relaxed text-muted-foreground">
+            Per run: mean <span className="font-medium text-foreground/75">{formatDuration(distribution.mean)}</span>
+            {" · "}P5 <span className="font-medium text-foreground/75">{formatDuration(distribution.p5)}</span>
+            {" · "}P95 <span className="font-medium text-foreground/75">{formatDuration(distribution.p95)}</span>
+          </p>
+        </>
       ) : (
-        <div className="rounded-lg border border-dashed px-3.5 py-3 text-[0.75rem] text-muted-foreground">
-          {performance?.availability === "unavailable"
-            ? performance.reason
-            : "No usable duration observations were stored for this run."}
-        </div>
+        <>
+          <div className="text-[0.7rem] font-medium text-muted-foreground">Total run duration</div>
+          <p className="mt-1 text-[0.75rem] text-muted-foreground">
+            {performance?.availability === "unavailable"
+              ? performance.reason
+              : "No usable duration observations were stored for this run."}
+          </p>
+        </>
       )}
     </section>
   );
