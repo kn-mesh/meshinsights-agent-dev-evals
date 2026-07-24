@@ -262,9 +262,10 @@ Working `manifest.json`, `agent-version.json`, immutable attempts,
 `result.json`, review, and performance detail support immediate debugging and
 resume. A meaningful complete run is preserved through `$eval-lifecycle`,
 which creates compact aggregate retained artifacts and the linked meaningful
-agent version. The working manifest retains every selected example's complete
-frozen source-snapshot window, Azure storage identity, recipe, known gaps, and
-raw artifact object key, byte size, and SHA-256 contract.
+agent version, verifies them, and permanently removes the source working eval.
+Before elevation, the working manifest retains every selected example's
+complete frozen source-snapshot window, Azure storage identity, recipe, known
+gaps, and raw artifact object key, byte size, and SHA-256 contract.
 
 Result schema version 2 separates durable evaluation evidence from disposable
 performance diagnostics. Its summary contains `accuracy`, `reliability`,
@@ -513,7 +514,9 @@ The retained folder contains `manifest.json`, `result.json`, aggregate
 `units.json`, `agent-provenance.json`, `evidence-references.json`, and optional
 `agent.patch`. It preserves full final AI outputs, expected outputs, validation,
 grading, accuracy, usage, and cost. It prunes performance, invocation, tool,
-and intermediate review detail and never copies Azure evidence locally.
+and intermediate review detail and never copies Azure evidence locally. Once
+the retained artifacts verify, elevation permanently deletes the source working
+eval; there is no duplicate working row for the same occurrence.
 
 Permanently delete exact evals only after explicit confirmation:
 

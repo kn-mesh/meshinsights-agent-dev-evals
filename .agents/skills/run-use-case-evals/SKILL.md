@@ -65,6 +65,11 @@ in this skill.
    occurrence, whose completed work is already durable.
    Diagnose the first substantive error; do not mistake successful Blob `206`
    logs or thread-shutdown noise for the root cause.
+   One user request authorizes at most one new full-benchmark occurrence unless
+   the user explicitly requests more. If a completed run later proves
+   ineligible for elevation, publication, or another downstream action, stop,
+   explain the issue and estimated rerun cost, and ask before starting another
+   expensive eval. Never silently replace or duplicate a completed run.
 7. Verify durable and optional artifacts separately:
    - load and integrity-check `result.json`; confirm `run` matches the requested
      evaluation profile identity/hash, benchmark, model, reasoning effort,

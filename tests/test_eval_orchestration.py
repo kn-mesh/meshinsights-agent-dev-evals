@@ -1747,8 +1747,17 @@ def test_complete_working_eval_elevates_to_compact_verified_retained_artifacts(
         "performance, speed, latency, retry, and invocation detail",
         "tool traces and intermediate review objects",
         "local copies of Azure evidence",
+        "the complete source working eval after retained verification",
     ]
     assert elevated["verified"] is True
+    assert elevated["source_deleted"] is True
+    assert not (
+        eval_root
+        / "working"
+        / benchmark.benchmark_key
+        / f"v{benchmark.version_number}"
+        / run_id
+    ).exists()
     assert {path.name for path in retained_dir.iterdir()} == {
         "manifest.json",
         "result.json",
@@ -1792,7 +1801,7 @@ def test_complete_working_eval_elevates_to_compact_verified_retained_artifacts(
         evidence_adapter=_EvidenceAdapter(),  # type: ignore[arg-type]
     )
     listed = backend.list_runs()["runs"]
-    assert {item["lifecycle_state"] for item in listed} == {"working", "retained"}
+    assert {item["lifecycle_state"] for item in listed} == {"retained"}
     assert all(item["cost"] == payload["summary"]["cost"] for item in listed)
     retained_id = elevated["retained_eval_id"]
     attempts = backend.list_attempts(
@@ -1877,10 +1886,7 @@ def test_permanent_delete_preserves_shared_retained_agent_until_last_reference(
     )
     assert removed_b["agent_version_removed"] is True
     assert not agent_dir.exists()
-
-    removed_working = service.delete_working(first["run"]["run_id"], confirmed=True)
-    assert removed_working["permanent"] is True
-    assert removed_working["recoverable"] is False
+    assert service.list_evals("working") == []
 
 
 def test_progress_tracker_reports_healthy_failure_and_running(

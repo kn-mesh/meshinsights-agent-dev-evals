@@ -1,0 +1,1445 @@
+{
+  "artifacts": {
+    "agent_version": "agent-version.json",
+    "attempts": "attempts/",
+    "manifest": "manifest.json"
+  },
+  "run": {
+    "agent_version_resolver_contract_version": 1,
+    "completed_at_utc": "2026-07-24T17:50:59+00:00",
+    "dimensions": {
+      "agent": {
+        "agent_version_id": "av_666fe01a1a7ed6819e0a2d16",
+        "evidence_recipe_sha256": "5c38faf7a0211e04053b44fb59dca88f0a0ae084925a203f8a16d42dcaf70551",
+        "lifecycle_state_at_run": "candidate",
+        "manifest_schema_version": 1,
+        "manifest_sha256": "666fe01a1a7ed6819e0a2d16ec72ae03137041d9f265cdc637c6f5df1d25b540",
+        "model_policy_sha256": "e454cbe1aad5932483f2dfbf6fca520af20b0c4ac6462d5d2f38d8aca4d67057",
+        "resolved_graph_sha256": "bfdc7c12f22e088e76fa9f70134410375b4c6381b27e86965da695c2d8a38cc1",
+        "source_tree_state": "clean"
+      },
+      "benchmark": {
+        "key": "phase-1-benchmark-3fb7f544",
+        "name": "Phase 1 Benchmark",
+        "project_key": "spirax-pulse",
+        "published_at": "2026-07-17T16:48:04.237409+00:00",
+        "published_contract_schema_version": 2,
+        "source": "azure_postgres_entra",
+        "source_state_sha256": "f3ae4b8824b73df17ded93100d0ff7cff832162de4aff76dab404768fcc5ae7d",
+        "version": 1,
+        "version_id": "b8667849-57a4-4a16-b3ca-4db7cfa98da8"
+      },
+      "configuration": {},
+      "evaluation_profile": {
+        "content_sha256": "21247fd12b0e7c07919d82fb280e6ef8ea43d8a6847486212338cd5d5a821609",
+        "grader_set_sha256": "1705b20c56a1bb41d7d549f8842c57c275a934994665d72e2bcf5cdf273ca612",
+        "id": "spirax-failure-evaluation",
+        "path": "evaluation_configs/spirax-failure-evaluation.eval.yaml",
+        "schema_version": 1,
+        "slice_definition_sha256": "adc4c85a51051dad17445a981144cbbddb920221db4cb0543a51f65e89149e33",
+        "version": 1
+      },
+      "evidence": {
+        "benchmark_source_state_sha256": "f3ae4b8824b73df17ded93100d0ff7cff832162de4aff76dab404768fcc5ae7d",
+        "evidence_recipe_id": "spirax-steam-trap-evidence@v2",
+        "source": "azure_blob",
+        "source_snapshot_contract": "azure-blob-sha256-v1",
+        "storage_account_url": "https://misprxlbdvqdol4f5j2ozla.blob.core.windows.net",
+        "storage_container": "source-snapshots"
+      },
+      "execution": {
+        "ai_execution_policies": [
+          {
+            "model": "azure:gpt-5.6-luna",
+            "output_retries": 0,
+            "processor": "V1_3AlarmClassificationAIWorkflowProcessor",
+            "reasoning_effort": "low",
+            "timeout_seconds_per_attempt": 120,
+            "transport_attempts": 3
+          }
+        ],
+        "error_action": "continue",
+        "max_workers": 4,
+        "runtime": "threaded"
+      },
+      "harness": {
+        "eval_schema_version": 2,
+        "execution_contract_version": 1
+      },
+      "model": {
+        "api": "openai_responses",
+        "id": "azure:gpt-5.6-luna",
+        "input_pricing_policy": "assume_uncached",
+        "pricing": {
+          "billing_plan": "global-standard",
+          "billing_provider": "azure_openai",
+          "cache_write_1h_per_million_tokens": null,
+          "cache_write_5m_per_million_tokens": null,
+          "cache_write_per_million_tokens": null,
+          "cached_input_per_million_tokens": 0.1,
+          "content_sha256": "baf57577b62abb1b798b6df8de4ea0afe3c02eb4dda0b61669271825dcbf86e6",
+          "currency": "USD",
+          "effective_date": "2026-07-01",
+          "estimator_version": 3,
+          "input_per_million_tokens": 1.0,
+          "output_per_million_tokens": 6.0,
+          "reasoning_per_million_tokens": null,
+          "source": "https://prices.azure.com/api/retail/prices",
+          "version": "azure-retail-2026-07-01"
+        },
+        "provider": "azure",
+        "reasoning_effort": "low"
+      },
+      "pipeline": {
+        "content_sha256": "7997e160ff993889c8645f583ad43460a761535c038e6620f982ad300c0eb3d5",
+        "path": "pipeline_configs/v1_3.ppln"
+      },
+      "scoring": {
+        "grader_set_sha256": "1705b20c56a1bb41d7d549f8842c57c275a934994665d72e2bcf5cdf273ca612",
+        "resolved_contract_sha256": "af0400005344bec540c6afae181ff45471001faea0fd1110a04e0d66c9985d93",
+        "slice_definition_sha256": "adc4c85a51051dad17445a981144cbbddb920221db4cb0543a51f65e89149e33"
+      },
+      "source": {
+        "content_manifest_sha256": "c96a5316827c871e2ed59ec4d29eaf008cab636039dead0f52908fafea479572",
+        "git_revision": "339958df3fc325562c1c1e48c22f7f1060b60b78",
+        "tree_state": "dirty"
+      }
+    },
+    "eval_run_id": "eval_50d7caaf1700500e44ebee5b",
+    "graders": [
+      {
+        "config": {},
+        "id": "core.exact",
+        "version": 1
+      },
+      {
+        "config": {},
+        "id": "core.exact",
+        "version": 1
+      }
+    ],
+    "label_schemas": [
+      {
+        "content_sha256": "b3929d13a89f4dab79f986e615d1e8315762af4dc0854f37d48c6620ae336239",
+        "schema_key": "spirax-steam-trap-label",
+        "schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+        "version": "v1"
+      }
+    ],
+    "latest_invocation_id": "inv_4595d0f545404273943a70f533ff48f5",
+    "progress_interval_seconds": 30.0,
+    "run_created_at_utc": "2026-07-24T17:38:26.423159+00:00",
+    "run_id": "eval_50d7caaf1700500e44ebee5b",
+    "run_spec_sha256": "37f2b13dc48c496a671c4129fce4c453655e63a98fe7ec70b63a22775398eca4",
+    "runs_per_example": 3,
+    "schema_version": 2,
+    "scope": "all",
+    "selected_example_scope_sha256": "40650af28a7d5bf5840fe070e824bdfdf54fc4e49c7cbf4891c1da607c00e52f",
+    "slice_counts": {
+      "closed-failure": 27,
+      "expected-failure": 44,
+      "healthy": 26,
+      "open-failure": 12,
+      "unknown-failure": 5
+    },
+    "slices": [
+      {
+        "key": "healthy",
+        "label": "Healthy",
+        "where": {
+          "equals": {
+            "path": [
+              "benchmark",
+              "labels",
+              "classification"
+            ],
+            "value": "Healthy"
+          }
+        }
+      },
+      {
+        "key": "expected-failure",
+        "label": "Expected Failure",
+        "where": {
+          "equals": {
+            "path": [
+              "benchmark",
+              "labels",
+              "classification"
+            ],
+            "value": "Failure"
+          }
+        }
+      },
+      {
+        "key": "open-failure",
+        "label": "Open Failure",
+        "where": {
+          "equals": {
+            "path": [
+              "benchmark",
+              "labels",
+              "root_cause"
+            ],
+            "value": "Open Failure"
+          }
+        }
+      },
+      {
+        "key": "closed-failure",
+        "label": "Closed Failure",
+        "where": {
+          "equals": {
+            "path": [
+              "benchmark",
+              "labels",
+              "root_cause"
+            ],
+            "value": "Closed Failure"
+          }
+        }
+      },
+      {
+        "key": "unknown-failure",
+        "label": "Unknown Failure",
+        "where": {
+          "equals": {
+            "path": [
+              "benchmark",
+              "labels",
+              "root_cause"
+            ],
+            "value": "Unknown"
+          }
+        }
+      }
+    ],
+    "started_at_utc": "2026-07-24T17:38:26.423159+00:00"
+  },
+  "schema_version": 2,
+  "summary": {
+    "accuracy": {
+      "by_field": {
+        "classification": {
+          "accuracy": 0.8904761904761904,
+          "by_confidence": {
+            "High": {
+              "accuracy": 0.9467455621301775,
+              "correct_runs": 160,
+              "evaluated_runs": 169
+            },
+            "Low": {
+              "accuracy": 0.6585365853658537,
+              "correct_runs": 27,
+              "evaluated_runs": 41
+            }
+          },
+          "by_expected_value": {
+            "Failure": {
+              "accuracy": 0.9393939393939394,
+              "correct_runs": 124,
+              "evaluated_runs": 132
+            },
+            "Healthy": {
+              "accuracy": 0.8076923076923077,
+              "correct_runs": 63,
+              "evaluated_runs": 78
+            }
+          },
+          "correct_runs": 187,
+          "evaluated_runs": 210
+        },
+        "root_cause": {
+          "accuracy": 0.8106060606060606,
+          "by_confidence": {
+            "High": {
+              "accuracy": 0.9052631578947369,
+              "correct_runs": 86,
+              "evaluated_runs": 95
+            },
+            "Low": {
+              "accuracy": 0.5675675675675675,
+              "correct_runs": 21,
+              "evaluated_runs": 37
+            }
+          },
+          "by_expected_value": {
+            "Closed Failure": {
+              "accuracy": 0.8148148148148148,
+              "correct_runs": 66,
+              "evaluated_runs": 81
+            },
+            "Open Failure": {
+              "accuracy": 0.9444444444444444,
+              "correct_runs": 34,
+              "evaluated_runs": 36
+            },
+            "Unknown": {
+              "accuracy": 0.4666666666666667,
+              "correct_runs": 7,
+              "evaluated_runs": 15
+            }
+          },
+          "correct_runs": 107,
+          "evaluated_runs": 132
+        }
+      },
+      "by_slice": {
+        "closed-failure": {
+          "by_field": {
+            "classification": {
+              "accuracy": 0.9135802469135802,
+              "by_confidence": {
+                "High": {
+                  "accuracy": 0.9491525423728814,
+                  "correct_runs": 56,
+                  "evaluated_runs": 59
+                },
+                "Low": {
+                  "accuracy": 0.8181818181818182,
+                  "correct_runs": 18,
+                  "evaluated_runs": 22
+                }
+              },
+              "by_expected_value": {
+                "Failure": {
+                  "accuracy": 0.9135802469135802,
+                  "correct_runs": 74,
+                  "evaluated_runs": 81
+                }
+              },
+              "correct_runs": 74,
+              "evaluated_runs": 81
+            },
+            "root_cause": {
+              "accuracy": 0.8148148148148148,
+              "by_confidence": {
+                "High": {
+                  "accuracy": 0.9193548387096774,
+                  "correct_runs": 57,
+                  "evaluated_runs": 62
+                },
+                "Low": {
+                  "accuracy": 0.47368421052631576,
+                  "correct_runs": 9,
+                  "evaluated_runs": 19
+                }
+              },
+              "by_expected_value": {
+                "Closed Failure": {
+                  "accuracy": 0.8148148148148148,
+                  "correct_runs": 66,
+                  "evaluated_runs": 81
+                }
+              },
+              "correct_runs": 66,
+              "evaluated_runs": 81
+            }
+          },
+          "complete_evaluation": {
+            "accuracy": 0.8148148148148148,
+            "correct_runs": 66,
+            "evaluated_runs": 81
+          }
+        },
+        "expected-failure": {
+          "by_field": {
+            "classification": {
+              "accuracy": 0.9393939393939394,
+              "by_confidence": {
+                "High": {
+                  "accuracy": 0.9607843137254902,
+                  "correct_runs": 98,
+                  "evaluated_runs": 102
+                },
+                "Low": {
+                  "accuracy": 0.8666666666666667,
+                  "correct_runs": 26,
+                  "evaluated_runs": 30
+                }
+              },
+              "by_expected_value": {
+                "Failure": {
+                  "accuracy": 0.9393939393939394,
+                  "correct_runs": 124,
+                  "evaluated_runs": 132
+                }
+              },
+              "correct_runs": 124,
+              "evaluated_runs": 132
+            },
+            "root_cause": {
+              "accuracy": 0.8106060606060606,
+              "by_confidence": {
+                "High": {
+                  "accuracy": 0.9052631578947369,
+                  "correct_runs": 86,
+                  "evaluated_runs": 95
+                },
+                "Low": {
+                  "accuracy": 0.5675675675675675,
+                  "correct_runs": 21,
+                  "evaluated_runs": 37
+                }
+              },
+              "by_expected_value": {
+                "Closed Failure": {
+                  "accuracy": 0.8148148148148148,
+                  "correct_runs": 66,
+                  "evaluated_runs": 81
+                },
+                "Open Failure": {
+                  "accuracy": 0.9444444444444444,
+                  "correct_runs": 34,
+                  "evaluated_runs": 36
+                },
+                "Unknown": {
+                  "accuracy": 0.4666666666666667,
+                  "correct_runs": 7,
+                  "evaluated_runs": 15
+                }
+              },
+              "correct_runs": 107,
+              "evaluated_runs": 132
+            }
+          },
+          "complete_evaluation": {
+            "accuracy": 0.8106060606060606,
+            "correct_runs": 107,
+            "evaluated_runs": 132
+          }
+        },
+        "healthy": {
+          "by_field": {
+            "classification": {
+              "accuracy": 0.8076923076923077,
+              "by_confidence": {
+                "High": {
+                  "accuracy": 0.9253731343283582,
+                  "correct_runs": 62,
+                  "evaluated_runs": 67
+                },
+                "Low": {
+                  "accuracy": 0.09090909090909091,
+                  "correct_runs": 1,
+                  "evaluated_runs": 11
+                }
+              },
+              "by_expected_value": {
+                "Healthy": {
+                  "accuracy": 0.8076923076923077,
+                  "correct_runs": 63,
+                  "evaluated_runs": 78
+                }
+              },
+              "correct_runs": 63,
+              "evaluated_runs": 78
+            },
+            "root_cause": {
+              "accuracy": null,
+              "by_confidence": {},
+              "by_expected_value": {},
+              "correct_runs": 0,
+              "evaluated_runs": 0
+            }
+          },
+          "complete_evaluation": {
+            "accuracy": 0.8076923076923077,
+            "correct_runs": 63,
+            "evaluated_runs": 78
+          }
+        },
+        "open-failure": {
+          "by_field": {
+            "classification": {
+              "accuracy": 0.9722222222222222,
+              "by_confidence": {
+                "High": {
+                  "accuracy": 0.967741935483871,
+                  "correct_runs": 30,
+                  "evaluated_runs": 31
+                },
+                "Low": {
+                  "accuracy": 1.0,
+                  "correct_runs": 5,
+                  "evaluated_runs": 5
+                }
+              },
+              "by_expected_value": {
+                "Failure": {
+                  "accuracy": 0.9722222222222222,
+                  "correct_runs": 35,
+                  "evaluated_runs": 36
+                }
+              },
+              "correct_runs": 35,
+              "evaluated_runs": 36
+            },
+            "root_cause": {
+              "accuracy": 0.9444444444444444,
+              "by_confidence": {
+                "High": {
+                  "accuracy": 0.9666666666666667,
+                  "correct_runs": 29,
+                  "evaluated_runs": 30
+                },
+                "Low": {
+                  "accuracy": 0.8333333333333334,
+                  "correct_runs": 5,
+                  "evaluated_runs": 6
+                }
+              },
+              "by_expected_value": {
+                "Open Failure": {
+                  "accuracy": 0.9444444444444444,
+                  "correct_runs": 34,
+                  "evaluated_runs": 36
+                }
+              },
+              "correct_runs": 34,
+              "evaluated_runs": 36
+            }
+          },
+          "complete_evaluation": {
+            "accuracy": 0.9444444444444444,
+            "correct_runs": 34,
+            "evaluated_runs": 36
+          }
+        },
+        "unknown-failure": {
+          "by_field": {
+            "classification": {
+              "accuracy": 1.0,
+              "by_confidence": {
+                "High": {
+                  "accuracy": 1.0,
+                  "correct_runs": 12,
+                  "evaluated_runs": 12
+                },
+                "Low": {
+                  "accuracy": 1.0,
+                  "correct_runs": 3,
+                  "evaluated_runs": 3
+                }
+              },
+              "by_expected_value": {
+                "Failure": {
+                  "accuracy": 1.0,
+                  "correct_runs": 15,
+                  "evaluated_runs": 15
+                }
+              },
+              "correct_runs": 15,
+              "evaluated_runs": 15
+            },
+            "root_cause": {
+              "accuracy": 0.4666666666666667,
+              "by_confidence": {
+                "High": {
+                  "accuracy": 0.0,
+                  "correct_runs": 0,
+                  "evaluated_runs": 3
+                },
+                "Low": {
+                  "accuracy": 0.5833333333333334,
+                  "correct_runs": 7,
+                  "evaluated_runs": 12
+                }
+              },
+              "by_expected_value": {
+                "Unknown": {
+                  "accuracy": 0.4666666666666667,
+                  "correct_runs": 7,
+                  "evaluated_runs": 15
+                }
+              },
+              "correct_runs": 7,
+              "evaluated_runs": 15
+            }
+          },
+          "complete_evaluation": {
+            "accuracy": 0.4666666666666667,
+            "correct_runs": 7,
+            "evaluated_runs": 15
+          }
+        }
+      },
+      "complete_evaluation": {
+        "accuracy": 0.8095238095238095,
+        "correct_runs": 170,
+        "evaluated_runs": 210
+      }
+    },
+    "cost": {
+      "actual_by_currency": {},
+      "attempts_with_cost_observations": 210,
+      "complete_unit_cost_by_currency": {
+        "USD": {
+          "average": 0.011684871428571428,
+          "count": 210,
+          "p5": 0.01062095,
+          "p95": 0.013077199999999999,
+          "total": 2.453823
+        }
+      },
+      "estimated_by_currency": {
+        "USD": 2.4538229999999985
+      },
+      "recorded_attempts": 210,
+      "status_counts": {
+        "estimated_complete": 210
+      },
+      "units_with_complete_cost_observations": 210,
+      "units_with_partial_pricing": 0,
+      "units_without_usable_cost_information": 0
+    },
+    "execution_recovery": {
+      "execution_generations": 210,
+      "logical_work_items": 210,
+      "missing_work_items": 0,
+      "recorded_work_items": 210,
+      "rerun_generations": 0
+    },
+    "nondeterminism": {
+      "by_example": {
+        "250000101|2024-11-03T14:00:32": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250000116|2026-03-04T08:01:36": {
+          "complete_correctness_distribution": {
+            "correct": 1,
+            "incorrect": 2
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 1,
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 2
+          },
+          "scored_repetitions": 3
+        },
+        "250000214|2025-10-20T05:25:06": {
+          "complete_correctness_distribution": {
+            "correct": 0,
+            "incorrect": 3
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 2,
+            "527aa97957519aecb1c7509df1ee6195251bb50f1e44b807a988240b27013725": 1
+          },
+          "scored_repetitions": 3
+        },
+        "250000642|2025-05-07T20:56:38": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250001578|2026-01-06T09:34:00": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250001616|2024-04-09T19:33:43": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250002155|2024-12-25T17:55:46": {
+          "complete_correctness_distribution": {
+            "correct": 2,
+            "incorrect": 1
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 2,
+            "527aa97957519aecb1c7509df1ee6195251bb50f1e44b807a988240b27013725": 1
+          },
+          "scored_repetitions": 3
+        },
+        "250002410|2025-01-21T20:41:07": {
+          "complete_correctness_distribution": {
+            "correct": 0,
+            "incorrect": 3
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250002765|2026-02-21T02:11:24": {
+          "complete_correctness_distribution": {
+            "correct": 2,
+            "incorrect": 1
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 1,
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 2
+          },
+          "scored_repetitions": 3
+        },
+        "250002804|2026-03-17T02:33:11": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250003032|2024-06-27T19:23:30": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250003575|2026-03-17T06:48:00": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250003602|2026-03-17T02:30:43": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250003694|2024-10-08T14:37:16": {
+          "complete_correctness_distribution": {
+            "correct": 0,
+            "incorrect": 3
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "527aa97957519aecb1c7509df1ee6195251bb50f1e44b807a988240b27013725": 1,
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 2
+          },
+          "scored_repetitions": 3
+        },
+        "250003740|2026-03-17T04:42:58": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250003873|2026-03-08T13:24:10": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250003921|2026-03-17T06:53:01": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250003969|2026-03-09T00:13:56": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "527aa97957519aecb1c7509df1ee6195251bb50f1e44b807a988240b27013725": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250004137|2026-02-24T08:29:14": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250004177|2026-02-07T00:14:51": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250004218|2025-10-30T12:59:43": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250004325|2025-04-10T17:11:11": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250004348|2026-01-15T02:24:28": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250004418|2026-03-17T04:42:04": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250004437|2026-01-28T18:48:06": {
+          "complete_correctness_distribution": {
+            "correct": 2,
+            "incorrect": 1
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 2,
+            "527aa97957519aecb1c7509df1ee6195251bb50f1e44b807a988240b27013725": 1
+          },
+          "scored_repetitions": 3
+        },
+        "250004743|2024-08-08T20:38:12": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250004859|2026-03-17T11:09:22": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250004862|2026-03-17T11:08:05": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250004871|2026-03-17T11:07:54": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250004877|2024-08-15T08:48:21": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250005067|2026-01-19T12:48:30": {
+          "complete_correctness_distribution": {
+            "correct": 2,
+            "incorrect": 1
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 2,
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 1
+          },
+          "scored_repetitions": 3
+        },
+        "250005150|2025-10-20T01:34:20": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250005354|2026-03-17T11:06:43": {
+          "complete_correctness_distribution": {
+            "correct": 0,
+            "incorrect": 3
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250005404|2026-03-13T11:55:27": {
+          "complete_correctness_distribution": {
+            "correct": 1,
+            "incorrect": 2
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 1,
+            "527aa97957519aecb1c7509df1ee6195251bb50f1e44b807a988240b27013725": 2
+          },
+          "scored_repetitions": 3
+        },
+        "250005500|2026-03-17T06:47:26": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250005501|2024-09-18T17:07:25": {
+          "complete_correctness_distribution": {
+            "correct": 1,
+            "incorrect": 2
+          },
+          "distinct_output_count": 3,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 1,
+            "527aa97957519aecb1c7509df1ee6195251bb50f1e44b807a988240b27013725": 1,
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 1
+          },
+          "scored_repetitions": 3
+        },
+        "250005577|2025-01-24T14:25:40": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250005605|2025-10-03T01:08:35": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250005653|2025-10-25T10:09:11": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250005692|2025-10-31T01:39:54": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250005696|2026-01-13T05:36:58": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250005732|2026-02-17T18:22:10": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 3
+          },
+          "scored_repetitions": 3
+        },
+        "250005883|2025-11-26T17:38:20": {
+          "complete_correctness_distribution": {
+            "correct": 1,
+            "incorrect": 2
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 1,
+            "527aa97957519aecb1c7509df1ee6195251bb50f1e44b807a988240b27013725": 2
+          },
+          "scored_repetitions": 3
+        },
+        "260000115|2026-03-07T22:07:58": {
+          "complete_correctness_distribution": {
+            "correct": 2,
+            "incorrect": 1
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 1,
+            "527aa97957519aecb1c7509df1ee6195251bb50f1e44b807a988240b27013725": 2
+          },
+          "scored_repetitions": 3
+        },
+        "260000116|2026-01-21T20:14:04": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260000143|2026-03-11T01:39:27": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260000167|2025-03-02T14:55:43": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260000170|2026-02-25T01:43:53": {
+          "complete_correctness_distribution": {
+            "correct": 2,
+            "incorrect": 1
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 1,
+            "527aa97957519aecb1c7509df1ee6195251bb50f1e44b807a988240b27013725": 2
+          },
+          "scored_repetitions": 3
+        },
+        "260000292|2026-03-17T09:02:42": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260000374|2025-04-20T07:04:26": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260000478|2025-10-15T18:45:05": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260000499|2025-03-03T10:50:22": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260000510|2025-10-09T23:50:11": {
+          "complete_correctness_distribution": {
+            "correct": 0,
+            "incorrect": 3
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260000701|2026-03-16T17:55:13": {
+          "complete_correctness_distribution": {
+            "correct": 1,
+            "incorrect": 2
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 2,
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 1
+          },
+          "scored_repetitions": 3
+        },
+        "260000953|2026-02-18T20:16:00": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260001111|2026-03-17T02:35:35": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260001345|2026-01-30T02:44:00": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260001377|2026-03-03T06:04:25": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260001438|2026-03-08T00:24:00": {
+          "complete_correctness_distribution": {
+            "correct": 1,
+            "incorrect": 2
+          },
+          "distinct_output_count": 3,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 1,
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 1,
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 1
+          },
+          "scored_repetitions": 3
+        },
+        "260001535|2025-12-09T15:37:41": {
+          "complete_correctness_distribution": {
+            "correct": 1,
+            "incorrect": 2
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 1,
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 2
+          },
+          "scored_repetitions": 3
+        },
+        "260001642|2026-03-17T11:12:07": {
+          "complete_correctness_distribution": {
+            "correct": 1,
+            "incorrect": 2
+          },
+          "distinct_output_count": 3,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 1,
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 1,
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 1
+          },
+          "scored_repetitions": 3
+        },
+        "260001742|2025-10-17T20:23:09": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260002518|2025-11-20T20:16:19": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260002680|2026-03-12T14:21:29": {
+          "complete_correctness_distribution": {
+            "correct": 1,
+            "incorrect": 2
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 2,
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 1
+          },
+          "scored_repetitions": 3
+        },
+        "260002782|2026-02-20T17:32:41": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "c8258cf05e73529574b7f3082601f047ad02d29542df815dd939022df95dba6b": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260002797|2026-02-08T06:26:07": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260002816|2026-03-17T11:08:17": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260003042|2026-03-17T04:39:09": {
+          "complete_correctness_distribution": {
+            "correct": 2,
+            "incorrect": 1
+          },
+          "distinct_output_count": 2,
+          "output_distribution": {
+            "3e6048cfb7802fa30a428fd04ce1171531bba8007efcd0172ba4a0f8cd581281": 1,
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 2
+          },
+          "scored_repetitions": 3
+        },
+        "260003441|2026-03-17T08:58:12": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        },
+        "260003552|2026-03-17T04:38:26": {
+          "complete_correctness_distribution": {
+            "correct": 3,
+            "incorrect": 0
+          },
+          "distinct_output_count": 1,
+          "output_distribution": {
+            "fef5301ea972a8a7e6439fa905cc32b3a51a77667dca3d8a53be8be1f64dca00": 3
+          },
+          "scored_repetitions": 3
+        }
+      },
+      "examples_with_multiple_scored_repetitions": 70,
+      "output_agreement_rate": 0.7428571428571429,
+      "unanimous_output_examples": 52,
+      "unstable_output_examples": 18
+    },
+    "reliability": {
+      "execution_status_counts": {
+        "completed": 210
+      },
+      "failures_by_type": {},
+      "output_contract_status_counts": {
+        "valid": 210
+      },
+      "output_contract_validity_rate": 1.0,
+      "planned_runs": 210,
+      "recorded_runs": 210
+    },
+    "runs_per_example": 3,
+    "scoring_coverage": {
+      "coverage": 1.0,
+      "grader_completion_rate": 1.0,
+      "planned_runs": 210,
+      "scored_runs": 210,
+      "status_counts": {
+        "scored": 210
+      }
+    },
+    "timing": {
+      "evaluation_active_wall_seconds": 752.5574129169108
+    },
+    "total_examples": 70,
+    "usage": {
+      "attempts_with_usage": 210,
+      "availability": "available",
+      "recorded_attempts": 210,
+      "totals": {
+        "cache_write_tokens": 0,
+        "cached_input_tokens": 650240,
+        "input_tokens": 1946733,
+        "output_tokens": 84515,
+        "output_validation_attempts": 210,
+        "reasoning_tokens": 43978,
+        "requests": 210,
+        "tool_calls": 0,
+        "total_tokens": 2031248
+      }
+    }
+  }
+}

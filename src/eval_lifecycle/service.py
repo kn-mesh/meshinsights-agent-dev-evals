@@ -89,6 +89,7 @@ class EvalLifecycleService:
                 "performance, speed, latency, retry, and invocation detail",
                 "tool traces and intermediate review objects",
                 "local copies of Azure evidence",
+                "the complete source working eval after retained verification",
             ],
         }
 
@@ -98,13 +99,18 @@ class EvalLifecycleService:
         prepared = self._prepare_elevation(run_id)
         destination: Path = prepared["destination"]
         if destination.exists():
-            self.verify(prepared["retained_eval_id"])
+            verified = self.verify(prepared["retained_eval_id"])
+            source_deletion = self.delete_working(run_id, confirmed=True)
             return {
                 "operation": "elevate",
                 "created": False,
                 "retained_eval_id": prepared["retained_eval_id"],
                 "path": self._relative(destination),
                 "agent_version_id": prepared["agent_version_id"],
+                "verified": verified["verified"],
+                "source_deleted": True,
+                "source_files_deleted": source_deletion["files_deleted"],
+                "source_bytes_deleted": source_deletion["bytes_deleted"],
             }
 
         staging_root = self.retained_root / ".staging"
@@ -155,6 +161,7 @@ class EvalLifecycleService:
             shutil.rmtree(staging, ignore_errors=True)
 
         verified = self.verify(prepared["retained_eval_id"])
+        source_deletion = self.delete_working(run_id, confirmed=True)
         return {
             "operation": "elevate",
             "created": True,
@@ -162,6 +169,9 @@ class EvalLifecycleService:
             "path": self._relative(destination),
             "agent_version_id": prepared["agent_version_id"],
             "verified": verified["verified"],
+            "source_deleted": True,
+            "source_files_deleted": source_deletion["files_deleted"],
+            "source_bytes_deleted": source_deletion["bytes_deleted"],
         }
 
     def verify(self, retained_eval_id: str) -> dict[str, Any]:

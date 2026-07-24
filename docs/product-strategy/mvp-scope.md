@@ -272,7 +272,9 @@ It is one operation that:
    token, and cost information required for later review;
 6. removes detailed speed, latency, invocation, and other disposable
    performance data from the retained representation; and
-7. leaves the retained eval protected from ordinary working-run cleanup.
+7. verifies the retained eval and linked agent artifacts;
+8. permanently removes the source working eval; and
+9. leaves the retained eval protected from ordinary working-run cleanup.
 
 A retained eval and its retained agent version must not become detached. If one
 is retained, the other is retained through the same elevation operation.
@@ -312,6 +314,8 @@ required:
 
 - `working/` contains complete, immediately reviewable, disposable run detail;
 - `retained/` contains a small number of durable aggregate artifacts;
+- a successfully elevated occurrence exists only under `retained/`, never in
+  both lifecycle roots;
 - `units.json` contains per-unit expected outputs, full AI outputs, validation,
   grading outcomes, and review-critical metadata without requiring one file per
   unit;
@@ -340,8 +344,9 @@ eval lifecycle:
 3. run or resume an eval;
 4. inspect the working eval through Codex or the local app;
 5. elevate a meaningful eval and its agent version;
-6. verify the retained artifacts; and
-7. permanently delete disposable working evals or, less frequently, an exact
+6. verify the retained artifacts and remove the source working eval as one
+   elevation transaction; and
+7. permanently delete non-elevated disposable working evals or, less frequently, an exact
    retained eval.
 
 The skill must explain the folder contract, the difference between working and

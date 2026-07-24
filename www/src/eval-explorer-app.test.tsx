@@ -191,7 +191,9 @@ describe("EvalExplorerApp workflow", () => {
 
     expect(container.textContent).toContain("Failure classification");
     expect(container.textContent).toContain("Failure classification · High");
-    expect(container.textContent).toContain("Root cause classification · Low");
+    expect(container.textContent).toContain("Root cause classification · High");
+    expect(container.textContent).not.toContain("Failure classification · Low");
+    expect(container.textContent).not.toContain("Root cause classification · Low");
     expect(container.textContent).not.toContain("Complete evaluation");
     expect(container.textContent).not.toContain("overall accuracy");
     expect(container.textContent).toContain("$12.35");
@@ -209,7 +211,8 @@ describe("EvalExplorerApp workflow", () => {
     await select(byLabel("Filter by lifecycle"), "");
     expect(container.querySelector('[aria-label="Open evaluation run run-a"]')?.parentElement?.textContent).not.toContain("Working");
 
-    await select(byLabel("Sort evaluation runs"), "field:classification:asc");
+    await click(byLabel("Sort by Failure classification"));
+    await click(byLabel("Sort by Failure classification"));
     await waitFor(() => container.querySelector("tbody tr button")?.getAttribute("aria-label")?.includes("run-b") === true);
     expect(new URL(window.location.href).searchParams.get("sort")).toBe("field:classification:asc");
 

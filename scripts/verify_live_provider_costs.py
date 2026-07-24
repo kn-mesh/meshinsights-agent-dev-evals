@@ -28,7 +28,7 @@ from src.evals.eval_orchestration import _estimate_cost_from_usage
 DEFAULT_MODELS = (
     "azure:gpt-5.6-luna",
     "azure:claude-haiku-4-5",
-    "google:gemini-3.1-flash-lite",
+    "google:gemini-3.5-flash-lite",
 )
 
 

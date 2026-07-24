@@ -149,7 +149,9 @@ compact aggregate containing `manifest.json`,
 `evidence-references.json`, and an optional `agent.patch`. Retained evals never
 contain per-unit files, performance detail, review objects, or local copies of
 Azure evidence. Shared meaningful agent-version records live under
-`eval_results/retained/agent_versions/`.
+`eval_results/retained/agent_versions/`. After retained verification succeeds,
+elevation permanently removes the source working occurrence so one eval is not
+listed in both lifecycle states.
 
 The explorer reconstructs evidence from each working run manifest or retained
 eval's exact Azure storage references. It does not re-query the current
@@ -189,7 +191,8 @@ and retained evals, previews and performs full-run elevation, verifies compact
 retained artifacts, and permanently deletes an exact working or retained eval.
 Elevation preserves the benchmark and agent identities, aggregate results,
 full final AI outputs, grading, usage/cost, relevant Git provenance, and exact
-Azure evidence references while pruning disposable detail.
+Azure evidence references while pruning disposable detail. It verifies the
+retained artifacts before permanently deleting the source working occurrence.
 
 Deletion is immediate and unrecoverable. Retained deletion requires the exact
 retained ID twice, and a shared agent version remains until its last retained

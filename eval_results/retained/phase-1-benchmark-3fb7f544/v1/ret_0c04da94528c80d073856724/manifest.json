@@ -1,0 +1,62 @@
+{
+  "agent_version_id": "av_666fe01a1a7ed6819e0a2d16",
+  "agent_version_manifest_sha256": "666fe01a1a7ed6819e0a2d16ec72ae03137041d9f265cdc637c6f5df1d25b540",
+  "artifacts": {
+    "agent-provenance.json": {
+      "byte_size": 43939,
+      "sha256": "f0ee99646f9506d340811f76bd59510d2948ccd450c5626e510b8b7924cd8b25"
+    },
+    "evidence-references.json": {
+      "byte_size": 164770,
+      "sha256": "9aa6e6cbb6ea301f1598e63b09c0b523de5f31cb4cecc70ddae4bf802d2684ee"
+    },
+    "result.json": {
+      "byte_size": 47997,
+      "sha256": "30f47ebb2d8e1a867d5bac75410014656d067200c8d971071ec4a85813774c2a"
+    },
+    "units.json": {
+      "byte_size": 2038068,
+      "sha256": "4c35200b486287384bb6972b408e3c28048d0bb30031a09c2bb4037161d54539"
+    }
+  },
+  "benchmark": {
+    "key": "phase-1-benchmark-3fb7f544",
+    "source_state_sha256": "f3ae4b8824b73df17ded93100d0ff7cff832162de4aff76dab404768fcc5ae7d",
+    "version": 1,
+    "version_id": "b8667849-57a4-4a16-b3ca-4db7cfa98da8"
+  },
+  "created_at_utc": "2026-07-24T17:51:18.947996+00:00",
+  "identity_seed": {
+    "agent_version_id": "av_666fe01a1a7ed6819e0a2d16",
+    "agent_version_manifest_sha256": "666fe01a1a7ed6819e0a2d16ec72ae03137041d9f265cdc637c6f5df1d25b540",
+    "benchmark": {
+      "key": "phase-1-benchmark-3fb7f544",
+      "source_state_sha256": "f3ae4b8824b73df17ded93100d0ff7cff832162de4aff76dab404768fcc5ae7d",
+      "version": 1,
+      "version_id": "b8667849-57a4-4a16-b3ca-4db7cfa98da8"
+    },
+    "lifecycle_state": "retained",
+    "schema_version": 2,
+    "source_eval_run_id": "eval_50d7caaf1700500e44ebee5b",
+    "source_run_id": "eval_50d7caaf1700500e44ebee5b",
+    "source_run_spec_sha256": "37f2b13dc48c496a671c4129fce4c453655e63a98fe7ec70b63a22775398eca4"
+  },
+  "lifecycle_state": "retained",
+  "pruned_categories": [
+    "attempt_files",
+    "performance",
+    "review_tool_traces",
+    "review_intermediate_objects",
+    "local_evidence_copies"
+  ],
+  "retained_eval_id": "ret_0c04da94528c80d073856724",
+  "schema_version": 2,
+  "source_eval_run_id": "eval_50d7caaf1700500e44ebee5b",
+  "source_provenance": {
+    "dirty_overlay_sha256": null,
+    "git_revision": "339958df3fc325562c1c1e48c22f7f1060b60b78",
+    "tree_state": "clean"
+  },
+  "source_run_id": "eval_50d7caaf1700500e44ebee5b",
+  "source_run_spec_sha256": "37f2b13dc48c496a671c4129fce4c453655e63a98fe7ec70b63a22775398eca4"
+}

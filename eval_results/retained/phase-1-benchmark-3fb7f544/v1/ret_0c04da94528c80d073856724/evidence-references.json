@@ -1,0 +1,3569 @@
+{
+  "benchmark_source_state_sha256": "f3ae4b8824b73df17ded93100d0ff7cff832162de4aff76dab404768fcc5ae7d",
+  "evidence_recipe_id": "spirax-steam-trap-evidence@v2",
+  "examples": [
+    {
+      "decision_timestamp": "2024-11-03T14:00:32+00:00",
+      "example_id": "250000101|2024-11-03T14:00:32",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Invista Inc. - Maitland, ON",
+        "sensor_id": "250000101",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "4b052205-90a7-4069-9ea6-b169b64a409e",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:56.512693Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 332,
+          "content_sha256": "6d9271132038c977b6694a9d66d43d5c311fd49d9909d9587a74da7c7bac1d32",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_27a61fb99fbfb12a/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 468545,
+          "content_sha256": "d0490a6b5149bcc18a0a764f19c63cf0d869ede3f27be17748b41fa872cfb8ac",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_27a61fb99fbfb12a/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "d09af0bd7f84b8fb23b765a0a1069ea46f71cdfdc9e274c744c7a0b74bbf6e76",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2024-11-03T14:00:32+00:00",
+      "raw_window_start": "2023-11-04T14:00:32+00:00",
+      "source_snapshot_id": "spirax_src_27a61fb99fbfb12a",
+      "unit_id": "250000101"
+    },
+    {
+      "decision_timestamp": "2026-03-04T08:01:36+00:00",
+      "example_id": "250000116|2026-03-04T08:01:36",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250000116",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Early signs of an abrupt closed failure. Haven't seen this pattern before, and there are plenty of shutdowns. The condesate side doesn't change temp during this steam side drop",
+            "review_event_id": "8575cfd0-31a3-4279-86d2-c5a2812de55a",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:03.485076Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 954,
+          "content_sha256": "973572537f3c1ef70435ed629cd4212e6a1bc1f4d92f32e1915a566909d74e1a",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_104b22cf39c2b357/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 660560,
+          "content_sha256": "d6e7e6109481cf299b46d4707480228131844c9df5eb58aa08b8ddff68d0096d",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_104b22cf39c2b357/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "736bf9a67295a45ec85b5b370e79f341ff968af98d76f306eb7e677a716b9eff",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-04T08:01:36+00:00",
+      "raw_window_start": "2025-03-04T08:01:36+00:00",
+      "source_snapshot_id": "spirax_src_104b22cf39c2b357",
+      "unit_id": "250000116"
+    },
+    {
+      "decision_timestamp": "2025-10-20T05:25:06+00:00",
+      "example_id": "250000214|2025-10-20T05:25:06",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Invista Inc. - Maitland, ON",
+        "sensor_id": "250000214",
+        "source_candidate_list": "reviewed_high_confidence_devices"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "e5eb7c94-6a36-458e-bf4a-55975b63bb04",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:15.106643Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1206,
+          "content_sha256": "ad62a342ae3a2e396cb7c4f4ab60b7ed808da92d75626b65aa530ed72f6fe21e",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_68347e7deb55df4f/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 712487,
+          "content_sha256": "def8833bce9ae0b48ae3663860a3dafa64c17a99f82467f46bb01321d9320554",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_68347e7deb55df4f/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "8b576d74b59894e8afe78bc6f42a6f8c75f1f9c51c8fbaf81d2b089fb2784f79",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-10-20T05:25:06+00:00",
+      "raw_window_start": "2024-10-20T05:25:06+00:00",
+      "source_snapshot_id": "spirax_src_68347e7deb55df4f",
+      "unit_id": "250000214"
+    },
+    {
+      "decision_timestamp": "2025-05-07T20:56:38+00:00",
+      "example_id": "250000642|2025-05-07T20:56:38",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Mohawk Medbuy -old",
+        "sensor_id": "250000642",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Inverted Bucket"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "02d5964f-0101-4031-8b42-51a416844d64",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:56.295387Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 4501,
+          "content_sha256": "cc3e6d359c78cb4cbd6edcc78b36652d2866af7830bbe3a090c7f74284cdca50",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fd8347470591ccf4/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 684368,
+          "content_sha256": "2d5ea3d2f53a83e5dc5550ed045e8b0ae4ee13a649227a29f862a0b0a522a03f",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fd8347470591ccf4/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "67b99eac57522e9cd124f29873b1500eb4618eda9e18e053c1c70cbf70941230",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-05-07T20:56:38+00:00",
+      "raw_window_start": "2024-05-07T20:56:38+00:00",
+      "source_snapshot_id": "spirax_src_fd8347470591ccf4",
+      "unit_id": "250000642"
+    },
+    {
+      "decision_timestamp": "2026-01-06T09:34:00+00:00",
+      "example_id": "250001578|2026-01-06T09:34:00",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250001578",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "None"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Sustained increase in condensate temp ~25 deg over a 1 month period.",
+            "review_event_id": "4f29193c-fbe7-4105-893b-4dfbc2421912",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:05.169262Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 549,
+          "content_sha256": "387f46b89d80c871fd828e31bbc93b9aaeb466d988603a68ec202602f986ef35",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_3cc45240293007a2/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 600864,
+          "content_sha256": "22b0cda317812533b959ef3c494758c12ed63cb49a972e6d63a1918a5676cbfe",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_3cc45240293007a2/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "7cb5236354c3263d618b46ea030643ddb366405c0478a5db20cc523a683a4413",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-01-06T09:34:00+00:00",
+      "raw_window_start": "2025-01-06T09:34:00+00:00",
+      "source_snapshot_id": "spirax_src_3cc45240293007a2",
+      "unit_id": "250001578"
+    },
+    {
+      "decision_timestamp": "2024-04-09T19:33:43+00:00",
+      "example_id": "250001616|2024-04-09T19:33:43",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Resilience Biotechnologies",
+        "sensor_id": "250001616",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "c2980dd8-c814-4955-8543-8c5577d6c411",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:56.008873Z"
+          },
+          {
+            "explanation": "Steam side drops to converge with condensate side ~3 weeks prior to the alarm and has not recovered",
+            "review_event_id": "5dff8625-77ab-49e1-be77-a0db34d4d0ad",
+            "reviewer_display_name": "kneuens1@gmail.com",
+            "reviewer_project_role": "sme",
+            "selected_for_publication": false,
+            "submitted_at": "2026-07-17T16:16:04.126269Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 2061,
+          "content_sha256": "ea86979b9b38510528272e1f9242d5241a4e1d47fd725d3df44894a6a64523c3",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4ef781c129dd78bc/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 553531,
+          "content_sha256": "f7aa9edfea5bdba8c013643f8ee39e10a369e534c549eb9e311464ddd3b2409c",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4ef781c129dd78bc/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "8c0365ecdcf6e12474578d97e3a5d117e119b75e3520c3b46459702c46a10915",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2024-04-09T19:33:43+00:00",
+      "raw_window_start": "2023-04-10T19:33:43+00:00",
+      "source_snapshot_id": "spirax_src_4ef781c129dd78bc",
+      "unit_id": "250001616"
+    },
+    {
+      "decision_timestamp": "2024-12-25T17:55:46+00:00",
+      "example_id": "250002155|2024-12-25T17:55:46",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Cameco Inc.",
+        "sensor_id": "250002155",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "TD"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "173e7558-74e4-47dd-9115-1c69fd7fe79b",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:55.768484Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 907,
+          "content_sha256": "c3c1f5bd2d0f2837c47fb69eacde4bbefe88c389ec7723689526aa071cc74ad2",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_74406be36368299f/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 683622,
+          "content_sha256": "148e5c849e09535c5e7a8f8930cd85512cb4bf4377a2ee226646dd487f1d031b",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_74406be36368299f/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "91f87068e23b09a32c5ee5c1f15c147c5111c5147224a7430a88379ebbd2fbc5",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2024-12-25T17:55:46+00:00",
+      "raw_window_start": "2023-12-26T17:55:46+00:00",
+      "source_snapshot_id": "spirax_src_74406be36368299f",
+      "unit_id": "250002155"
+    },
+    {
+      "decision_timestamp": "2025-01-21T20:41:07+00:00",
+      "example_id": "250002410|2025-01-21T20:41:07",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Resilience Biotechnologies",
+        "sensor_id": "250002410",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "f8a4a482-7c3d-419f-b368-56be1cd3ee91",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:59.166641Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1416,
+          "content_sha256": "a7d22c5a48b079b7ef94659159a8885b76705e116972ab777fa964d1ce113ccc",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_ef3aebae2bb32a6f/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 711797,
+          "content_sha256": "8ff64180010db66216b35bbf1265d8bbffaafdacca800f81856d9ee54e1d0044",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_ef3aebae2bb32a6f/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "d260d5d69c2f37efebeb0c3ce542c0a37fa2fd86d884f05eebb6cb3aece9c1f4",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-01-21T20:41:07+00:00",
+      "raw_window_start": "2024-01-22T20:41:07+00:00",
+      "source_snapshot_id": "spirax_src_ef3aebae2bb32a6f",
+      "unit_id": "250002410"
+    },
+    {
+      "decision_timestamp": "2026-02-21T02:11:24+00:00",
+      "example_id": "250002765|2026-02-21T02:11:24",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250002765",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "90BH"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Increase in condensate temp until ~convergence with steam side temp",
+            "review_event_id": "29010812-655c-42e8-92df-bfda5cab9d10",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:04.339256Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1639,
+          "content_sha256": "47aefa0a6df45beba3205967482f821e8f219546dd10298d89a0cd6c75ce64dc",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a52cefa12b724d95/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 543767,
+          "content_sha256": "1d55925b8296cba3f10be2e15746cd69ce6fcc29f45c75ccd5d3d72ee6759a79",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a52cefa12b724d95/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "fbee2b3bdd9e26106faf28f14265978e368c9ca969fd8361e7efaaf31a36df6a",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-02-21T02:11:24+00:00",
+      "raw_window_start": "2025-02-21T02:11:24+00:00",
+      "source_snapshot_id": "spirax_src_a52cefa12b724d95",
+      "unit_id": "250002765"
+    },
+    {
+      "decision_timestamp": "2026-03-17T02:33:11+00:00",
+      "example_id": "250002804|2026-03-17T02:33:11",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250002804",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "APT 14"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Temp sensors flipped. Healthy temp delta and repeated pattersn",
+            "review_event_id": "bbe49151-efac-4bc0-a511-39736516e953",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:12.959175Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 8795,
+          "content_sha256": "4f8134cfef59466a43a9959c8ab409e7ada249ca25b16c6785bbdf7b8fb43fa5",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4ef5b97649eb6442/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 627218,
+          "content_sha256": "916b39326bc2b15fa12003590888084acee85e24ce87de1eecb6e182dd2f2ba8",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4ef5b97649eb6442/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "21f3273c0c16f0aed691476ae45691d576660402c6a7849a83a87d10760a6da3",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T02:33:11+00:00",
+      "raw_window_start": "2025-03-17T02:33:11+00:00",
+      "source_snapshot_id": "spirax_src_4ef5b97649eb6442",
+      "unit_id": "250002804"
+    },
+    {
+      "decision_timestamp": "2024-06-27T19:23:30+00:00",
+      "example_id": "250003032|2024-06-27T19:23:30",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "London Health Science Centre",
+        "sensor_id": "250003032",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Inverted Bucket"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "4f3dd9a7-53a3-4c09-b9df-a244c704eb82",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:55.470708Z"
+          },
+          {
+            "explanation": "Steam side temp drops over ~3 days before converging with condensate side",
+            "review_event_id": "c4b75fba-858b-45e5-85b0-7978da067aa5",
+            "reviewer_display_name": "kneuens1@gmail.com",
+            "reviewer_project_role": "sme",
+            "selected_for_publication": false,
+            "submitted_at": "2026-07-17T16:16:40.377494Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 688,
+          "content_sha256": "b001dac5bb357187b6ec1d9fd62663351d01a969be9ba1216b8d252cfb3a37db",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_d3e55d6bd6b9f6d1/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 747683,
+          "content_sha256": "f8f84601fe327c8436c0471090d6e4f920ae3320f0cafcdd5150cf72fb0247ac",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_d3e55d6bd6b9f6d1/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "1b25a18956554430346215df3e392878ac0241570bac22a11dc3c4ea42e7df85",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2024-06-27T19:23:30+00:00",
+      "raw_window_start": "2023-06-28T19:23:30+00:00",
+      "source_snapshot_id": "spirax_src_d3e55d6bd6b9f6d1",
+      "unit_id": "250003032"
+    },
+    {
+      "decision_timestamp": "2026-03-17T06:48:00+00:00",
+      "example_id": "250003575|2026-03-17T06:48:00",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250003575",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Inverted Bucket"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Trends have repeated over time, showing consistent normalization",
+            "review_event_id": "a094586d-f1ad-4911-95be-0a36a986defb",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:11.320393Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 6518,
+          "content_sha256": "6face286a74298124c9319bb142bf812d752c740d73ffbc0e7eb1d4fd067ae85",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4269da812af95540/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 791967,
+          "content_sha256": "304206a76bb2e56b5d0d2e87e0c95a2d6d888e43bc6a6eb8b9469432bbf09d2d",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4269da812af95540/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "baed778644ab276eb17161baba47779d5ce7b6a025c92903c3008eeeba34f6f3",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T06:48:00+00:00",
+      "raw_window_start": "2025-03-17T06:48:00+00:00",
+      "source_snapshot_id": "spirax_src_4269da812af95540",
+      "unit_id": "250003575"
+    },
+    {
+      "decision_timestamp": "2026-03-17T02:30:43+00:00",
+      "example_id": "250003602|2026-03-17T02:30:43",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "UHN",
+        "sensor_id": "250003602",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "21174b95-1e5e-491b-a376-1b6c66e20509",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:14.054434Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1395,
+          "content_sha256": "39d696246450f10fe2d1ae877374fb1956d5db9cfe99dadd82ccf519ec7ca8af",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fba4fb9647369756/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 707517,
+          "content_sha256": "d2d200efffbecd9bfbd563db11a3116f8a97082915b7a2373bdb7bbe011222a2",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fba4fb9647369756/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "f42f3c8a476ecec117a5768999c7615b6d19de974cacb94b918d5f4c2318ebb5",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T02:30:43+00:00",
+      "raw_window_start": "2025-03-17T02:30:43+00:00",
+      "source_snapshot_id": "spirax_src_fba4fb9647369756",
+      "unit_id": "250003602"
+    },
+    {
+      "decision_timestamp": "2024-10-08T14:37:16+00:00",
+      "example_id": "250003694|2024-10-08T14:37:16",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "UHN",
+        "sensor_id": "250003694",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "3ed71619-8a27-4bd6-8ebf-4b8dfd99421d",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:55.249417Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 942,
+          "content_sha256": "f8a6792e7d991b6d68b26a4d89ffba2105293a4b27d1da72d79159f55a2960ae",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_98e1e8a55a3f08dd/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 719831,
+          "content_sha256": "9f5e52ba615a95607d96b18dc32323b0263cf3d37de95ba078df53d624ae8a8a",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_98e1e8a55a3f08dd/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "89600ebc73ce3d16c9ae8501ef03279f57edbd9c139def4d95c0dd712be0b941",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2024-10-08T14:37:16+00:00",
+      "raw_window_start": "2023-10-09T14:37:16+00:00",
+      "source_snapshot_id": "spirax_src_98e1e8a55a3f08dd",
+      "unit_id": "250003694"
+    },
+    {
+      "decision_timestamp": "2026-03-17T04:42:58+00:00",
+      "example_id": "250003740|2026-03-17T04:42:58",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "St. Jerome Hospital",
+        "sensor_id": "250003740",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Balanced Pressure"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "501a179f-2c15-4aa8-ac3d-9073148f6058",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:14.349212Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 5069,
+          "content_sha256": "42088f453d61a00bc86c6674fc683e78863e766b27a2188ca3828dd4c15ee3b2",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_3b7d7c4cf4c9d38a/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 712168,
+          "content_sha256": "f7323fd4ffa0fee18b80a9e142c52a3485af933d50d2fa8ddca480be9cd4f3c3",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_3b7d7c4cf4c9d38a/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "2f77793ef45d1f0b9ffe8841d9798ebc8d885c83273ce0055c479beb5c665f3b",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T04:42:58+00:00",
+      "raw_window_start": "2025-03-17T04:42:58+00:00",
+      "source_snapshot_id": "spirax_src_3b7d7c4cf4c9d38a",
+      "unit_id": "250003740"
+    },
+    {
+      "decision_timestamp": "2026-03-08T13:24:10+00:00",
+      "example_id": "250003873|2026-03-08T13:24:10",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250003873",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "N/A"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Steam and condensate are ~equal until a shutdown, after shutdown steam side temp drops ~10 deg below condensate side",
+            "review_event_id": "bd23d32d-8f00-45cd-8931-f6d82bb1415e",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:07.580316Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 2035,
+          "content_sha256": "7a5ce70394f2bb4952e82a7e6a5221aa555261a38f004e4c8100e74b73cb060c",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6f078d3bada018af/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 690806,
+          "content_sha256": "916416f9612713508127c0affd6f0b8b8829fa094b2ec23f1cebab40c6d599d4",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6f078d3bada018af/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "45ff542c48983a140b1992052c7a1639386648595e7a9e6d3b372b89fc97ee66",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-08T13:24:10+00:00",
+      "raw_window_start": "2025-03-08T13:24:10+00:00",
+      "source_snapshot_id": "spirax_src_6f078d3bada018af",
+      "unit_id": "250003873"
+    },
+    {
+      "decision_timestamp": "2026-03-17T06:53:01+00:00",
+      "example_id": "250003921|2026-03-17T06:53:01",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250003921",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "N/A"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "A short term shutdown appeared to trigger alert, but everything looks healthy",
+            "review_event_id": "a845a8a9-35db-432f-a5e9-67f7ced06c28",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:11.004872Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 3340,
+          "content_sha256": "4d26ad22a62d8c9d84aaf7fb684e1579c8bb6400141cb2fd331e161d3297cb20",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_113d469231f997fb/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 714607,
+          "content_sha256": "f25752ceca12bb2a8f12133f71d0a22dc8a13be2c831488abe3ebf1033aa66e1",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_113d469231f997fb/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "290c204270504959486714786976471b2d8ede0e7fa3b18a4b9393c9ffd21ade",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T06:53:01+00:00",
+      "raw_window_start": "2025-03-17T06:53:01+00:00",
+      "source_snapshot_id": "spirax_src_113d469231f997fb",
+      "unit_id": "250003921"
+    },
+    {
+      "decision_timestamp": "2026-03-09T00:13:56+00:00",
+      "example_id": "250003969|2026-03-09T00:13:56",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Gay Lea Foods",
+        "sensor_id": "250003969",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "N/A"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "a9e4f14b-28d2-4baa-b83c-f8fab8cf9edc",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:15.397178Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 331,
+          "content_sha256": "ec101346c0ada06cd23ba374c2e51ff6801c96baa1e198da58b00bad4a8693d6",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c053b54fbac62f83/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 608969,
+          "content_sha256": "36b71764c11256914a8f5720b8ab0790f5b6e99f617db2ffc78ed439368e0b17",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c053b54fbac62f83/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "fce21ab4f9708d77ac9a51574dfe10c69c66e5acef57ba41f6640060ae884efc",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-09T00:13:56+00:00",
+      "raw_window_start": "2025-03-09T00:13:56+00:00",
+      "source_snapshot_id": "spirax_src_c053b54fbac62f83",
+      "unit_id": "250003969"
+    },
+    {
+      "decision_timestamp": "2026-02-24T08:29:14+00:00",
+      "example_id": "250004137|2026-02-24T08:29:14",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250004137",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Gradual increase in condensate temp until ~convergence with steam side temp",
+            "review_event_id": "6704ee42-24ce-4a88-b398-db99a259fe43",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:04.046519Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 540,
+          "content_sha256": "16712c17103f7d08e3f6b9a89b03d8f21270b3b5df3b6be2f76baed671136e05",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_05c02737611b75d8/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 711137,
+          "content_sha256": "f7beb27dc62e9a136f2142e2f869cb95ac6216d514eb20488952f5b498bb91ed",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_05c02737611b75d8/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "1c83ae3da18370679100210b868783581ab69aa6b239ef0071972ff4f0e4d6d2",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-02-24T08:29:14+00:00",
+      "raw_window_start": "2025-02-24T08:29:14+00:00",
+      "source_snapshot_id": "spirax_src_05c02737611b75d8",
+      "unit_id": "250004137"
+    },
+    {
+      "decision_timestamp": "2026-02-07T00:14:51+00:00",
+      "example_id": "250004177|2026-02-07T00:14:51",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250004177",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "TD"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Steam side temp drops in sticky/chattering manner, until eventually sharply dropping below condensate",
+            "review_event_id": "0b411983-8468-41e0-aa0d-29a9c4ffa4d4",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:53.203854Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1127,
+          "content_sha256": "6964834e9878b3fe5d5973c72ea981c3b8d2c3849f3a3b624f13abe28fc456ab",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c479c90239315ee1/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 695518,
+          "content_sha256": "2632e93f25be2942aa148f5546b101d491c7565cdb68f251a39747d1e44ed8f1",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c479c90239315ee1/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "006d55f174a91585676979d16e36156492b93362d495364e06aeda1133e6ec98",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-02-07T00:14:51+00:00",
+      "raw_window_start": "2025-02-07T00:14:51+00:00",
+      "source_snapshot_id": "spirax_src_c479c90239315ee1",
+      "unit_id": "250004177"
+    },
+    {
+      "decision_timestamp": "2025-10-30T12:59:43+00:00",
+      "example_id": "250004218|2025-10-30T12:59:43",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250004218",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Ball float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Sticky trap behavior over last week, clear deviation from historic trend",
+            "review_event_id": "24e5dd33-74f3-4217-9fb0-366d6837f4fb",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:07.051727Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1087,
+          "content_sha256": "542c3310cc12e1a44ed403f8eff356a90d89e4848a83db0a177a5889d1b8a438",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6f107c707ae723ca/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 569114,
+          "content_sha256": "8aa692c8a3ca7b8ca22232812c2a080fbf7eacb4f5a36b67cd4b8baa21da3016",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6f107c707ae723ca/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "f9c201dbdadada28cdb6af16fe9af6d3360f190dd6ae34ea2a0967b62a4bc8b3",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-10-30T12:59:43+00:00",
+      "raw_window_start": "2024-10-30T12:59:43+00:00",
+      "source_snapshot_id": "spirax_src_6f107c707ae723ca",
+      "unit_id": "250004218"
+    },
+    {
+      "decision_timestamp": "2025-04-10T17:11:11+00:00",
+      "example_id": "250004325|2025-04-10T17:11:11",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Laval University",
+        "sensor_id": "250004325",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "934353ea-bcc1-492c-a24b-afb271fb3316",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:57.575254Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 750,
+          "content_sha256": "7d264befcdf6de216c4198aa5266054ad6ffc4640c7930403bfc2d8dfff07ed3",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_816a7ba3df42097e/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 457719,
+          "content_sha256": "c75f87419a95c2ec1328dbe9a7a5919b30432b3c1394926cc28a58879786988e",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_816a7ba3df42097e/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "f8164bd31da0933cb532bcdca05f4e4271ae6d66bf015a85c6c67f6c15fc25a2",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-04-10T17:11:11+00:00",
+      "raw_window_start": "2024-04-10T17:11:11+00:00",
+      "source_snapshot_id": "spirax_src_816a7ba3df42097e",
+      "unit_id": "250004325"
+    },
+    {
+      "decision_timestamp": "2026-01-15T02:24:28+00:00",
+      "example_id": "250004348|2026-01-15T02:24:28",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250004348",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "TD"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Trends have repeated over time, showing consistent normalization. Slightly lower temps during most recent occurance",
+            "review_event_id": "fb3a297b-633e-45df-a581-57c8bca55150",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:09.206722Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 4811,
+          "content_sha256": "7655a9f2ae1772529ca8315e92fe69fae8979628d1e7a959d64e7cecb08bd403",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c2f54490783f01c1/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 547802,
+          "content_sha256": "dabe43fef2da437cafe6fe1f30a548bae2c69ee8bb7872353d368d301644a975",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c2f54490783f01c1/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "f2998e0ada2f028e827a1de665aeef7a45ec7203e88917665b35adb2b0339fcf",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-01-15T02:24:28+00:00",
+      "raw_window_start": "2025-01-15T02:24:28+00:00",
+      "source_snapshot_id": "spirax_src_c2f54490783f01c1",
+      "unit_id": "250004348"
+    },
+    {
+      "decision_timestamp": "2026-03-17T04:42:04+00:00",
+      "example_id": "250004418|2026-03-17T04:42:04",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250004418",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "No issues detected, lots of noise but steady trend w/ healthy temp delta",
+            "review_event_id": "4ef56aba-6fe8-40c8-8700-0ed3b235f560",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:12.087782Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 8795,
+          "content_sha256": "9daab4b617e77e73ad9ffa8402c37c7a9f4c49a10b6d51907253f695f16035f7",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_7da6fcb7fecc9534/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 676180,
+          "content_sha256": "56a51734becd5507285ec09ec9eebb67e33aea75c925cb6ae9777f5c467868da",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_7da6fcb7fecc9534/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "2435a9eb523c691c3dd3e7eef89f5edd45e91ed6817ad6368352e7ac5bb870de",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T04:42:04+00:00",
+      "raw_window_start": "2025-03-17T04:42:04+00:00",
+      "source_snapshot_id": "spirax_src_7da6fcb7fecc9534",
+      "unit_id": "250004418"
+    },
+    {
+      "decision_timestamp": "2026-01-28T18:48:06+00:00",
+      "example_id": "250004437|2026-01-28T18:48:06",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250004437",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "FT14HC"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Closed failure occurred ~10 days before a shutdown in late December. This is depicted by stem side temperature converging to the condensate side temp (actually a bit below).\n\nAfter a recent shutdown and startup, the failure appears present.",
+            "review_event_id": "96a3b3a5-a5f5-4c04-b287-67c5c4657c34",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-15T17:12:15.003052Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1371,
+          "content_sha256": "496d6035c133e329d8d2fa2d8917b85c0a1147a1dd88be408c0952909f0f9585",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a044c0083d169275/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 766564,
+          "content_sha256": "b1cca51df6e319bd3e1f0cbc7fbf3d73b14f1a7bfd07813419ae1356d7a1e54f",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a044c0083d169275/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "1cfdece1044be9d4529d58465c5ff98454740248a7a7bb810d16ee0c7da79f9d",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-01-28T18:48:06+00:00",
+      "raw_window_start": "2025-01-28T18:48:06+00:00",
+      "source_snapshot_id": "spirax_src_a044c0083d169275",
+      "unit_id": "250004437"
+    },
+    {
+      "decision_timestamp": "2024-08-08T20:38:12+00:00",
+      "example_id": "250004743|2024-08-08T20:38:12",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Ferrero Canada",
+        "sensor_id": "250004743",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Thermodynamic"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "55c55bd2-2b96-4b2b-9147-ca722eccbf55",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:57.348006Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 920,
+          "content_sha256": "c5f34b14a5f628389f72aaa949568b4469c2ee20b80d552dc71bc47b3927c050",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_080d8d66279f9c0e/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 664794,
+          "content_sha256": "b96e27cb4cc3084d22c04bf6f3f37a184d639f2599aadc189fe72db6fd4b4c1e",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_080d8d66279f9c0e/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "ce596bb2effdc1aad127e333d5ba444e81a50088affcc35b50ac102f7e57d49b",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2024-08-08T20:38:12+00:00",
+      "raw_window_start": "2023-08-09T20:38:12+00:00",
+      "source_snapshot_id": "spirax_src_080d8d66279f9c0e",
+      "unit_id": "250004743"
+    },
+    {
+      "decision_timestamp": "2026-03-17T11:09:22+00:00",
+      "example_id": "250004859|2026-03-17T11:09:22",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250004859",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "TD42"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "(Alex reviewed on 3/26 mtg) the temp drop of both temps b/w baseline and ambient shutdown temps is likely control modulation behavior, since it's below 100C is why the temp differential reduces (but not fully converged) during this noisy period (low pressure and below saturation temp)  & Trends have repeated over time, showing consistent normalization",
+            "review_event_id": "fd834ab7-c953-489e-8f36-773f0fce98aa",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:09.726403Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 4448,
+          "content_sha256": "e150ad319534b4df98a088ffa2d768ea8592bbecf21e50588a4d2b3e86b1b70d",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e8a1f654c4c7b90b/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 719943,
+          "content_sha256": "d05fa7762edd21f877f2d23bd8634ceba04e025d4f31ad5dedfec24b010368a4",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e8a1f654c4c7b90b/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "09f5015166d406276e839dca40d939d14bafa12c1b61744dba494239905a9559",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T11:09:22+00:00",
+      "raw_window_start": "2025-03-17T11:09:22+00:00",
+      "source_snapshot_id": "spirax_src_e8a1f654c4c7b90b",
+      "unit_id": "250004859"
+    },
+    {
+      "decision_timestamp": "2026-03-17T11:08:05+00:00",
+      "example_id": "250004862|2026-03-17T11:08:05",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Vale",
+        "sensor_id": "250004862",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "TD42"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "cadb56c2-849b-49de-8bba-14d92a8c91be",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:14.871367Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1136,
+          "content_sha256": "03e02d01dbc604846e02645cf4acd489c13e3d5cfff8951c61a6c815dc9dd232",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_cdbb9451023fb4d5/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 705005,
+          "content_sha256": "27d13053a65fdac0ba0bd4a9a6d0e7b4cabb6e435f8a3e2629c4fc59dd0ce5e0",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_cdbb9451023fb4d5/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "ca9ba5b6f4350afcceabfab3a6445fedb19491f14bc988661f2b86abfe6b44a3",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T11:08:05+00:00",
+      "raw_window_start": "2025-03-17T11:08:05+00:00",
+      "source_snapshot_id": "spirax_src_cdbb9451023fb4d5",
+      "unit_id": "250004862"
+    },
+    {
+      "decision_timestamp": "2026-03-17T11:07:54+00:00",
+      "example_id": "250004871|2026-03-17T11:07:54",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250004871",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Yarway 711"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Trends have repeated over time, showing consistent normalization",
+            "review_event_id": "e340ab61-7674-4d84-bfc2-f39dfaf016e0",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:10.245483Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 6932,
+          "content_sha256": "f6abcc4b6f0206c74b20013421b837e41b8d36639ef55148bdf949dbf2c263e3",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_88843d02887447aa/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 714598,
+          "content_sha256": "7a32fd7e8ef4cdab4a151db004127d3e6b430b33738b2bdd28c22b58ac2ff049",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_88843d02887447aa/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "5650608907e55db6efb4e36c58f53da95365bf0dc3cc2f3a78cc2bd191bd8608",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T11:07:54+00:00",
+      "raw_window_start": "2025-03-17T11:07:54+00:00",
+      "source_snapshot_id": "spirax_src_88843d02887447aa",
+      "unit_id": "250004871"
+    },
+    {
+      "decision_timestamp": "2024-08-15T08:48:21+00:00",
+      "example_id": "250004877|2024-08-15T08:48:21",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Mackenzie Hospital",
+        "sensor_id": "250004877",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "85c2bd26-670a-48b0-b905-93551be2bb80",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:54.970635Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 2046,
+          "content_sha256": "b7df03a7c7e17310adc89758786624dbee6687b15fdfddd75d1cca446f00150c",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_589f5cd04c379685/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 753904,
+          "content_sha256": "cc8a6485629e97d9b1e297c54b5eb395c6e303b17fb7500facba20730cd260a8",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_589f5cd04c379685/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "887119c497f0f4b0fd19b48ebd7f5058e875773b989a8f48260fb92758a8b240",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2024-08-15T08:48:21+00:00",
+      "raw_window_start": "2023-08-16T08:48:21+00:00",
+      "source_snapshot_id": "spirax_src_589f5cd04c379685",
+      "unit_id": "250004877"
+    },
+    {
+      "decision_timestamp": "2026-01-19T12:48:30+00:00",
+      "example_id": "250005067|2026-01-19T12:48:30",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250005067",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Starting in November, condensate side temperature started to rise towards steam side temps. Periodically the condensate side temp will return to previous healthy baseline...this is worth checking out on site.",
+            "review_event_id": "bb1ce957-23e4-4695-a2b2-4333170ac75c",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-15T17:09:31.805681Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1246,
+          "content_sha256": "95d6319a89c207c1c91184b734c937358f6d397713f6e793bf8b88495a2583e1",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6549a0b4486dd95d/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 695727,
+          "content_sha256": "aa4016e2d47deda90826bb25ad7e2ea13e8a2181d3713fb78a567f908b5d74ba",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6549a0b4486dd95d/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "3b20e95ce24e508dcd32019d779661449eb7a8a6d2fd0a8494e8ed8c67952e89",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-01-19T12:48:30+00:00",
+      "raw_window_start": "2025-01-19T12:48:30+00:00",
+      "source_snapshot_id": "spirax_src_6549a0b4486dd95d",
+      "unit_id": "250005067"
+    },
+    {
+      "decision_timestamp": "2025-10-20T01:34:20+00:00",
+      "example_id": "250005150|2025-10-20T01:34:20",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Teva Canada - Stouffville",
+        "sensor_id": "250005150",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Thermodynamic"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "8d5f6e8b-d16c-49b2-96ac-80686e3d9693",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:59.442304Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 892,
+          "content_sha256": "f4a35169bcdc9deedbca1278bc8efe1ea39dd585a75d12ea0dce0c19a862e5f5",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_2f6890d52d28d292/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 703466,
+          "content_sha256": "592bce171f910f7bfd0f5ec9b10d184799401fb1c8f7184f39aab1f8e52f3b2c",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_2f6890d52d28d292/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "d09ef41a0f2f85cc4a61ca978bcced57698365195d2227447c12fed8c26c46ca",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-10-20T01:34:20+00:00",
+      "raw_window_start": "2024-10-20T01:34:20+00:00",
+      "source_snapshot_id": "spirax_src_2f6890d52d28d292",
+      "unit_id": "250005150"
+    },
+    {
+      "decision_timestamp": "2026-03-17T11:06:43+00:00",
+      "example_id": "250005354|2026-03-17T11:06:43",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250005354",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Thermodynamic"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "This looks like a slow closed failure due to a gradual decrease in steam side temperature over 3 months until convergence w/ condensate side temp. However given that the steam side temp has experienced this pattern before and recovered AND that the stem sie is dropping in a step change manner points to a control modulation that decreases to a low temperature which causes the temperature convergence (<100C)",
+            "review_event_id": "6f33e058-da91-4c40-be0f-2de18ee4aa39",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:08.926268Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 3827,
+          "content_sha256": "141e586537b0414c17beb3bf3e1ed34b92b74057f7b77787ff8bbe8412dec0d7",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_3c5dd903d9de867f/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 715331,
+          "content_sha256": "8a503bd9b2b6126b8817a7317c7c813aeef8192b3346b5cd8dc1a4d57ae76a05",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_3c5dd903d9de867f/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "af6181f08d5e0575d48618709b815c816a7f2959c120601d760d3d13d1e2cecb",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T11:06:43+00:00",
+      "raw_window_start": "2025-03-17T11:06:43+00:00",
+      "source_snapshot_id": "spirax_src_3c5dd903d9de867f",
+      "unit_id": "250005354"
+    },
+    {
+      "decision_timestamp": "2026-03-13T11:55:27+00:00",
+      "example_id": "250005404|2026-03-13T11:55:27",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250005404",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "After a step change downward in temps, temp delta collapses and oscilates / mirrors. However the downward trend of moving averages shows a closed failure behavior",
+            "review_event_id": "2f057949-209a-4b95-bee1-8e4ed2f7fdbf",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:16.678567Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 673,
+          "content_sha256": "dc376f37408ca1d8da4a3497382f96d0c66f0634657e6e3b4122b1099e2a57ab",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e7c985d1e1c0385d/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 637280,
+          "content_sha256": "5801c778ac0aa4290d4004bcf8b10ff4dd33382f07c81f74b2ce4b6dc951055d",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e7c985d1e1c0385d/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "b7791c8a722989af57f04b5dfb1e4196dd4dd18baf71546640b968ca0740fb16",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-13T11:55:27+00:00",
+      "raw_window_start": "2025-03-13T11:55:27+00:00",
+      "source_snapshot_id": "spirax_src_e7c985d1e1c0385d",
+      "unit_id": "250005404"
+    },
+    {
+      "decision_timestamp": "2026-03-17T06:47:26+00:00",
+      "example_id": "250005500|2026-03-17T06:47:26",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250005500",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Thermodynamic"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "No issues detected, unsure why it was triggered",
+            "review_event_id": "ec27adab-f844-43e2-adcb-d2a526eac549",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:11.840690Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 741,
+          "content_sha256": "41cf5a63737e06b4c551a311e5d55e795dcae845eede6df9f562cb540c84455b",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_b960593702382b10/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 684310,
+          "content_sha256": "74da07a921972e429c5dc526828f5f65225f9e9d2e715416a47610498e0acd28",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_b960593702382b10/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "945fb98d33006df37edd8eccbbcffe00b47655f824c22c3588f7bac0c6741f99",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T06:47:26+00:00",
+      "raw_window_start": "2025-03-17T06:47:26+00:00",
+      "source_snapshot_id": "spirax_src_b960593702382b10",
+      "unit_id": "250005500"
+    },
+    {
+      "decision_timestamp": "2024-09-18T17:07:25+00:00",
+      "example_id": "250005501|2024-09-18T17:07:25",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "St. Annes Hospital",
+        "sensor_id": "250005501",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float & Thermostatic"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "559b0042-9df0-4d50-be13-cefc96a141f1",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:57.048919Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 688,
+          "content_sha256": "e8f9d877a4b9b089e33993576667e9dece277ed63ef3c88111c8b7815108deab",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_36b92e4e6855c9d6/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 726072,
+          "content_sha256": "e6cfaa9c35563bd2f7c1d42fb33d17dc7ec57ec7489f308b00dd74b90119de28",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_36b92e4e6855c9d6/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "304a9e1b98c70ae91a30f48d615793b7b75eb3c2066a590591849d670fd52b2b",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2024-09-18T17:07:25+00:00",
+      "raw_window_start": "2023-09-19T17:07:25+00:00",
+      "source_snapshot_id": "spirax_src_36b92e4e6855c9d6",
+      "unit_id": "250005501"
+    },
+    {
+      "decision_timestamp": "2025-01-24T14:25:40+00:00",
+      "example_id": "250005577|2025-01-24T14:25:40",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Evonik",
+        "sensor_id": "250005577",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "N/A"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "400f48db-5614-4de5-8caf-27ecedc7f53e",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:54.731213Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 334,
+          "content_sha256": "ac1368432395bda42206b2455cdf3ebb357e302e43c225552d88fccc9448d078",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_cf4ac8f783b8eb2c/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 697503,
+          "content_sha256": "d7c9261717af7bf36a5446b548e39c1090036783cccf0095abbd72301af77c55",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_cf4ac8f783b8eb2c/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "21901325928ed29a77f14b479002b4198b8b19698cc886baeb693583517d697e",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-01-24T14:25:40+00:00",
+      "raw_window_start": "2024-01-25T14:25:40+00:00",
+      "source_snapshot_id": "spirax_src_cf4ac8f783b8eb2c",
+      "unit_id": "250005577"
+    },
+    {
+      "decision_timestamp": "2025-10-03T01:08:35+00:00",
+      "example_id": "250005605|2025-10-03T01:08:35",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "CRCHUM",
+        "sensor_id": "250005605",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "1c159df0-8032-4225-b84a-00552b52392e",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:56.826702Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 750,
+          "content_sha256": "5f922d777ba1f6b836c1ba3e25cad9e00fce656a386750b0019d9d8560134e26",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_95fad9f3d35feae6/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 693131,
+          "content_sha256": "16391261c5a4c91ed17bd1006424cfc22d183efeb0c5621bd9fc54dc45a78ac4",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_95fad9f3d35feae6/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "ee9794ccacd05ece929811b76b2841f61c1f6546a5bb71408464f3fce6a80b36",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-10-03T01:08:35+00:00",
+      "raw_window_start": "2024-10-03T01:08:35+00:00",
+      "source_snapshot_id": "spirax_src_95fad9f3d35feae6",
+      "unit_id": "250005605"
+    },
+    {
+      "decision_timestamp": "2025-10-25T10:09:11+00:00",
+      "example_id": "250005653|2025-10-25T10:09:11",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250005653",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Inverted Bucket"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Sticky trap behavior over last week, clear deviation from historic trend",
+            "review_event_id": "5a50ca70-0a7f-4dd3-b478-92b15b9085b2",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:53.428533Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1135,
+          "content_sha256": "6b567c33de8a103d912f8fbdf3ea17c9b58afa6e05a93e5b8e207dde781c25b8",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fcac084c0164c19d/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 699818,
+          "content_sha256": "c5b08b7eb06492eb7a4c64fc776e4e25f9ce562bce1a245dcec70ba27ba0a58c",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fcac084c0164c19d/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "f7fd3853b8ab456016945ef9cb6b9f41d918f859acbf41d209fdcb8763a8bcd6",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-10-25T10:09:11+00:00",
+      "raw_window_start": "2024-10-25T10:09:11+00:00",
+      "source_snapshot_id": "spirax_src_fcac084c0164c19d",
+      "unit_id": "250005653"
+    },
+    {
+      "decision_timestamp": "2025-10-31T01:39:54+00:00",
+      "example_id": "250005692|2025-10-31T01:39:54",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "St. Jerome Hospital",
+        "sensor_id": "250005692",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "ec7e6189-e89c-4630-895e-cbf2d447f6a8",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:59.960144Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 541,
+          "content_sha256": "b807e0d6296661e322656d48a5c507648066e6fd2b28adb7764cd0414d6bcf67",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_585be3291662cad1/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 621785,
+          "content_sha256": "25be5d491e233c52f34479dbcff1492092defbf4e22f7614be93adbafccbd09e",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_585be3291662cad1/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "439d120bf2fc627a7fac33097f8b592375fd138b182e8d97f2896d4186329a8b",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-10-31T01:39:54+00:00",
+      "raw_window_start": "2024-10-31T01:39:54+00:00",
+      "source_snapshot_id": "spirax_src_585be3291662cad1",
+      "unit_id": "250005692"
+    },
+    {
+      "decision_timestamp": "2026-01-13T05:36:58+00:00",
+      "example_id": "250005696|2026-01-13T05:36:58",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250005696",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Thermodynamic"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Condensate temp increases above steam temp, rising ~40 deg over a 2 month period",
+            "review_event_id": "fb4e0f68-7daa-4a33-b55a-8007ad1f1c67",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:04.907402Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1609,
+          "content_sha256": "8432a9b7f7a761e53c67895a414a617f2b2cb1ae348f1d92b7defd733be0207c",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_33de7ad7d265f59f/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 718249,
+          "content_sha256": "521179b73b40781ec712638c65eead3d709b14e36bfebdd9d09290b8454ddb14",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_33de7ad7d265f59f/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "9efa40497c72b0adb09f48b4d6b26c830885b419a727b45b91d3ec1435381ee9",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-01-13T05:36:58+00:00",
+      "raw_window_start": "2025-01-13T05:36:58+00:00",
+      "source_snapshot_id": "spirax_src_33de7ad7d265f59f",
+      "unit_id": "250005696"
+    },
+    {
+      "decision_timestamp": "2026-02-17T18:22:10+00:00",
+      "example_id": "250005732|2026-02-17T18:22:10",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "250005732",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Thermodynamic"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Gradual increase in condensate temp (~30 deg), hasn't converged with steam w/ a ~30 deg gap still",
+            "review_event_id": "5b137b2f-dbe0-402d-ab76-7e0b3475e198",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:04.576812Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 301,
+          "content_sha256": "a41cc732dfdc89c2d1fffc5c7a2bba15ebe397c0bd3e928b0fff424797d26411",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c098612d610607a8/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 702068,
+          "content_sha256": "b4fb3b9396fd969e13b270b4c81a30a116a4c0d4131d7c82013b7699b8fcb8bd",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c098612d610607a8/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "3f609d788789565df5561bfa0dd7a40efd6951e691a2785d7c98129e1238d019",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-02-17T18:22:10+00:00",
+      "raw_window_start": "2025-02-17T18:22:10+00:00",
+      "source_snapshot_id": "spirax_src_c098612d610607a8",
+      "unit_id": "250005732"
+    },
+    {
+      "decision_timestamp": "2025-11-26T17:38:20+00:00",
+      "example_id": "250005883|2025-11-26T17:38:20",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Providence Health - BC",
+        "sensor_id": "250005883",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Inverted Bucket"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "80ca2518-aac1-4f64-b9f7-d14cb7ee6361",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:54.413660Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1354,
+          "content_sha256": "d0a7365bc9fe1c790cc56b2cd5564194eafd485051203587bd78a4216ee3fdbd",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a5f0fba001efa6ec/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 536045,
+          "content_sha256": "ce0a421ea882ced483175dbcf3a055cd06b1e7f72655fdaa0b029d6c188149d7",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a5f0fba001efa6ec/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "16ddd1a9bf5055984a186b22d306158ef3f07684161369cbd4aaa5f9655f4c64",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-11-26T17:38:20+00:00",
+      "raw_window_start": "2024-11-26T17:38:20+00:00",
+      "source_snapshot_id": "spirax_src_a5f0fba001efa6ec",
+      "unit_id": "250005883"
+    },
+    {
+      "decision_timestamp": "2026-03-07T22:07:58+00:00",
+      "example_id": "260000115|2026-03-07T22:07:58",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260000115",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "(Rafal Explained on 3/26 mtg) Failure appears after recent shutdown. Convergence of temp delta after restart points to failure. Potentially flooded trap which isn't an open or closed failure",
+            "review_event_id": "57c7699b-b842-471d-83e1-48be21ed4fab",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:06.011049Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1339,
+          "content_sha256": "1fe84b1cb444598e216d1ce62eace284bb1a44eee561a77c1ef2a91ff8448c6d",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_31c1a4847b4dee5f/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 622213,
+          "content_sha256": "a2f4abb091772d8fc8f6ca999d3182ac68c44b4c7b2092c91cff3abcef4bc4c9",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_31c1a4847b4dee5f/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "3b67f58ec059c957c15f790946a06818f9eb502f008a163da7d4e6c3d7c5e2be",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-07T22:07:58+00:00",
+      "raw_window_start": "2025-03-07T22:07:58+00:00",
+      "source_snapshot_id": "spirax_src_31c1a4847b4dee5f",
+      "unit_id": "260000115"
+    },
+    {
+      "decision_timestamp": "2026-01-21T20:14:04+00:00",
+      "example_id": "260000116|2026-01-21T20:14:04",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260000116",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Clear open failure that has progressed over the past 2 months. Condensate side temp is rising linearly toward the steam side temp with the temperature differential decreasing by over 50%",
+            "review_event_id": "5ec110c9-092b-4ff8-b347-20b2ef33c10c",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:58.093546Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1333,
+          "content_sha256": "dab47d5514cb352200916a4580705edc57406a550ce709ef07f0493b4e6a82a0",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_80ce07423e8c4dbf/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 595599,
+          "content_sha256": "fe5a2dd2790a4d321d4b1d61eb07b9fbf42a2a672717999e40f701dddaa5367e",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_80ce07423e8c4dbf/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "4e69832509780dfbee79e4fb6101852764bfa60b0bc476c1f606bce17d226645",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-01-21T20:14:04+00:00",
+      "raw_window_start": "2025-01-21T20:14:04+00:00",
+      "source_snapshot_id": "spirax_src_80ce07423e8c4dbf",
+      "unit_id": "260000116"
+    },
+    {
+      "decision_timestamp": "2026-03-11T01:39:27+00:00",
+      "example_id": "260000143|2026-03-11T01:39:27",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Creative Energy",
+        "sensor_id": "260000143",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Inverted Bucket"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "726afd49-a0a8-47cf-aff4-54bfbcf2a07f",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:09:00.193142Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1096,
+          "content_sha256": "ddb62f0f289197f1ad5fba3e11e44d99119d10df8acdac522db23431f5076526",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_532e96f91f10b948/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 601210,
+          "content_sha256": "9239fef86e81d07cc38af6c07ae4b3b4da16176e7d61ef45c69d23f38a03621f",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_532e96f91f10b948/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "fcbde4307782f1bbd17b54b4c3c808410dc2cf90145c22b0f357508c1b3d55e2",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-11T01:39:27+00:00",
+      "raw_window_start": "2025-03-11T01:39:27+00:00",
+      "source_snapshot_id": "spirax_src_532e96f91f10b948",
+      "unit_id": "260000143"
+    },
+    {
+      "decision_timestamp": "2025-03-02T14:55:43+00:00",
+      "example_id": "260000167|2025-03-02T14:55:43",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Coca Cola - Fairlife",
+        "sensor_id": "260000167",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Thermodynamic"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "43eb97c4-0174-450a-b26a-1502ba6b7b88",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:54.193275Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1355,
+          "content_sha256": "ebeb6ab0b27d4241855a249da804bcc3a47b060e8b527cce9f7dbb939fb83cee",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6305bd0b7257c86e/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 580833,
+          "content_sha256": "5ced03aa0c1859260a1c67ede2d176031bbc5e68ae0feb1d84cc61d46d6887b0",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6305bd0b7257c86e/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "c7eaf8bae64a79b4e9ad53ad47a52d47bbd2a4b0bf5c39e7f221e15d7923a739",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-03-02T14:55:43+00:00",
+      "raw_window_start": "2024-03-02T14:55:43+00:00",
+      "source_snapshot_id": "spirax_src_6305bd0b7257c86e",
+      "unit_id": "260000167"
+    },
+    {
+      "decision_timestamp": "2026-02-25T01:43:53+00:00",
+      "example_id": "260000170|2026-02-25T01:43:53",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260000170",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "N/A"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "(Rafal Explained on 3/26 mtg) Failure appears after recent shutdown. Convergence of temp delta after restart points to failure. Potentially flooded trap which isn't an open or closed failure",
+            "review_event_id": "104e1a7a-5de9-4fc0-8988-ceb323a2e75e",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:06.251367Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 541,
+          "content_sha256": "2760985e77fb76fa5b5b9f619a66fb7e66df4eaa8d92f4dcd7d15e7dbeabd1a9",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fbc77362ea1483e6/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 582728,
+          "content_sha256": "348b77bc6ce27bf78b36ddf965d66346e14d9964198bd85a27d1d700bbd09cba",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_fbc77362ea1483e6/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "29b289dbaf4dc9b69118fad10fa52a3989953f797be47c1ae7ec67f258cdbd42",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-02-25T01:43:53+00:00",
+      "raw_window_start": "2025-02-25T01:43:53+00:00",
+      "source_snapshot_id": "spirax_src_fbc77362ea1483e6",
+      "unit_id": "260000170"
+    },
+    {
+      "decision_timestamp": "2026-03-17T09:02:42+00:00",
+      "example_id": "260000292|2026-03-17T09:02:42",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260000292",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float & Thermostatic"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Trends have repeated over time. Lots of noise but no clear failure",
+            "review_event_id": "907803f1-dc7f-4536-bd39-5f6d7c8c9d1e",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:10.483473Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 2585,
+          "content_sha256": "819f8b0798547ebdb15de3652121dd9b31440d610a175a41b3c4bdacff2cd82c",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_119a528a8b1bd4d3/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 620948,
+          "content_sha256": "be6529472f904b6c3d685fcb3274484e4efe98ba031fc1b62c790ef54c551620",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_119a528a8b1bd4d3/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "d2ce3d12e1cfd80a44249aa2ec083d6962971d9757a85f2812e8ecd7f7a78b0e",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T09:02:42+00:00",
+      "raw_window_start": "2025-03-17T09:02:42+00:00",
+      "source_snapshot_id": "spirax_src_119a528a8b1bd4d3",
+      "unit_id": "260000292"
+    },
+    {
+      "decision_timestamp": "2025-04-20T07:04:26+00:00",
+      "example_id": "260000374|2025-04-20T07:04:26",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Invista Inc. - Maitland, ON",
+        "sensor_id": "260000374",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "N/A"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "0b06e1d9-e459-494d-bc5a-b3a3fd864f0d",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:53.896620Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 334,
+          "content_sha256": "4929f33265437558228a9afbf051549e313a1312960579f6e75d90b5ff2d6e80",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_66af788fb71cf0b0/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 632262,
+          "content_sha256": "bcd0cbd8f9af059c0301d5c7ba0156a22fe4683f18c2a790dfa8bc12e561ab28",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_66af788fb71cf0b0/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "a0efecff56582db67d7ba753242f2d622d5649e200c357be718d37bc779b17a1",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-04-20T07:04:26+00:00",
+      "raw_window_start": "2024-04-20T07:04:26+00:00",
+      "source_snapshot_id": "spirax_src_66af788fb71cf0b0",
+      "unit_id": "260000374"
+    },
+    {
+      "decision_timestamp": "2025-10-15T18:45:05+00:00",
+      "example_id": "260000478|2025-10-15T18:45:05",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Cortellucci Vaughan Hospital",
+        "sensor_id": "260000478",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "b7bb141c-0b3a-4572-bbf0-dc7abd25253d",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:57.868289Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 4767,
+          "content_sha256": "1090a86318db257dfc1fa9ac9e0879bb970b5cb85040ca3afc94c626cc031b0a",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4ddc916fbe26ff1d/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 629089,
+          "content_sha256": "7e45f5bd2b30dbc749ce99459cebaaff7d4db5ed53371f6ff9fa7a352b5c485a",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_4ddc916fbe26ff1d/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "1194d5506daabe71c76ac4e2396d54f2ff7a971bba4a1f72bd5e62dc3ed5139c",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-10-15T18:45:05+00:00",
+      "raw_window_start": "2024-10-15T18:45:05+00:00",
+      "source_snapshot_id": "spirax_src_4ddc916fbe26ff1d",
+      "unit_id": "260000478"
+    },
+    {
+      "decision_timestamp": "2025-03-03T10:50:22+00:00",
+      "example_id": "260000499|2025-03-03T10:50:22",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Cortellucci Vaughan Hospital",
+        "sensor_id": "260000499",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "c48eb737-e3e7-4dcb-ab49-759393d57c15",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:53.673045Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 897,
+          "content_sha256": "660082fc2ceec603d9e80b92c1442df04162273290537a19276a0e2da0e1d454",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_54f4ea569590d931/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 549630,
+          "content_sha256": "998eb2785dbac985a91030de5ad3621a857266770075d69f6f52e8d75c947ace",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_54f4ea569590d931/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "b6c085ca0a58906dd23baa31194bfb1d497c6242670bf8d4d7374f065f0fdc85",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-03-03T10:50:22+00:00",
+      "raw_window_start": "2024-03-03T10:50:22+00:00",
+      "source_snapshot_id": "spirax_src_54f4ea569590d931",
+      "unit_id": "260000499"
+    },
+    {
+      "decision_timestamp": "2025-10-09T23:50:11+00:00",
+      "example_id": "260000510|2025-10-09T23:50:11",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Cortellucci Vaughan Hospital",
+        "sensor_id": "260000510",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "28ecd92f-03c9-478d-8a61-62ebd39a174e",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:58.930840Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 3001,
+          "content_sha256": "b6f4d11e4ae7414ba9e5a8e5de3ea45fd10bac3e63c0cb5894477ff4b763eee5",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_bf209cc970d2435b/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 613144,
+          "content_sha256": "e347a35a9d9ef3705841fcb3b968f25f0616a5cce1172f8598c999df779c8a06",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_bf209cc970d2435b/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "c036c1b857306dff376a5aaa5bfa105d0112e1edb2695c74c928f5a37b2c9fef",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-10-09T23:50:11+00:00",
+      "raw_window_start": "2024-10-09T23:50:11+00:00",
+      "source_snapshot_id": "spirax_src_bf209cc970d2435b",
+      "unit_id": "260000510"
+    },
+    {
+      "decision_timestamp": "2026-03-16T17:55:13+00:00",
+      "example_id": "260000701|2026-03-16T17:55:13",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Invista Inc. - Maitland, ON",
+        "sensor_id": "260000701",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "N/A"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "a834090a-38df-4b46-a44d-93a5fdc7664b",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:17.206102Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 336,
+          "content_sha256": "d2a5ee7655d16c04b75cfbc677027a32d0d37f6ccd33714843342530a061e7dd",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e3d98d77c26b829e/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 573131,
+          "content_sha256": "7aa86460e8653822c93c340a4e66bee545ff33e419948b09b9fd5ccf5c9a03ec",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e3d98d77c26b829e/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "a15df24ab8791897f1567549a425d145a10d1761a6bf7e8f46adc6f2459495b8",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-16T17:55:13+00:00",
+      "raw_window_start": "2025-03-16T17:55:13+00:00",
+      "source_snapshot_id": "spirax_src_e3d98d77c26b829e",
+      "unit_id": "260000701"
+    },
+    {
+      "decision_timestamp": "2026-02-18T20:16:00+00:00",
+      "example_id": "260000953|2026-02-18T20:16:00",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260000953",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float & Thermostatic"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Very slowly progressing closed failure over the ~5 months (drops 10 degrees)",
+            "review_event_id": "7d6a547e-d803-4cc2-8a70-bd5e71a4138f",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:08.102486Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1206,
+          "content_sha256": "f9e9ed27808b9b3b1743c79a2360cb90a1ad62cc1db1de1e42d72c2fcb9384a8",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_b2700826069f71b0/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 583997,
+          "content_sha256": "158f8fb4848fbcd8854bda2074fbd80ac3f8706456dcafe2dc387ab1df3072d3",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_b2700826069f71b0/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "f9358bf628b5be1ce3a0aaebc972ba98fb2c911e076253ab2748b4734e816459",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-02-18T20:16:00+00:00",
+      "raw_window_start": "2025-02-18T20:16:00+00:00",
+      "source_snapshot_id": "spirax_src_b2700826069f71b0",
+      "unit_id": "260000953"
+    },
+    {
+      "decision_timestamp": "2026-03-17T02:35:35+00:00",
+      "example_id": "260001111|2026-03-17T02:35:35",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260001111",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Trends have repeated over time, low temp delta during entire year might point to a long-term failure",
+            "review_event_id": "c27fe16d-7ca4-4a75-aa99-7802c7e1efa5",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:12.722029Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 9209,
+          "content_sha256": "0ab43d324972104d29bfee451453417618cffcc90da2c82b491476958e9c67da",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_7f7333fd644cc9ad/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 620451,
+          "content_sha256": "d2f9551ad72aa230b6cccd75e5531fda6c0869d2e81438a65170fe24180e49da",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_7f7333fd644cc9ad/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "8062c0380f4e63f6704d6e879fe061793f55373c1524676db97dcafd8be2b135",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T02:35:35+00:00",
+      "raw_window_start": "2025-03-17T02:35:35+00:00",
+      "source_snapshot_id": "spirax_src_7f7333fd644cc9ad",
+      "unit_id": "260001111"
+    },
+    {
+      "decision_timestamp": "2026-01-30T02:44:00+00:00",
+      "example_id": "260001345|2026-01-30T02:44:00",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260001345",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Thermodynamic"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Step change in condensate temp by ~20 deg towards steam temp",
+            "review_event_id": "f19a7698-faa7-448f-8cb4-121b1a0a3cba",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:08.632532Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 743,
+          "content_sha256": "f6d75d0b0efc9a951066647ce38e6216fe1104fb72c19861279c0d6f59a260d5",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_05401d7173550484/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 348003,
+          "content_sha256": "19e50705e66b2215aac397a3025cf8fd31b35debc93a8fde315cc06e12b9e71c",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_05401d7173550484/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "4cd38be1236b43b42179a7e1559ac9678ca23b64905ec01162cb0f80703c480d",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-01-30T02:44:00+00:00",
+      "raw_window_start": "2025-01-30T02:44:00+00:00",
+      "source_snapshot_id": "spirax_src_05401d7173550484",
+      "unit_id": "260001345"
+    },
+    {
+      "decision_timestamp": "2026-03-03T06:04:25+00:00",
+      "example_id": "260001377|2026-03-03T06:04:25",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260001377",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Thermodynamic"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Condensate temp increases towards steam side temp (step change)",
+            "review_event_id": "89a3609d-81c7-4f6f-97d3-d6de8010425e",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:03.812246Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 737,
+          "content_sha256": "f7793dc0562dbdab91eb95cf0ab8636be52f7ac0012e657ee7b2f74d6776f6f1",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_f2310494a9461908/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 395932,
+          "content_sha256": "df559f5911cf617497e4e59118a654771b077620d94e5198112d810d7a1dfa50",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_f2310494a9461908/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "c6e17682228fd05dbc48c4180f71adf300c01100bb9971d8013e3844b14a0e3a",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-03T06:04:25+00:00",
+      "raw_window_start": "2025-03-03T06:04:25+00:00",
+      "source_snapshot_id": "spirax_src_f2310494a9461908",
+      "unit_id": "260001377"
+    },
+    {
+      "decision_timestamp": "2026-03-08T00:24:00+00:00",
+      "example_id": "260001438|2026-03-08T00:24:00",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "organization": "Corru-Kraft - Buena Park",
+        "sensor_id": "260001438",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Ball float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Imported from the Phase 1 pilot reviewed rubric; no reviewer note was recorded in the source file.",
+            "review_event_id": "1824cedf-164a-491f-8e2d-f09ad28bf469",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:11.562417Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1120,
+          "content_sha256": "6ee83e5c2e52f4351c63af9052de44d3e2c3c6835d9c0b2164cb5c8fbf44ec29",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6e0b0be83e95eff6/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 629781,
+          "content_sha256": "cf28b0fa3cb27ce8e6604b3d7b09dc455d7151c58acac8eb84c1b2639a22ab37",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_6e0b0be83e95eff6/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "52870a16e19955ed4b520298315ca0c689f654d6d3f10b451368eceb54b8d798",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-08T00:24:00+00:00",
+      "raw_window_start": "2025-03-08T00:24:00+00:00",
+      "source_snapshot_id": "spirax_src_6e0b0be83e95eff6",
+      "unit_id": "260001438"
+    },
+    {
+      "decision_timestamp": "2025-12-09T15:37:41+00:00",
+      "example_id": "260001535|2025-12-09T15:37:41",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260001535",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Bucket trap"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Steam side temp drops rapidly, dropping below condensate. Recently this drop happened a few times and each time condensate did not move in unison highlighting a potential control / process shift that didn't impact condesate side temp….After ~8h condensate drops in near unison. Historic healthy shutdowns don't have this lag, they are simultaneous",
+            "review_event_id": "f99fad99-43d1-4de0-b2a4-94f434bb344c",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:06.759906Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 729,
+          "content_sha256": "3b07af5cea405a5a34fa6c62925900e7d7b54aa7487e3f3c0c8ea516ca85c0fe",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_8fecd27763fe8699/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 470641,
+          "content_sha256": "90bb8ad7c5883ee7f0a9ab41178fc4cbc80eceae619e8756b91d0937df91556b",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_8fecd27763fe8699/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "10ea06429795547928bc89130cfe7104a530c89625e96bc0c9c74307b1992147",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-12-09T15:37:41+00:00",
+      "raw_window_start": "2024-12-09T15:37:41+00:00",
+      "source_snapshot_id": "spirax_src_8fecd27763fe8699",
+      "unit_id": "260001535"
+    },
+    {
+      "decision_timestamp": "2026-03-17T11:12:07+00:00",
+      "example_id": "260001642|2026-03-17T11:12:07",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260001642",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Float"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Trends have repeated over time, showing consistent normalization",
+            "review_event_id": "f4328b67-6212-4e59-be37-042d9d3c229c",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:09.441092Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1147,
+          "content_sha256": "b1196975511d7ed4101fe54a31c80129b029ce6d8cddfe4a4b95e861aa3d163e",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_96aff8c3bd70aec8/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 574799,
+          "content_sha256": "d9deb4028657598538b2e5a22870b2cbda200ba2c1fa999869b9ae1cf35121c6",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_96aff8c3bd70aec8/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "e8cfb129235ad9af70ec6e2c930bed7147c25dec42d8b7686d78baa98667a7b2",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T11:12:07+00:00",
+      "raw_window_start": "2025-03-17T11:12:07+00:00",
+      "source_snapshot_id": "spirax_src_96aff8c3bd70aec8",
+      "unit_id": "260001642"
+    },
+    {
+      "decision_timestamp": "2025-10-17T20:23:09+00:00",
+      "example_id": "260001742|2025-10-17T20:23:09",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260001742",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Thermodynamic"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "1 week prior to alarm, condensate side temp jump from ~100C to 150C, exceeding steam side temp",
+            "review_event_id": "3ec5dbeb-b4f6-4dd7-a998-efce67a4f2d9",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:58.621179Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 541,
+          "content_sha256": "218a1101ac39acff0deee8b2b5eb38d2fa27f3cf76cfafb4124b62b58cdc31bb",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a430b2d0e98f0bf7/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 360516,
+          "content_sha256": "596ed0ad86167fd082ea54916fa1747a882700a30d57095181015a98dc8d59cd",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_a430b2d0e98f0bf7/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "363ec2a0907f9795cb0a8ee8dc67fc53bb80c6d9369efb7767c092de41362d95",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-10-17T20:23:09+00:00",
+      "raw_window_start": "2024-10-17T20:23:09+00:00",
+      "source_snapshot_id": "spirax_src_a430b2d0e98f0bf7",
+      "unit_id": "260001742"
+    },
+    {
+      "decision_timestamp": "2025-11-20T20:16:19+00:00",
+      "example_id": "260002518|2025-11-20T20:16:19",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260002518",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Inverted Bucket"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Rapid increase in condensate temp (~up to 70 deg at peak), converged with stream side and introduced choppy behavior of temp",
+            "review_event_id": "23a3ed54-d1e7-4609-aa85-a7a1e7e486eb",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:05.486586Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 303,
+          "content_sha256": "1877a1d90558516daf5c5e91724e2a3a56db7223ce75f44f4535214108a35dee",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_85b07bc14e7e645e/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 250326,
+          "content_sha256": "dd001fb75adde767b825670190796ffb6db6987e5e4ac5e3d15ba864b5d5b3b9",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_85b07bc14e7e645e/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "18c156d53e006c7a1142a375b8ab4294c5c69cfbbe88061793a1d5b7af01fee9",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2025-11-20T20:16:19+00:00",
+      "raw_window_start": "2024-11-20T20:16:19+00:00",
+      "source_snapshot_id": "spirax_src_85b07bc14e7e645e",
+      "unit_id": "260002518"
+    },
+    {
+      "decision_timestamp": "2026-03-12T14:21:29+00:00",
+      "example_id": "260002680|2026-03-12T14:21:29",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260002680",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Inconnu"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "(Alex explained this is a healthy trap on recorded meeting 3/26) While this behavior is indeed strange w/ very low temps (perhaps an issue with installation, maybe tests), there are no signs of failure the temperature differential expanded (Can't be failured closed since clearly something is flowing through the trap to cause the temperature of condensate side to increase, stabilizes at an elevated temp so the contant flow is coming through --- can't be open failure due to temp differential being very large)",
+            "review_event_id": "890cf225-47cc-4aa9-87d8-eb6948554d9b",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:59.659715Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 770,
+          "content_sha256": "10246802c4ceb0d265758fe5aa37c87b8950f7374a5e5debe1c0b504c429d4fc",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_f0a1a4d94df7e1cb/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 431952,
+          "content_sha256": "a6168b5db817db268d027bae14d9ad2907ff5aa9922a51fe0240d0b8108e0c16",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_f0a1a4d94df7e1cb/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "97348ec2ac92eaf9154812a1b9a5a17fbc79c59546e35a5195ee842d1f661361",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-12T14:21:29+00:00",
+      "raw_window_start": "2025-03-12T14:21:29+00:00",
+      "source_snapshot_id": "spirax_src_f0a1a4d94df7e1cb",
+      "unit_id": "260002680"
+    },
+    {
+      "decision_timestamp": "2026-02-20T17:32:41+00:00",
+      "example_id": "260002782|2026-02-20T17:32:41",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260002782",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "FIO"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Step change in condensate temp by ~30 deg towards steam temp",
+            "review_event_id": "4ed69237-ed96-4423-8d78-33e08ab40125",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T16:08:58.394603Z"
+          }
+        ],
+        "verification": {
+          "context_schema_key": null,
+          "context_schema_version": null,
+          "note": "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+          "recorded_at": null,
+          "source": "operator_feedback",
+          "source_content_sha256": null,
+          "source_fields": null
+        }
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 552,
+          "content_sha256": "51c814799f69ef15be37fb6f57947eed9aead6cdf6845d305d3e17b98f47d9a4",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_0b7b83aa9fa331c2/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 401486,
+          "content_sha256": "bb540060e307f0ba13a9b5b911db8b898e3ba9147bc8aca51a0a9de71fbd886a",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_0b7b83aa9fa331c2/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "0554258f617b57808e1abf642b88cba8c08b3840c88a2169419422870b6880a4",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-02-20T17:32:41+00:00",
+      "raw_window_start": "2025-02-20T17:32:41+00:00",
+      "source_snapshot_id": "spirax_src_0b7b83aa9fa331c2",
+      "unit_id": "260002782"
+    },
+    {
+      "decision_timestamp": "2026-02-08T06:26:07+00:00",
+      "example_id": "260002797|2026-02-08T06:26:07",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260002797",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Inverted Bucket"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "Steam side temp drops past condensate side temp over ~45 days. (drops a total of 25 deg)",
+            "review_event_id": "21f1a71d-5b30-4cac-8234-1d5e8fba127c",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:08.337409Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1394,
+          "content_sha256": "ad46e97259a335e8cad641d3c119561f598be47de07fa21f72065281c83f87bd",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_8934128bfa059272/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 382628,
+          "content_sha256": "d6f81901ae1e9c152a84a22fcbe3ac48b70e891d45df55264b795cd4ae1c4224",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_8934128bfa059272/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "d590213f601425bf801b00bbac22b664333c125bfc724ef837bed6ce1e1898f3",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-02-08T06:26:07+00:00",
+      "raw_window_start": "2025-02-08T06:26:07+00:00",
+      "source_snapshot_id": "spirax_src_8934128bfa059272",
+      "unit_id": "260002797"
+    },
+    {
+      "decision_timestamp": "2026-03-17T11:08:17+00:00",
+      "example_id": "260002816|2026-03-17T11:08:17",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260002816",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "N/A"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "No issues detected, unsure why it was triggered",
+            "review_event_id": "69956889-688a-4ffd-874f-2bb85a025b71",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:09.954824Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 305,
+          "content_sha256": "424511f2807c24fb32f7f98a1734aa3e702f548da89a5baa8a5e782c1558b20c",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_b82766d4a774de77/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 284902,
+          "content_sha256": "cffc3cae53fcbd0e111dfe4b7b3e6d0e3ee6bab0a9e09c5eeb87ae4aee971ac1",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_b82766d4a774de77/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "86575d86d62d14eadb2939ec278b31aa59a798bdbfd1aa7e82c70c1370cd9709",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T11:08:17+00:00",
+      "raw_window_start": "2025-03-17T11:08:17+00:00",
+      "source_snapshot_id": "spirax_src_b82766d4a774de77",
+      "unit_id": "260002816"
+    },
+    {
+      "decision_timestamp": "2026-03-17T04:39:09+00:00",
+      "example_id": "260003042|2026-03-17T04:39:09",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260003042",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Inverted bucket"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "No issues detected, unsure why it was triggered",
+            "review_event_id": "f1b7e5b4-10d2-4817-b0d8-2fa0d6470841",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:12.379666Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 959,
+          "content_sha256": "46d8a9aa5602b34311eae6728f420f688a3ec1097a568d6b71688dafd8ec3f6e",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e7c605e5b93dcb86/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 433197,
+          "content_sha256": "2016bf03be5667203e865e46cc23b51d03dfe12560852f0d3da03591df1f19ab",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_e7c605e5b93dcb86/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "8a2915487b5bf020f6bf857963622c1a1faa2610c564be8c46446cecc91f4f29",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T04:39:09+00:00",
+      "raw_window_start": "2025-03-17T04:39:09+00:00",
+      "source_snapshot_id": "spirax_src_e7c605e5b93dcb86",
+      "unit_id": "260003042"
+    },
+    {
+      "decision_timestamp": "2026-03-17T08:58:12+00:00",
+      "example_id": "260003441|2026-03-17T08:58:12",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260003441",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Inverted bucket"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "No issues detected, unsure why it was triggered",
+            "review_event_id": "77e676be-3929-4215-963f-8d8462a9e9a4",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-17T15:56:10.769838Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 959,
+          "content_sha256": "7de076d431233d1b6371441f676dfa7bd27fe0a4af4dac01d958f889f71a0b1c",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_53e3b84564cbb2f4/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 270147,
+          "content_sha256": "051aa7f1d3129062fb6b2539b0fcc5811b7dfabe0f40d5a1daa52108e9a0d29a",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_53e3b84564cbb2f4/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "32cd0927827c168055cca9bf290ad1a58e3c0bf37d2d0636b3af0e196af36e1e",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T08:58:12+00:00",
+      "raw_window_start": "2025-03-17T08:58:12+00:00",
+      "source_snapshot_id": "spirax_src_53e3b84564cbb2f4",
+      "unit_id": "260003441"
+    },
+    {
+      "decision_timestamp": "2026-03-17T04:38:26+00:00",
+      "example_id": "260003552|2026-03-17T04:38:26",
+      "label_schema_version_id": "2042f5e5-5bf1-4518-9782-80e66ae45e67",
+      "metadata": {
+        "sensor_id": "260003552",
+        "source_candidate_list": "reviewed_high_confidence_devices",
+        "steam_trap_type": "Inverted bucket"
+      },
+      "published_review_context": {
+        "labeler_notes": [
+          {
+            "explanation": "No deviation from temperature patterns which has been present for months. Temperature differential also has not degraded",
+            "review_event_id": "2b45714f-e427-4575-8fc7-2fe4b65345de",
+            "reviewer_display_name": "kurt.neuens@meshsystems.com",
+            "reviewer_project_role": "fde",
+            "selected_for_publication": true,
+            "submitted_at": "2026-07-15T17:07:03.912313Z"
+          }
+        ],
+        "verification": null
+      },
+      "raw_artifacts": [
+        {
+          "artifact_kind": "alarms",
+          "byte_size": 1550,
+          "content_sha256": "982e760dd37e4763b104db03e7fcbd17cb4f192cc516de11526364bf173f6616",
+          "content_type": "application/x-ndjson",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c51eaa9b7d34feeb/alarms.jsonl"
+        },
+        {
+          "artifact_kind": "telemetry",
+          "byte_size": 289641,
+          "content_sha256": "4ee7f37895e2a5adcb9d4d9dffd374e419ce66dd7da0ae03659475d8b489321b",
+          "content_type": "application/vnd.apache.parquet",
+          "object_key": "projects/spirax-pulse/use-cases/spirax_steam_trap_failure_detection/source-snapshots/spirax_src_c51eaa9b7d34feeb/telemetry.parquet"
+        }
+      ],
+      "raw_captured_at": "2026-07-10T20:46:04.504044+00:00",
+      "raw_known_gaps": [],
+      "raw_snapshot_content_sha256": "7dc0a3948eae5a797716b3929a43a6a3b98df0a871513eb452a5a8a1256fda57",
+      "raw_source_kind": "mongo",
+      "raw_window_end": "2026-03-17T04:38:26+00:00",
+      "raw_window_start": "2025-03-17T04:38:26+00:00",
+      "source_snapshot_id": "spirax_src_c51eaa9b7d34feeb",
+      "unit_id": "260003552"
+    }
+  ],
+  "schema_version": 2,
+  "source_snapshot_contract": "azure-blob-sha256-v1",
+  "storage": {
+    "access": "read_only_on_demand",
+    "account_url": "https://misprxlbdvqdol4f5j2ozla.blob.core.windows.net",
+    "container": "source-snapshots"
+  }
+}

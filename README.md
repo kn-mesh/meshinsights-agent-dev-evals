@@ -257,7 +257,9 @@ eval; it does not copy the complete source tree.
 Every new eval is a rich, disposable working eval. Elevation is an explicit
 full-run operation for a meaningful result and agent version. Retained evals
 use aggregate artifacts, prune performance/tool-trace detail, and keep exact
-Azure evidence references rather than local evidence copies.
+Azure evidence references rather than local evidence copies. After the retained
+eval verifies successfully, elevation permanently removes its source working
+eval so the explorer shows only the retained row for that occurrence.
 
 ```bash
 uv run python -m src.eval_lifecycle.cli list --state all --json

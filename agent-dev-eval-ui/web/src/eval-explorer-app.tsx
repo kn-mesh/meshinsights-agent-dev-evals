@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
+  ArrowUpDown,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -499,11 +502,6 @@ type MetricColumn = {
   get: (run: RunEntry) => AccuracyMetric | null;
 };
 
-type RunSortOption = {
-  value: string;
-  label: string;
-};
-
 function ResultsOverview({
   adapter,
   runs,
@@ -536,8 +534,7 @@ function ResultsOverview({
   const models = uniqueValues(runs.map((run) => run.model));
   const reasoningEfforts = uniqueValues(runs.map((run) => run.reasoning_effort));
   const metricColumns = buildMetricColumns(runs, adapter.evaluationFieldLabels);
-  const sortOptions = buildRunSortOptions(metricColumns);
-  const activeSort = sortOptions.some((option) => option.value === sort) ? sort : defaultRunSort;
+  const activeSort = isRunSort(sort, metricColumns) ? sort : defaultRunSort;
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const filteredRuns = sortRuns(runs
     .filter((run) => !modelFilter || run.model === modelFilter)
@@ -577,49 +574,43 @@ function ResultsOverview({
         </div>
         <section
           aria-label="Evaluation result table controls"
-          className="grid grid-cols-[minmax(220px,1.6fr)_repeat(4,minmax(130px,1fr))_auto] items-end gap-3 border-b bg-muted p-3.5 max-[1100px]:grid-cols-2 max-[560px]:grid-cols-1"
+          className="grid items-end gap-3 px-4 pb-3 pt-4 lg:grid-cols-[160px_minmax(190px,0.8fr)_160px_minmax(280px,1.5fr)_auto] max-[1024px]:grid-cols-2 max-[560px]:grid-cols-1"
         >
-          <label className="grid min-w-0 gap-1">
-            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Search runs</span>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                aria-label="Search evaluation runs"
-                placeholder="Run ID, model, benchmark, pipeline…"
-                value={search}
-                onChange={(event) => onSearch(event.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </label>
-          <label className="grid min-w-0 gap-1">
-            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Lifecycle</span>
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Lifecycle</span>
             <Select aria-label="Filter by lifecycle" value={lifecycleFilter} onValueChange={onLifecycleFilter}>
               <option value="">All evals</option>
               <option value="working">Not elevated</option>
               <option value="retained">Elevated</option>
             </Select>
           </label>
-          <label className="grid min-w-0 gap-1">
-            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Model</span>
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Model</span>
             <Select aria-label="Filter by model" value={modelFilter} onValueChange={onModelFilter}>
               <option value="">All models</option>
               {models.map((model) => <option key={model} value={model}>{model}</option>)}
             </Select>
           </label>
-          <label className="grid min-w-0 gap-1">
-            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Reasoning</span>
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reasoning</span>
             <Select aria-label="Filter by reasoning effort" value={reasoningFilter} onValueChange={onReasoningFilter}>
               <option value="">All efforts</option>
               {reasoningEfforts.map((effort) => <option key={effort} value={effort}>{humanize(effort)}</option>)}
             </Select>
           </label>
-          <label className="grid min-w-0 gap-1">
-            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Sort by</span>
-            <Select aria-label="Sort evaluation runs" value={activeSort} onValueChange={onSort}>
-              {sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </Select>
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Search</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                aria-label="Search evaluation runs"
+                placeholder="Run ID, model, benchmark, pipeline…"
+                value={search}
+                onChange={(event) => onSearch(event.target.value)}
+                className="pl-9"
+              />
+            </div>
           </label>
           {controlsChanged ? (
             <Button
@@ -639,22 +630,37 @@ function ResultsOverview({
           ) : null}
         </section>
         {filteredRuns.length ? (
-          <div className="overflow-x-auto overscroll-x-contain">
+          <div className="mx-4 mb-4 overflow-x-auto overscroll-x-contain rounded-md border">
             <table aria-label="Evaluation runs and metrics" className="w-full min-w-[1040px] border-collapse text-[0.75rem]">
-              <thead>
+              <thead className="bg-muted text-left text-xs text-muted-foreground">
                 <tr>
-                  <th className="min-w-[250px] border-b bg-muted px-3.5 py-2.5 text-left align-bottom text-[0.625rem] font-bold uppercase leading-snug tracking-wide text-muted-foreground">
-                    Run inputs
-                  </th>
+                  <SortableHeader
+                    label="Run inputs"
+                    sort={activeSort}
+                    ascendingSort="oldest"
+                    descendingSort="newest"
+                    onSort={onSort}
+                    className="min-w-[250px]"
+                  />
                   {metricColumns.map((column) => (
-                    <th key={column.key} className="border-b bg-muted px-3.5 py-2.5 text-left align-bottom text-[0.625rem] font-bold uppercase leading-snug tracking-wide text-muted-foreground">
-                      {column.label}
-                    </th>
+                    <SortableHeader
+                      key={column.key}
+                      label={column.label}
+                      sort={activeSort}
+                      ascendingSort={`${column.key}:asc`}
+                      descendingSort={`${column.key}:desc`}
+                      onSort={onSort}
+                    />
                   ))}
-                  <th className="border-b bg-muted px-3.5 py-2.5 text-left align-bottom text-[0.625rem] font-bold uppercase leading-snug tracking-wide text-muted-foreground">
-                    Cost
-                  </th>
-                  <th className="border-b bg-muted px-3.5 py-2.5 text-left align-bottom text-[0.625rem] font-bold uppercase leading-snug tracking-wide text-muted-foreground">
+                  <SortableHeader
+                    label="Cost"
+                    sort={activeSort}
+                    ascendingSort="cost:asc"
+                    descendingSort="cost:desc"
+                    onSort={onSort}
+                    className="min-w-[230px]"
+                  />
+                  <th className="bg-muted px-3 py-2 text-left text-xs font-medium text-muted-foreground">
                     <span className="sr-only">Open run</span>
                   </th>
                 </tr>
@@ -663,10 +669,10 @@ function ResultsOverview({
                 {filteredRuns.map((run) => (
                   <tr
                     key={run.run_id}
-                    className="group cursor-pointer transition-colors hover:bg-accent/40"
+                    className="group cursor-pointer border-t transition-colors hover:bg-accent/40"
                     onClick={() => onSelectRun(run.run_id)}
                   >
-                    <td className="border-t px-3.5 py-3 align-middle">
+                    <td className="px-3 py-2.5 align-middle">
                       <div className="grid gap-0.5">
                         <button
                           type="button"
@@ -686,14 +692,11 @@ function ResultsOverview({
                         <small className="text-muted-foreground">
                           {formatRunDate(run.created_at_utc)} · {run.recorded_attempts}/{run.planned_attempts} attempts
                         </small>
-                        <code title={run.run_id} className="mt-1 w-fit text-[0.625rem] text-foreground/65">
-                          {shortRunId(run.run_id)}
-                        </code>
                       </div>
                     </td>
                     {metricColumns.map((column) => <MetricCell key={column.key} metric={column.get(run)} />)}
                     <CostCell cost={run.cost} />
-                    <td className="border-t px-3.5 py-3 text-center align-middle text-muted-foreground transition-colors group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true">
+                    <td className="px-3 py-2.5 text-center align-middle text-muted-foreground transition-colors group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true">
                       <ChevronRight className="inline size-4" />
                     </td>
                   </tr>
@@ -713,7 +716,7 @@ function ResultsOverview({
 
 function MetricCell({ metric }: { metric: AccuracyMetric | null }) {
   return (
-    <td className="min-w-[105px] border-t px-3.5 py-3 align-middle">
+    <td className="min-w-[105px] px-3 py-2.5 align-middle">
       <strong className="block font-heading text-[0.9rem]">{formatAccuracy(metric)}</strong>
       <small className="mt-0.5 block text-[0.625rem] text-muted-foreground">
         {metric ? `${metric.correct_runs}/${metric.evaluated_runs}` : "No data"}
@@ -722,18 +725,64 @@ function MetricCell({ metric }: { metric: AccuracyMetric | null }) {
   );
 }
 
+function SortableHeader({
+  label,
+  sort,
+  ascendingSort,
+  descendingSort,
+  onSort,
+  className,
+}: {
+  label: string;
+  sort: string;
+  ascendingSort: string;
+  descendingSort: string;
+  onSort: (value: string) => void;
+  className?: string;
+}) {
+  const ascending = sort === ascendingSort;
+  const descending = sort === descendingSort;
+  const nextSort = descending ? ascendingSort : descendingSort;
+  const SortIcon = ascending ? ArrowUp : descending ? ArrowDown : ArrowUpDown;
+  const direction = ascending ? "ascending" : descending ? "descending" : "not sorted";
+
+  return (
+    <th
+      aria-sort={ascending ? "ascending" : descending ? "descending" : "none"}
+      className={cn(
+        "min-w-[120px] bg-muted px-3 py-2 text-left text-xs font-medium text-muted-foreground",
+        className,
+      )}
+    >
+      <button
+        type="button"
+        aria-label={`Sort by ${label}`}
+        title={`${label}: ${direction}. Click to sort ${nextSort === ascendingSort ? "ascending" : "descending"}.`}
+        onClick={() => onSort(nextSort)}
+        className={cn(
+          "flex w-full items-center gap-1.5 text-left font-medium outline-none transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+          (ascending || descending) && "text-foreground",
+        )}
+      >
+        <span>{label}</span>
+        <SortIcon className="size-3.5 shrink-0" />
+      </button>
+    </th>
+  );
+}
+
 function CostCell({ cost }: { cost?: CostSummary | null }) {
   const rows = costRows(cost);
   if (!cost || !rows.length) {
     return (
-      <td className="min-w-[230px] border-t px-3.5 py-3 align-middle">
+      <td className="min-w-[230px] px-3 py-2.5 align-middle">
         <strong className="block font-heading text-[0.9rem]">—</strong>
         <small className="mt-0.5 block text-[0.625rem] text-muted-foreground">Unavailable</small>
       </td>
     );
   }
   return (
-    <td className="min-w-[230px] border-t px-3.5 py-3 align-middle">
+    <td className="min-w-[230px] px-3 py-2.5 align-middle">
       {rows.map((row, index) => (
         <div key={row.currency} className={cn(index > 0 && "mt-2 border-t pt-2")}>
           <strong className="block font-heading text-[0.9rem]">{formatCost(row.total, row.currency)}</strong>
@@ -948,7 +997,7 @@ function buildMetricColumns(runs: RunEntry[], labels: Record<string, string> = {
     });
     const confidences = Array.from(new Set(
       runs.flatMap((run) => Object.keys(run.accuracy?.by_field[fieldKey]?.by_confidence ?? {})),
-    )).sort(confidenceOrder);
+    )).filter((confidence) => confidence.toLocaleLowerCase() === "high").sort(confidenceOrder);
     for (const confidence of confidences) {
       columns.push({
         key: `field:${fieldKey}:confidence:${confidence}`,
@@ -960,19 +1009,22 @@ function buildMetricColumns(runs: RunEntry[], labels: Record<string, string> = {
   return columns;
 }
 
-function buildRunSortOptions(columns: MetricColumn[]): RunSortOption[] {
-  return [
-    { value: "newest", label: "Newest first" },
-    { value: "oldest", label: "Oldest first" },
-    { value: "model", label: "Model A–Z" },
-    { value: "reasoning", label: "Reasoning effort" },
-    ...columns
-      .filter((column) => !column.key.includes(":confidence:"))
-      .flatMap((column) => [
-        { value: `${column.key}:desc`, label: `${column.label}: highest` },
-        { value: `${column.key}:asc`, label: `${column.label}: lowest` },
-      ]),
-  ];
+function isRunSort(sort: string, columns: MetricColumn[]) {
+  if ([
+    "newest",
+    "oldest",
+    "model",
+    "model:asc",
+    "model:desc",
+    "reasoning",
+    "reasoning:asc",
+    "reasoning:desc",
+    "lifecycle:asc",
+    "lifecycle:desc",
+    "cost:asc",
+    "cost:desc",
+  ].includes(sort)) return true;
+  return columns.some((column) => sort === `${column.key}:asc` || sort === `${column.key}:desc`);
 }
 
 function sortRuns(runs: RunEntry[], sort: string, columns: MetricColumn[]) {
@@ -989,16 +1041,37 @@ function sortRuns(runs: RunEntry[], sort: string, columns: MetricColumn[]) {
       }
     }
     if (sort === "oldest") return compareRunDates(left, right);
-    if (sort === "model") {
+    if (sort === "model" || sort.startsWith("model:")) {
       const compared = (left.model ?? "").localeCompare(right.model ?? "");
-      if (compared) return compared;
+      if (compared) return sort === "model:desc" ? -compared : compared;
     }
-    if (sort === "reasoning") {
+    if (sort === "reasoning" || sort.startsWith("reasoning:")) {
       const compared = (left.reasoning_effort ?? "").localeCompare(right.reasoning_effort ?? "");
-      if (compared) return compared;
+      if (compared) return sort === "reasoning:desc" ? -compared : compared;
+    }
+    if (sort.startsWith("lifecycle:")) {
+      const leftLifecycle = left.lifecycle_state === "retained" ? 1 : 0;
+      const rightLifecycle = right.lifecycle_state === "retained" ? 1 : 0;
+      if (leftLifecycle !== rightLifecycle) {
+        return (leftLifecycle - rightLifecycle) * (sort.endsWith(":asc") ? 1 : -1);
+      }
+    }
+    if (sort.startsWith("cost:")) {
+      const leftCost = sortableCost(left.cost);
+      const rightCost = sortableCost(right.cost);
+      if (leftCost == null && rightCost != null) return 1;
+      if (leftCost != null && rightCost == null) return -1;
+      if (leftCost != null && rightCost != null && leftCost !== rightCost) {
+        return (leftCost - rightCost) * (sort.endsWith(":asc") ? 1 : -1);
+      }
     }
     return compareRunDates(right, left);
   });
+}
+
+function sortableCost(cost?: CostSummary | null) {
+  const totals = costRows(cost).map((row) => row.total);
+  return totals.length ? totals.reduce((sum, total) => sum + total, 0) : null;
 }
 
 function compareRunDates(left: RunEntry, right: RunEntry) {
@@ -1492,10 +1565,6 @@ function formatRunDate(value: string | null | undefined) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
-}
-
-function shortRunId(runId: string) {
-  return runId.length > 24 ? `${runId.slice(0, 24)}…` : runId;
 }
 
 function humanize(value: string) {
