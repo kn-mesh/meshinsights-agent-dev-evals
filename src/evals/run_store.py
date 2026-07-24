@@ -20,7 +20,6 @@ if TYPE_CHECKING:
 
 from evaluation import (
     build_performance_summary,
-    build_run_identity,
     build_work_item_id,
     canonical_json_bytes,
     canonical_sha256,
@@ -105,20 +104,16 @@ class LocalRunStore:
                 f"Manifest run specification is invalid: {self.manifest_path}"
             )
         derived_hash = canonical_sha256(run_spec)
-        schema_version = payload.get("schema_version")
-        valid_identity = False
-        if schema_version == 1:
-            derived_run_id, _ = build_run_identity(run_spec)
-            valid_identity = self.run_id == derived_run_id
-        elif schema_version == 2:
-            occurrence_seed = payload.get("occurrence_seed")
-            valid_identity = isinstance(
-                occurrence_seed, dict
-            ) and verify_eval_run_identity(
+        occurrence_seed = payload.get("occurrence_seed")
+        valid_identity = (
+            payload.get("schema_version") == 2
+            and isinstance(occurrence_seed, dict)
+            and verify_eval_run_identity(
                 self.run_id,
                 occurrence_seed=occurrence_seed,
                 run_spec_sha256=derived_hash,
             )
+        )
         if expected != derived_hash or not valid_identity:
             raise RunStoreIntegrityError(
                 f"Manifest run specification identity is invalid: {self.manifest_path}"
@@ -501,14 +496,12 @@ class LocalRunStore:
         evaluation_active_wall_seconds: float | None = None,
     ) -> dict[str, Any]:
         """Rebuild the compact summary from tracked eval evidence."""
-        manifest = self.read_manifest()
-        schema_version = int(manifest["schema_version"])
         state = self._evaluation_state()
         expected_config = state["run"]
         expected_config["completed_at_utc"] = completed_at_utc
         expected_config["latest_invocation_id"] = latest_invocation_id
 
-        # Lazy import avoids the orchestration -> comparison -> integrity cycle.
+        # Lazy import avoids a run-store -> orchestration import cycle.
         from src.evals.eval_orchestration import _build_summary
 
         summary = _build_summary(
@@ -519,16 +512,15 @@ class LocalRunStore:
                 expected_config.get("dimensions", {}).get("model", {}).get("pricing")
             ),
         )
-        if schema_version >= 2:
-            summary["timing"] = {
-                "evaluation_active_wall_seconds": (
-                    self.execution_invocation_wall_time_seconds()
-                    if evaluation_active_wall_seconds is None
-                    else float(evaluation_active_wall_seconds)
-                )
-            }
+        summary["timing"] = {
+            "evaluation_active_wall_seconds": (
+                self.execution_invocation_wall_time_seconds()
+                if evaluation_active_wall_seconds is None
+                else float(evaluation_active_wall_seconds)
+            )
+        }
         return {
-            "schema_version": schema_version,
+            "schema_version": 2,
             "summary": summary,
             "run": expected_config,
             "artifacts": {
@@ -547,8 +539,8 @@ class LocalRunStore:
         contract = manifest.get("eval_contract")
         if (
             not isinstance(contract, dict)
-            or contract.get("schema_version") != manifest.get("schema_version")
-            or contract.get("schema_version") not in {1, 2}
+            or manifest.get("schema_version") != 2
+            or contract.get("schema_version") != 2
         ):
             raise RunStoreIntegrityError(
                 "Run manifest is missing its matching eval contract."

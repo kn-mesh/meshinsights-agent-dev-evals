@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -16,8 +17,9 @@ from evaluation import (
     OutputContractStatus,
     ReviewStoreError,
     ScoringStatus,
-    build_run_identity,
+    build_eval_run_identity,
     build_work_item_id,
+    canonical_sha256,
     eval_attempt_to_dict,
 )
 
@@ -31,12 +33,27 @@ from src.evals.inspection import (
 from src.evals.run_store import LocalRunStore
 
 
+def test_inspection_cli_excludes_partial_review_purge() -> None:
+    commands = next(
+        action.choices
+        for action in inspection_cli._parser()._actions  # noqa: SLF001
+        if isinstance(action, argparse._SubParsersAction)
+    )
+
+    assert "purge" not in commands
+
+
 def _run_fixture(tmp_path: Path) -> tuple[Path, str, str]:
     run_spec = {
         "scope": {"example_ids": ["example-a"]},
         "runs_per_example": 2,
     }
-    run_id, digest = build_run_identity(run_spec)
+    digest = canonical_sha256(run_spec)
+    run_id, occurrence_seed = build_eval_run_identity(
+        run_spec_sha256=digest,
+        created_at_utc="2026-01-01T00:00:00+00:00",
+        nonce="inspection-test",
+    )
     run_dir = tmp_path / "working" / "benchmark" / "v1" / run_id
     run_dir.mkdir(parents=True)
     work_items = [
@@ -50,17 +67,20 @@ def _run_fixture(tmp_path: Path) -> tuple[Path, str, str]:
         for index in (1, 2)
     ]
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "performance_schema_version": 1,
         "run_id": run_id,
+        "eval_run_id": run_id,
         "run_spec_sha256": digest,
+        "occurrence_seed": occurrence_seed,
         "run_spec": run_spec,
         "work_items": work_items,
         "eval_contract": {
-            "schema_version": 1,
+            "schema_version": 2,
             "run": {
-                "schema_version": 1,
+                "schema_version": 2,
                 "run_id": run_id,
+                "eval_run_id": run_id,
                 "run_spec_sha256": digest,
                 "benchmark_key": "benchmark",
                 "benchmark_version_number": 1,
@@ -298,7 +318,7 @@ def test_inspection_replaces_old_disposable_index_schema(tmp_path: Path) -> None
     assert store.read_index()["review_index_schema_version"] == 2
 
 
-def test_inspection_refreshes_index_for_manifest_commit_and_review_purge(
+def test_inspection_refreshes_index_for_manifest_commit(
     tmp_path: Path,
 ) -> None:
     run_dir, run_id, digest = _run_fixture(tmp_path)
@@ -324,13 +344,6 @@ def test_inspection_refreshes_index_for_manifest_commit_and_review_purge(
     assert committed["review_status"] == "complete"
     assert store.read_index()["review_state_sha256"] != initial_sha256
 
-    store.purge(dry_run=False, confirmed=True)
-    purged_rows = list_inspection_rows(run_dir)["rows"]
-
-    assert all(
-        item["review_unavailable_reason"] == {"code": "purged"} for item in purged_rows
-    )
-
 
 def test_review_store_marks_orphaned_objects_invalid(tmp_path: Path) -> None:
     run_dir, run_id, digest = _run_fixture(tmp_path)
@@ -347,8 +360,6 @@ def test_review_store_marks_orphaned_objects_invalid(tmp_path: Path) -> None:
     ]
 
     assert (
-        store.review_state(expected_execution_ids=execution_ids)["integrity"][
-            "status"
-        ]
+        store.review_state(expected_execution_ids=execution_ids)["integrity"]["status"]
         == "invalid"
     )

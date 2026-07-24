@@ -1,191 +1,107 @@
 ---
 name: agent-eval-builder
-description: Build or change the minimum Agent Workbench evaluation capability needed for an FDE to measure, inspect, compare, and improve connected-system agent variants against published benchmarks. Use for benchmark/evidence handoff contracts, evaluation profiles, graders, orchestration, result contracts, comparisons, or eval-result applications. Do not use merely to run or troubleshoot an existing eval; use run-use-case-evals. Prefer the simplest existing path and require evidence before adding reusable infrastructure, new persistence layers, execution modes, or artifact lifecycle features.
+description: Build or change the minimum Agent Workbench evaluation capability needed to measure, inspect, and improve agent variants against published benchmarks. Use for benchmark/evidence handoffs, evaluation profiles, graders, orchestration, result contracts, or eval-result applications. To run an existing eval use run-use-case-evals; to analyze one use eval-results-analysis.
 ---
 
 # Agent Eval Builder
 
-Help an FDE answer: **Did this agent variant make better decisions for the
-right units at the right decision points, and why?**
+Help an FDE answer whether an agent made better decisions for the right units
+at the right decision points, and why. Build only the capability required for
+that outcome.
 
-The skill guides product work, not preservation of every current implementation
-detail. Existing behavior remains relevant when changing it, but it is not a
-reason by itself to expand or reproduce the architecture.
+## Product Boundary
 
-## Preserve The Product Boundary
+- Benchmark Studio owns published membership, approved labels, frozen label
+  schema, and immutable evidence.
+- Agent Workbench consumes that truth read-only for development and evaluation.
+- Keep use-case meaning, prompts, graders, and views project-local; share only
+  mechanics with the same meaning across real use cases.
+- Do not add Studio writes, local benchmark truth, production hosting, or
+  generic runtime infrastructure.
+- If the request explicitly authorizes the named reusable scope, proceed after
+  stating its ownership and focused tests. Otherwise, identify the exact
+  reusable paths/contracts and pause once for approval.
 
-- Benchmark Studio owns published benchmark membership, approved labels,
-  frozen label-schema identity, and immutable evidence.
-- Agent Workbench consumes that truth read-only to develop, evaluate, compare,
-  inspect, and package agent variants.
-- Keep use-case labels, evidence meaning, prompts, and business rules in the
-  use-case project. Keep genuinely reusable evaluation mechanics in shared code.
-- Do not add Benchmark Studio write paths, local benchmark truth, production
-  hosting, or generic agent-runtime infrastructure.
-- Before modifying reusable evaluation, UI, versioning, bootstrap, or lifecycle
-  code, show why the use-case layer is insufficient, identify the exact shared
-  paths and contracts, and obtain explicit user approval.
+For product choices, read `docs/product-strategy/` when it exists. In generated
+projects use `workbench.project.json`, `docs/use_case/`, and these boundaries.
 
-## Start With The FDE Outcome
+## Select One Stage Gate
 
-Before proposing or editing code, answer these questions from repository
-evidence:
+### 1. One measurable example
 
-1. What FDE job is being completed: measure, inspect, compare, or improve?
-2. What concrete task is blocked or materially slow today?
-3. What is the simplest existing path that can complete that task?
-4. Does the change help launch or improve a decision about a unit at a decision
-   point?
-5. What evidence justifies a reusable abstraction rather than a use-case-local
-   change?
-6. What adjacent feature should explicitly **not** be added yet?
+Require one explicitly versioned published example, preserved unit/timestamp/
+example/evidence identity, and structured output comparable with approved
+labels. Validate through the pipeline runner, not a one-example eval.
 
-If the task does not have a clear FDE outcome, stop expanding the design and
-report the mismatch.
+### 2. Minimum useful evaluation
 
-## Use These Stage Gates
+Add only enough to select the requested benchmark scope; execute an explicit
+agent/model configuration in bounded threads or serial debug mode; persist
+completed units; resume missing work; distinguish failed, invalid, and
+incorrect outputs; and report accuracy, reliability, coverage, usage, and cost
+with reproducible identity.
 
-Advance only as far as the requested outcome requires.
+Keep project predicates in profiles. Do not add process execution, arbitrary
+operator predicates, generalized rerun/comparison orchestration, or another
+persistence or identity system.
 
-### Gate 1: One measurable example
+### 3. Inspection
 
-Require a working pipeline that:
+Support bounded discovery of incorrect, invalid, failed, or unstable examples
+and inspection of expected output, actual output, exact evidence, and available
+model/tool detail. Compare high-level dimensions across independent runs; do
+not create paired-delta artifacts or duplicate attempt representations.
 
-- runs one exact example from a named published benchmark version;
-- preserves unit, decision timestamp, example, source-snapshot, and evidence
-  identity; and
-- returns a structured decision that can be compared with approved labels.
+### 4. Reusable capability
 
-Validate this gate with focused tests and the exact-example pipeline runner,
-not by creating a one-example eval occurrence. If this gate fails, fix the
-pipeline or handoff contract before adding or running eval orchestration.
+Share behavior only when two real use cases need the same semantics, an
+existing shared contract is insufficient, or an explicit product decision
+requires it. Similar code alone is not evidence.
 
-### Gate 2: Minimum useful evaluation
+### 5. Operational hardening
 
-Add only enough evaluation capability to:
+The supported lifecycle is rich working evals, explicit elevation of one
+complete selected occurrence into compact retained aggregates, read-only
+exploration, and exact permanent deletion. Route selected retained publication to
+`$publish-retained-eval`.
 
-- select the full benchmark, an explicit unit/example list, or named use-case
-  sections;
-- execute the existing pipeline with an explicit model/configuration;
-- use bounded threaded execution normally and serial execution only for
-  debugging;
-- persist each completed unit and resume only missing work after interruption;
-- distinguish execution failure, invalid output, and incorrect valid output;
-- calculate accuracy, reliability, token totals, total cost, average cost, and
-  P5/P95 per-unit cost with cost-coverage status; and
-- retain enough identity to reproduce or explain the result.
+Do not add quarantine, restore, recoverable deletion, archival tiers, generic
+garbage collection, lifecycle UI mutation, automatic cloud sync, or Studio
+writes.
 
-Keep conditional predicates internal to project profiles. Do not add process
-execution, arbitrary operator predicates, generalized rerun policies,
-failure-generation reruns, or comparison orchestration to the supported runner
-workflow.
+## Strategic Invariants
 
-### Gate 3: Inspect and compare
+- Preserve traceable benchmark, example, unit, decision timestamp, source
+  snapshot, evidence, and agent/configuration identity.
+- Verify frozen artifact integrity before interpretation.
+- Keep expected labels and actual outputs separately inspectable.
+- Exclude invalid, failed, and unscored attempts from accuracy; expose them in
+  reliability and coverage.
+- Treat missing detailed inspection data as unavailable, not score corruption.
+- Prefer an existing evaluator/query, then a project profile/grader/adapter,
+  then the smallest compatible shared extension.
 
-Enable the FDE or Codex to:
+## Workflow
 
-- find incorrect, invalid, failed, or unstable examples;
-- inspect expected output, actual output, exact evidence identity, and available
-  model inputs/outputs; and
-- compare variants only across declared dimensions.
+1. Read `docs/use_case/`, the pipeline, profile, result, and focused tests.
+2. State the FDE outcome, selected gate, blocker, and explicit non-goals.
+3. Trace the narrowest current execution and inspection path.
+4. Implement at the layer that owns the meaning.
+5. Test only the contracts touched: benchmark handoff, profile/grader,
+   orchestration/result, inspection/UI, or explicitly requested lifecycle.
+6. When the first pipeline, agent policy, and profile are operable, finalize
+   `EvalRunbook.md` with validated exact-example, discovery, eval, inspection,
+   lifecycle, and publication commands; then remove
+   `agent-workbench-eval-runbook-status: bootstrap-placeholder`.
+7. Report the outcome, evidence, limitation, and deferred infrastructure.
 
-Prefer extending the current result and inspection path over creating another
-representation of attempts, evidence, or comparisons.
+Select completion checks from the
+[repository verification matrix](../project-guide/references/verification-matrix.md)
+for every changed layer.
 
-### Gate 4: Reusable infrastructure
-
-Promote behavior into shared evaluation code only when at least one of these is
-true:
-
-- two real use cases need the same semantic behavior;
-- a current shared contract cannot correctly express the requested job; or
-- an explicit product decision requires the capability.
-
-Similarity of implementation is not enough. The abstraction must preserve the
-same meaning across use cases.
-
-### Gate 5: Operational hardening
-
-The supported lifecycle is only:
-
-- rich local working evals;
-- explicit elevation of one complete run and its meaningful agent version into
-  compact retained aggregates;
-- read-only All/Working/Retained review; and
-- exact permanent deletion.
-
-Do not add quarantine, restore, recoverable deletion, archival tiers,
-generalized reachability/garbage collection, migration platforms, UI lifecycle
-mutations, or cloud retention without a new explicit product decision.
-
-Local disk housekeeping and artifact lifecycle management are maintenance
-concerns, not default Agent Workbench product capabilities.
-
-## Prefer The Smallest Change
-
-Use this order:
-
-1. Reuse an existing evaluator, grader, result field, or inspection query.
-2. Make a use-case-local profile, grader, adapter, or view.
-3. Extend a shared contract with the smallest compatible change.
-4. Add a new shared subsystem only after Gate 4 is satisfied.
-
-Do not preserve an abstraction solely because current code is coherent. When a
-simpler path can meet the requested outcome safely, identify the removable or
-deprecated path instead of silently layering beside it.
-
-## Preserve Only Strategic Invariants By Default
-
-- Published benchmark and frozen-evidence access remains read-only.
-- Unit, decision timestamp, example, benchmark, source snapshot, and agent
-  configuration remain traceable through the result.
-- Frozen artifact integrity is verified before evidence is interpreted.
-- Expected labels and actual agent outputs remain separately inspectable.
-- Accuracy excludes invalid, failed, or unscored attempts; reliability and
-  coverage expose those attempts separately.
-- Use-case-specific meaning does not leak into shared evaluation mechanics.
-- Detailed inspection data can be absent without corrupting the durable score.
-
-Everything else is an implementation choice to evaluate against the requested
-FDE outcome.
-
-## Work In This Sequence
-
-1. Read the relevant product strategy, use-case context, pipeline, profile,
-   result, and tests.
-2. State the FDE outcome, current blocker, selected stage gate, and explicit
-   non-goals.
-3. Trace the narrowest current execution and inspection path end to end.
-4. Implement the smallest change at the layer that owns its meaning.
-5. Validate the changed behavior and the strategic invariants it touches.
-6. Report the achieved outcome, remaining limitation, and any infrastructure
-   deliberately deferred.
-
-## Validate In Proportion To The Change
-
-- Benchmark handoff: test project scope, immutable identity, label-schema
-  integrity, artifact verification, and read-only behavior.
-- Profile or grader: test valid, invalid, missing, conditional, and representative
-  slice cases relevant to the change.
-- Orchestration: test the selected execution path, failures relevant to it, and
-  stable result materialization.
-- Inspection or UI: test wrong-example discovery and the exact evidence and
-  model detail the user needs.
-- Comparison: test declared dimensions and paired examples used by the change.
-- Lifecycle or recovery: test it only when the user explicitly requested that
-  maintenance behavior.
-
-Do not automatically require every runtime, storage, recovery, lifecycle, and
-UI test category for a local scoring or orchestration change.
-
-## Load Technical Detail Only When Needed
-
-Read [references/current-evaluation-contracts.md](references/current-evaluation-contracts.md)
-when a task changes an existing eval schema, run store, candidate-version
-contract, review capture, explorer API, hosted input, comparison, or lifecycle
-implementation. It describes current behavior for compatibility and diagnosis;
-it does not make those features required for new work.
-
-Use `EvalRunbook.md` and `$run-use-case-evals` for live commands. Use
-`$eval-results-analysis` to explain an existing regression without changing the
-evaluation system.
+Read
+[references/current-evaluation-contracts.md](references/current-evaluation-contracts.md)
+only when changing or diagnosing an existing schema, run store, candidate
+version, review capture, explorer API, hosted input, publication, or lifecycle
+contract. Use `EvalRunbook.md` and `$run-use-case-evals` for commands, and
+`$eval-results-analysis` for regression analysis without system changes.

@@ -35,19 +35,22 @@ Put custom behavior only in:
   evidence envelope; and
 - `www/src/use_case/`: schema validation and evidence composition/charts.
 
-If a useful primitive can be configured without understanding the use case,
-propose it as a reusable change and obtain explicit user approval before editing
-the reusable UI or eval packages. If it contains business meaning, artifact
-names, thresholds, or domain-specific layout, keep it in the
-manifest-declared reference paths.
+If the request explicitly authorizes the named reusable scope, proceed after
+stating its ownership and focused tests. Otherwise, identify the exact reusable
+paths/contracts and pause once for approval. Keep business meaning, artifact
+names, thresholds, and domain-specific layout in manifest-declared reference
+paths.
 
 ## 3. Port The Evidence Path
 
-1. Load the exact benchmark identity and selected example's complete frozen
-   source-snapshot contract from the retained eval-run manifest.
-2. Retrieve only those retained frozen artifacts through `EvidenceStore`;
-   preserve hash/size verification and the decision timestamp cutoff. Do not
-   re-query the current publication catalog to recover a historical run.
+1. Resolve and verify one immutable evidence-input contract:
+   - working occurrence: `manifest.json` with schema-v2 `eval_contract` and
+     complete frozen example contracts;
+   - retained occurrence: lifecycle-verified bundle plus exact
+     `evidence-references.json`.
+2. Retrieve only the artifacts referenced by that selected occurrence through
+   `EvidenceStore`; preserve hash/size verification and the decision timestamp
+   cutoff. Do not re-query the current publication catalog for historical runs.
 3. Recreate Benchmark Studio's normalization and derived fields in
    `src/evidence/`. Never query a live source system or infer data from labels.
 4. Return a versioned, JSON-serializable envelope containing provenance,
@@ -63,16 +66,21 @@ reviewers saw. Styling may differ unless pixel parity is requested.
 
 ## 4. Verify Before Handoff
 
+Select the Python, reusable, and frontend rows in the
+[repository verification matrix](../project-guide/references/verification-matrix.md).
+
 - Unit-test decoding and normalization with safe synthetic fixtures.
 - Test the generic API separately from the project adapter.
 - Build and test the React app, including an evidence-render smoke test.
 - Compare one real published example against Benchmark Studio semantics.
+- Assert equivalent working and retained inputs render the same evidence
+  semantics through one adapter.
 - Confirm the explorer runs without the Benchmark Studio checkout or live
   source system.
 - Confirm tool calls and detailed review data degrade clearly when capture was
-  disabled or purged.
+  disabled or unavailable.
 
-The port is done when the user can select a retained eval run, inspect expected
-and actual outputs plus model/tool activity, and view the verified evidence
-package used for that exact benchmark version—with all use-case meaning confined
-to the project-owned directories above.
+The port is done when the user can select a working or retained occurrence,
+inspect its available outputs and activity, and view the verified evidence
+package used for that exact benchmark version—with all use-case meaning
+confined to the project-owned directories above.

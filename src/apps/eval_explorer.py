@@ -10,7 +10,7 @@ import webbrowser
 from typing import Any
 
 from agent_eval_ui import create_app
-from evaluation import AttemptQuery, build_comparison_identity, query_attempt_rows
+from evaluation import AttemptQuery, query_attempt_rows
 from mi.core import bootstrap_environment
 import uvicorn
 
@@ -73,9 +73,7 @@ class ProjectExplorerBackend:
                 "path": str(run_dir.relative_to(self.project_root)),
                 "summary": result.get("summary", {}),
                 "run": result.get("run", {}),
-                "example_ids": sorted(
-                    {str(row["example_id"]) for row in units}
-                ),
+                "example_ids": sorted({str(row["example_id"]) for row in units}),
                 "inspection": {
                     "review": {
                         "status": "retained_compact",
@@ -134,7 +132,9 @@ class ProjectExplorerBackend:
             model_calls = dict(raw_model_calls)
             slowest = model_calls.get("slowest", [])
             if not isinstance(slowest, list):
-                raise ValueError("Performance model_calls.slowest must be a JSON array.")
+                raise ValueError(
+                    "Performance model_calls.slowest must be a JSON array."
+                )
             correlations = self._execution_correlations(run_dir, run_id=run_id)
             model_calls["slowest"] = [
                 {
@@ -240,10 +240,7 @@ class ProjectExplorerBackend:
         store = LocalRunStore(run_dir, run_id=run_id)
         manifest = store.read_manifest()
         contract = manifest.get("eval_contract")
-        if not isinstance(contract, dict) or contract.get("schema_version") not in {
-            1,
-            2,
-        }:
+        if not isinstance(contract, dict) or contract.get("schema_version") != 2:
             raise ValueError("Run manifest is missing a supported eval contract.")
         config = contract.get("run")
         if not isinstance(config, dict):
@@ -286,67 +283,6 @@ class ProjectExplorerBackend:
             example=example,
         )
 
-    def list_comparisons(self) -> dict[str, Any]:
-        return {"comparisons": self._comparison_entries()}
-
-    def get_comparison(self, comparison_id: str) -> dict[str, Any]:
-        matches = [
-            item
-            for item in self._comparison_entries()
-            if item["comparison_id"] == comparison_id
-        ]
-        if len(matches) != 1 or matches[0]["result_path"] is None:
-            raise FileNotFoundError(f"Comparison result not found: {comparison_id}.")
-        path = (self.project_root / str(matches[0]["result_path"])).resolve()
-        if not path.is_relative_to(self.project_root):
-            raise ValueError("Comparison path escapes the project root.")
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        if payload.get("comparison_id") != comparison_id:
-            raise ValueError("Comparison payload has the wrong identity.")
-        return payload
-
-    def _comparison_entries(self) -> list[dict[str, Any]]:
-        entries: list[dict[str, Any]] = []
-        working_root = self.eval_root / "working"
-        if not working_root.exists():
-            return entries
-        for path in sorted(
-            working_root.glob("**/comparisons/cmp_*.manifest.json")
-        ):
-            payload = json.loads(path.read_text(encoding="utf-8"))
-            spec = payload.get("comparison_spec")
-            if not isinstance(spec, dict):
-                raise ValueError(f"Comparison manifest is malformed: {path}")
-            comparison_id, digest = build_comparison_identity(spec)
-            if (
-                path.name != f"{comparison_id}.manifest.json"
-                or payload.get("comparison_id") != comparison_id
-                or payload.get("comparison_spec_sha256") != digest
-            ):
-                raise ValueError(f"Comparison identity is invalid: {path}")
-            result_path = path.with_name(f"{comparison_id}.json")
-            entries.append(
-                {
-                    "comparison_id": comparison_id,
-                    "manifest_path": path.relative_to(
-                        self.project_root
-                    ).as_posix(),
-                    "result_path": (
-                        result_path.relative_to(self.project_root).as_posix()
-                        if result_path.is_file()
-                        else None
-                    ),
-                    "run_ids": [
-                        str(item) for item in spec.get("run_ids", [])
-                    ],
-                    "varying_dimensions": [
-                        str(item)
-                        for item in spec.get("varying_dimensions", [])
-                    ],
-                }
-            )
-        return entries
-
     def _run_dir(self, run_id: str) -> Path:
         entry = self.lifecycle.inspect(run_id)
         path = (self.project_root / entry["path"]).resolve()
@@ -362,7 +298,16 @@ class ProjectExplorerBackend:
             isinstance(item, dict) for item in units
         ):
             raise ValueError("Retained units artifact is invalid.")
-        return units
+        return [
+            {
+                **item,
+                # The UI contract needs a route key. A retained work item is already
+                # stable and repetition-specific, so expose it without persisting
+                # disposable execution identity in the retained artifact.
+                "execution_id": item.get("work_item_id"),
+            }
+            for item in units
+        ]
 
     def _retained_evidence(
         self, run_id: str, *, run_dir: Path, example_id: str
@@ -440,9 +385,7 @@ class ProjectExplorerBackend:
         return {"availability": "available", **context}
 
     @staticmethod
-    def _benchmark_context(
-        run_dir: Path, *, example_id: str
-    ) -> dict[str, Any]:
+    def _benchmark_context(run_dir: Path, *, example_id: str) -> dict[str, Any]:
         manifest = LocalRunStore(run_dir, run_id=run_dir.name).read_manifest()
         examples = manifest.get("eval_contract", {}).get("examples", [])
         matches = [
@@ -473,9 +416,9 @@ class ProjectExplorerBackend:
         return {
             str(records[-1]["execution_id"]): {
                 "example_id": records[-1].get("example_id"),
-                "unit_id": examples.get(
-                    str(records[-1].get("example_id")), {}
-                ).get("unit_id"),
+                "unit_id": examples.get(str(records[-1].get("example_id")), {}).get(
+                    "unit_id"
+                ),
             }
             for records in store.records_by_work_item().values()
             if records
@@ -501,7 +444,8 @@ class ProjectExplorerBackend:
                     "reason": f"Performance is not current for {execution_id}.",
                 }
             generation = (
-                str(durable[0]["work_item_id"]), int(durable[0]["generation"])
+                str(durable[0]["work_item_id"]),
+                int(durable[0]["generation"]),
             )
             matching = [
                 item
@@ -547,9 +491,7 @@ def _retained_benchmark_example(payload: dict[str, Any]) -> BenchmarkExample:
             "label_schema_version_id": payload.get("label_schema_version_id"),
             "example_metadata": payload.get("metadata", {}),
             "source_snapshot_id": payload.get("source_snapshot_id"),
-            "raw_snapshot_content_sha256": payload.get(
-                "raw_snapshot_content_sha256"
-            ),
+            "raw_snapshot_content_sha256": payload.get("raw_snapshot_content_sha256"),
             "raw_source_kind": payload.get("raw_source_kind"),
             "raw_captured_at": payload.get("raw_captured_at"),
             "raw_window_start": payload.get("raw_window_start"),

@@ -1,4 +1,4 @@
-"""Tests for project-owned evaluation profiles, predicates, and preflight."""
+"""Reference-use-case tests for evaluation profiles and preflight."""
 
 from pathlib import Path
 

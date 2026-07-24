@@ -5,14 +5,12 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-import os
 from pathlib import Path
 
 import pytest
 from pydantic_ai.messages import ModelRequest, SystemPromptPart, UserPromptPart
 
 from evaluation import LocalReviewStore, ReviewStoreError
-import evaluation.review as review_module
 from mi.ai.backends.pydantic_ai_backend import PydanticAIBackend
 from mi.ai.message import UserMessage
 from mi.ai.review import serialize_messages
@@ -28,7 +26,7 @@ def _run_dir(tmp_path: Path) -> Path:
     return run_dir
 
 
-def test_review_store_deduplicates_within_run_and_purges_only_review(
+def test_review_store_deduplicates_and_redacts_within_run(
     tmp_path: Path,
 ) -> None:
     run_dir = _run_dir(tmp_path)
@@ -92,17 +90,9 @@ def test_review_store_deduplicates_within_run_and_purges_only_review(
     assert "embedded-must-not-persist" not in persisted
 
     diagnosis, _ = store.write_diagnosis({"hypothesis": "prompt is ambiguous"})
-    preview = store.purge(dry_run=True)
-    assert preview["file_count"] > 0
-    assert store.purge(dry_run=False, confirmed=True)["purged"] is True
     assert (run_dir / "manifest.json").exists()
     assert (run_dir / "result.json").exists()
     assert diagnosis.exists()
-    assert json.loads(store.capture_path.read_text())["status"] == "purged"
-
-    # A later failed-work generation may capture a new ephemeral review bundle.
-    store.initialize(run_spec_sha256="a" * 64)
-    assert json.loads(store.capture_path.read_text())["status"] == "in_progress"
 
 
 @pytest.mark.parametrize(
@@ -151,9 +141,9 @@ def test_review_capture_empty_state_is_distinct_from_failure(tmp_path: Path) -> 
     run_dir = _run_dir(tmp_path)
     store = LocalReviewStore(run_dir, run_id="eval_review")
 
-    assert store.capture_summary()["status"] == "absent"
+    assert store.review_state()["capture"]["status"] == "absent"
     store.initialize(run_spec_sha256="a" * 64)
-    assert store.capture_summary()["status"] == "in_progress"
+    assert store.review_state()["capture"]["status"] == "in_progress"
 
 
 def test_review_store_accepts_actual_pydantic_ai_urlsafe_binary_serialization(
@@ -293,19 +283,6 @@ def test_review_store_rejects_malformed_binary_without_leaving_objects(
     assert not tuple(store.executions_dir.glob("*/*.json"))
 
 
-def test_review_store_rejects_unconfirmed_mutating_purge(tmp_path: Path) -> None:
-    run_dir = _run_dir(tmp_path)
-    store = LocalReviewStore(run_dir, run_id="eval_review")
-    store.initialize(run_spec_sha256="a" * 64)
-
-    try:
-        store.purge(dry_run=False)
-    except RuntimeError as error:
-        assert "explicit confirmation" in str(error)
-    else:  # pragma: no cover - safety assertion
-        raise AssertionError("Purge unexpectedly ran without confirmation.")
-
-
 def test_review_store_rejects_symlinked_review_directory(tmp_path: Path) -> None:
     run_dir = _run_dir(tmp_path)
     outside = tmp_path / "outside"
@@ -319,47 +296,6 @@ def test_review_store_rejects_symlinked_review_directory(tmp_path: Path) -> None
         assert "escapes" in str(error) or "symlink" in str(error)
     else:  # pragma: no cover - safety assertion
         raise AssertionError("Symlinked review directory was accepted.")
-
-
-def test_review_store_restores_bundle_when_purge_deletion_fails(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    run_dir = _run_dir(tmp_path)
-    store = LocalReviewStore(run_dir, run_id="eval_review")
-    store.initialize(run_spec_sha256="a" * 64)
-    retained = store.review_dir / "retained.txt"
-    retained.write_text("review evidence", encoding="utf-8")
-
-    with monkeypatch.context() as context:
-        context.setattr(
-            review_module.shutil,
-            "rmtree",
-            lambda _path: (_ for _ in ()).throw(OSError("simulated interruption")),
-        )
-        with pytest.raises(OSError, match="simulated interruption"):
-            store.purge(dry_run=False, confirmed=True)
-
-    assert retained.read_text(encoding="utf-8") == "review evidence"
-    assert not store.purge_staging_dir.exists()
-    assert store.purge(dry_run=True)["file_count"] >= 2
-    assert store.purge(dry_run=False, confirmed=True)["purged"] is True
-
-
-def test_review_store_recovers_a_bundle_staged_by_an_interrupted_process(
-    tmp_path: Path,
-) -> None:
-    run_dir = _run_dir(tmp_path)
-    store = LocalReviewStore(run_dir, run_id="eval_review")
-    store.initialize(run_spec_sha256="a" * 64)
-    retained = store.review_dir / "retained.txt"
-    retained.write_text("review evidence", encoding="utf-8")
-    os.replace(store.review_dir, store.purge_staging_dir)
-
-    preview = store.purge(dry_run=True)
-
-    assert preview["file_count"] >= 2
-    assert retained.read_text(encoding="utf-8") == "review evidence"
-    assert not store.purge_staging_dir.exists()
 
 
 def test_review_store_rejects_tampered_manifest_and_object(tmp_path: Path) -> None:

@@ -1,4 +1,4 @@
-"""Tests for the project-owned root model catalog."""
+"""Reference-use-case tests for the project-owned root model catalog."""
 
 from pathlib import Path
 

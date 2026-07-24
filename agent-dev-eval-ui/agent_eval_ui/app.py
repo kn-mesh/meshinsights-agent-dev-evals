@@ -27,8 +27,6 @@ class ExplorerBackend(Protocol):
     ) -> dict[str, Any]: ...
     def get_attempt(self, run_id: str, execution_id: str) -> dict[str, Any]: ...
     def get_evidence(self, run_id: str, example_id: str) -> dict[str, Any]: ...
-    def list_comparisons(self) -> dict[str, Any]: ...
-    def get_comparison(self, comparison_id: str) -> dict[str, Any]: ...
 
 
 def create_app(*, backend: ExplorerBackend, static_dir: Path | None = None) -> FastAPI:
@@ -79,14 +77,6 @@ def create_app(*, backend: ExplorerBackend, static_dir: Path | None = None) -> F
     @app.get("/api/runs/{run_id}/examples/{example_id}/evidence")
     def get_evidence(run_id: str, example_id: str) -> dict[str, Any]:
         return _call(backend.get_evidence, run_id, example_id)
-
-    @app.get("/api/comparisons")
-    def list_comparisons() -> dict[str, Any]:
-        return _call(backend.list_comparisons)
-
-    @app.get("/api/comparisons/{comparison_id}")
-    def get_comparison(comparison_id: str) -> dict[str, Any]:
-        return _call(backend.get_comparison, comparison_id)
 
     resolved_static = static_dir.resolve() if static_dir is not None else None
     if resolved_static is not None and (resolved_static / "assets").is_dir():

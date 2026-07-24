@@ -67,11 +67,6 @@
       "description": "Selective immutable publication of retained evaluations"
     },
     {
-      "path": "src/lifecycle",
-      "owner": "reusable_workbench",
-      "description": "Frozen legacy quarantine and recovery implementation"
-    },
-    {
       "path": "src/pipelines",
       "owner": "reusable_workbench",
       "description": "Generic pipeline runners"
@@ -95,6 +90,16 @@
       "path": "docs/use_case",
       "owner": "reference_use_case",
       "description": "Replaceable durable use-case context"
+    },
+    {
+      "path": "tests",
+      "owner": "reusable_workbench",
+      "description": "Reusable Workbench and generated-project contract tests"
+    },
+    {
+      "path": "tests/use_case",
+      "owner": "reference_use_case",
+      "description": "Replaceable reference-use-case tests"
     },
     {
       "path": "pipeline_configs",
@@ -195,7 +200,7 @@
       "src/processors",
       "src/retrievers",
       "www/src/use_case",
-      "tests"
+      "tests/use_case"
     ],
     "remove_directories": [
       "docs/development-backlog",
@@ -225,7 +230,7 @@
       "src/processors",
       "src/retrievers",
       "www/src/use_case",
-      "tests"
+      "tests/use_case"
     ],
     "forbidden_terms": [
       "spirax",

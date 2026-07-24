@@ -43,7 +43,6 @@ _DEFAULT_NON_EXECUTION_EXCLUSIONS = (
     "src/benchmarks/**",
     "src/eval_lifecycle/**",
     "src/evals/**",
-    "src/lifecycle/**",
     "src/model_configuration.py",
     "src/pipelines/**",
     "src/project_bootstrap/**",
@@ -465,7 +464,7 @@ def resolve_agent_version(
         "runtime_contract": {
             "agent_version_contract_version": 1,
             "pipeline_execution_contract_version": 1,
-            "compatible_result_schema_versions": [1, 2],
+            "compatible_result_schema_versions": [2],
             "registry_schema_version": registry.version,
         },
     }

@@ -119,6 +119,8 @@ uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1_3.ppln
   --azure-postgres-host <postgres-host> \
   --azure-postgres-database <postgres-database> \
   --azure-postgres-user <entra-login> \
+  --azure-storage-account-url <blob-account-url> \
+  --azure-storage-container <blob-container> \
   --benchmark-key <published-benchmark-key> \
   --benchmark-version <version-number> \
   --example-id '<example-id>' \
@@ -182,13 +184,10 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --azure-storage-container source-snapshots
 ```
 
-With the complete `--azure-postgres-*` arguments above, discovery uses direct
-Entra-authenticated Azure PostgreSQL. Without them, the repository falls back
-to `DATABASE_URL` when it is set; this repository's normal local environment
-may therefore show a local catalog instead of hosted Azure state. The message
-`Retrieving published benchmarks for spirax-pulse from Azure...` is emitted
-before connection-path verification and is not evidence that Azure was queried.
-Do not use the bare chooser to establish hosted availability.
+Discovery uses direct Entra-authenticated Azure PostgreSQL. The effective
+project, PostgreSQL, and Blob identities must match `workbench.project.json`
+before catalog access. Missing or mismatched hosted identities fail closed;
+`DATABASE_URL` does not substitute for this operator path.
 
 Record the selected benchmark key and version, then use the fully explicit
 command for subsequent runs in the same environment. Repeat discovery after
@@ -227,6 +226,32 @@ environment and verification timestamp outside the reusable command templates.
 - Configure credentials required by the selected model provider.
 - Check `models.yaml` for the model's `api` family. Catalog membership means the
   model is selectable; the runtime adapter must also support that API family.
+
+## Occurrence Authorization And Stateful Dry Run
+
+One request authorizes at most one new occurrence of its selected scope,
+whether that scope is all examples, named sections, or explicit units/examples.
+Do not silently create a second occurrence after preflight, interruption, or a
+repeated command.
+
+Before a paid run, report:
+
+- selected examples × `--runs-per-example`;
+- model and reasoning effort;
+- runtime and `--max-workers`; and
+- the frozen `model_pricing.yaml` record, currency, rates, and
+  `assume_uncached` estimation basis when available.
+
+If the request already authorizes that concrete run, proceed. Otherwise, ask
+for direction once.
+
+Eval `--dry-run` is stateful. It creates a durable working occurrence and writes
+`manifest.json` plus `agent-version.json`, but executes no attempts and captures
+no review. The CLI prints the exact command to continue that same occurrence;
+use it unchanged. It removes `--dry-run` and adds the allocated
+`--run-id eval_<occurrence>`. Do not rerun the original command without
+`--run-id`, because that allocates a second occurrence. Publication dry-run is
+different: it remains storage-free.
 
 ## Results
 
@@ -445,12 +470,14 @@ uv run python -m src.evals.eval_orchestration \
   --status-run-id eval_<hash>
 ```
 
-## Compare Completed Results
+## Review Completed Results Across Runs
 
-Comparison happens after evals complete. Use Codex with
-`$eval-results-analysis` or select retained runs in the local read-only
-explorer. Keep execution focused on producing one durable result per explicit
-agent/model/scope configuration.
+Keep each eval as one independent durable result. Use the local read-only
+explorer to view high-level accuracy, reliability, cost, model, and
+configuration differences, then open a run to inspect its units and evidence.
+Use `$eval-results-analysis` when an AI coding agent should review multiple
+results. The MVP does not create direct-comparison artifacts or paired-delta
+reports.
 
 ## Ephemeral Coding-Agent Review
 
@@ -502,7 +529,7 @@ uv run python -m src.eval_lifecycle.cli list --state all --json
 uv run python -m src.eval_lifecycle.cli inspect eval_<hash> --json
 ```
 
-Preview and explicitly elevate a meaningful complete full run:
+Preview and explicitly elevate a complete selected occurrence:
 
 ```bash
 uv run python -m src.eval_lifecycle.cli elevate eval_<hash> --dry-run --json

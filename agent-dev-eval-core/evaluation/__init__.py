@@ -17,9 +17,7 @@ from evaluation.graders import (
     build_default_grader_registry,
 )
 from evaluation.identity import (
-    build_comparison_identity,
     build_eval_run_identity,
-    build_run_identity,
     build_work_item_id,
     canonical_json_bytes,
     canonical_sha256,
@@ -27,11 +25,9 @@ from evaluation.identity import (
 )
 from evaluation.metrics import (
     MetricCounts,
-    build_confidence_accuracy,
     build_performance_summary,
     build_reliability_summary,
     build_scoring_coverage,
-    group_metric_counts,
     metric_counts,
 )
 from evaluation.models import (
@@ -51,11 +47,7 @@ from evaluation.receipt_extraction import (
     read_path,
     validate_metadata_identity,
 )
-from evaluation.result_writer import (
-    build_results_dir_for_pipeline,
-    normalize_filename_token,
-    write_json_exclusive,
-)
+from evaluation.result_writer import normalize_filename_token
 from evaluation.review import (
     CaptureStatus,
     LocalReviewStore,
@@ -97,15 +89,11 @@ __all__ = [
     "ReviewStoreError",
     "ScoringStatus",
     "StructuredOutputExtraction",
-    "build_confidence_accuracy",
     "benchmark_source_reference",
-    "build_comparison_identity",
     "build_default_grader_registry",
     "build_eval_run_identity",
     "build_performance_summary",
-    "build_run_identity",
     "build_reliability_summary",
-    "build_results_dir_for_pipeline",
     "build_scoring_coverage",
     "build_work_item_id",
     "canonical_json_bytes",
@@ -114,7 +102,6 @@ __all__ = [
     "eval_attempt_performance_to_dict",
     "eval_attempt_to_dict",
     "extract_output_fields",
-    "group_metric_counts",
     "is_sensitive_key",
     "is_sensitive_path",
     "metric_counts",
@@ -122,6 +109,5 @@ __all__ = [
     "read_path",
     "validate_metadata_identity",
     "verify_eval_run_identity",
-    "write_json_exclusive",
     "query_attempt_rows",
 ]

@@ -1,4 +1,4 @@
-"""Bounded repeated execution across serial, thread, and process runtimes."""
+"""Bounded repeated execution across serial and threaded runtimes."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ from collections.abc import Callable, Iterable
 from concurrent.futures import (
     FIRST_COMPLETED,
     Future,
-    ProcessPoolExecutor,
     ThreadPoolExecutor,
     wait,
 )
@@ -17,7 +16,7 @@ import time
 from typing import Generic, Literal, TypeVar
 
 
-RuntimeType = Literal["serial", "threaded", "process"]
+RuntimeType = Literal["serial", "threaded"]
 ErrorActionType = Literal["stop", "continue"]
 T = TypeVar("T")
 R = TypeVar("R")
@@ -42,7 +41,7 @@ class RepeatedEvalExecutorConfig:
     cancellation_grace_seconds: float = 30.0
 
     def __post_init__(self) -> None:
-        if self.runtime not in {"serial", "threaded", "process"}:
+        if self.runtime not in {"serial", "threaded"}:
             raise ValueError(f"Unsupported runtime: {self.runtime}.")
         if self.error_action not in {"stop", "continue"}:
             raise ValueError(f"Unsupported error_action: {self.error_action}.")
@@ -236,17 +235,12 @@ class RepeatedEvalExecutor(Generic[T, R]):
         on_completed: TerminalCallback[T, R] | None,
         should_cancel: Callable[[], bool] | None,
     ) -> tuple[RepeatedEvalRecord[T, R], ...]:
-        executor_class = (
-            ProcessPoolExecutor
-            if self._config.runtime == "process"
-            else ThreadPoolExecutor
-        )
         queued = deque(enumerate(work_items))
         records: dict[int, RepeatedEvalRecord[T, R]] = {}
         pending: dict[Future[R], tuple[int, RepeatedEvalWorkItem[T], float]] = {}
         stop_submitting = False
         cancellation_started_at: float | None = None
-        executor = executor_class(max_workers=self._config.max_workers)
+        executor = ThreadPoolExecutor(max_workers=self._config.max_workers)
         interrupted = False
         try:
             if should_cancel is not None and should_cancel():
@@ -327,7 +321,7 @@ class RepeatedEvalExecutor(Generic[T, R]):
 
     def _fill_pending(
         self,
-        executor: ThreadPoolExecutor | ProcessPoolExecutor,
+        executor: ThreadPoolExecutor,
         queued: deque[tuple[int, RepeatedEvalWorkItem[T]]],
         pending: dict[Future[R], tuple[int, RepeatedEvalWorkItem[T], float]],
         run_once: Callable[[RepeatedEvalWorkItem[T]], R],

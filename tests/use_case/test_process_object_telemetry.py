@@ -1,4 +1,4 @@
-"""Tests for pipeline-visible aggregate AI execution telemetry."""
+"""Reference-use-case tests for aggregate AI execution telemetry."""
 
 from src.objects.process_object import PulseFailureAnalysisProcessObject
 

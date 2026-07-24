@@ -32,29 +32,32 @@ libraries by hand.
 
 5. Confirm:
    - reusable libraries and generic root skills were preserved;
+   - `tests/test_repository_skills.py` was preserved and passes in the generated
+     project after the reference-only `tests/use_case/` seam was cleared;
    - manifest-declared reference paths were cleared;
    - local evals, retained versions, credentials, caches, and build output were
      not copied;
-   - `README.md`, `EvalRunbook.md`, `.env.example`, `models.yaml`,
-     `model_pricing.yaml`, and
-     `workbench.project.json` contain the new project identity; and
+   - `README.md`, `EvalRunbook.md`, `.env.example`, `models.yaml`, and
+     `workbench.project.json` contain the new project identity;
+   - reusable `model_pricing.yaml` remains valid and satisfies every
+     `models.yaml` pricing reference without use-case identity; and
    - validation reports no reference-identity leakage.
 6. Capture durable domain context in `docs/use_case/PROJECT_CONTEXT.md`.
+   Treat the generated `EvalRunbook.md` as a marked bootstrap placeholder, not
+   an executable eval guide.
 7. Hand off evidence and control-pipeline work to
    `$benchmark-pipeline-port`, then use `$port-eval-explorer-use-case` for the
    project evidence view.
 
+Use the
+[repository verification matrix](../project-guide/references/verification-matrix.md)
+for any template or bootstrap implementation change.
+
 ## Reusable-Code Approval
 
-Inspect reusable source when necessary, but do not modify it without explicit
-user approval. Before editing `mi-core/`, `agent-dev-eval-core/`,
-`agent-dev-eval-ui/`, reusable Workbench code, bootstrap, versioning, or generic
-lifecycle mechanics:
-
-1. show why the use-case layer cannot correctly satisfy the request;
-2. identify the exact reusable paths and contracts;
-3. explain the cross-use-case behavior and focused tests; and
-4. ask the user for approval.
+If the request explicitly authorizes the named reusable scope, proceed after
+stating its ownership and focused tests. Otherwise, identify the exact reusable
+paths/contracts and pause once for approval.
 
 If an approved shared fix is made locally, record the canonical template or
 library target and the upstream issue, PR, commit, or pending action before

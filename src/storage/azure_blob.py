@@ -27,7 +27,6 @@ class AzureBlobEvidenceStore:
     def __init__(
         self,
         *,
-        connection_string: str | None = None,
         account_url: str | None = None,
         credential: Any | None = None,
         container: str | None = None,
@@ -40,9 +39,6 @@ class AzureBlobEvidenceStore:
         resolved_account_url = (
             account_url or os.getenv("AZURE_STORAGE_ACCOUNT_URL", "")
         ).strip().rstrip("/")
-        resolved_connection = (
-            connection_string or os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
-        ).strip()
         resolved_container = (
             container or os.getenv("AZURE_STORAGE_CONTAINER", "")
         ).strip()
@@ -56,16 +52,9 @@ class AzureBlobEvidenceStore:
             )
             self._container = service.get_container_client(resolved_container)
             return
-        if not resolved_connection:
-            raise ValueError(
-                "AZURE_STORAGE_ACCOUNT_URL or AZURE_STORAGE_CONNECTION_STRING is "
-                "required for evidence retrieval."
-            )
-        service = BlobServiceClient.from_connection_string(
-            resolved_connection,
-            api_version=AZURE_BLOB_SERVICE_API_VERSION,
+        raise ValueError(
+            "AZURE_STORAGE_ACCOUNT_URL is required for Entra evidence retrieval."
         )
-        self._container = service.get_container_client(resolved_container)
 
     def read_verified(self, artifact: SourceArtifact) -> bytes:
         """Download one artifact and enforce its frozen length and SHA-256 hash."""

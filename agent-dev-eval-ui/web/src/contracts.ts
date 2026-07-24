@@ -60,13 +60,14 @@ export type PerformanceSummary =
       reason: string;
     };
 
-export interface PublishedLabelerNote {
+export interface PublishedReviewerCoverage {
   review_event_id: string;
+  label_revision: number;
+  reviewer_user_id: string;
   reviewer_display_name: string;
   reviewer_project_role: string;
   submitted_at: string;
-  explanation: string;
-  selected_for_publication: boolean;
+  is_selected_label_revision: boolean;
 }
 
 export interface PublishedVerification {
@@ -81,7 +82,7 @@ export interface PublishedVerification {
 
 export interface BenchmarkContext {
   availability: "available";
-  labeler_notes: PublishedLabelerNote[];
+  reviewer_coverage: PublishedReviewerCoverage[];
   verification: PublishedVerification | null;
 }
 

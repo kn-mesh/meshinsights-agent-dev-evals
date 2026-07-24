@@ -1,4 +1,4 @@
-"""Behavior tests for the prototype-equivalent Pulse v1_3 workflow."""
+"""Reference-use-case behavior tests for the Pulse v1_3 workflow."""
 
 from __future__ import annotations
 

@@ -39,10 +39,6 @@ meshinsights-cli = { path = "mi-core/cli", editable = true }
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-filterwarnings = [
-    # Ignore pytz internal use of deprecated utcfromtimestamp on Python 3.12+
-    "ignore:datetime\\.datetime\\.utcfromtimestamp\\(\\) is deprecated:DeprecationWarning:pytz(\\..*)?$",
-]
 
 [tool.basedpyright]
 include = ["src", "agent-dev-eval-core/evaluation", "model_catalog.py"]

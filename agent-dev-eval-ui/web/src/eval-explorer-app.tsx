@@ -554,7 +554,7 @@ function ResultsOverview({
             Overall evaluation results
           </h2>
           <p className="mt-1.5 max-w-3xl text-[0.8125rem] leading-relaxed text-muted-foreground">
-            Review recent detail or compare meaningful elevated results, then open a run to inspect units and evidence.
+            Review high-level results across separate eval runs, then open one to inspect its units and evidence.
           </p>
         </div>
         <div className="grid min-w-32 gap-0.5 border-l pl-5 text-right max-[900px]:border-l-0 max-[900px]:pl-0 max-[900px]:text-left">
@@ -1177,7 +1177,7 @@ function BenchmarkContextPanel({
   fieldLabels?: Record<string, string>;
   verificationSchemas: SourceVerificationSchema[];
 }) {
-  const notes = context.labeler_notes.filter((note) => note.explanation.trim());
+  const reviewerCoverage = context.reviewer_coverage ?? [];
   const verification = context.verification;
   return (
     <details open className="benchmark-context group overflow-hidden rounded-lg border">
@@ -1186,7 +1186,7 @@ function BenchmarkContextPanel({
           <StickyNote className="size-4 text-primary" />
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Supporting context</div>
-            <h3 className="mt-0.5 text-[0.95rem] font-semibold tracking-tight">Labeler notes and verification</h3>
+            <h3 className="mt-0.5 text-[0.95rem] font-semibold tracking-tight">Reviewer coverage and verification</h3>
           </div>
         </div>
         <span className="flex items-center gap-2.5">
@@ -1199,24 +1199,25 @@ function BenchmarkContextPanel({
 
       <div className="grid grid-cols-2 border-t max-[900px]:grid-cols-1">
         <section className="min-w-0 p-4">
-          <h4 className="mb-2.5 text-[0.78rem] font-semibold">Labeler notes</h4>
-          {notes.length ? (
+          <h4 className="mb-2.5 text-[0.78rem] font-semibold">Reviewer coverage</h4>
+          {reviewerCoverage.length ? (
             <div className="grid gap-2.5">
-              {notes.map((note) => (
-                <article className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 rounded-md border bg-card p-3" key={note.review_event_id}>
+              {reviewerCoverage.map((reviewer) => (
+                <article className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 rounded-md border bg-card p-3" key={reviewer.review_event_id}>
                   <div className="grid min-w-0 gap-0.5">
-                    <strong className="text-[0.75rem] font-semibold">{note.reviewer_display_name}</strong>
-                    <span className="text-[0.65rem] text-muted-foreground">{humanize(note.reviewer_project_role)} · {formatRunDate(note.submitted_at)}</span>
+                    <strong className="text-[0.75rem] font-semibold">{reviewer.reviewer_display_name}</strong>
+                    <span className="text-[0.65rem] text-muted-foreground">
+                      {humanize(reviewer.reviewer_project_role)} · revision {reviewer.label_revision} · {formatRunDate(reviewer.submitted_at)}
+                    </span>
                   </div>
-                  {note.selected_for_publication ? (
+                  {reviewer.is_selected_label_revision ? (
                     <span className="justify-self-end text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Selected label</span>
                   ) : null}
-                  <p className="col-span-2 whitespace-pre-wrap text-[0.75rem] leading-relaxed text-foreground/85">{note.explanation}</p>
                 </article>
               ))}
             </div>
           ) : (
-            <p className="text-[0.75rem] leading-relaxed text-muted-foreground">No labeler notes were attached to the published reviewer revisions.</p>
+            <p className="text-[0.75rem] leading-relaxed text-muted-foreground">No reviewer coverage was attached to this published example.</p>
           )}
         </section>
 

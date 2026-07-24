@@ -33,7 +33,7 @@ def find_run_directory(run_id: str, *, root: Path = Path("eval_results")) -> Pat
 
 
 def materialize_review_index(run_dir: Path) -> Path:
-    """Join schema-v1 eval rows to retained review execution manifests."""
+    """Join schema-v2 eval rows to retained review execution manifests."""
     store = _store(run_dir)
     result = _verified_result(run_dir)
     run_store = LocalRunStore(run_dir, run_id=run_dir.name)
@@ -369,8 +369,6 @@ def _review_unavailable_reason(
             "message": failure.get("reason"),
         }
     status = str(capture.get("status", "absent"))
-    if status == "purged":
-        return {"code": "purged"}
     if capture.get("mode") == "off":
         return {"code": "disabled" if status != "absent" else "absent"}
     if status == "failed":

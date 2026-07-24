@@ -247,19 +247,20 @@ uv run python -m src.agent_versions.cli --json resolve \
   --dirty-policy capture
 ```
 
-The supported meaningful-version workflow is full-run elevation through
-`src.eval_lifecycle.cli`. It retains the candidate's Git identity,
-configuration hashes, and relevant patch together with the compact retained
+The supported meaningful-version workflow elevates a complete selected
+occurrence through `src.eval_lifecycle.cli`. It retains the candidate's Git
+identity, configuration hashes, and relevant patch with the compact retained
 eval; it does not copy the complete source tree.
 
 ## Local Version And Result Lifecycle
 
-Every new eval is a rich, disposable working eval. Elevation is an explicit
-full-run operation for a meaningful result and agent version. Retained evals
-use aggregate artifacts, prune performance/tool-trace detail, and keep exact
-Azure evidence references rather than local evidence copies. After the retained
-eval verifies successfully, elevation permanently removes its source working
-eval so the explorer shows only the retained row for that occurrence.
+Every new eval is a rich, disposable working eval. Elevation accepts a complete
+selected occurrence—zero missing planned work items with a recorded latest
+attempt for each—regardless of whether its scope is all examples, sections, or
+explicit units/examples. Retained evals use aggregate artifacts, prune
+performance/tool-trace detail, and keep exact Azure evidence references rather
+than local evidence copies. After verification, elevation permanently removes
+the source working eval so the explorer shows only the retained row.
 
 ```bash
 uv run python -m src.eval_lifecycle.cli list --state all --json

@@ -1,4 +1,4 @@
-"""Tests for benchmark-frozen Azure Blob evidence retrieval."""
+"""Reference-use-case tests for frozen Azure Blob evidence retrieval."""
 
 from __future__ import annotations
 

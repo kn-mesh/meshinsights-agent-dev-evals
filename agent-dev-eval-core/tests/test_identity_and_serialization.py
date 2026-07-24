@@ -9,7 +9,6 @@ from evaluation import (
     OutputContractStatus,
     ScoringStatus,
     build_eval_run_identity,
-    build_run_identity,
     build_work_item_id,
     canonical_sha256,
     eval_attempt_from_dict,
@@ -24,7 +23,6 @@ def test_canonical_identity_ignores_mapping_order() -> None:
     second = {"runs": 3, "model": {"reasoning": "high", "id": "provider:model"}}
 
     assert canonical_sha256(first) == canonical_sha256(second)
-    assert build_run_identity(first) == build_run_identity(second)
 
 
 def test_work_item_identity_is_stable_and_repetition_specific() -> None:

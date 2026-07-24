@@ -29,12 +29,6 @@ members = ["core", "cli"]
 mi-core = { workspace = true }
 meshinsights-cli = { workspace = true }
 
-[tool.pytest.ini_options]
-filterwarnings = [
-    # Ignore pytz internal use of deprecated utcfromtimestamp on Python 3.12+
-    "ignore:datetime\\.datetime\\.utcfromtimestamp\\(\\) is deprecated:DeprecationWarning:pytz(\\..*)?$",
-]
-
 [tool.basedpyright]
 include = ["core/src", "cli/src", "tests"]
 typeCheckingMode = "standard"

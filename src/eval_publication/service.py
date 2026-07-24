@@ -14,21 +14,18 @@ from typing import Any
 
 from evaluation import canonical_sha256
 
+from src.benchmarks import PublishedReviewContext
 from src.eval_lifecycle import EvalLifecycleService
+from src.eval_lifecycle.projection import (
+    project_retained_result,
+    project_retained_unit,
+)
 from src.eval_publication.models import (
     PublicationManifest,
     PublicationSeed,
     PublishedArtifact,
 )
 from src.eval_publication.storage import AzureBlobPublicationStore, PublicationStore
-
-
-PAYLOAD_NAMES = (
-    "result.json",
-    "units.json",
-    "evidence-references.json",
-    "agent-provenance.json",
-)
 
 
 class EvalPublicationError(RuntimeError):
@@ -355,10 +352,9 @@ class EvalPublicationService:
 
 
 def _published_result(result: dict[str, Any]) -> dict[str, Any]:
-    output = deepcopy(result)
+    output = project_retained_result(result)
     output.pop("artifacts", None)
     run = output["run"]
-    run.pop("latest_invocation_id", None)
     dimensions = run.get("dimensions", {})
     for key in ("pipeline", "evaluation_profile"):
         if isinstance(dimensions.get(key), dict):
@@ -372,20 +368,8 @@ def _published_units(
     eval_run_id: str,
 ) -> dict[str, Any]:
     output_rows: list[dict[str, Any]] = []
-    excluded = {
-        "execution_generation",
-        "execution_history",
-        "execution_id",
-        "invocation_id",
-        "failure_details",
-        "review_status",
-        "review_unavailable_reason",
-        "flaky",
-    }
     for item in units["units"]:
-        output_rows.append(
-            {key: deepcopy(value) for key, value in item.items() if key not in excluded}
-        )
+        output_rows.append(project_retained_unit(item))
     return {
         "schema_version": 1,
         "retained_eval_id": units["retained_eval_id"],
@@ -476,6 +460,18 @@ def _validate_unit_rows(units: list[Any]) -> None:
             raise EvalPublicationError(
                 f"Published unit {index} has invalid grader evaluations."
             )
+        context = item.get("published_review_context")
+        if not isinstance(context, dict):
+            raise EvalPublicationError(
+                f"Published unit {index} is missing published reviewer context."
+            )
+        try:
+            PublishedReviewContext.model_validate(context)
+        except ValueError as exc:
+            raise EvalPublicationError(
+                f"Published unit {index} has legacy or invalid reviewer context; "
+                "rerun and retain the eval before publication."
+            ) from exc
 
 
 def _validate_evidence_references(

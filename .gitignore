@@ -33,17 +33,10 @@ wheels/
 # Local immutable agent-version manifests and content-addressed objects
 /agent_versions/
 
-# Working evals are rich, disposable, and local. Explicitly elevated aggregate
-# artifacts under eval_results/retained remain visible to Git.
-/eval_results/working/
-
-# Legacy/local detailed run evidence remains ignored.
-/eval_results/**/performance/
-/eval_results/**/review/
-/eval_results/**/attempts/
-/eval_results/**/objects/
-/eval_results/**/.coordinator.lock
-/eval_results/**/.DS_Store
+# Evaluation results are generated local data. Working runs, retained evals,
+# model outputs, reviewer context, and publication-ready bundles must never be
+# committed to the source repository.
+/eval_results/
 
 
 # Frozen legacy lifecycle state remains machine-local and unsupported.

@@ -22,7 +22,7 @@ from evaluation.identity import canonical_sha256
 from evaluation.security import is_sensitive_key
 
 
-CaptureStatus = Literal["in_progress", "complete", "partial", "failed", "purged"]
+CaptureStatus = Literal["in_progress", "complete", "partial", "failed"]
 
 _MAX_FAILURE_OBSERVATIONS = 100
 
@@ -93,7 +93,6 @@ class LocalReviewStore:
         self.staging_dir = self.review_dir / ".staging"
         self.lock_path = self.run_dir / ".review.lock"
         self.diagnosis_dir = self.run_dir / "diagnosis"
-        self.purge_staging_dir = self.run_dir / ".review.purge-in-progress"
         self._capture_lock = threading.RLock()
 
     def initialize(self, *, run_spec_sha256: str, mode: str = "full") -> Path:
@@ -134,22 +133,6 @@ class LocalReviewStore:
         }
         if self.capture_path.exists():
             existing = self._read_json(self.capture_path)
-            if existing.get("status") == "purged":
-                for key, value in (
-                    ("review_schema_version", self.schema_version),
-                    ("run_id", self.run_id),
-                    ("publication", "local_only"),
-                ):
-                    if existing.get(key) != value:
-                        raise ReviewStoreError(
-                            f"Review purge tombstone conflicts at {key!r}."
-                        )
-                payload["created_at_utc"] = existing.get(
-                    "created_at_utc", payload["created_at_utc"]
-                )
-                payload["prior_purge"] = existing.get("purge")
-                self._atomic_write_json(self.capture_path, payload)
-                return self.capture_path
             for key, value in (
                 ("review_schema_version", self.schema_version),
                 ("run_id", self.run_id),
@@ -348,14 +331,6 @@ class LocalReviewStore:
             self._atomic_write_json(self.capture_path, capture)
             return capture
 
-    def capture_summary(
-        self, *, expected_execution_ids: list[str] | None = None
-    ) -> dict[str, Any]:
-        """Return a status derived from evidence, never merely a stored status string."""
-        return self.review_state(expected_execution_ids=expected_execution_ids)[
-            "capture"
-        ]
-
     def review_state(
         self, *, expected_execution_ids: list[str] | None = None
     ) -> dict[str, Any]:
@@ -382,24 +357,6 @@ class LocalReviewStore:
                 "review_state_sha256": fingerprint,
             }
         capture = self._read_json(self.capture_path)
-        if capture.get("status") == "purged":
-            derived_capture = {
-                **capture,
-                "review_unavailable_reason": {"code": "purged"},
-            }
-            return {
-                "capture": derived_capture,
-                "integrity": {"status": "valid", "errors": []},
-                "review_state_sha256": canonical_sha256(
-                    {
-                        "capture": capture,
-                        "expected_execution_ids": sorted(expected_execution_ids or ()),
-                        "manifests": [],
-                        "objects": [],
-                        "staging": [],
-                    }
-                ),
-            }
         expected = expected_execution_ids
         if expected is None:
             raw_expected = capture.get("expected_execution_ids", [])
@@ -655,80 +612,6 @@ class LocalReviewStore:
             "file_count": len(files),
             "bytes": sum(path.stat().st_size for path in files),
         }
-
-    def purge(self, *, dry_run: bool, confirmed: bool = False) -> dict[str, Any]:
-        """Remove only this exact run's disposable review content."""
-        with self._write_lock():
-            return self._purge_unlocked(dry_run=dry_run, confirmed=confirmed)
-
-    def _purge_unlocked(
-        self, *, dry_run: bool, confirmed: bool = False
-    ) -> dict[str, Any]:
-        self._validate_run_dir()
-        self._recover_interrupted_purge()
-        summary = (
-            self.size()
-            if self.review_dir.exists()
-            else {
-                "run_id": self.run_id,
-                "path": str(self.review_dir),
-                "file_count": 0,
-                "bytes": 0,
-            }
-        )
-        if dry_run:
-            return {**summary, "dry_run": True, "purged": False}
-        if not confirmed:
-            raise ReviewStoreError("Review purge requires explicit confirmation.")
-        if not self.review_dir.exists():
-            return {**summary, "dry_run": False, "purged": True}
-
-        self._assert_within_run(self.review_dir)
-        if self.review_dir.is_symlink():
-            raise ReviewStoreError("Review directory must not be a symlink.")
-        self._assert_within_run(self.purge_staging_dir)
-        if self.purge_staging_dir.exists():
-            raise ReviewStoreError(
-                f"Review purge staging path already exists: {self.purge_staging_dir}"
-            )
-        os.replace(self.review_dir, self.purge_staging_dir)
-        try:
-            shutil.rmtree(self.purge_staging_dir)
-        except BaseException:
-            if self.purge_staging_dir.exists() and not self.review_dir.exists():
-                os.replace(self.purge_staging_dir, self.review_dir)
-            raise
-        self.review_dir.mkdir(parents=True, exist_ok=True)
-        tombstone = {
-            "review_schema_version": self.schema_version,
-            "run_id": self.run_id,
-            "publication": "local_only",
-            "status": "purged",
-            "created_at_utc": utc_now(),
-            "updated_at_utc": utc_now(),
-            "purge": {
-                "purged_at_utc": utc_now(),
-                "file_count": summary["file_count"],
-                "bytes": summary["bytes"],
-            },
-        }
-        self._atomic_write_json(self.capture_path, tombstone)
-        return {**summary, "dry_run": False, "purged": True}
-
-    def _recover_interrupted_purge(self) -> None:
-        """Restore a staged review bundle left by an interrupted purge."""
-        self._assert_within_run(self.purge_staging_dir)
-        if not self.purge_staging_dir.exists():
-            return
-        if self.purge_staging_dir.is_symlink():
-            raise ReviewStoreError(
-                "Review purge staging directory must not be a symlink."
-            )
-        if self.review_dir.exists():
-            raise ReviewStoreError(
-                "Both review and purge staging directories exist; refusing recovery."
-            )
-        os.replace(self.purge_staging_dir, self.review_dir)
 
     def _externalize(
         self,

@@ -46,17 +46,18 @@ class PublishedLabelSchema(BaseModel):
         return self
 
 
-class PublishedLabelerNote(BaseModel):
-    """One exact reviewer note frozen into published benchmark context."""
+class PublishedReviewerCoverage(BaseModel):
+    """One reviewer revision frozen into published benchmark coverage."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     review_event_id: str = Field(min_length=1)
-    reviewer_display_name: str = Field(min_length=1)
-    reviewer_project_role: str = Field(min_length=1)
+    label_revision: int = Field(ge=1)
+    reviewer_user_id: str
+    reviewer_display_name: str
+    reviewer_project_role: str
     submitted_at: datetime
-    explanation: str
-    selected_for_publication: bool
+    is_selected_label_revision: bool
 
 
 class PublishedVerification(BaseModel):
@@ -76,11 +77,11 @@ class PublishedVerification(BaseModel):
 
 
 class PublishedReviewContext(BaseModel):
-    """Frozen reviewer notes and verification retained with an eval run."""
+    """Frozen reviewer coverage and verification retained with an eval run."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    labeler_notes: tuple[PublishedLabelerNote, ...] = ()
+    reviewer_coverage: tuple[PublishedReviewerCoverage, ...] = ()
     verification: PublishedVerification | None = None
 
 

@@ -1,4 +1,4 @@
-"""Tests for the generic explorer API and Spirax evidence projection."""
+"""Reference-use-case tests for the explorer and evidence projection."""
 
 from __future__ import annotations
 
@@ -20,8 +20,9 @@ from evaluation import (
     FieldEvaluation,
     OutputContractStatus,
     ScoringStatus,
-    build_run_identity,
+    build_eval_run_identity,
     build_work_item_id,
+    canonical_sha256,
     eval_attempt_to_dict,
 )
 from src.apps.eval_explorer import (
@@ -57,12 +58,6 @@ class _Backend:
     def get_evidence(self, run_id: str, example_id: str) -> dict[str, Any]:
         return {"run_id": run_id, "example_id": example_id, "verified": True}
 
-    def list_comparisons(self) -> dict[str, Any]:
-        return {"comparisons": []}
-
-    def get_comparison(self, comparison_id: str) -> dict[str, Any]:
-        raise FileNotFoundError(comparison_id)
-
 
 def test_generic_app_delegates_routes_and_maps_missing_results() -> None:
     client = TestClient(create_app(backend=_Backend()))
@@ -82,7 +77,7 @@ def test_generic_app_delegates_routes_and_maps_missing_results() -> None:
         client.get("/api/runs/run-1/examples/example-1/evidence").json()["verified"]
         is True
     )
-    assert client.get("/api/comparisons/missing").status_code == 404
+    assert client.get("/api/comparisons").status_code == 404
 
 
 def test_static_app_serves_the_spa_without_shadowing_unknown_api(
@@ -247,26 +242,26 @@ class _FrozenEvidenceStore:
         raise AssertionError(f"Unexpected artifact: {artifact.artifact_kind}")
 
 
-def _schema_v1_run(project_root: Path) -> tuple[Path, str, str]:
+def _working_run(project_root: Path) -> tuple[Path, str, str]:
     run_spec = {"scope": {"example_ids": ["example-a"]}, "runs_per_example": 1}
-    run_id, digest = build_run_identity(run_spec)
-    run_dir = (
-        project_root
-        / "eval_results"
-        / "working"
-        / "benchmark"
-        / "v1"
-        / run_id
+    digest = canonical_sha256(run_spec)
+    run_id, occurrence_seed = build_eval_run_identity(
+        run_spec_sha256=digest,
+        created_at_utc="2026-01-01T00:00:00+00:00",
+        nonce="eval-explorer-test",
     )
+    run_dir = project_root / "eval_results" / "working" / "benchmark" / "v1" / run_id
     run_dir.mkdir(parents=True)
     work_item_id = build_work_item_id(
         run_id=run_id, item_id="example-a", attempt_index=1
     )
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "performance_schema_version": 1,
         "run_id": run_id,
+        "eval_run_id": run_id,
         "run_spec_sha256": digest,
+        "occurrence_seed": occurrence_seed,
         "run_spec": run_spec,
         "work_items": [
             {
@@ -276,10 +271,11 @@ def _schema_v1_run(project_root: Path) -> tuple[Path, str, str]:
             }
         ],
         "eval_contract": {
-            "schema_version": 1,
+            "schema_version": 2,
             "run": {
-                "schema_version": 1,
+                "schema_version": 2,
                 "run_id": run_id,
+                "eval_run_id": run_id,
                 "run_spec_sha256": digest,
                 "dimensions": {
                     "benchmark": {
@@ -323,16 +319,15 @@ def _schema_v1_run(project_root: Path) -> tuple[Path, str, str]:
                     "slice_keys": [],
                     "metadata": {"sensor_id": "7"},
                     "published_review_context": {
-                        "labeler_notes": [
+                        "reviewer_coverage": [
                             {
                                 "review_event_id": "review-event-a",
+                                "label_revision": 2,
+                                "reviewer_user_id": "reviewer-user-a",
                                 "reviewer_display_name": "Alex Labeler",
                                 "reviewer_project_role": "domain_reviewer",
                                 "submitted_at": "2026-01-01T00:00:00Z",
-                                "explanation": (
-                                    "Telemetry supports the published label."
-                                ),
-                                "selected_for_publication": True,
+                                "is_selected_label_revision": True,
                             }
                         ],
                         "verification": {
@@ -340,13 +335,9 @@ def _schema_v1_run(project_root: Path) -> tuple[Path, str, str]:
                             "note": "Confirmed by customer.",
                             "recorded_at": "2026-01-02T00:00:00Z",
                             "source_content_sha256": "d" * 64,
-                            "context_schema_key": (
-                                "spirax_customer_verification"
-                            ),
+                            "context_schema_key": ("spirax_customer_verification"),
                             "context_schema_version": "1",
-                            "source_fields": {
-                                "failure_cause": "Trap failed closed"
-                            },
+                            "source_fields": {"failure_cause": "Trap failed closed"},
                         },
                     },
                 }
@@ -451,7 +442,7 @@ def _schema_v1_run(project_root: Path) -> tuple[Path, str, str]:
 def test_project_backend_exposes_optional_correlated_performance(
     tmp_path: Path,
 ) -> None:
-    run_dir, run_id, execution_id = _schema_v1_run(tmp_path)
+    run_dir, run_id, execution_id = _working_run(tmp_path)
     evidence_adapter = _EvidenceAdapter()
     backend = ProjectExplorerBackend(
         tmp_path,
@@ -472,7 +463,7 @@ def test_project_backend_exposes_optional_correlated_performance(
     assert attempt["performance"]["availability"] == "available"
     assert attempt["performance"]["metrics"]["duration_seconds"] == 12.0
     assert attempt["benchmark_context"]["availability"] == "available"
-    assert attempt["benchmark_context"]["labeler_notes"][0]["review_event_id"] == (
+    assert attempt["benchmark_context"]["reviewer_coverage"][0]["review_event_id"] == (
         "review-event-a"
     )
     evidence = backend.get_evidence(run_id, "example-a")
@@ -507,14 +498,14 @@ def test_project_backend_exposes_optional_correlated_performance(
 def test_project_backend_exposes_retained_published_review_context(
     tmp_path: Path,
 ) -> None:
-    _, run_id, execution_id = _schema_v1_run(tmp_path)
+    _, run_id, execution_id = _working_run(tmp_path)
     backend = ProjectExplorerBackend(tmp_path)
 
     context = backend.get_attempt(run_id, execution_id)["benchmark_context"]
 
     assert context["availability"] == "available"
-    assert context["labeler_notes"][0]["review_event_id"] == "review-event-a"
-    assert context["labeler_notes"][0]["selected_for_publication"] is True
+    assert context["reviewer_coverage"][0]["review_event_id"] == "review-event-a"
+    assert context["reviewer_coverage"][0]["is_selected_label_revision"] is True
     assert context["verification"]["source"] == "operator_feedback"
     assert context["verification"]["source_fields"] == {
         "failure_cause": "Trap failed closed"
@@ -524,7 +515,7 @@ def test_project_backend_exposes_retained_published_review_context(
 def test_project_backend_rejects_evidence_outside_retained_run_scope(
     tmp_path: Path,
 ) -> None:
-    _, run_id, _ = _schema_v1_run(tmp_path)
+    _, run_id, _ = _working_run(tmp_path)
     backend = ProjectExplorerBackend(
         tmp_path,
         evidence_adapter=_EvidenceAdapter(),  # type: ignore[arg-type]
@@ -537,12 +528,10 @@ def test_project_backend_rejects_evidence_outside_retained_run_scope(
 def test_project_backend_decodes_evidence_from_retained_manifest(
     tmp_path: Path,
 ) -> None:
-    _, run_id, _ = _schema_v1_run(tmp_path)
+    _, run_id, _ = _working_run(tmp_path)
     backend = ProjectExplorerBackend(
         tmp_path,
-        evidence_adapter=SpiraxEvidenceAdapter(
-            evidence_store=_FrozenEvidenceStore()
-        ),
+        evidence_adapter=SpiraxEvidenceAdapter(evidence_store=_FrozenEvidenceStore()),
     )
 
     evidence = backend.get_evidence(run_id, "example-a")
@@ -556,7 +545,7 @@ def test_project_backend_decodes_evidence_from_retained_manifest(
 def test_project_backend_reuses_default_evidence_adapter(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _, run_id, _ = _schema_v1_run(tmp_path)
+    _, run_id, _ = _working_run(tmp_path)
     evidence_adapter = _EvidenceAdapter()
     creations: list[Path] = []
 
@@ -576,7 +565,7 @@ def test_project_backend_reuses_default_evidence_adapter(
 def test_project_backend_rejects_manifest_without_required_frozen_evidence(
     tmp_path: Path,
 ) -> None:
-    run_dir, run_id, _ = _schema_v1_run(tmp_path)
+    run_dir, run_id, _ = _working_run(tmp_path)
     manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
     manifest["eval_contract"]["examples"][0].pop("raw_artifacts")
     (run_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
@@ -695,7 +684,7 @@ def test_project_backend_pages_and_resolves_attempts_beyond_ten_thousand(
 def test_project_backend_treats_malformed_performance_as_unavailable(
     tmp_path: Path, model_calls: Any
 ) -> None:
-    run_dir, run_id, execution_id = _schema_v1_run(tmp_path)
+    run_dir, run_id, execution_id = _working_run(tmp_path)
     summary_path = run_dir / "performance" / "summary.json"
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     summary["model_calls"] = model_calls
@@ -717,7 +706,7 @@ def test_project_backend_treats_malformed_performance_as_unavailable(
 def test_performance_summary_and_links_use_only_latest_generation(
     tmp_path: Path,
 ) -> None:
-    run_dir, run_id, old_execution_id = _schema_v1_run(tmp_path)
+    run_dir, run_id, old_execution_id = _working_run(tmp_path)
     store = LocalRunStore(run_dir, run_id=run_id)
     durable = dict(store.read_attempt_records()[0])
     performance = dict(store.read_performance_records()[0])
@@ -758,9 +747,9 @@ def test_performance_summary_and_links_use_only_latest_generation(
         event="completed",
         payload={"duration_seconds": 3.0, "selected_work_items": 1},
     )
-    store.performance_attempt_path(
-        work_item_id=work_item_id, generation=1
-    ).write_text("not-json", encoding="utf-8")
+    store.performance_attempt_path(work_item_id=work_item_id, generation=1).write_text(
+        "not-json", encoding="utf-8"
+    )
     store.materialize_result(
         completed_at_utc="2026-01-01T00:01:00+00:00",
         latest_invocation_id="inv_rerun",
@@ -776,8 +765,9 @@ def test_performance_summary_and_links_use_only_latest_generation(
     assert summary["availability"] == "available"
     assert summary["recorded_executions"] == 1
     assert summary["model_calls"]["slowest"][0]["execution_id"] == new_execution_id
-    assert backend.get_attempt(run_id, new_execution_id)["performance"][
-        "availability"
-    ] == "available"
+    assert (
+        backend.get_attempt(run_id, new_execution_id)["performance"]["availability"]
+        == "available"
+    )
     with pytest.raises(FileNotFoundError):
         backend.get_attempt(run_id, old_execution_id)

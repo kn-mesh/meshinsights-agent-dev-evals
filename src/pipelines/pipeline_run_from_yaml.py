@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from mi.core import bootstrap_environment
 from mi.core.pipeline_builder import PipelineBuilder
 from mi.core.pipeline_receipt import PipelineReceipt
 
@@ -20,7 +21,11 @@ from src.benchmarks import (
     BenchmarkExample,
     BenchmarkVersion,
 )
-from src.benchmarks.compatibility import preflight_pipeline_benchmark_contract
+from src.benchmarks.compatibility import (
+    load_project_contract,
+    preflight_pipeline_benchmark_contract,
+)
+from src.benchmarks.runtime_identity import resolve_hosted_data_plane_identity
 
 
 def run_pipeline(
@@ -233,6 +238,8 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--azure-postgres-host")
     parser.add_argument("--azure-postgres-database")
     parser.add_argument("--azure-postgres-user")
+    parser.add_argument("--azure-storage-account-url")
+    parser.add_argument("--azure-storage-container")
     parser.add_argument("--benchmark-key", required=True)
     parser.add_argument("--benchmark-version", type=int)
     parser.add_argument("--example-id", required=True)
@@ -246,15 +253,39 @@ def _argument_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     """Load and run one published benchmark example."""
-    args = _argument_parser().parse_args()
+    parser = _argument_parser()
+    args = parser.parse_args()
+    bootstrap_environment()
+    try:
+        identity = resolve_hosted_data_plane_identity(
+            load_project_contract(args.yaml_path),
+            project_key=args.project_key,
+            postgres_host=args.azure_postgres_host,
+            postgres_database=args.azure_postgres_database,
+            postgres_user=args.azure_postgres_user,
+            storage_account_url=args.azure_storage_account_url,
+            storage_container=args.azure_storage_container,
+        )
+    except ValueError as error:
+        parser.error(str(error))
+    os.environ.update(
+        {
+            "APP_PROJECT_KEY": identity.project_key,
+            "AZURE_POSTGRES_HOST": identity.postgres_host,
+            "AZURE_POSTGRES_DATABASE": identity.postgres_database,
+            "AZURE_POSTGRES_USER": identity.postgres_user,
+            "AZURE_STORAGE_ACCOUNT_URL": identity.storage_account_url,
+            "AZURE_STORAGE_CONTAINER": identity.storage_container,
+        }
+    )
     benchmark, example = load_benchmark_example(
-        project_key=args.project_key,
+        project_key=identity.project_key,
         benchmark_key=args.benchmark_key,
         benchmark_version=args.benchmark_version,
         example_id=args.example_id,
-        postgres_host=args.azure_postgres_host,
-        postgres_database=args.azure_postgres_database,
-        postgres_user=args.azure_postgres_user,
+        postgres_host=identity.postgres_host,
+        postgres_database=identity.postgres_database,
+        postgres_user=identity.postgres_user,
     )
     receipt = run_pipeline(
         args.yaml_path,

@@ -1,4 +1,4 @@
-"""Tests for benchmark-backed v1_3 runtime configuration."""
+"""Reference-use-case tests for v1_3 runtime configuration."""
 
 from __future__ import annotations
 
@@ -10,6 +10,9 @@ import tempfile
 
 import yaml
 from mi.core.pipeline_builder import PipelineBuilder
+from src.processors.v1_3.v1_3_alarm_classification_ai_workflow_processor import (
+    V1_3AlarmClassificationAIWorkflowProcessorConfig,
+)
 
 from src.benchmarks.models import (
     BenchmarkExample,
@@ -151,3 +154,7 @@ def test_runtime_config_builds_the_registered_v1_3_pipeline() -> None:
 
     assert pipeline.config.name == "pulse_alarm_failure_analysis_v1_3"
     assert pipeline.config.version == "1.3.0"
+    assert isinstance(
+        pipeline.processors[1].config,
+        V1_3AlarmClassificationAIWorkflowProcessorConfig,
+    )

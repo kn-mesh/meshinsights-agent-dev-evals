@@ -99,39 +99,12 @@ class BenchmarkCatalogSpec(StrictModel):
         return self
 
 
-class ModelPricingSpec(StrictModel):
-    """Optional frozen non-secret rates copied into the project catalog."""
-
-    version: str = Field(min_length=1)
-    currency: str = Field(min_length=1)
-    input_per_million_tokens: float | None = Field(default=None, ge=0)
-    output_per_million_tokens: float | None = Field(default=None, ge=0)
-    cached_input_per_million_tokens: float | None = Field(default=None, ge=0)
-    cache_write_per_million_tokens: float | None = Field(default=None, ge=0)
-    cache_write_5m_per_million_tokens: float | None = Field(default=None, ge=0)
-    cache_write_1h_per_million_tokens: float | None = Field(default=None, ge=0)
-    reasoning_per_million_tokens: float | None = Field(default=None, ge=0)
-    billing_provider: str | None = None
-    billing_plan: str | None = None
-    estimator_version: int = Field(default=3, ge=1)
-    effective_date: str | None = None
-    source: str | None = None
-
-
 class ModelSpec(StrictModel):
     """One project-supported model and its required provider API family."""
 
     id: str = Field(pattern=r"^[^:\s]+:[^\s]+$")
     api: ModelApi
     pricing_key: str | None = Field(default=None, min_length=1)
-    pricing: ModelPricingSpec | None = None
-
-    @model_validator(mode="after")
-    def validate_pricing_reference(self) -> ModelSpec:
-        """Allow a reusable reference or legacy inline pricing, but not both."""
-        if self.pricing_key is not None and self.pricing is not None:
-            raise ValueError("A model cannot define both pricing_key and pricing.")
-        return self
 
 
 class ModelCatalogSpec(StrictModel):
@@ -171,12 +144,6 @@ class TemplateProvenance(StrictModel):
 class ProjectPaths(StrictModel):
     """Durable locations used by Agent Workbench workflows."""
 
-    use_case_context: str = "docs/use_case"
-    pipeline_configs: str = "pipeline_configs"
-    evaluation_configs: str = "evaluation_configs"
-    agent_version_configs: str = "agent_version_configs"
-    eval_results: str = "eval_results"
-    promoted_agent_versions: str = "agent_versions"
     model_catalog: str = "models.yaml"
 
 

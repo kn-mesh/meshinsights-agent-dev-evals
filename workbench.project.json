@@ -59,12 +59,6 @@
     ]
   },
   "paths": {
-    "use_case_context": "docs/use_case",
-    "pipeline_configs": "pipeline_configs",
-    "evaluation_configs": "evaluation_configs",
-    "agent_version_configs": "agent_version_configs",
-    "eval_results": "eval_results",
-    "promoted_agent_versions": "agent_versions",
     "model_catalog": "models.yaml"
   }
 }

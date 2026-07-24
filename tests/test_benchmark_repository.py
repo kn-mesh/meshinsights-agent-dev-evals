@@ -12,6 +12,7 @@ import pytest
 
 from src.benchmarks.postgres_repository import (
     AzurePostgresBenchmarkRepository,
+    _PUBLISHED_BENCHMARK_SQL,
     _build_benchmark_version,
     _normalize_trusted_postgres_rows,
 )
@@ -109,16 +110,27 @@ def _row() -> dict[str, Any]:
             "failure_cause": "Trap failed closed",
             "action_to_resolve": "Replaced the trap",
         },
-        "labeler_notes": [
+        "selected_review_event_id": "review-event-a",
+        "reviewer_coverage": [
             {
                 "review_event_id": "review-event-a",
+                "label_revision": 2,
+                "reviewer_user_id": "reviewer-user-a",
                 "reviewer_display_name": "Alex Labeler",
                 "reviewer_project_role": "domain_reviewer",
                 "submitted_at": datetime(
                     2026, 3, 18, 8, tzinfo=timezone.utc
                 ),
-                "explanation": "Telemetry and alarm evidence support failure.",
-                "selected_for_publication": True,
+            },
+            {
+                "review_event_id": "review-event-b",
+                "label_revision": 1,
+                "reviewer_user_id": "reviewer-user-b",
+                "reviewer_display_name": "Blair Reviewer",
+                "reviewer_project_role": "domain_reviewer",
+                "submitted_at": datetime(
+                    2026, 3, 18, 7, tzinfo=timezone.utc
+                ),
             }
         ],
         "raw_artifacts": [
@@ -177,8 +189,13 @@ def test_repository_loads_full_labels_schema_and_frozen_manifest() -> None:
     assert benchmark.examples[0].unit_id == "7"
     review_context = benchmark.examples[0].published_review_context
     assert review_context is not None
-    assert review_context.labeler_notes[0].reviewer_display_name == "Alex Labeler"
-    assert review_context.labeler_notes[0].selected_for_publication is True
+    reviewer = review_context.reviewer_coverage[0]
+    assert reviewer.reviewer_display_name == "Alex Labeler"
+    assert reviewer.label_revision == 2
+    assert reviewer.is_selected_label_revision is True
+    assert review_context.reviewer_coverage[1].is_selected_label_revision is False
+    assert "explanation" not in reviewer.model_dump()
+    assert "review_events" not in _PUBLISHED_BENCHMARK_SQL
     assert review_context.verification is not None
     assert review_context.verification.source == "operator_feedback"
     assert review_context.verification.source_fields == {

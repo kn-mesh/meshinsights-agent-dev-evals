@@ -1,4 +1,4 @@
-"""Contract tests for the Pulse v1_3 evidence and receipt handoff."""
+"""Reference-use-case contract tests for the Pulse v1_3 evidence handoff."""
 
 from __future__ import annotations
 

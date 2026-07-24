@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import shutil
 import subprocess
+import sys
+from typing import Any, cast
 
 import pytest
 import yaml
@@ -119,11 +122,11 @@ build-backend = "setuptools.build_meta"
                     },
                 ],
                 "reference_reset": {
-                    "clear_directories": ["docs/use_case"],
+                    "clear_directories": ["docs/use_case", "tests/use_case"],
                     "remove_directories": [],
                     "remove_files": [],
                     "root_skills_with_project_defaults": [],
-                    "leak_scan_paths": ["README.md", "docs/use_case"],
+                    "leak_scan_paths": ["README.md", "docs/use_case", "tests/use_case"],
                     "forbidden_terms": ["spirax", "steam trap"],
                 },
             }
@@ -133,6 +136,10 @@ build-backend = "setuptools.build_meta"
     )
     (root / "src").mkdir()
     (root / "src/__init__.py").touch()
+    (root / "src/agent_versions").mkdir()
+    (root / "src/agent_versions/__init__.py").write_text(
+        "REUSABLE = True\n", encoding="utf-8"
+    )
     (root / "mi-core").mkdir()
     (root / "mi-core/keep.py").write_text("REUSABLE = True\n", encoding="utf-8")
     (root / ".agents/skills/project-guide").mkdir(parents=True)
@@ -143,6 +150,22 @@ build-backend = "setuptools.build_meta"
     (root / "docs/use_case").mkdir(parents=True)
     (root / "docs/use_case/reference.md").write_text(
         "Spirax steam trap reference\n", encoding="utf-8"
+    )
+    (root / "tests/use_case").mkdir(parents=True)
+    (root / "tests/use_case/test_reference.py").write_text(
+        "def test_reference_only():\n    assert False\n",
+        encoding="utf-8",
+    )
+    (root / "tests/test_reusable.py").write_text(
+        "def test_reusable_contract():\n    assert True\n",
+        encoding="utf-8",
+    )
+    (root / "tests/test_repository_skills.py").write_text(
+        "from pathlib import Path\n\n"
+        "def test_preserved_repository_skill():\n"
+        "    root = Path(__file__).resolve().parents[1]\n"
+        "    assert (root / '.agents/skills/project-guide/SKILL.md').is_file()\n",
+        encoding="utf-8",
     )
     (root / ".env").write_text("REAL_SECRET=do-not-copy\n", encoding="utf-8")
     (root / ".env.local").write_text("OTHER_SECRET=do-not-copy\n", encoding="utf-8")
@@ -194,6 +217,14 @@ def test_bootstrap_spec_rejects_unknown_fields_and_missing_defaults() -> None:
     with pytest.raises(ValueError, match="Default model"):
         BootstrapSpec.model_validate(payload)
 
+    payload = _spec_payload()
+    payload["model_catalog"]["models"][0]["pricing"] = {  # type: ignore[index]
+        "version": "legacy-v1",
+        "currency": "USD",
+    }
+    with pytest.raises(ValueError, match="pricing"):
+        BootstrapSpec.model_validate(payload)
+
 
 def test_non_git_bootstrap_requires_explicit_revision(tmp_path: Path) -> None:
     template = tmp_path / "template"
@@ -240,12 +271,37 @@ def test_non_git_bootstrap_renders_and_validates_safe_project(tmp_path: Path) ->
     assert not (destination / "src/example.egg-info").exists()
     assert (destination / "eval_results/.gitkeep").exists()
     assert (destination / "mi-core/keep.py").is_file()
+    assert (destination / "src/agent_versions/__init__.py").is_file()
     assert (destination / ".agents/skills/project-guide/SKILL.md").is_file()
     assert not (destination / "docs/use_case/reference.md").exists()
     assert (destination / "workbench.template.json").is_file()
     assert (destination / "EvalRunbook.md").is_file()
+    generated_runbook = (destination / "EvalRunbook.md").read_text()
+    assert "agent-workbench-eval-runbook-status: bootstrap-placeholder" in (
+        generated_runbook
+    )
+    assert "Do not run an eval from this file" in generated_runbook
+    assert "$agent-eval-builder" in generated_runbook
     assert (destination / "www/src/use_case/.gitkeep").is_file()
-    assert (destination / "tests/.gitkeep").is_file()
+    assert (destination / "tests/use_case/.gitkeep").is_file()
+    assert not (destination / "tests/use_case/test_reference.py").exists()
+    assert (destination / "tests/test_reusable.py").is_file()
+    assert (destination / "tests/test_repository_skills.py").is_file()
+    reusable_test = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            "tests/test_reusable.py",
+            "tests/test_repository_skills.py",
+        ],
+        cwd=destination,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert reusable_test.returncode == 0, reusable_test.stdout + reusable_test.stderr
     assert "APP_PROJECT_KEY=acme-pumps" in (destination / ".env.example").read_text()
     assert (
         (destination / "README.md").read_text().startswith("# Acme Pump Reliability\n")
@@ -255,7 +311,58 @@ def test_non_git_bootstrap_renders_and_validates_safe_project(tmp_path: Path) ->
         yaml.safe_load((destination / "models.yaml").read_text())["default_model"]
         == "azure:gpt-test"
     )
+    assert (destination / "model_pricing.yaml").read_text() == (
+        template / "model_pricing.yaml"
+    ).read_text()
     assert validate_project(destination)["status"] == "valid"
+
+
+def test_real_template_bootstrap_preserves_runnable_skill_contract(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template"
+    shutil.copytree(
+        ROOT,
+        template,
+        ignore=shutil.ignore_patterns(
+            ".git",
+            ".venv",
+            "node_modules",
+            "__pycache__",
+            ".pytest_cache",
+            ".ruff_cache",
+            ".coverage",
+            "*.egg-info",
+            "eval_results",
+            "build",
+            "dist",
+        ),
+    )
+    destination = tmp_path / "generated"
+    spec = _spec_payload()
+    model_catalog = cast(dict[str, Any], spec["model_catalog"])
+    models = cast(list[dict[str, Any]], model_catalog["models"])
+    models[0].pop("pricing_key")
+
+    initialize_project(
+        destination,
+        spec_path=_write_spec(tmp_path, spec),
+        template_source=str(template),
+        template_revision="working-tree-test",
+        initialize_git=False,
+    )
+
+    assert not (destination / "tests/use_case/test_repository_skills.py").exists()
+    preserved_test = destination / "tests/test_repository_skills.py"
+    assert preserved_test.is_file()
+    completed = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", str(preserved_test)],
+        cwd=destination,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
 
 
 def test_git_url_and_ref_record_exact_commit_and_create_new_repo(
@@ -341,9 +448,7 @@ def test_validation_accepts_local_root_environment_file(tmp_path: Path) -> None:
         template_revision="fixture-v1",
         initialize_git=False,
     )
-    (destination / ".env").write_text(
-        "LOCAL_SECRET=developer-only\n", encoding="utf-8"
-    )
+    (destination / ".env").write_text("LOCAL_SECRET=developer-only\n", encoding="utf-8")
 
     assert validate_project(destination)["status"] == "valid"
 
@@ -389,15 +494,15 @@ def test_template_manifest_covers_reusable_mvp_workbench_surfaces() -> None:
     manifest = json.loads(
         (ROOT / "workbench.template.json").read_text(encoding="utf-8")
     )
-    ownership = {
-        item["path"]: item["owner"] for item in manifest["ownership"]
-    }
+    ownership = {item["path"]: item["owner"] for item in manifest["ownership"]}
 
     assert ownership["bootstrap_configs"] == "root_infrastructure"
     assert ownership["model_catalog.py"] == "reusable_workbench"
     assert ownership["src/model_configuration.py"] == "reusable_workbench"
     assert ownership["src/eval_lifecycle"] == "reusable_workbench"
     assert ownership["src/eval_publication"] == "reusable_workbench"
+    assert ownership["tests"] == "reusable_workbench"
+    assert ownership["tests/use_case"] == "reference_use_case"
 
 
 def test_cli_emits_machine_readable_success(

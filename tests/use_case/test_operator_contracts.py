@@ -1,4 +1,4 @@
-"""Prevent removed eval-schema contracts from returning to active guidance."""
+"""Reference-template operator guidance contract tests."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import sys
 import pytest
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 OPERATOR_DOCUMENTS = (
     ROOT / "README.md",
     ROOT / "EvalRunbook.md",
@@ -24,7 +24,9 @@ REMOVED_CONTRACTS = (
 
 
 @pytest.mark.parametrize("path", OPERATOR_DOCUMENTS, ids=lambda path: path.name)
-def test_active_operator_document_uses_only_schema_v1_contracts(path: Path) -> None:
+def test_active_operator_document_uses_only_current_result_contracts(
+    path: Path,
+) -> None:
     content = path.read_text(encoding="utf-8")
     found = [contract for contract in REMOVED_CONTRACTS if contract in content]
     assert not found, f"{path.relative_to(ROOT)} contains removed contracts: {found}"
@@ -50,20 +52,15 @@ def test_eval_skills_cover_current_artifact_boundaries() -> None:
         assert required in analysis_skill
 
 
-def test_git_retention_boundary_matches_operator_contract() -> None:
+def test_generated_eval_state_stays_out_of_source_control() -> None:
     gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
 
-    assert "/eval_results/working/" in gitignore
-    assert "/eval_results/**/attempts/" in gitignore
-    assert "/eval_results/**/performance/" in gitignore
-    assert "/eval_results/**/review/" in gitignore
-    assert "/eval_results/**/manifest.json" not in gitignore
-    assert "/eval_results/**/agent-version.json" not in gitignore
-    assert "/eval_results/retained/" not in gitignore
+    assert "/eval_results/" in gitignore
 
 
 def test_runbook_explicit_eval_flags_match_current_cli_help() -> None:
     runbook = (ROOT / "EvalRunbook.md").read_text(encoding="utf-8")
+    assert "agent-workbench-eval-runbook-status: bootstrap-placeholder" not in runbook
     completed = subprocess.run(
         [sys.executable, "-m", "src.evals.eval_orchestration", "--help"],
         cwd=ROOT,
@@ -95,7 +92,7 @@ def test_runbook_explicit_eval_flags_match_current_cli_help() -> None:
     for flag in required_flags:
         assert flag in runbook
         assert flag in completed.stdout
-    for maintenance_only in (
+    for unsupported in (
         "--label-filter",
         "--slice",
         "--resume-mode",
@@ -105,4 +102,4 @@ def test_runbook_explicit_eval_flags_match_current_cli_help() -> None:
         "--compare-result",
         "--error-action",
     ):
-        assert maintenance_only not in completed.stdout
+        assert unsupported not in completed.stdout

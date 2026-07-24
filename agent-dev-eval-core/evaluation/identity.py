@@ -24,12 +24,6 @@ def canonical_sha256(payload: object) -> str:
     return hashlib.sha256(canonical_json_bytes(payload)).hexdigest()
 
 
-def build_run_identity(run_spec: dict[str, Any]) -> tuple[str, str]:
-    """Return the legacy schema-v1 deterministic run identity."""
-    digest = canonical_sha256(run_spec)
-    return f"eval_{digest[:24]}", digest
-
-
 def build_eval_run_identity(
     *,
     run_spec_sha256: str,
@@ -68,12 +62,6 @@ def verify_eval_run_identity(
     if occurrence_seed.get("run_spec_sha256") != run_spec_sha256:
         return False
     return eval_run_id == f"eval_{canonical_sha256(occurrence_seed)[:24]}"
-
-
-def build_comparison_identity(comparison_spec: dict[str, Any]) -> tuple[str, str]:
-    """Return the short comparison id and complete specification hash."""
-    digest = canonical_sha256(comparison_spec)
-    return f"cmp_{digest[:24]}", digest
 
 
 def build_work_item_id(*, run_id: str, item_id: str, attempt_index: int) -> str:

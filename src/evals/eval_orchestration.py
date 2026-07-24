@@ -76,13 +76,16 @@ from src.benchmarks.compatibility import (
     load_project_contract,
     preflight_pipeline_benchmark_contract,
 )
+from src.benchmarks.runtime_identity import (
+    HostedDataPlaneIdentity,
+    resolve_hosted_data_plane_identity,
+)
 from src.evals.cli_support import (
     normalize_ai_reasoning_effort,
     prompt_csv_values,
     prompt_positive_int,
     prompt_select_option,
 )
-from src.evals.comparisons import build_comparison, build_comparison_manifest
 from src.evals.evaluation_profile import (
     EvaluationPreflight,
     EvaluationProfile,
@@ -356,6 +359,7 @@ def run_eval(
     progress_interval_seconds: float = 30.0,
     repository: BenchmarkRepository | None = None,
     benchmark_source: str | None = None,
+    hosted_identity: HostedDataPlaneIdentity | None = None,
     grader_registry: GraderRegistry | None = None,
     agent_version_id: str | None = None,
     agent_policy_path: Path | None = None,
@@ -375,7 +379,7 @@ def run_eval(
         raise ValueError("runs_per_example must be at least 1.")
     if max_workers < 1:
         raise ValueError("max_workers must be at least 1.")
-    if runtime not in {"serial", "threaded", "process"}:
+    if runtime not in {"serial", "threaded"}:
         raise ValueError(f"Unsupported runtime: {runtime}.")
     if error_action not in {"stop", "continue"}:
         raise ValueError(f"Unsupported error_action: {error_action}.")
@@ -424,11 +428,27 @@ def run_eval(
         lifecycle_state=lifecycle_state,
     )
     profile = load_evaluation_profile(evaluation_profile_path)
+    project_contract = load_project_contract(yaml_path)
     dimensions = _validate_configuration_dimensions(configuration_dimensions or {})
     registry = grader_registry or build_project_grader_registry()
     benchmark_repository = repository or AzurePostgresBenchmarkRepository(
         project_key=project_key
     )
+    if isinstance(benchmark_repository, AzurePostgresBenchmarkRepository):
+        resolved_identity = hosted_identity or resolve_hosted_data_plane_identity(
+            project_contract,
+            project_key=project_key,
+        )
+        os.environ.update(
+            {
+                "APP_PROJECT_KEY": resolved_identity.project_key,
+                "AZURE_POSTGRES_HOST": resolved_identity.postgres_host,
+                "AZURE_POSTGRES_DATABASE": resolved_identity.postgres_database,
+                "AZURE_POSTGRES_USER": resolved_identity.postgres_user,
+                "AZURE_STORAGE_ACCOUNT_URL": resolved_identity.storage_account_url,
+                "AZURE_STORAGE_CONTAINER": resolved_identity.storage_container,
+            }
+        )
     resolved_benchmark_source = benchmark_source or (
         "azure_postgres_entra"
         if isinstance(benchmark_repository, AzurePostgresBenchmarkRepository)
@@ -452,7 +472,6 @@ def run_eval(
     )
     if not examples:
         raise ValueError("No benchmark examples match the provided filters.")
-    project_contract = load_project_contract(yaml_path)
     configured_benchmark = find_configured_published_benchmark(
         project_contract, benchmark
     )
@@ -1129,13 +1148,9 @@ def _run_all_examples(
     planned_count = (
         len(work_items) if work_items is not None else len(examples) * runs_per_example
     )
-    tracker = (
-        _EvalProgressTracker(
-            total_runs=planned_count,
-            heartbeat_seconds=progress_interval_seconds,
-        )
-        if runtime != "process"
-        else None
+    tracker = _EvalProgressTracker(
+        total_runs=planned_count,
+        heartbeat_seconds=progress_interval_seconds,
     )
     executor = RepeatedEvalExecutor[BenchmarkExample, EvalAttempt](
         RepeatedEvalExecutorConfig(
@@ -1144,7 +1159,7 @@ def _run_all_examples(
             error_action=error_action,
             pending_heartbeat_seconds=progress_interval_seconds,
         ),
-        logger=logger if runtime == "process" else _QUIET_EXECUTOR_LOGGER,
+        logger=_QUIET_EXECUTOR_LOGGER,
     )
     if tracker is not None:
         tracker.start()
@@ -2510,12 +2525,6 @@ def _argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--ai-model")
     parser.add_argument(
-        "--compare-model",
-        action="append",
-        default=[],
-        help=argparse.SUPPRESS,
-    )
-    parser.add_argument(
         "--ai-reasoning-effort", choices=["default", "low", "medium", "high"]
     )
     parser.add_argument("--agent-version-id")
@@ -2545,7 +2554,10 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Resolve identity, preflight, and durable work selection without execution.",
+        help=(
+            "Create a durable working occurrence, preflight it, and select work "
+            "without execution; continue it with the emitted --run-id command."
+        ),
     )
     parser.add_argument(
         "--materialize-only",
@@ -2556,20 +2568,6 @@ def _argument_parser() -> argparse.ArgumentParser:
         "--status-run-id",
         help="Print durable status for an existing local run and exit.",
     )
-    parser.add_argument(
-        "--compare-result",
-        action="append",
-        default=[],
-        type=Path,
-        help=argparse.SUPPRESS,
-    )
-    parser.add_argument(
-        "--varying-dimension",
-        action="append",
-        default=[],
-        help=argparse.SUPPRESS,
-    )
-    parser.add_argument("--comparison-output-dir", type=Path, help=argparse.SUPPRESS)
     parser.add_argument(
         "--dimension",
         action="append",
@@ -2705,17 +2703,8 @@ def _resolve_cli_model(
             f"Selected model: {format_model(catalog.get(selected), default_model=catalog.default_model)}"
         )
         return selected
-    if args.compare_model:
-        try:
-            selected = resolve_model(args.compare_model[0], catalog)
-        except ValueError as error:
-            parser.error(str(error))
-        print(
-            f"Selected model: {format_model(catalog.get(selected), default_model=catalog.default_model)}"
-        )
-        return selected
     if not sys.stdin.isatty():
-        parser.error("--ai-model or --compare-model is required non-interactively.")
+        parser.error("--ai-model is required non-interactively.")
     choices = {
         format_model(model, default_model=catalog.default_model): model.id
         for model in catalog.models
@@ -2934,6 +2923,8 @@ def _resume_command(argv: list[str], *, run_id: str | None = None) -> str:
         if value == "--run-id":
             skip_next = True
             continue
+        if value == "--dry-run":
+            continue
         normalized.append(value)
     if run_id is not None:
         normalized.extend(["--run-id", run_id])
@@ -2976,17 +2967,6 @@ def main() -> None:
     if args.status_run_id:
         _print_run_status(_find_run_directory(args.status_run_id))
         return
-    if args.compare_result:
-        try:
-            path = build_comparison(
-                args.compare_result,
-                varying_dimensions=set(args.varying_dimension),
-                output_dir=args.comparison_output_dir,
-            )
-        except ValueError as error:
-            parser.error(str(error))
-        print(f"Comparison written to: {path}")
-        return
     bootstrap_environment()
     model_catalog = load_model_catalog()
     yaml_path = _resolve_path(
@@ -3004,14 +2984,34 @@ def main() -> None:
         parser=parser,
     )
     profile = load_evaluation_profile(evaluation_profile_path)
-    project_key = (args.project_key or os.getenv("APP_PROJECT_KEY", "")).strip()
-    if not project_key:
-        parser.error("APP_PROJECT_KEY or --project-key is required.")
+    try:
+        identity = resolve_hosted_data_plane_identity(
+            load_project_contract(yaml_path),
+            project_key=args.project_key,
+            postgres_host=args.azure_postgres_host,
+            postgres_database=args.azure_postgres_database,
+            postgres_user=args.azure_postgres_user,
+            storage_account_url=args.azure_storage_account_url,
+            storage_container=args.azure_storage_container,
+        )
+    except ValueError as error:
+        parser.error(str(error))
+    os.environ.update(
+        {
+            "APP_PROJECT_KEY": identity.project_key,
+            "AZURE_POSTGRES_HOST": identity.postgres_host,
+            "AZURE_POSTGRES_DATABASE": identity.postgres_database,
+            "AZURE_POSTGRES_USER": identity.postgres_user,
+            "AZURE_STORAGE_ACCOUNT_URL": identity.storage_account_url,
+            "AZURE_STORAGE_CONTAINER": identity.storage_container,
+        }
+    )
+    project_key = identity.project_key
     repository: BenchmarkRepository = AzurePostgresBenchmarkRepository(
         project_key=project_key,
-        host=args.azure_postgres_host,
-        database=args.azure_postgres_database,
-        user=args.azure_postgres_user,
+        host=identity.postgres_host,
+        database=identity.postgres_database,
+        user=identity.postgres_user,
     )
     benchmark_source = "azure_postgres_entra"
     benchmark_key, benchmark_version = _resolve_cli_benchmark(
@@ -3035,46 +3035,15 @@ def main() -> None:
     runs_per_example = _resolve_cli_runs_per_example(args, parser=parser)
     runtime = _resolve_cli_runtime(args, parser=parser)
     configuration_dimensions = _parse_configuration_dimensions(args.dimension, parser)
-    evidence_account_url = (
-        (args.azure_storage_account_url or os.getenv("AZURE_STORAGE_ACCOUNT_URL", ""))
-        .strip()
-        .rstrip("/")
-    )
-    evidence_container = (
-        args.azure_storage_container or os.getenv("AZURE_STORAGE_CONTAINER", "")
-    ).strip()
-    if not evidence_account_url.startswith("https://") or not evidence_container:
-        parser.error(
-            "direct Entra access requires AZURE_STORAGE_ACCOUNT_URL and "
-            "AZURE_STORAGE_CONTAINER (or the corresponding CLI flags)."
-        )
-    os.environ["AZURE_STORAGE_ACCOUNT_URL"] = evidence_account_url
-    os.environ["AZURE_STORAGE_CONTAINER"] = evidence_container
-    requested_models = [ai_model]
-    for requested in args.compare_model:
-        try:
-            resolved = resolve_model(requested, model_catalog)
-        except ValueError as error:
-            parser.error(str(error))
-        if resolved not in requested_models:
-            requested_models.append(resolved)
-    if args.run_id and len(requested_models) > 1:
-        parser.error("--run-id cannot identify more than one compared model run.")
 
-    def run_model(
-        model: str,
-        *,
-        dry_run: bool,
-        materialize_only: bool,
-        resume_run_id: str | None = None,
-    ) -> Path:
+    def run_selected_model(*, dry_run: bool, materialize_only: bool) -> Path:
         return run_eval(
             yaml_path,
             evaluation_profile_path=evaluation_profile_path,
             project_key=project_key,
             benchmark_key=benchmark_key,
             benchmark_version=benchmark.version_number,
-            ai_model=model,
+            ai_model=ai_model,
             ai_reasoning_effort=ai_reasoning_effort,
             example_ids=example_ids,
             unit_ids=unit_ids,
@@ -3091,49 +3060,20 @@ def main() -> None:
             configuration_dimensions=configuration_dimensions,
             resume_mode=args.resume_mode,
             rerun_failure_types=set(args.rerun_failure_type) or None,
-            expected_run_id=resume_run_id or args.run_id,
+            expected_run_id=args.run_id,
             dry_run=dry_run,
             materialize_only=materialize_only,
             repository=repository,
             benchmark_source=benchmark_source,
+            hosted_identity=identity,
             review_capture=args.review_capture,
         )
 
-    comparison_manifest: Path | None = None
     try:
-        if len(requested_models) > 1:
-            preflight_paths = [
-                run_model(model, dry_run=True, materialize_only=False)
-                for model in requested_models
-            ]
-            comparison_manifest = build_comparison_manifest(
-                preflight_paths,
-                varying_dimensions={"model"},
-                output_dir=args.comparison_output_dir,
-            )
-            paths = (
-                preflight_paths
-                if args.dry_run
-                else [
-                    run_model(
-                        model,
-                        dry_run=False,
-                        materialize_only=args.materialize_only,
-                        resume_run_id=preflight_path.parent.name,
-                    )
-                    for model, preflight_path in zip(
-                        requested_models, preflight_paths, strict=True
-                    )
-                ]
-            )
-        else:
-            paths = [
-                run_model(
-                    requested_models[0],
-                    dry_run=args.dry_run,
-                    materialize_only=args.materialize_only,
-                )
-            ]
+        path = run_selected_model(
+            dry_run=args.dry_run,
+            materialize_only=args.materialize_only,
+        )
     except EvalRunInterrupted as error:
         print("INTERRUPTED: completed attempts are durable and the run is incomplete.")
         print(
@@ -3146,25 +3086,14 @@ def main() -> None:
         raise SystemExit(4) from error
     except ValueError as error:
         parser.error(str(error))
-    terminal_failures = False
-    for path in paths:
-        if args.dry_run:
-            print(f"Run manifest written to: {path}")
-        else:
-            terminal_failures = _print_cli_outcome(path) or terminal_failures
     if args.dry_run:
-        if comparison_manifest is not None:
-            print(f"Comparison manifest written to: {comparison_manifest}")
-        return
-    if len(paths) > 1:
-        comparison = build_comparison(
-            paths,
-            varying_dimensions={"model"},
-            output_dir=args.comparison_output_dir,
-            comparison_manifest_path=comparison_manifest,
+        print(f"Run manifest written to: {path}")
+        print(
+            "Continue this occurrence with: "
+            f"{_resume_command(sys.argv[1:], run_id=path.parent.name)}"
         )
-        print(f"Comparison written to: {comparison}")
-    if terminal_failures:
+        return
+    if _print_cli_outcome(path):
         raise SystemExit(3)
 
 

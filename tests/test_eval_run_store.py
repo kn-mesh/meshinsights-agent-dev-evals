@@ -6,22 +6,33 @@ from pathlib import Path
 
 import pytest
 
-from evaluation import build_run_identity, build_work_item_id, canonical_sha256
+from evaluation import (
+    build_eval_run_identity,
+    build_work_item_id,
+    canonical_sha256,
+)
 from src.evals.run_store import LocalRunStore, RunStoreIntegrityError
 
 
 def _manifest() -> dict[str, object]:
     run_spec = {"benchmark": "v1", "model": "provider:model"}
-    run_id, digest = build_run_identity(run_spec)
+    digest = canonical_sha256(run_spec)
+    run_id, occurrence_seed = build_eval_run_identity(
+        run_spec_sha256=digest,
+        created_at_utc="2026-01-01T00:00:00+00:00",
+        nonce="run-store-test",
+    )
     work_item_id = build_work_item_id(
         run_id=run_id, item_id="example-a", attempt_index=1
     )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "performance_schema_version": 1,
         "coordinator_scope": "local_single_host",
         "run_id": run_id,
+        "eval_run_id": run_id,
         "run_spec_sha256": digest,
+        "occurrence_seed": occurrence_seed,
         "run_spec": run_spec,
         "work_items": [
             {
@@ -95,6 +106,18 @@ def test_store_rejects_conflicting_immutable_generation(tmp_path: Path) -> None:
 def test_manifest_validates_full_spec_hash(tmp_path: Path) -> None:
     manifest = _manifest()
     manifest["run_spec_sha256"] = canonical_sha256({"different": True})
+    store = LocalRunStore(
+        tmp_path / str(manifest["run_id"]), run_id=str(manifest["run_id"])
+    )
+    store.initialize(manifest)  # type: ignore[arg-type]
+
+    with pytest.raises(RunStoreIntegrityError, match="identity is invalid"):
+        store.read_manifest()
+
+
+def test_manifest_rejects_removed_schema_v1_contract(tmp_path: Path) -> None:
+    manifest = _manifest()
+    manifest["schema_version"] = 1
     store = LocalRunStore(
         tmp_path / str(manifest["run_id"]), run_id=str(manifest["run_id"])
     )

@@ -1,6 +1,4 @@
 """AI workflow processor for v1_3 Pulse alarm classification from chart images."""
-# ruff: noqa: F541
-
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
@@ -68,7 +66,7 @@ class V1_3AlarmClassificationAIWorkflowProcessor(
         self, data_object: PulseFailureAnalysisProcessObject
     ) -> str:
         """Build the system prompt for classifying one Pulse alarm."""
-        return f"""
+        return """
 <your_task>
 A rules-based Failure Detection Engine (FDE) flagged a potential steam trap failure. The FDE has a >50% false positive rate. Review the temperature charts and classify:
 - Issue: "Healthy" or "Failure"

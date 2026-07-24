@@ -112,7 +112,8 @@ select
   bve.source_verification_schema_key,
   bve.source_verification_schema_version,
   bve.source_verification_fields,
-  published_notes.labeler_notes
+  bve.selected_review_event_id,
+  bve.reviewer_coverage
 from selected_version sv
 join benchmark_version_examples bve
   on bve.project_id = sv.project_id
@@ -120,29 +121,6 @@ join benchmark_version_examples bve
 left join label_schema_versions lsv
   on lsv.project_id = bve.project_id
  and lsv.id = bve.label_schema_version_id
-left join lateral (
-  select coalesce(
-    jsonb_agg(
-      jsonb_build_object(
-        'review_event_id', re.id::text,
-        'reviewer_display_name', re.reviewer_display_name,
-        'reviewer_project_role', re.reviewer_project_role,
-        'submitted_at', re.submitted_at,
-        'explanation', re.explanation,
-        'selected_for_publication', re.id = bve.selected_review_event_id
-      )
-      order by re.submitted_at, re.id
-    ),
-    '[]'::jsonb
-  ) as labeler_notes
-  from review_events re
-  where re.project_id = bve.project_id
-    and exists (
-      select 1
-      from jsonb_array_elements(bve.reviewer_coverage) as coverage(item)
-      where coverage.item ->> 'review_event_id' = re.id::text
-    )
-) published_notes on true
 order by bve.example_id
 """
 
@@ -412,11 +390,24 @@ def _build_benchmark_version(
 
 
 def _published_review_context(row: dict[str, Any]) -> dict[str, Any]:
-    notes = row.get("labeler_notes")
-    if notes is None:
-        notes = []
-    if not isinstance(notes, list):
-        raise ValueError("Published labeler notes must be an array.")
+    coverage = row.get("reviewer_coverage")
+    if coverage is None:
+        coverage = []
+    if not isinstance(coverage, list):
+        raise ValueError("Published reviewer coverage must be an array.")
+    selected_review_event_id = str(row.get("selected_review_event_id") or "")
+    reviewer_coverage = [
+        {
+            **item,
+            "is_selected_label_revision": (
+                str(item.get("review_event_id") or "") == selected_review_event_id
+            ),
+        }
+        for item in coverage
+        if isinstance(item, dict)
+    ]
+    if len(reviewer_coverage) != len(coverage):
+        raise ValueError("Published reviewer coverage entries must be objects.")
     source = row.get("verification_source")
     verification = None
     if source is not None:
@@ -431,7 +422,7 @@ def _published_review_context(row: dict[str, Any]) -> dict[str, Any]:
             ),
             "source_fields": row.get("source_verification_fields"),
         }
-    return {"labeler_notes": notes, "verification": verification}
+    return {"reviewer_coverage": reviewer_coverage, "verification": verification}
 
 
 def _normalize_trusted_postgres_rows(

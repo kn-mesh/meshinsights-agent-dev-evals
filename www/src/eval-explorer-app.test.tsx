@@ -103,13 +103,14 @@ const adapter: UseCaseAdapter = {
 
 const benchmarkContext = {
   availability: "available",
-  labeler_notes: [{
+  reviewer_coverage: [{
     review_event_id: "review-a",
+    label_revision: 2,
+    reviewer_user_id: "reviewer-user-a",
     reviewer_display_name: "Alex Labeler",
     reviewer_project_role: "domain_reviewer",
     submitted_at: "2026-07-20T09:30:00Z",
-    explanation: "Pressure decay and the downstream alarm support a failed trap.",
-    selected_for_publication: true,
+    is_selected_label_revision: true,
   }],
   verification: {
     source: "operator_feedback",
@@ -326,7 +327,7 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).toContain("18.9 s");
     expect(container.textContent).toContain("2m 10s");
     expect(container.textContent).toContain("Alex Labeler");
-    expect(container.textContent).toContain("Pressure decay and the downstream alarm");
+    expect(container.textContent).toContain("revision 2");
     expect(container.textContent).toContain("Customer verified");
     expect(container.textContent).toContain("Selected label");
     expect(container.textContent).toContain("Trap failed closed");

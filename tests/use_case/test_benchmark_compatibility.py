@@ -1,4 +1,4 @@
-"""Tests for use-case-neutral benchmark and pipeline compatibility preflight."""
+"""Reference-use-case tests for benchmark and pipeline compatibility."""
 
 from __future__ import annotations
 

@@ -4,10 +4,10 @@
 
 - bounded repeated execution with complete attempt accounting;
 - explicit durable work-item execution with terminal checkpoint callbacks;
-- canonical run, comparison, and logical repetition identities;
+- canonical run and logical repetition identities;
 - schema-driven JSON scalar extraction with optional configured confidence;
 - explicit deterministic graders for exact, normalized-string, and numeric
-  comparisons;
+  evaluation;
 - orthogonal execution, output-contract, and scoring states;
 - separate accuracy, reliability, scoring-coverage, and performance aggregation;
 - typed attempt and field-evaluation evidence;

@@ -15,6 +15,11 @@ from evaluation import (
 )
 
 
+def test_repeated_execution_rejects_process_runtime() -> None:
+    with pytest.raises(ValueError, match="Unsupported runtime"):
+        RepeatedEvalExecutorConfig(runtime="process")  # type: ignore[arg-type]
+
+
 def _failure_result(
     work_item: RepeatedEvalWorkItem[str],
     message: str,

@@ -17,7 +17,8 @@ Agent Launch journey or create the portable agent package.
 - Inspect aggregate results and individual examples, including the evidence,
   model input, model output, expected output, and grading result needed to
   understand failures.
-- Compare useful variants, models, prompts, and configurations.
+- Review high-level differences across separate eval results for useful
+  variants, models, prompts, and configurations.
 - Preserve enough experiment context to explain material changes in results.
 - Explicitly save meaningful agent versions and their associated benchmark and
   evaluation results so progress can be demonstrated and useful states can be
@@ -173,9 +174,11 @@ The protected eval workflow is:
 5. produce the completed eval result; and
 6. review the result through Codex, the local evaluation review app, or both.
 
-Comparison is a review activity performed after eval execution completes. Codex
-or the local app may compare two or more completed evals, but the eval runner
-does not need a separate mandatory "compare with another run" step.
+Each completed eval remains a separate result. The local app displays
+high-level result, model, and configuration differences and supports drill-down
+into one run at a time; Codex may review multiple independent results when
+deeper analysis is useful. The MVP does not create direct-comparison artifacts,
+paired-delta reports, comparison APIs, or multi-model comparison orchestration.
 
 ### Evaluation scope
 
@@ -260,8 +263,10 @@ Every completed eval begins as a **working eval**. An FDE may explicitly
 **elevate** it when the result represents a meaningful agent version worth
 long-term comparison or review.
 
-Elevation applies to a complete eval run, never to selected units within a run.
-It is one operation that:
+Elevation applies to a complete selected occurrence—zero missing planned work
+items with one latest recorded attempt per planned item. The selected scope may
+be all examples, named sections, or explicit units/examples; elevation never
+extracts only part of that occurrence. It is one operation that:
 
 1. marks the eval as retained;
 2. retains its associated meaningful agent version;

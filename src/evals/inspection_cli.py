@@ -21,7 +21,7 @@ from src.evals.inspection import (
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Inspect and purge disposable local eval review bundles."
+        description="Inspect disposable local eval review bundles."
     )
     parser.add_argument("--root", type=Path, default=Path("eval_results"))
     commands = parser.add_subparsers(dest="command", required=True)
@@ -58,12 +58,6 @@ def _parser() -> argparse.ArgumentParser:
     execution_parser.add_argument("--execution", required=True)
     execution_parser.add_argument("--section")
     execution_parser.add_argument("--resolve-text", action="store_true")
-
-    purge_parser = commands.add_parser("purge")
-    purge_parser.add_argument("--run", required=True)
-    purge_mode = purge_parser.add_mutually_exclusive_group(required=True)
-    purge_mode.add_argument("--dry-run", action="store_true")
-    purge_mode.add_argument("--yes", action="store_true")
 
     diagnose_parser = commands.add_parser("diagnose")
     diagnose_parser.add_argument("--run", required=True)
@@ -121,8 +115,6 @@ def main() -> None:
         elif args.command == "materialize":
             path = materialize_review_index(run_dir)
             payload = {"run_id": run_dir.name, "index_path": str(path)}
-        elif args.command == "purge":
-            payload = store.purge(dry_run=args.dry_run, confirmed=args.yes)
         elif args.command == "diagnose":
             diagnosis = _load_object(args.input)
             markdown = (

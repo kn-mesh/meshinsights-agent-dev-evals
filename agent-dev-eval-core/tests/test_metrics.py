@@ -7,7 +7,6 @@ from evaluation import (
     FieldEvaluation,
     OutputContractStatus,
     ScoringStatus,
-    build_confidence_accuracy,
     build_performance_summary,
     build_reliability_summary,
     build_scoring_coverage,
@@ -94,26 +93,3 @@ def test_performance_reports_completed_failed_and_stage_latency() -> None:
         "p95": 3.9,
     }
     assert performance["stage_duration_seconds"]["process"]["mean"] == 2.0
-
-
-def test_confidence_accuracy_is_optional_and_reports_coverage() -> None:
-    with_confidence = _scored_attempt(correct=True, duration=1.0, confidence="High")
-    without_confidence = _scored_attempt(correct=False, duration=1.0)
-
-    confidence = build_confidence_accuracy(
-        [with_confidence, without_confidence],
-        label_name="classification",
-        expected_values=("Failure",),
-    )
-
-    assert confidence["confidence_coverage"] == {
-        "outputs_with_confidence": 1,
-        "evaluated_outputs": 2,
-        "coverage": 0.5,
-    }
-    assert confidence["all"]["High"] == {
-        "accuracy": 1.0,
-        "correct_runs": 1,
-        "evaluated_runs": 1,
-    }
-    assert confidence["all"]["Low"]["accuracy"] is None

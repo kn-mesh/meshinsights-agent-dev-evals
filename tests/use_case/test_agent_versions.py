@@ -1,4 +1,4 @@
-"""Tests for immutable agent-version resolution, storage, and policy checks."""
+"""Reference-use-case tests for agent-version resolution, storage, and policy."""
 
 from __future__ import annotations
 
@@ -18,9 +18,10 @@ from src.agent_versions import (
     resolve_agent_version,
     validate_runtime_overrides,
 )
+from src.agent_versions.models import AgentVersionPolicy, PolicyAsset
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 REAL_DIRTY_RUNTIME_PATHS = agent_version_resolver._dirty_runtime_paths
 
 
@@ -55,6 +56,44 @@ def test_v1_resolution_is_deterministic_and_complete() -> None:
         asset["path"].startswith("src/project_bootstrap/")
         for asset in identity["assets"]
     )
+
+
+def test_resolver_merges_component_and_policy_only_assets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    load_policy = agent_version_resolver.load_agent_version_policy
+
+    def policy_with_additional_asset(path: Path) -> AgentVersionPolicy:
+        policy = load_policy(path)
+        return policy.model_copy(
+            update={
+                "additional_assets": (
+                    PolicyAsset(
+                        role="operator_contract",
+                        logical_name="project_context",
+                        path="../docs/use_case/PROJECT_CONTEXT.md",
+                        media_type="text/markdown",
+                    ),
+                )
+            }
+        )
+
+    monkeypatch.setattr(
+        agent_version_resolver,
+        "load_agent_version_policy",
+        policy_with_additional_asset,
+    )
+
+    resolved = resolve_agent_version(
+        ROOT / "pipeline_configs/v1_3.ppln", dirty_policy="capture"
+    )
+    assets = {
+        asset["path"]: {role["role"] for role in asset["roles"]}
+        for asset in resolved.manifest.identity["assets"]
+    }
+
+    assert "output_schema" in assets["src/processors/common/structured_outputs.py"]
+    assert "operator_contract" in assets["docs/use_case/PROJECT_CONTEXT.md"]
 
 
 def test_model_override_policy_is_fail_closed() -> None:

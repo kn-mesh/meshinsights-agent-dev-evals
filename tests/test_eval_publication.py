@@ -67,6 +67,7 @@ def _retained_fixture(
     *,
     execution_status: str = "completed",
     tree_state: str = "clean",
+    legacy_reviewer_context: bool = False,
 ) -> str:
     (root / "workbench.project.json").write_text(
         json.dumps(
@@ -148,9 +149,43 @@ def _retained_fixture(
                 "agent_output": {"answer": "yes"},
                 "benchmark_labels": {"answer": "yes"},
                 "evaluations": {"answer": {"correct": True}},
+                "published_review_context": (
+                    {
+                        "labeler_notes": [
+                            {
+                                "review_event_id": "review-event-a",
+                                "reviewer_display_name": "Alex Labeler",
+                                "reviewer_project_role": "domain_reviewer",
+                                "submitted_at": "2026-07-20T09:30:00Z",
+                                "explanation": "Legacy reviewer explanation.",
+                                "selected_for_publication": True,
+                            }
+                        ],
+                        "verification": None,
+                    }
+                    if legacy_reviewer_context
+                    else {
+                        "reviewer_coverage": [
+                            {
+                                "review_event_id": "review-event-a",
+                                "label_revision": 2,
+                                "reviewer_user_id": "reviewer-user-a",
+                                "reviewer_display_name": "Alex Labeler",
+                                "reviewer_project_role": "domain_reviewer",
+                                "submitted_at": "2026-07-20T09:30:00Z",
+                                "is_selected_label_revision": True,
+                            }
+                        ],
+                        "verification": None,
+                    }
+                ),
                 "usage": {"total_tokens": 10},
                 "cost": {"status": "actual", "amount": 0.1},
                 "invocation_id": "inv_local",
+                "execution_id": "work-a.1",
+                "execution_generation": 1,
+                "failure_details": {"trace": "local-only"},
+                "review_status": "retained_compact",
                 "execution_history": [{"execution_status": execution_status}],
             }
         ],
@@ -311,6 +346,32 @@ def test_publish_verifies_payloads_before_committing_manifest(tmp_path: Path) ->
         assert len(payload_reads) == 4
         assert max(payload_reads) < manifest_index
 
+    published_units_blob = next(
+        content
+        for name, content in store.blobs.items()
+        if name.endswith("/units.json")
+    )
+    published_result_blob = next(
+        content
+        for name, content in store.blobs.items()
+        if name.endswith("/result.json")
+    )
+    published_unit = json.loads(published_units_blob)["units"][0]
+    assert {
+        "invocation_id",
+        "execution_id",
+        "execution_generation",
+        "execution_history",
+        "failure_details",
+        "review_status",
+        "review_unavailable_reason",
+        "flaky",
+    }.isdisjoint(published_unit)
+    reviewer = published_unit["published_review_context"]["reviewer_coverage"][0]
+    assert reviewer["is_selected_label_revision"] is True
+    assert "explanation" not in reviewer
+    assert "latest_invocation_id" not in json.loads(published_result_blob)["run"]
+
 
 def test_corrupt_payload_never_commits_manifest(tmp_path: Path) -> None:
     retained_eval_id = _retained_fixture(tmp_path)
@@ -321,6 +382,15 @@ def test_corrupt_payload_never_commits_manifest(tmp_path: Path) -> None:
         service.publish(retained_eval_id, confirmed=True)
 
     assert not any(name.endswith("publication-manifest.json") for name in store.blobs)
+
+
+def test_publication_rejects_legacy_explanation_bearing_reviewer_context(
+    tmp_path: Path,
+) -> None:
+    retained_eval_id = _retained_fixture(tmp_path, legacy_reviewer_context=True)
+
+    with pytest.raises(EvalPublicationError, match="legacy or invalid reviewer context"):
+        EvalPublicationService(tmp_path, store=_MemoryStore()).dry_run(retained_eval_id)
 
 
 @pytest.mark.parametrize(

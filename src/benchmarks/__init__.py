@@ -4,9 +4,9 @@ from src.benchmarks.models import (
     BenchmarkExample,
     BenchmarkVersion,
     PublishedBenchmarkVersionSummary,
-    PublishedLabelerNote,
     PublishedLabelSchema,
     PublishedReviewContext,
+    PublishedReviewerCoverage,
     PublishedVerification,
     SourceArtifact,
 )
@@ -21,9 +21,9 @@ __all__ = [
     "BenchmarkRepository",
     "BenchmarkVersion",
     "PublishedBenchmarkVersionSummary",
-    "PublishedLabelerNote",
     "PublishedLabelSchema",
     "PublishedReviewContext",
+    "PublishedReviewerCoverage",
     "PublishedVerification",
     "SourceArtifact",
 ]

@@ -1,104 +1,73 @@
 ---
 name: eval-lifecycle
-description: Manage the formal local lifecycle of Agent Workbench evaluation results. Use when an FDE or coding agent needs to explain working versus retained evals, list exact evals, preview or elevate one complete full run and its agent version, verify retained artifacts, or permanently delete an exact working or retained eval. Do not use for running evals, analyzing accuracy, cloud publication, recoverable deletion, or UI mutation.
+description: Manage the formal local lifecycle of Agent Workbench eval results. Use to explain working versus retained evals, list or inspect exact IDs, preview/elevate one complete selected occurrence, verify retained artifacts, or permanently delete an exact eval. Do not run or analyze evals, publish retained evals, perform recoverable deletion, or mutate through UI.
 ---
 
 # Eval Lifecycle
 
-Use the supported `src.eval_lifecycle.cli` workflow. Deletion is permanent;
-there is no quarantine, restore, recovery, or generalized reachability layer.
+Use `src.eval_lifecycle.cli`. Deletion and post-elevation source removal are
+permanent; there is no quarantine, restore, or recovery layer.
 
-## Lifecycle Contract
+## Contract
 
-- Every new run begins under `eval_results/working/` with rich per-unit
-  attempts, review detail, and disposable performance observations.
-- Elevation applies to one complete run, never selected units.
-- An elevated eval lives under `eval_results/retained/` as a few aggregate
-  artifacts and is linked to the retained meaningful agent version.
-- After the retained artifacts and linked agent version verify successfully,
-  elevation permanently removes the source working eval. Working and retained
-  rows must never coexist for the same source occurrence.
-- Retained `units.json` preserves expected outputs, full final AI outputs,
-  validation, grading, usage, and cost without a file per unit.
-- `evidence-references.json` preserves exact Azure account, container, object,
-  size, SHA-256, source snapshot, and recipe identity. Evidence is retrieved
-  and verified on demand; it is not copied locally.
-- `agent-provenance.json` and optional `agent.patch` preserve Git identity,
-  relevant configuration hashes, and relevant dirty or untracked agent
-  content.
-- Elevation prunes attempt files, performance/latency detail, tool traces, and
-  intermediate review objects from the retained representation, then removes
-  the complete source working directory.
-- Deletion is permanent and not recoverable.
+- New runs are rich working evals with attempts and optional review/performance.
+- Elevation accepts one complete selected occurrence: every planned work item
+  has a recorded terminal attempt and none are missing. It preserves compact
+  aggregates, final outputs, grading, usage/cost, exact evidence references,
+  and meaningful agent provenance, then prunes execution/review detail.
+- Retained verification must succeed before the source working directory is
+  removed. One occurrence must not coexist in both states.
+- Evidence stays in Azure and is hash-verified on demand.
+- Exact deletion is immediate and not recoverable.
 
 ## Workflow
 
-### 1. List or inspect exact evals
+1. List or inspect; report exact ID, state, benchmark/version, agent/model,
+   coverage, and path:
 
-```bash
-uv run python -m src.eval_lifecycle.cli list --state all --json
-uv run python -m src.eval_lifecycle.cli list --state working --json
-uv run python -m src.eval_lifecycle.cli list --state retained --json
-uv run python -m src.eval_lifecycle.cli inspect <eval-id> --json
-```
+   ```bash
+   uv run python -m src.eval_lifecycle.cli list --state all --json
+   uv run python -m src.eval_lifecycle.cli inspect <eval-id> --json
+   ```
 
-Report the exact ID, lifecycle state, benchmark/version, agent version, model,
-attempt coverage, and path. Never infer lifecycle state from age or score.
+2. Preview elevation and review preservation/pruning. Refuse incomplete or
+   inconsistent runs:
 
-### 2. Preview elevation
+   ```bash
+   uv run python -m src.eval_lifecycle.cli elevate eval_<hash> --dry-run --json
+   ```
 
-```bash
-uv run python -m src.eval_lifecycle.cli elevate eval_<hash> --dry-run --json
-```
+3. After explicit confirmation, elevate and verify. Report retained eval and
+   agent-version IDs, and confirm source removal happened only after verify:
 
-Read the preservation and pruning lists. Refuse incomplete or inconsistent
-runs. Confirm that this full run represents a meaningful agent version and
-that successful elevation permanently removes its source working eval before
-proceeding.
+   ```bash
+   uv run python -m src.eval_lifecycle.cli elevate eval_<hash> --yes --json
+   uv run python -m src.eval_lifecycle.cli verify ret_<hash> --json
+   ```
 
-### 3. Elevate and verify
+4. Confirm the exact target before permanent deletion unless the request
+   already authorizes that ID:
 
-```bash
-uv run python -m src.eval_lifecycle.cli elevate eval_<hash> --yes --json
-uv run python -m src.eval_lifecycle.cli verify ret_<hash> --json
-```
+   ```bash
+   uv run python -m src.eval_lifecycle.cli delete working eval_<hash> --yes --json
+   uv run python -m src.eval_lifecycle.cli delete retained ret_<hash> \
+     --confirm-retained ret_<hash> --json
+   ```
 
-Report both the retained eval ID and agent version ID. Elevation is
-non-interactive and scriptable after explicit confirmation. Confirm that the
-source working eval was deleted only after retained verification. Do not add an
-elevate action to the MVP review UI.
-
-### 4. Permanently delete an exact working eval
-
-```bash
-uv run python -m src.eval_lifecycle.cli delete working eval_<hash> --yes --json
-```
-
-Confirm the exact target with the user before execution unless their request
-already clearly authorizes that ID. Explain that completed data is immediately
-removed and cannot be resumed or restored.
-
-### 5. Permanently delete an exact retained eval
-
-```bash
-uv run python -m src.eval_lifecycle.cli delete retained ret_<hash> \
-  --confirm-retained ret_<hash> --json
-```
-
-Retained deletion requires the exact ID twice. Report the linked agent version
-and whether it was removed. If another retained eval references the same agent
-version, the shared version must remain.
+   Retained deletion requires the ID twice. Report whether its agent version
+   remained because another retained eval references it.
 
 ## Routing And Boundaries
 
-- Use `$run-use-case-evals` to create or resume working evals.
-- Use `$eval-results-analysis` to review working or retained results.
-- Use `$external-runtime-setup` to configure model identity and frozen pricing.
-- Use `$agent-eval-builder` for changes to lifecycle schemas or the read-only
-  explorer.
-- The review app may filter All, Working, and Retained and inspect both states.
-  It must not elevate, delete, edit, annotate, or expose another mutation.
-- Cloud publication is post-MVP. Do not add Azure retained-result writes.
-- Before modifying reusable lifecycle, eval, UI, versioning, or bootstrap code,
-  explain why a project-local change is insufficient, identify exact shared
-  paths/contracts, and obtain explicit user approval.
+- `$run-use-case-evals`: create or resume working evals.
+- `$eval-results-analysis`: inspect quality.
+- `$publish-retained-eval`: explicitly create an immutable Azure publication
+  event from one verified retained eval.
+- `$agent-eval-builder`: change lifecycle schemas or explorer behavior.
+- The explorer is read-only for All/Working/Retained. Never add elevation,
+  deletion, annotation, automatic sync, or Benchmark Studio writes.
+- If the request explicitly authorizes the named reusable scope, proceed after
+  stating its ownership and focused tests. Otherwise, identify the exact
+  reusable paths/contracts and pause once for approval.
+- For implementation changes, select every affected layer in the
+  [repository verification matrix](../project-guide/references/verification-matrix.md).

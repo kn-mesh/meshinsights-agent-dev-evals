@@ -47,7 +47,6 @@ _EXCLUDED_PARTS = frozenset(
         ".insights",
         ".coverage",
         "__pycache__",
-        "agent_versions",
         "build",
         "dist",
         "eval_results",
@@ -71,6 +70,7 @@ _REQUIRED_DIRECTORIES = (
     "src/evals",
     "www/src/use_case",
     "tests",
+    "tests/use_case",
 )
 
 
@@ -360,6 +360,8 @@ def _ordinary_files(source: Path) -> tuple[Path, ...]:
 def _excluded(relative: Path) -> bool:
     """Return whether a template path is local state or potentially sensitive."""
     pure = PurePosixPath(relative.as_posix())
+    if pure.parts and pure.parts[0].lower() == "agent_versions":
+        return True
     if any(part.lower() in _EXCLUDED_PARTS for part in pure.parts):
         return True
     if any(part.lower().endswith(".egg-info") for part in pure.parts):
@@ -392,7 +394,7 @@ def _render_project(
             "agent_version_configs",
             "eval_results",
             "www/src/use_case",
-            "tests",
+            "tests/use_case",
         } and not any(directory.iterdir()):
             (directory / ".gitkeep").touch()
     for directory in _REQUIRED_DIRECTORIES:
@@ -485,6 +487,12 @@ def _write_eval_runbook(path: Path, spec: BootstrapSpec) -> None:
     path.write_text(
         f"""# {spec.project.name} Eval Runbook
 
+<!-- agent-workbench-eval-runbook-status: bootstrap-placeholder -->
+
+**Status:** Bootstrap placeholder. Do not run an eval from this file until the
+first evaluable pipeline, agent policy, and evaluation profile have replaced
+this marker with explicit validated commands.
+
 The project default is benchmark `{spec.benchmarks.default.key}` version
 `{spec.benchmarks.default.version}` with model
 `{spec.model_catalog.default_model}`.
@@ -497,8 +505,9 @@ Before running an eval:
 4. use `$run-use-case-evals` to select the full benchmark, explicit units, or a
    named use-case section.
 
-The concrete pipeline and evaluation-profile paths are created while porting the
-use case. Do not copy commands from the reference implementation.
+`$benchmark-pipeline-port` records the exact-example control-pipeline command.
+`$agent-eval-builder` finalizes this runbook after the first evaluation profile
+exists. Do not copy commands from the reference implementation.
 """,
         encoding="utf-8",
     )

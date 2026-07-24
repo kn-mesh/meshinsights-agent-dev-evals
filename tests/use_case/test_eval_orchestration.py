@@ -1,4 +1,4 @@
-"""Tests for schema-driven published-benchmark evaluation orchestration."""
+"""Reference-use-case tests for evaluation orchestration."""
 
 from __future__ import annotations
 
@@ -29,9 +29,9 @@ from src.apps.eval_explorer import ProjectExplorerBackend
 from src.benchmarks import (
     BenchmarkExample,
     BenchmarkVersion,
-    PublishedLabelerNote,
     PublishedLabelSchema,
     PublishedReviewContext,
+    PublishedReviewerCoverage,
     PublishedVerification,
     SourceArtifact,
 )
@@ -1146,20 +1146,21 @@ def test_interruption_preserves_completed_work_and_resume_runs_only_missing(
     assert payload["summary"]["execution_recovery"]["execution_generations"] == 2
 
 
-def test_dry_run_resolves_manifest_without_pipeline_execution(
+def test_dry_run_resolves_manifest_and_continues_same_occurrence(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     example = _example().model_copy(
         update={
             "published_review_context": PublishedReviewContext(
-                labeler_notes=(
-                    PublishedLabelerNote(
+                reviewer_coverage=(
+                    PublishedReviewerCoverage(
                         review_event_id="review-event-a",
+                        label_revision=2,
+                        reviewer_user_id="reviewer-user-a",
                         reviewer_display_name="Alex Labeler",
                         reviewer_project_role="domain_reviewer",
                         submitted_at=datetime(2026, 3, 18, 8, tzinfo=timezone.utc),
-                        explanation="Telemetry supports the published label.",
-                        selected_for_publication=True,
+                        is_selected_label_revision=True,
                     ),
                 ),
                 verification=PublishedVerification(
@@ -1208,13 +1209,32 @@ def test_dry_run_resolves_manifest_without_pipeline_execution(
         "alarms",
     ]
     context = retained_example["published_review_context"]
-    assert context["labeler_notes"][0]["explanation"] == (
-        "Telemetry supports the published label."
-    )
+    assert context["reviewer_coverage"][0]["label_revision"] == 2
+    assert context["reviewer_coverage"][0]["is_selected_label_revision"] is True
+    assert "explanation" not in context["reviewer_coverage"][0]
     assert context["verification"]["source"] == "operator_feedback"
     assert context["verification"]["source_fields"] == {
         "failure_cause": "Trap failed closed"
     }
+    assert not tuple(path.parent.glob("attempts/**/*.json"))
+
+    monkeypatch.setattr(
+        eval_orchestration,
+        "run_pipeline",
+        lambda *args, **kwargs: _receipt(example),
+    )
+    result_path = eval_orchestration.run_eval(
+        Path("pipeline_configs/v1_3.ppln"),
+        evaluation_profile_path=PROFILE_PATH,
+        benchmark_key=benchmark.benchmark_key,
+        repository=_Repository(benchmark),
+        runtime="serial",
+        expected_run_id=manifest["run_id"],
+        output_root=tmp_path,
+    )
+
+    assert result_path == path.parent / "result.json"
+    assert len(tuple(tmp_path.glob("**/working/**/eval_*"))) == 1
 
 
 def test_run_identity_excludes_progress_interval_but_includes_worker_limit(
@@ -1286,7 +1306,7 @@ def test_normal_cli_exposes_only_three_scope_forms_and_supported_runtimes() -> N
     assert "--unit-ids" in help_text
     assert "--section" in help_text
     assert "--runtime {threaded,serial}" in help_text
-    for hidden in (
+    for unsupported in (
         "--label-filter",
         "--slice",
         "--resume-mode",
@@ -1296,7 +1316,7 @@ def test_normal_cli_exposes_only_three_scope_forms_and_supported_runtimes() -> N
         "--compare-result",
         "process",
     ):
-        assert hidden not in help_text
+        assert unsupported not in help_text
 
     defaults = parser.parse_args([])
     assert defaults.runtime == "threaded"
@@ -1324,11 +1344,13 @@ def test_named_section_resolves_label_and_explicit_list_is_distinct() -> None:
 
 def test_resume_command_is_shell_safe() -> None:
     command = eval_orchestration._resume_command(
-        ["pipeline configs/agent.ppln", "--all-examples"],
+        ["pipeline configs/agent.ppln", "--all-examples", "--dry-run"],
         run_id="eval_" + "a" * 24,
     )
 
     assert "'pipeline configs/agent.ppln'" in command
+    assert "--dry-run" not in command
+    assert "--run-id eval_aaaaaaaaaaaaaaaaaaaaaaaa" in command
     assert command.endswith("--run-id eval_" + "a" * 24)
 
 
@@ -1737,6 +1759,20 @@ def test_complete_working_eval_elevates_to_compact_verified_retained_artifacts(
     run_id = payload["run"]["run_id"]
     service = EvalLifecycleService(tmp_path)
 
+    class _EvidenceAdapter:
+        def build_view(self, **kwargs: Any) -> dict[str, Any]:
+            return {
+                "verified": True,
+                "example_id": kwargs["example"].example_id,
+            }
+
+    backend = ProjectExplorerBackend(
+        tmp_path,
+        evidence_adapter=_EvidenceAdapter(),  # type: ignore[arg-type]
+    )
+    working_evidence = backend.get_evidence(
+        run_id, benchmark.examples[0].example_id
+    )
     preview = service.preview_elevation(run_id)
     elevated = service.elevate(run_id, confirmed=True)
     retained_dir = tmp_path / elevated["path"]
@@ -1779,7 +1815,17 @@ def test_complete_working_eval_elevates_to_compact_verified_retained_artifacts(
     assert units["units"][0]["evaluations"]["classification"]["correct"] is True
     assert "usage" in units["units"][0]
     assert "cost" in units["units"][0]
-    assert units["units"][0]["review_status"] == "retained_compact"
+    assert "latest_invocation_id" not in retained_result["run"]
+    assert {
+        "execution_id",
+        "execution_generation",
+        "execution_history",
+        "invocation_id",
+        "failure_details",
+        "review_status",
+        "review_unavailable_reason",
+        "flaky",
+    }.isdisjoint(units["units"][0])
     evidence = json.loads((retained_dir / "evidence-references.json").read_text())
     assert evidence["storage"]["account_url"].startswith("https://")
     assert evidence["examples"][0]["raw_artifacts"][0]["content_sha256"]
@@ -1789,17 +1835,6 @@ def test_complete_working_eval_elevates_to_compact_verified_retained_artifacts(
     else:
         assert not (retained_dir / "agent.patch").exists()
 
-    class _EvidenceAdapter:
-        def build_view(self, **kwargs: Any) -> dict[str, Any]:
-            return {
-                "verified": True,
-                "example_id": kwargs["example"].example_id,
-            }
-
-    backend = ProjectExplorerBackend(
-        tmp_path,
-        evidence_adapter=_EvidenceAdapter(),  # type: ignore[arg-type]
-    )
     listed = backend.list_runs()["runs"]
     assert {item["lifecycle_state"] for item in listed} == {"retained"}
     assert all(item["cost"] == payload["summary"]["cost"] for item in listed)
@@ -1817,10 +1852,10 @@ def test_complete_working_eval_elevates_to_compact_verified_retained_artifacts(
     detail = backend.get_attempt(retained_id, attempts["rows"][0]["execution_id"])
     assert detail["review"] is None
     assert detail["performance"]["availability"] == "unavailable"
-    assert (
-        backend.get_evidence(retained_id, benchmark.examples[0].example_id)["verified"]
-        is True
+    retained_evidence = backend.get_evidence(
+        retained_id, benchmark.examples[0].example_id
     )
+    assert retained_evidence == working_evidence
     unexpected = retained_dir / "unexpected"
     unexpected.mkdir()
     with pytest.raises(EvalLifecycleError, match="non-file"):
