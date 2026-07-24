@@ -1,6 +1,6 @@
 ---
 name: run-use-case-evals
-description: Prepare, execute, or troubleshoot published-benchmark evaluation commands for the current Agent Workbench use case. Use when a developer or coding agent asks how to run an eval, wants a smoke or full benchmark run, needs current project defaults, or needs help selecting the pipeline, model, scope, repetition, and supported runtime. Do not use for changing eval orchestration contracts or analyzing accuracy regressions.
+description: Prepare, execute, or troubleshoot published-benchmark evaluation commands for the current Agent Workbench use case. Use when a developer or coding agent asks how to run a targeted or full benchmark eval, needs current project defaults, or needs help selecting the pipeline, model, scope, repetition, and supported runtime. Do not use for changing eval orchestration contracts, validating an agent under development on one unit, or analyzing accuracy regressions.
 ---
 
 # Run Use-Case Evals
@@ -50,8 +50,13 @@ in this skill.
    current hosted catalog result, retain the benchmark placeholders and tell
    the user to resolve them; never present a concrete key as "currently
    available" based only on repository contents.
-5. Start with the runbook's one-example serial smoke run when pipeline/model
-   compatibility has not already been established.
+5. Execute the scope the user requested. Do not create a one-example eval as a
+   compatibility check or prerequisite to a section or full-benchmark eval.
+   Agent development must establish pipeline/model compatibility with focused
+   tests and the exact-example pipeline runner before evaluation. A
+   one-example or one-unit eval is valid only when that narrow evaluation is
+   itself the user's requested measurement or when debugging an existing eval
+   failure; never run it automatically before a wider eval.
 6. When authorized to execute, monitor the run through completion and report
    the unique eval occurrence ID, deterministic `run_spec_sha256`, and exact
    `result.json` path. Starting the same command again creates a new
@@ -95,6 +100,10 @@ in this skill.
 - Use `$eval-lifecycle` to list, elevate, verify, or permanently delete an
   exact working or retained eval.
 - Use `$external-runtime-setup` for provider credentials or telemetry setup.
+- Do not substitute a one-example eval for the exact-example pipeline validation
+  required while writing or editing an agent. Eval occurrences are measurement
+  artifacts and appear in the eval explorer even when their scope is only one
+  example.
 - Do not teach process execution, arbitrary label filters/predicates, failure
   generation reruns, materialization-only operations, or comparison flags as
   normal eval workflow.

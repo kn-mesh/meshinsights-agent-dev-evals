@@ -32,8 +32,10 @@ uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
   --review-capture full
 ```
 
-This is a full 70-example model run and therefore incurs model usage. Use the
-smoke-run pattern below when validating a new pipeline or model configuration.
+This is a full 70-example model run and therefore incurs model usage. Validate
+a new or edited agent first with focused tests and the exact-example pipeline
+runner; do not create a one-example eval occurrence as a prerequisite to this
+full eval.
 
 ## Prefer The Explicit Command
 
@@ -105,27 +107,32 @@ non-secret; provider credentials remain in `.env`. Prices are never fetched or
 silently refreshed during an eval. The resolved pricing record is frozen into
 run identity and results.
 
-## Recommended First Run
+## Development Validation Is Not An Eval
 
-Run one known example serially before evaluating the full benchmark:
+When writing or editing an agent, run focused tests and one known example
+through the exact-example pipeline runner before considering the agent ready
+for evaluation:
 
 ```bash
-uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
-  --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
+uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1_3.ppln \
   --project-key spirax-pulse \
+  --azure-postgres-host <postgres-host> \
+  --azure-postgres-database <postgres-database> \
+  --azure-postgres-user <entra-login> \
   --benchmark-key <published-benchmark-key> \
   --benchmark-version <version-number> \
-  --example-ids '<example-id>' \
+  --example-id '<example-id>' \
   --ai-model <provider:model> \
-  --ai-reasoning-effort medium \
-  --runs-per-example 1 \
-  --runtime serial \
-  --max-workers 1
+  --ai-reasoning-effort medium
 ```
 
-Example IDs can contain `|`, so quote them. After the smoke run succeeds,
-replace `--example-ids` with `--all-examples` and use repeated threaded runs
-for the full benchmark.
+Example IDs can contain `|`, so quote them. This command validates one unit
+without creating an eval result that appears in the explorer.
+
+Do not run a one-example eval automatically before a section or full-benchmark
+eval. A one-example or one-unit eval is appropriate only when that narrow
+scope is the requested measurement or when debugging an existing eval failure.
+After development validation passes, run the requested eval scope directly.
 
 ## Scope Options
 

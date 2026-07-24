@@ -25,6 +25,9 @@ design dimension, keep the structured receipt contract stable when practical,
 and add a matching agent policy for AI variants. Record the parent, the short
 hypothesis, and what changed in this file.
 
-Run one exact benchmark example and a one-example eval before widening scope.
-The pipeline name is the human working label; `agent_version_id` identifies
-exact executable content and `run_id` identifies an evaluation.
+Run focused tests and one exact benchmark example through the pipeline runner
+before considering an agent edit complete. Do not create a one-example eval as
+a prerequisite to a wider eval; run the requested evaluation scope directly
+after unit-level pipeline validation. The pipeline name is the human working
+label; `agent_version_id` identifies exact executable content and `run_id`
+identifies an evaluation.

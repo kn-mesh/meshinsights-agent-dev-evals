@@ -56,8 +56,9 @@ Require a working pipeline that:
   identity; and
 - returns a structured decision that can be compared with approved labels.
 
-If this gate fails, fix the pipeline or handoff contract before adding eval
-orchestration.
+Validate this gate with focused tests and the exact-example pipeline runner,
+not by creating a one-example eval occurrence. If this gate fails, fix the
+pipeline or handoff contract before adding or running eval orchestration.
 
 ### Gate 2: Minimum useful evaluation
 

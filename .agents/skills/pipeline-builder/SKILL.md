@@ -240,11 +240,16 @@ Use this short workflow after the ported control pipeline is sound:
    for AI implementation details.
 5. Verify the result flows from a stable process artifact through the action
    payload into act-stage receipt metadata.
-6. Run focused tests and one exact published benchmark example, then use
-   `$run-use-case-evals` for a one-example serial eval.
-7. Report the changed and held-constant dimensions, pipeline path, candidate
-   `agent_version_id`, smoke `run_id`, and wider-eval command. Do not silently
-   run a broad eval, make another variant change, or promote the candidate.
+6. Run focused tests and one exact published benchmark example through
+   `src.pipelines.pipeline_run_from_yaml`. Treat that unit-level pipeline run,
+   not a one-example eval occurrence, as the required development validation.
+7. Once the candidate passes unit-level pipeline validation, use
+   `$run-use-case-evals` for the evaluation scope the user actually requested.
+   Do not create a one-example eval as a prerequisite to a wider eval.
+8. Report the changed and held-constant dimensions, pipeline path, exact
+   development-validation example, candidate `agent_version_id`, and requested
+   eval command or `run_id`. Do not silently run a broad eval, make another
+   variant change, or promote the candidate.
 
 Record the short hypothesis in the project's existing pipeline-version notes.
 Do not add a parallel variant manifest, generator, catalog, or identity; the

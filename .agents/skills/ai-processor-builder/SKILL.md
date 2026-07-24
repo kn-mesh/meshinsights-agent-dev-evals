@@ -461,6 +461,10 @@ Before finishing an AI processor:
 7. Override `_attach_response(...)` if downstream code needs a stable artifact key.
 8. Keep the final AI determination flowing into receipt metadata if the pipeline exposes it as an output.
 9. Verify prompts are explicit f-strings and easy to edit.
+10. Run focused tests and one exact published benchmark example through the
+    pipeline runner before considering the agent change complete. Do not use a
+    one-example eval occurrence for this development check; eval orchestration
+    is for the measurement scope the user actually requests.
 
 ## When Exact API Details Matter
 
