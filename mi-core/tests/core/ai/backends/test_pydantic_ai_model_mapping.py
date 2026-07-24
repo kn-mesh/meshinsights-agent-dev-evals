@@ -201,7 +201,7 @@ class TestResolveModel:
                 "google/gemini-3-flash-preview",
                 "OpenRouterModel",
             ),
-            ("azure", "claude-sonnet-4-5", "AnthropicModel"),
+            ("azure", "claude-sonnet-4-5", "FoundryAnthropicModel"),
         ],
     )
     def test_transport_retries_use_explicit_provider_models(

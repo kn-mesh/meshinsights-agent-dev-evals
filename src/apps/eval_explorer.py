@@ -240,8 +240,11 @@ class ProjectExplorerBackend:
         store = LocalRunStore(run_dir, run_id=run_id)
         manifest = store.read_manifest()
         contract = manifest.get("eval_contract")
-        if not isinstance(contract, dict) or contract.get("schema_version") != 1:
-            raise ValueError("Run manifest is missing its schema-v1 eval contract.")
+        if not isinstance(contract, dict) or contract.get("schema_version") not in {
+            1,
+            2,
+        }:
+            raise ValueError("Run manifest is missing a supported eval contract.")
         config = contract.get("run")
         if not isinstance(config, dict):
             raise ValueError("Run manifest is missing retained run identity.")

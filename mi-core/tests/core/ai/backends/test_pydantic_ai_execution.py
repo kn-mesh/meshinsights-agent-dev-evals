@@ -41,6 +41,94 @@ class ExampleOutput(BaseModel):
     value: int
 
 
+@pytest.mark.parametrize(
+    ("provider", "model", "request_usage", "expected"),
+    [
+        (
+            "azure",
+            "gpt-5.6-luna",
+            RequestUsage(
+                input_tokens=1_566,
+                output_tokens=1_518,
+                cache_read_tokens=1_408,
+                details={"reasoning_tokens": 576},
+            ),
+            {
+                "provider": "azure_openai",
+                "input_uncached_tokens": 158,
+                "input_cache_read_tokens": 1_408,
+                "output_visible_tokens": 942,
+                "output_reasoning_tokens": 576,
+                "gaps": ("input_cache_write_tokens_unreported",),
+            },
+        ),
+        (
+            "azure",
+            "claude-haiku-4-5",
+            RequestUsage(
+                input_tokens=1_800,
+                output_tokens=100,
+                cache_read_tokens=500,
+                cache_write_tokens=1_200,
+                details={
+                    "cache_write_5m_tokens": 1_000,
+                    "cache_write_1h_tokens": 200,
+                },
+            ),
+            {
+                "provider": "azure_claude",
+                "input_uncached_tokens": 100,
+                "input_cache_read_tokens": 500,
+                "output_visible_tokens": 100,
+                "output_reasoning_tokens": 0,
+                "gaps": (),
+            },
+        ),
+        (
+            "google",
+            "gemini-3.1-flash-lite",
+            RequestUsage(
+                input_tokens=50,
+                output_tokens=500,
+                cache_read_tokens=10,
+                details={"thoughts_tokens": 400},
+            ),
+            {
+                "provider": "google_direct",
+                "input_uncached_tokens": 40,
+                "input_cache_read_tokens": 10,
+                "output_visible_tokens": 100,
+                "output_reasoning_tokens": 400,
+                "gaps": (),
+            },
+        ),
+    ],
+)
+def test_provider_usage_normalizes_disjoint_billable_buckets(
+    provider: str,
+    model: str,
+    request_usage: RequestUsage,
+    expected: dict[str, Any],
+) -> None:
+    backend = PydanticAIBackend()
+    usage = backend._extract_direct_usage(  # noqa: SLF001
+        ModelResponse(
+            parts=[TextPart('{"value": 42}')],
+            usage=request_usage,
+        ),
+        provider=provider,
+        model=model,
+    )
+
+    request = usage.model_requests[0]
+    assert request.provider == expected["provider"]
+    assert request.input_uncached_tokens == expected["input_uncached_tokens"]
+    assert request.input_cache_read_tokens == expected["input_cache_read_tokens"]
+    assert request.output_visible_tokens == expected["output_visible_tokens"]
+    assert request.output_reasoning_tokens == expected["output_reasoning_tokens"]
+    assert request.billable_usage_gaps == expected["gaps"]
+
+
 def test_retry_transport_records_observed_http_attempts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -395,12 +483,11 @@ def test_workflow_retries_output_validation_separately_from_transport(
 
     assert result.output == ExampleOutput(value=42)
     assert request_count == 2
-    assert result.usage == AIUsage(
-        requests=2,
-        input_tokens=20,
-        output_tokens=6,
-        output_validation_attempts=2,
-    )
+    assert result.usage.requests == 2
+    assert result.usage.input_tokens == 20
+    assert result.usage.output_tokens == 6
+    assert result.usage.output_validation_attempts == 2
+    assert len(result.usage.model_requests) == 2
     assert [attempt["valid"] for attempt in result.review["validation_attempts"]] == [
         False,
         True,

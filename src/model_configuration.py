@@ -35,6 +35,18 @@ def format_model(model: ModelDefinition, *, default_model: str) -> str:
             rates.append(
                 f"cached-input={_rate(model.pricing.cached_input_per_million_tokens)}"
             )
+        if model.pricing.cache_write_per_million_tokens is not None:
+            rates.append(
+                f"cache-write={_rate(model.pricing.cache_write_per_million_tokens)}"
+            )
+        if model.pricing.cache_write_5m_per_million_tokens is not None:
+            rates.append(
+                f"cache-write-5m={_rate(model.pricing.cache_write_5m_per_million_tokens)}"
+            )
+        if model.pricing.cache_write_1h_per_million_tokens is not None:
+            rates.append(
+                f"cache-write-1h={_rate(model.pricing.cache_write_1h_per_million_tokens)}"
+            )
         if model.pricing.reasoning_per_million_tokens is not None:
             rates.append(
                 f"reasoning={_rate(model.pricing.reasoning_per_million_tokens)}"

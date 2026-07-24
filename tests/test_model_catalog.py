@@ -26,12 +26,17 @@ def test_root_catalog_defines_current_default_and_choices() -> None:
     assert resolve_model(None, catalog) == "azure:gpt-5.6-luna"
     assert resolve_model_definition(None, catalog).api == "openai_responses"
     assert all(model.pricing is not None for model in catalog.models)
+    assert all(model.pricing.estimator_version == 3 for model in catalog.models)
     assert catalog.get("azure:gpt-5.6-luna").pricing_key == (
         "azure:gpt-5.6-luna-standard-global"
     )
     assert (
-        catalog.get("azure:claude-sonnet-4-6").pricing
-        == catalog.get("anthropic:claude-sonnet-4-6").pricing
+        catalog.get("azure:claude-sonnet-4-6").pricing_key
+        == "azure:claude-sonnet-4-6-foundry"
+    )
+    assert (
+        catalog.get("azure:claude-sonnet-4-6").pricing.billing_provider
+        == "azure_claude"
     )
 
 

@@ -36,7 +36,7 @@ from evaluation import (
     RuntimeType,
     ScoringStatus,
     build_reliability_summary,
-    build_run_identity,
+    build_eval_run_identity,
     build_work_item_id,
     benchmark_source_reference,
     build_scoring_coverage,
@@ -119,6 +119,19 @@ _QUIET_EXECUTOR_LOGGER.setLevel(logging.CRITICAL)
 
 BASE_RESULTS_DIR = Path("eval_results")
 _INTERRUPTION_GRACE_SECONDS = 30.0
+_INPUT_PRICING_POLICY = "assume_uncached"
+_IGNORED_CACHE_USAGE_GAPS = {
+    "inconsistent_input_token_buckets",
+    "input_cache_write_tokens_unreported",
+}
+
+
+class EvalRunInterrupted(KeyboardInterrupt):
+    """Cooperative interruption carrying the exact resumable occurrence ID."""
+
+    def __init__(self, run_id: str) -> None:
+        super().__init__(run_id)
+        self.run_id = run_id
 
 
 @contextmanager
@@ -511,11 +524,35 @@ def run_eval(
             "source_snapshot_contract": configured_benchmark.source_snapshot_contract,
         },
     )
-    run_id, run_spec_sha256 = build_run_identity(run_spec)
-    if expected_run_id is not None and expected_run_id != run_id:
-        raise ValueError(
-            f"Resolved run id {run_id} does not match requested {expected_run_id}."
+    run_spec_sha256 = canonical_sha256(run_spec)
+    base = output_root or BASE_RESULTS_DIR
+    occurrence_seed: dict[str, Any] | None = None
+    existing_manifest: dict[str, Any] | None = None
+    if expected_run_id is None:
+        occurrence_created_at = utc_now()
+        run_id, occurrence_seed = build_eval_run_identity(
+            run_spec_sha256=run_spec_sha256,
+            created_at_utc=occurrence_created_at,
         )
+    else:
+        run_id = expected_run_id
+    run_dir = (
+        base
+        / "working"
+        / normalize_filename_token(benchmark.benchmark_key)
+        / f"v{benchmark.version_number}"
+        / run_id
+    )
+    store = LocalRunStore(run_dir, run_id=run_id)
+    if expected_run_id is not None:
+        if not store.manifest_path.is_file():
+            raise ValueError(f"Requested eval occurrence does not exist: {run_id}.")
+        existing_manifest = store.read_manifest()
+        if existing_manifest.get("run_spec_sha256") != run_spec_sha256:
+            raise ValueError(
+                f"Eval occurrence {run_id} has a conflicting resolved specification."
+            )
+        occurrence_seed = existing_manifest.get("occurrence_seed")
     work_plan = [
         {
             "work_item_id": build_work_item_id(
@@ -529,19 +566,10 @@ def run_eval(
         for example in examples
         for attempt_index in range(1, runs_per_example + 1)
     ]
-    base = output_root or BASE_RESULTS_DIR
-    run_dir = (
-        base
-        / "working"
-        / normalize_filename_token(benchmark.benchmark_key)
-        / f"v{benchmark.version_number}"
-        / run_id
-    )
-    store = LocalRunStore(run_dir, run_id=run_id)
     manifest_created_at = (
-        str(store.read_manifest()["created_at_utc"])
-        if store.manifest_path.exists()
-        else utc_now()
+        str(existing_manifest["created_at_utc"])
+        if existing_manifest is not None
+        else str((occurrence_seed or {})["created_at_utc"])
     )
     materialization_run_config = _build_run_config(
         yaml_path=yaml_path,
@@ -568,46 +596,49 @@ def run_eval(
         manifest_created_at=manifest_created_at,
     )
     materialization_run_config.pop("completed_at_utc", None)
-    store.initialize(
-        {
-            "schema_version": 1,
-            "performance_schema_version": 1,
-            "coordinator_scope": "local_single_host",
-            "run_id": run_id,
-            "run_spec_sha256": run_spec_sha256,
-            "run_spec": run_spec,
-            "work_items": work_plan,
-            "created_at_utc": manifest_created_at,
-            "eval_contract": {
-                "schema_version": 1,
-                "run": materialization_run_config,
-                "examples": _build_examples(
-                    [
-                        _ExampleEvalResult(
-                            example=example,
-                            slice_keys=preflight.example_slices[example.example_id],
-                            attempts=(),
-                        )
-                        for example in examples
+    if existing_manifest is None:
+        store.initialize(
+            {
+                "schema_version": 2,
+                "performance_schema_version": 1,
+                "coordinator_scope": "local_single_host",
+                "run_id": run_id,
+                "eval_run_id": run_id,
+                "run_spec_sha256": run_spec_sha256,
+                "occurrence_seed": occurrence_seed,
+                "run_spec": run_spec,
+                "work_items": work_plan,
+                "created_at_utc": manifest_created_at,
+                "eval_contract": {
+                    "schema_version": 2,
+                    "run": materialization_run_config,
+                    "examples": _build_examples(
+                        [
+                            _ExampleEvalResult(
+                                example=example,
+                                slice_keys=preflight.example_slices[example.example_id],
+                                attempts=(),
+                            )
+                            for example in examples
+                        ],
+                        profile=profile,
+                    ),
+                    "output_fields": [
+                        {
+                            "key": field.key,
+                            "graded": field.evaluation is not None,
+                            "benchmark_label_path": (
+                                list(field.evaluation.benchmark_label_path)
+                                if field.evaluation is not None
+                                else None
+                            ),
+                        }
+                        for field in profile.output_fields
                     ],
-                    profile=profile,
-                ),
-                "output_fields": [
-                    {
-                        "key": field.key,
-                        "graded": field.evaluation is not None,
-                        "benchmark_label_path": (
-                            list(field.evaluation.benchmark_label_path)
-                            if field.evaluation is not None
-                            else None
-                        ),
-                    }
-                    for field in profile.output_fields
-                ],
-                "slice_keys": [item.key for item in profile.slices],
-            },
-        }
-    )
+                    "slice_keys": [item.key for item in profile.slices],
+                },
+            }
+        )
     promoted_store.persist_candidate(resolved_agent, run_dir)
     if dry_run:
         selected = store.select_work_items(
@@ -711,9 +742,7 @@ def run_eval(
                         "execution_id": execution_id,
                         "generation": generation,
                         "invocation_id": invocation_id,
-                        "started_at_utc": started_at.isoformat(
-                            timespec="microseconds"
-                        ),
+                        "started_at_utc": started_at.isoformat(timespec="microseconds"),
                         "completed_at_utc": completed_at.isoformat(
                             timespec="microseconds"
                         ),
@@ -862,6 +891,8 @@ def run_eval(
                     invocation_id,
                     performance_error,
                 )
+            if interrupted:
+                raise EvalRunInterrupted(run_id) from error
             raise
         invocation_duration = time.monotonic() - invocation_started
         try:
@@ -999,7 +1030,7 @@ def _build_resolved_run_spec(
     )
     return {
         "execution_contract_version": 1,
-        "eval_schema_version": 1,
+        "eval_schema_version": 2,
         "project_key": benchmark.project_key,
         "benchmark": {
             "name": benchmark.benchmark_name,
@@ -1048,6 +1079,7 @@ def _build_resolved_run_spec(
             "id": ai_model,
             "api": model_definition.api,
             "reasoning_effort": ai_reasoning_effort,
+            "input_pricing_policy": _INPUT_PRICING_POLICY,
             "pricing": (_pricing_snapshot(model_definition)),
         },
         "evidence": {
@@ -1610,29 +1642,25 @@ def _build_cost_observation(
 def _estimate_cost_from_usage(
     usage: dict[str, Any], pricing: ModelPricing
 ) -> dict[str, Any]:
-    """Estimate one attempt from its usage and the run's frozen pricing."""
-    cached = usage.get("cached_input_tokens", 0)
+    """Estimate one attempt while conservatively assuming no input cache savings."""
+    model_requests = usage.get("model_requests")
+    if isinstance(model_requests, list) and model_requests:
+        return _estimate_request_level_cost(model_requests, pricing)
     reasoning = usage.get("reasoning_tokens", 0)
     raw_input = usage.get("input_tokens", 0)
     raw_output = usage.get("output_tokens", 0)
     billable_usage = {
-        "input_tokens": (
-            max(0, raw_input - cached)
-            if isinstance(raw_input, int) and isinstance(cached, int)
-            else raw_input
-        ),
+        "input_tokens": raw_input,
         "output_tokens": (
             max(0, raw_output - reasoning)
             if isinstance(raw_output, int) and isinstance(reasoning, int)
             else raw_output
         ),
-        "cached_input_tokens": cached,
         "reasoning_tokens": reasoning,
     }
     token_rates = {
         "input_tokens": pricing.input_per_million_tokens,
         "output_tokens": pricing.output_per_million_tokens,
-        "cached_input_tokens": pricing.cached_input_per_million_tokens,
         # OpenAI-family reasoning tokens are billed at the output-token rate
         # unless the frozen pricing record declares a distinct reasoning rate.
         "reasoning_tokens": (
@@ -1659,10 +1687,119 @@ def _estimate_cost_from_usage(
         "estimated": {
             "amount": amount,
             "currency": pricing.currency,
+            "input_pricing_policy": _INPUT_PRICING_POLICY,
             "pricing_version": pricing.version,
             "pricing": pricing.to_dict(),
             "pricing_sha256": canonical_sha256(pricing.to_dict()),
             "priced_usage": priced_usage,
+        },
+        "unpriced_usage": unpriced,
+    }
+
+
+def _estimate_request_level_cost(
+    model_requests: list[Any],
+    pricing: ModelPricing,
+) -> dict[str, Any]:
+    """Price requests with every reported input token at the uncached rate."""
+    rate_by_meter = {
+        "input_tokens": pricing.input_per_million_tokens,
+        "output_visible_tokens": pricing.output_per_million_tokens,
+        "output_reasoning_tokens": (
+            pricing.reasoning_per_million_tokens
+            if pricing.reasoning_per_million_tokens is not None
+            else pricing.output_per_million_tokens
+        ),
+    }
+    amount = 0.0
+    priced_usage: dict[str, int] = {}
+    unpriced: dict[str, int | str] = {}
+    request_costs: list[dict[str, Any]] = []
+    for sequence, request_usage in enumerate(model_requests, start=1):
+        if not isinstance(request_usage, dict):
+            unpriced[f"request_{sequence}"] = "invalid_request_usage"
+            continue
+        provider = request_usage.get("provider")
+        if (
+            pricing.billing_provider is not None
+            and provider != pricing.billing_provider
+        ):
+            unpriced[f"request_{sequence}.billing_provider"] = (
+                f"expected {pricing.billing_provider}, observed {provider}"
+            )
+        billable = request_usage.get("billable")
+        if not isinstance(billable, dict):
+            unpriced[f"request_{sequence}.billable"] = "missing"
+            continue
+        gaps = request_usage.get("billable_usage_gaps", [])
+        if isinstance(gaps, list):
+            for gap in gaps:
+                if isinstance(gap, str) and gap not in _IGNORED_CACHE_USAGE_GAPS:
+                    unpriced[f"request_{sequence}.{gap}"] = "quantity unavailable"
+
+        reported = request_usage.get("reported")
+        if not isinstance(reported, dict):
+            unpriced[f"request_{sequence}.reported"] = "missing"
+            reported = {}
+        meter_quantities = (
+            ("input_tokens", reported.get("input_tokens")),
+            ("output_visible_tokens", billable.get("output_visible_tokens")),
+            ("output_reasoning_tokens", billable.get("output_reasoning_tokens")),
+        )
+        request_amount = 0.0
+        line_items: list[dict[str, Any]] = []
+        for meter, quantity in meter_quantities:
+            if quantity is None:
+                unpriced[f"request_{sequence}.{meter}"] = "quantity unavailable"
+                continue
+            if (
+                not isinstance(quantity, int)
+                or isinstance(quantity, bool)
+                or quantity < 0
+            ):
+                unpriced[f"request_{sequence}.{meter}"] = "invalid quantity"
+                continue
+            if quantity == 0:
+                continue
+            rate = rate_by_meter[meter]
+            if rate is None:
+                unpriced[f"request_{sequence}.{meter}"] = quantity
+                continue
+            line_amount = quantity / 1_000_000 * rate
+            request_amount += line_amount
+            amount += line_amount
+            priced_usage[meter] = priced_usage.get(meter, 0) + quantity
+            line_items.append(
+                {
+                    "meter": meter,
+                    "quantity": quantity,
+                    "rate_per_million": rate,
+                    "amount": line_amount,
+                }
+            )
+        request_costs.append(
+            {
+                "sequence": sequence,
+                "provider": provider,
+                "model": request_usage.get("model"),
+                "amount": request_amount,
+                "line_items": line_items,
+            }
+        )
+    return {
+        "status": "estimated_partial" if unpriced else "estimated_complete",
+        "actual": None,
+        "estimated": {
+            "amount": amount,
+            "currency": pricing.currency,
+            "basis": pricing.billing_plan or "frozen_rate_card",
+            "input_pricing_policy": _INPUT_PRICING_POLICY,
+            "estimator_version": pricing.estimator_version,
+            "pricing_version": pricing.version,
+            "pricing": pricing.to_dict(),
+            "pricing_sha256": canonical_sha256(pricing.to_dict()),
+            "priced_usage": priced_usage,
+            "requests": request_costs,
         },
         "unpriced_usage": unpriced,
     }
@@ -1791,6 +1928,7 @@ def _build_usage_summary(attempts: list[EvalAttempt]) -> dict[str, Any]:
             "output_tokens",
             "total_tokens",
             "cached_input_tokens",
+            "cache_write_tokens",
             "reasoning_tokens",
             "tool_calls",
             "output_validation_attempts",
@@ -1817,10 +1955,7 @@ def _build_cost_summary(
         if (
             pricing is not None
             and isinstance(usage, dict)
-            and not (
-                isinstance(cost, dict)
-                and cost.get("status") == "actual"
-            )
+            and not (isinstance(cost, dict) and cost.get("status") == "actual")
         ):
             # The compact result is a derived view. Re-estimate from immutable
             # usage plus the exact pricing snapshot frozen into this run so a
@@ -1893,7 +2028,13 @@ def _model_pricing_from_frozen_snapshot(
             "input_per_million_tokens",
             "output_per_million_tokens",
             "cached_input_per_million_tokens",
+            "cache_write_per_million_tokens",
+            "cache_write_5m_per_million_tokens",
+            "cache_write_1h_per_million_tokens",
             "reasoning_per_million_tokens",
+            "billing_provider",
+            "billing_plan",
+            "estimator_version",
             "effective_date",
             "source",
         )
@@ -1902,6 +2043,8 @@ def _model_pricing_from_frozen_snapshot(
         fields["currency"], str
     ):
         return None
+    if not isinstance(fields["estimator_version"], int):
+        fields["estimator_version"] = 1
     return ModelPricing(**fields)  # type: ignore[arg-type]
 
 
@@ -2074,6 +2217,7 @@ def _build_run_config(
             "id": ai_model,
             "api": model_definition.api,
             "reasoning_effort": ai_reasoning_effort,
+            "input_pricing_policy": _INPUT_PRICING_POLICY,
             "pricing": (_pricing_snapshot(model_definition)),
         },
         "scoring": {
@@ -2103,7 +2247,7 @@ def _build_run_config(
         "configuration": configuration_dimensions,
     }
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "label_schemas": [
             {
                 "schema_version_id": schema.schema_version_id,
@@ -2136,12 +2280,14 @@ def _bind_run_config_to_manifest(
     run_spec: dict[str, Any],
     manifest_created_at: str,
 ) -> None:
-    """Add immutable manifest identity to the schema-v1 run metadata."""
+    """Add immutable occurrence identity to run metadata."""
     run_config.update(
         {
             "run_id": run_id,
+            "eval_run_id": run_id,
             "run_spec_sha256": run_spec_sha256,
             "run_created_at_utc": manifest_created_at,
+            "started_at_utc": manifest_created_at,
             "agent_version_resolver_contract_version": 1,
             "selected_example_scope_sha256": run_spec["scope"]["content_sha256"],
         }
@@ -2161,7 +2307,7 @@ def _bind_run_config_to_manifest(
             },
             "harness": {
                 "execution_contract_version": run_spec["execution_contract_version"],
-                "eval_schema_version": 1,
+                "eval_schema_version": 2,
             },
         }
     )
@@ -2340,9 +2486,7 @@ def _argument_parser() -> argparse.ArgumentParser:
         metavar="PATH=JSON_VALUE",
         help=argparse.SUPPRESS,
     )
-    parser.add_argument(
-        "--slice", action="append", default=[], help=argparse.SUPPRESS
-    )
+    parser.add_argument("--slice", action="append", default=[], help=argparse.SUPPRESS)
     parser.add_argument("--runs-per-example", type=int, default=1)
     parser.add_argument(
         "--runtime",
@@ -2396,7 +2540,7 @@ def _argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--run-id",
-        help="Require the resolved deterministic run to match this identity.",
+        help="Resume one exact existing eval occurrence and verify its specification.",
     )
     parser.add_argument(
         "--dry-run",
@@ -2425,9 +2569,7 @@ def _argument_parser() -> argparse.ArgumentParser:
         default=[],
         help=argparse.SUPPRESS,
     )
-    parser.add_argument(
-        "--comparison-output-dir", type=Path, help=argparse.SUPPRESS
-    )
+    parser.add_argument("--comparison-output-dir", type=Path, help=argparse.SUPPRESS)
     parser.add_argument(
         "--dimension",
         action="append",
@@ -2559,14 +2701,18 @@ def _resolve_cli_model(
             selected = resolve_model(args.ai_model, catalog)
         except ValueError as error:
             parser.error(str(error))
-        print(f"Selected model: {format_model(catalog.get(selected), default_model=catalog.default_model)}")
+        print(
+            f"Selected model: {format_model(catalog.get(selected), default_model=catalog.default_model)}"
+        )
         return selected
     if args.compare_model:
         try:
             selected = resolve_model(args.compare_model[0], catalog)
         except ValueError as error:
             parser.error(str(error))
-        print(f"Selected model: {format_model(catalog.get(selected), default_model=catalog.default_model)}")
+        print(
+            f"Selected model: {format_model(catalog.get(selected), default_model=catalog.default_model)}"
+        )
         return selected
     if not sys.stdin.isatty():
         parser.error("--ai-model or --compare-model is required non-interactively.")
@@ -2574,10 +2720,12 @@ def _resolve_cli_model(
         format_model(model, default_model=catalog.default_model): model.id
         for model in catalog.models
     }
-    return choices[prompt_select_option(
-        f"Choose an AI model (project default: {catalog.default_model}):",
-        list(choices),
-    )]
+    return choices[
+        prompt_select_option(
+            f"Choose an AI model (project default: {catalog.default_model}):",
+            list(choices),
+        )
+    ]
 
 
 def _resolve_cli_reasoning_effort(
@@ -2631,8 +2779,7 @@ def _resolve_cli_scope(
     )
     if supported_choices > 1:
         parser.error(
-            "Choose one scope: --all-examples, --example-ids, --unit-ids, "
-            "or --section."
+            "Choose one scope: --all-examples, --example-ids, --unit-ids, or --section."
         )
     if supported_choices:
         if label_filters or args.slice:
@@ -2660,11 +2807,15 @@ def _resolve_cli_scope(
             "Which identifiers are you entering?", ["Example IDs", "Unit IDs"]
         )
         values = prompt_csv_values(f"Enter comma-separated {identity_kind.lower()}")
-        return (values, None, {}, []) if identity_kind == "Example IDs" else (
-            None,
-            values,
-            {},
-            [],
+        return (
+            (values, None, {}, [])
+            if identity_kind == "Example IDs"
+            else (
+                None,
+                values,
+                {},
+                [],
+            )
         )
     labels = {item.label: item.key for item in profile.slices}
     section = prompt_select_option("Choose a named use-case section:", list(labels))
@@ -2690,7 +2841,9 @@ def _resolve_section_keys(
         key = lookup.get(value.strip().casefold())
         if key is None:
             choices = ", ".join(item.label for item in profile.slices) or "(none)"
-            parser.error(f"Unknown use-case section {value!r}. Choose one of: {choices}")
+            parser.error(
+                f"Unknown use-case section {value!r}. Choose one of: {choices}"
+            )
         if key not in resolved:
             resolved.append(key)
     return resolved
@@ -2733,6 +2886,7 @@ def _print_cli_outcome(path: Path) -> bool:
             f"output={totals.get('output_tokens', 0)}, "
             f"total={totals.get('total_tokens', 0)}, "
             f"cached-input={totals.get('cached_input_tokens', 0)}, "
+            f"cache-write={totals.get('cache_write_tokens', 0)}, "
             f"reasoning={totals.get('reasoning_tokens', 0)}."
         )
     cost = summary.get("cost", {})
@@ -2769,10 +2923,22 @@ def _print_cli_outcome(path: Path) -> bool:
     return failures > 0
 
 
-def _resume_command(argv: list[str]) -> str:
+def _resume_command(argv: list[str], *, run_id: str | None = None) -> str:
     """Return a shell-safe command that resolves the same immutable run."""
+    normalized: list[str] = []
+    skip_next = False
+    for value in argv:
+        if skip_next:
+            skip_next = False
+            continue
+        if value == "--run-id":
+            skip_next = True
+            continue
+        normalized.append(value)
+    if run_id is not None:
+        normalized.extend(["--run-id", run_id])
     return shlex.join(
-        [sys.executable, "-m", "src.evals.eval_orchestration", *argv]
+        [sys.executable, "-m", "src.evals.eval_orchestration", *normalized]
     )
 
 
@@ -2895,7 +3061,13 @@ def main() -> None:
     if args.run_id and len(requested_models) > 1:
         parser.error("--run-id cannot identify more than one compared model run.")
 
-    def run_model(model: str, *, dry_run: bool, materialize_only: bool) -> Path:
+    def run_model(
+        model: str,
+        *,
+        dry_run: bool,
+        materialize_only: bool,
+        resume_run_id: str | None = None,
+    ) -> Path:
         return run_eval(
             yaml_path,
             evaluation_profile_path=evaluation_profile_path,
@@ -2919,7 +3091,7 @@ def main() -> None:
             configuration_dimensions=configuration_dimensions,
             resume_mode=args.resume_mode,
             rerun_failure_types=set(args.rerun_failure_type) or None,
-            expected_run_id=args.run_id,
+            expected_run_id=resume_run_id or args.run_id,
             dry_run=dry_run,
             materialize_only=materialize_only,
             repository=repository,
@@ -2947,8 +3119,11 @@ def main() -> None:
                         model,
                         dry_run=False,
                         materialize_only=args.materialize_only,
+                        resume_run_id=preflight_path.parent.name,
                     )
-                    for model in requested_models
+                    for model, preflight_path in zip(
+                        requested_models, preflight_paths, strict=True
+                    )
                 ]
             )
         else:
@@ -2959,9 +3134,12 @@ def main() -> None:
                     materialize_only=args.materialize_only,
                 )
             ]
-    except KeyboardInterrupt:
+    except EvalRunInterrupted as error:
         print("INTERRUPTED: completed attempts are durable and the run is incomplete.")
-        print(f"Resume missing units with: {_resume_command(sys.argv[1:])}")
+        print(
+            "Resume missing units with: "
+            f"{_resume_command(sys.argv[1:], run_id=error.run_id)}"
+        )
         raise SystemExit(130) from None
     except RunStoreIntegrityError as error:
         print(f"STORAGE INTEGRITY FAILURE: {error}")

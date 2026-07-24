@@ -244,10 +244,12 @@ eval_results/working/<benchmark-key>/v<version>/<run-id>/
   diagnosis/                       # optional compact retained review notes
 ```
 
-Every new run is a working eval. The run ID deterministically hashes the resolved source-content manifest,
-pipeline, benchmark, profile/graders, model, reasoning, scope, repetitions,
-runtime, worker limit, error policy, and configuration dimensions. Running the
-identical command again resumes that run and does not duplicate completed work.
+Every new run is a working eval with a unique occurrence ID. The separate
+`run_spec_sha256` deterministically hashes the resolved source-content
+manifest, pipeline, benchmark, profile/graders, model, reasoning, scope,
+repetitions, runtime, worker limit, error policy, and configuration dimensions.
+Running the identical command again starts a new occurrence. Resume requires
+the exact existing occurrence through `--run-id eval_<occurrence>`.
 
 Working `manifest.json`, `agent-version.json`, immutable attempts,
 `result.json`, review, and performance detail support immediate debugging and
@@ -257,11 +259,12 @@ agent version. The working manifest retains every selected example's complete
 frozen source-snapshot window, Azure storage identity, recipe, known gaps, and
 raw artifact object key, byte size, and SHA-256 contract.
 
-Result schema version 1 separates durable evaluation evidence from disposable
+Result schema version 2 separates durable evaluation evidence from disposable
 performance diagnostics. Its summary contains `accuracy`, `reliability`,
-`scoring_coverage`, `usage`, `cost`, `nondeterminism`, and
-`execution_recovery`. Accuracy includes only runs with a valid configured
-output contract whose deterministic graders all completed.
+`scoring_coverage`, `usage`, `cost`, `nondeterminism`,
+`execution_recovery`, and aggregate active evaluation wall time. Accuracy
+includes only runs with a valid configured output contract whose deterministic
+graders all completed.
 Provider, pipeline, timeout, cancellation, identity, missing, malformed,
 partial-output, and grader failures remain fully recorded but are excluded from
 accuracy denominators. `scoring_coverage` shows how many planned attempts
@@ -279,6 +282,12 @@ tokens. Cost summary preserves actual, complete-estimate, partial-estimate, and
 unavailable status. For each currency it reports total, average per completed
 unit, P5, and P95 calculated from complete per-unit observations, plus counts
 of units with complete, partial, or unusable cost information.
+
+Estimated model costs use the conservative `assume_uncached` input-pricing
+policy: every provider-reported input token is priced at the ordinary input
+rate. Provider-reported cache reads and writes remain available in usage
+diagnostics, but they do not reduce estimated cost or create partial pricing
+coverage. Each new run freezes this policy in its model identity.
 
 `performance/summary.json` contains short-lived wall time, throughput, stage
 timings, retry telemetry, and model/API-call durations, including the exact
@@ -414,8 +423,8 @@ valid-run accuracy.
 Every terminal attempt is committed immediately. On `Ctrl-C` or another
 cooperative interruption, the runner reports the incomplete run ID, current
 state counts, manifest path, and an exact shell-safe resume command. Run that
-command unchanged: completed units keep their durable results and only missing
-units execute for the same immutable run identity.
+command unchanged. It includes `--run-id` for the exact occurrence; completed
+units keep their durable results and only missing units execute.
 
 Failed, invalid, and incorrect terminal results remain inspectable completed
 work. Selective failure reruns are not part of the supported MVP workflow.

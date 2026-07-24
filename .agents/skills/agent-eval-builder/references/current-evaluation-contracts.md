@@ -30,7 +30,8 @@ it into another use case.
 - `src/evals/eval_orchestration.py` coordinates selection, execution,
   aggregation, result materialization, and current CLI options.
 - `src/evals/run_specs.py` and `src/evals/run_store.py` implement deterministic
-  run identity, attempts, locking, resume/rerun selection, and materialization.
+  run-spec identity, unique eval occurrences, attempts, locking, exact-ID
+  resume/rerun selection, and materialization.
 - `agent-dev-eval-core/evaluation/` contains shared attempt, grader, metric,
   execution, serialization, review, and explorer-query mechanics.
 - `src/agent_versions/` resolves and promotes content-addressed candidate
@@ -44,6 +45,8 @@ it into another use case.
   local human explorer.
 - `src/eval_lifecycle/` implements the supported working/retained lifecycle,
   compact elevation, retained verification, and permanent exact deletion.
+- `src/eval_publication/` implements retained-eval publication preflight, the
+  versioned cloud subset, dry run, Azure conditional creation, and verification.
 
 ## Current Execution Path
 
@@ -62,7 +65,8 @@ The current orchestrator can:
 10. aggregate accuracy, reliability, coverage, slice, usage, and performance
     observations;
 11. persist attempts plus compact result and manifest files; and
-12. resume, selectively rerun, rematerialize, or compare compatible runs.
+12. start a unique occurrence by default and explicitly resume, selectively
+    rerun, rematerialize, or compare compatible occurrences.
 
 The coordinator also contains cooperative signal handling and invocation audit
 history. Treat these as current compatibility constraints only when a change
@@ -104,7 +108,8 @@ conditional applicability and benchmark-derived slices.
 
 ## Run And Retention Layout
 
-Current eval schema version 1 retains compact top-level `result.json` keys:
+New evals use occurrence-aware schema version 2 and retain compact top-level
+`result.json` keys:
 
 1. `schema_version`
 2. `summary`
@@ -123,6 +128,11 @@ The rich working layout separates:
 - `performance/` as disposable invocation and timing observations; and
 - `review/` as disposable prompt, model-response, tool, and multimodal detail.
 
+`eval_run_id` uniquely identifies one start, while `run_spec_sha256`
+deterministically identifies the resolved configuration. Repeating an identical
+command starts a new occurrence. Resume requires the exact existing
+`eval_run_id` and verifies the supplied resolved specification.
+
 `LocalRunStore.evaluation_rows()` reconstructs detailed rows from the manifest
 and retained attempt generations. Removing attempts gives up resume,
 rematerialization, detailed inspection, and attempt verification while leaving
@@ -132,7 +142,9 @@ Complete full runs may be elevated to:
 
 - `eval_results/retained/<benchmark>/v<version>/<retained-eval-id>/`
 
-Each retained eval is a compact aggregate containing `manifest.json`,
+Each new retained eval uses schema version 2 with a non-circular identity seed
+bound to the occurrence, benchmark, source state, and agent version. It is a
+compact aggregate containing `manifest.json`,
 `result.json`, `units.json`, `agent-provenance.json`,
 `evidence-references.json`, and an optional `agent.patch`. Retained evals never
 contain per-unit files, performance detail, review objects, or local copies of
@@ -184,6 +196,12 @@ retained ID twice, and a shared agent version remains until its last retained
 eval reference is deleted. The read-only explorer may filter and inspect both
 lifecycle states but must not elevate, delete, edit, or annotate them.
 
+An explicitly selected schema-v2 retained eval may be published when every
+canonical unit completed and its recorded agent surface is clean. Each publish
+creates a new event. Payloads are downloaded and hash-verified before
+`publication-manifest.json` is created last as the discovery marker.
+Publication does not alter the local lifecycle or Benchmark Studio truth.
+
 ## Hosted Inputs
 
 The current operator path uses direct Microsoft Entra access:
@@ -194,11 +212,17 @@ The current operator path uses direct Microsoft Entra access:
 - `AZURE_POSTGRES_USER`
 - `AZURE_STORAGE_ACCOUNT_URL`
 - `AZURE_STORAGE_CONTAINER`
+- `AZURE_EVAL_RESULTS_ACCOUNT_URL`
+- `AZURE_EVAL_RESULTS_CONTAINER`
 
 PostgreSQL transactions are set read-only. Blob access uses an identity with
 container-scoped `Storage Blob Data Reader`. Programmatic tests may inject
 `DATABASE_URL`. The operator path does not use Container App exec, runtime
 secret discovery, SAS tokens, or shared storage keys.
+
+The eval-results variables identify a separate Entra-authenticated publication
+destination. They are used only by the explicit publication command; evidence
+retrieval continues to use the read-only source-snapshot variables.
 
 ## Focused Validation Map
 

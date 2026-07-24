@@ -109,6 +109,7 @@ class AIProcessorConfig(BaseProcessorConfig):
         description="Backend-specific adapter options",
     )
 
+
 class AIProcessorMixin(Generic[PDO, OutputT]):
     """Base mixin shared by workflow and agent processors."""
 
@@ -258,9 +259,13 @@ class AIProcessorMixin(Generic[PDO, OutputT]):
                 "input_tokens": usage.input_tokens,
                 "output_tokens": usage.output_tokens,
                 "cached_input_tokens": usage.cached_input_tokens,
+                "cache_write_tokens": usage.cache_write_tokens,
                 "reasoning_tokens": usage.reasoning_tokens,
                 "tool_calls": usage.tool_calls,
                 "output_validation_attempts": usage.output_validation_attempts,
+                "model_requests": [
+                    request.to_dict() for request in usage.model_requests
+                ],
             },
         )
 

@@ -67,7 +67,13 @@ def test_upsert_cli_captures_versioned_rates_and_can_select_default(
         "input_per_million_tokens": 1.25,
         "output_per_million_tokens": 5.0,
         "cached_input_per_million_tokens": 0.25,
+        "cache_write_per_million_tokens": None,
+        "cache_write_5m_per_million_tokens": None,
+        "cache_write_1h_per_million_tokens": None,
         "reasoning_per_million_tokens": 5.0,
+        "billing_provider": None,
+        "billing_plan": None,
+        "estimator_version": 3,
         "effective_date": "2026-07-01",
         "source": "reviewed vendor price sheet",
     }

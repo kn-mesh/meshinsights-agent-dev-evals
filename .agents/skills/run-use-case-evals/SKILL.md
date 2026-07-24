@@ -53,9 +53,11 @@ in this skill.
 5. Start with the runbook's one-example serial smoke run when pipeline/model
    compatibility has not already been established.
 6. When authorized to execute, monitor the run through completion and report
-   the deterministic run ID and exact `result.json` path. If interrupted,
-   use the exact resume command printed by the runner; it reruns only missing
-   work for the same immutable identity and completed work is already durable.
+   the unique eval occurrence ID, deterministic `run_spec_sha256`, and exact
+   `result.json` path. Starting the same command again creates a new
+   occurrence. If interrupted, use the exact command printed by the runner; it
+   includes `--run-id <exact-occurrence>` and reruns only missing work for that
+   occurrence, whose completed work is already durable.
    Diagnose the first substantive error; do not mistake successful Blob `206`
    logs or thread-shutdown noise for the root cause.
 7. Verify durable and optional artifacts separately:
@@ -74,7 +76,7 @@ in this skill.
      and throughput observations cover current/latest attempt generations and
      are disposable; absence or invalid telemetry is supported and must not be
      described as missing durable eval evidence or a failed eval.
-8. Expect the schema-v1 run bundle under
+8. Expect the occurrence-aware schema-v2 run bundle under
    `eval_results/working/<benchmark-key>/v<version>/<run-id>/`. Every new run
    is a rich, disposable working eval. Report the exact `result.json` and do not
    reconstruct identity from display labels. If the completed run represents a

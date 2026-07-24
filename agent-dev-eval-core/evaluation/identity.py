@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import secrets
 from typing import Any
 
 
@@ -24,9 +25,49 @@ def canonical_sha256(payload: object) -> str:
 
 
 def build_run_identity(run_spec: dict[str, Any]) -> tuple[str, str]:
-    """Return the short run id and complete canonical specification hash."""
+    """Return the legacy schema-v1 deterministic run identity."""
     digest = canonical_sha256(run_spec)
     return f"eval_{digest[:24]}", digest
+
+
+def build_eval_run_identity(
+    *,
+    run_spec_sha256: str,
+    created_at_utc: str,
+    nonce: str | None = None,
+) -> tuple[str, dict[str, Any]]:
+    """Return one unique eval occurrence ID and its complete canonical seed."""
+    if len(run_spec_sha256) != 64 or any(
+        character not in "0123456789abcdef" for character in run_spec_sha256
+    ):
+        raise ValueError("run_spec_sha256 must be a lowercase SHA-256 digest.")
+    if not created_at_utc.strip():
+        raise ValueError("created_at_utc must not be empty.")
+    resolved_nonce = nonce or secrets.token_hex(32)
+    if not resolved_nonce.strip():
+        raise ValueError("nonce must not be empty.")
+    seed = {
+        "schema_version": 1,
+        "created_at_utc": created_at_utc,
+        "nonce": resolved_nonce,
+        "run_spec_sha256": run_spec_sha256,
+    }
+    digest = canonical_sha256(seed)
+    return f"eval_{digest[:24]}", seed
+
+
+def verify_eval_run_identity(
+    eval_run_id: str,
+    *,
+    occurrence_seed: dict[str, Any],
+    run_spec_sha256: str,
+) -> bool:
+    """Return whether an occurrence seed binds the run ID and specification."""
+    if occurrence_seed.get("schema_version") != 1:
+        return False
+    if occurrence_seed.get("run_spec_sha256") != run_spec_sha256:
+        return False
+    return eval_run_id == f"eval_{canonical_sha256(occurrence_seed)[:24]}"
 
 
 def build_comparison_identity(comparison_spec: dict[str, Any]) -> tuple[str, str]:

@@ -24,6 +24,9 @@ Agent Launch journey or create the portable agent package.
   revisited.
 - Support the local artifact handling necessary to keep the evaluation and
   improvement loop usable.
+- Explicitly publish selected complete retained eval results to durable Azure
+  storage without granting Agent Workbench permission to change Benchmark
+  Studio benchmark truth.
 
 ## Out of Scope
 
@@ -42,9 +45,8 @@ shape remain undecided:
   production runtime;
 - proving an end-to-end Agent Launch;
 - implementing a production-feedback return path; and
-- publishing selected retained eval results to Azure Blob Storage or another
-  shared store; and
-- automatically synchronizing or elevating retained evals into cloud storage.
+- automatically synchronizing, elevating, or publishing evals into cloud
+  storage without an explicit FDE action.
 
 ### Excluded from the MVP and near-term broader scope
 
@@ -87,9 +89,10 @@ product scope.
 6. Deletion is permanent. Recovering a deleted run is not an MVP requirement.
 7. One FDE manages the local artifacts for their project. Shared or
    multi-operator local lifecycle management is not required.
-8. Cloud storage for selected retained eval results is post-MVP. The likely
-   direction is Azure Blob Storage alongside, but logically separated from,
-   the frozen benchmark evidence packages.
+8. An FDE may explicitly publish selected complete retained eval results to
+   Azure Blob Storage. The eval-results destination is logically and
+   permission-wise separate from frozen benchmark evidence packages, and
+   publication never changes Benchmark Studio benchmark truth.
 
 ### Two classes of eval data
 
@@ -149,8 +152,7 @@ The MVP does not need:
 - generalized artifact reachability or garbage collection beyond what is
   strictly necessary to protect retained evals and agent versions;
 - retention policies, archival tiers, or other storage-administration
-  machinery; or
-- durable cloud publication.
+  machinery beyond the selected retained-eval publication contract.
 
 The current implementation already provides some capabilities beyond this
 boundary. Those features need not be removed immediately, but they should be
@@ -203,11 +205,13 @@ finish—for example, because the FDE presses `Ctrl-C`, closes the terminal, the
 machine or process stops, authentication expires, or an external service makes
 continued execution impossible.
 
-Completed unit results should be written durably as the eval progresses. When
-the FDE reruns the same eval identity and configuration, the runner should
-execute only the missing units. This avoids repeating model calls and cost. It
-is execution resumability, not recoverable deletion: once the eval run is
-deleted, it cannot be resumed or restored.
+Completed unit results should be written durably as the eval progresses. Every
+new start creates a unique eval occurrence, even when its configuration matches
+another run. To resume, the FDE supplies that exact occurrence ID; the runner
+verifies the resolved configuration and executes only missing units. This
+avoids repeating model calls and cost. It is execution resumability, not
+recoverable deletion: once the eval run is deleted, it cannot be resumed or
+restored.
 
 ### Token and cost measurement
 
@@ -363,9 +367,10 @@ evals. Elevation and deletion are performed through the documented command or
 Codex skill workflow. The app must continue to support detailed working-run
 review and compact retained-run review.
 
-Post-MVP, the destination of elevation may shift from the local `retained/`
-area to Azure Blob Storage. The working-versus-retained lifecycle and artifact
-meaning should remain stable when the storage location changes.
+An FDE may explicitly publish a complete local retained eval to Azure Blob
+Storage. Publication does not replace elevation, automatically synchronize
+local retained evals, or change the working-versus-retained lifecycle and
+artifact meaning.
 
 ## Decision 4: Reusable Core Versus Reference Use Case
 
@@ -502,5 +507,4 @@ deferred:
 - the eventual split into independently versioned repositories or published
   packages;
 - automatic upgrade propagation among use-case repositories;
-- portable agent packaging and production-runtime translation; and
-- cloud preservation of elevated evals.
+- portable agent packaging and production-runtime translation.

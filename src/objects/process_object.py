@@ -91,16 +91,26 @@ class PulseFailureAnalysisProcessObject(ProcessDataObject):
                 "input_tokens",
                 "output_tokens",
                 "cached_input_tokens",
+                "cache_write_tokens",
                 "reasoning_tokens",
                 "tool_calls",
                 "output_validation_attempts",
             )
         }
+        model_requests = [
+            request
+            for usage in processors.values()
+            for requests in [usage.get("model_requests")]
+            if isinstance(requests, list)
+            for request in requests
+            if isinstance(request, dict)
+        ]
         totals["total_tokens"] = totals["input_tokens"] + totals["output_tokens"]
         return {
             "availability": "available",
             "source": "mi.ai.processor_artifacts",
             "processors": processors,
+            "model_requests": model_requests,
             **totals,
         }
 

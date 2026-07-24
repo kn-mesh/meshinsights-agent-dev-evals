@@ -143,6 +143,9 @@ APP_PROJECT_KEY=<benchmark-studio-project-key> \
 
 # Working/retained elevation, verification, and permanent deletion
 uv run python -m src.eval_lifecycle.cli --help
+
+# Explicit publication of eligible retained evals
+uv run python -m src.eval_publication.cli --help
 ```
 
 See [`EvalRunbook.md`](EvalRunbook.md) for the explicit, reproducible eval
@@ -271,6 +274,27 @@ shared meaningful agent version while another retained eval still references
 it. The local review app remains read-only and offers All, Working, and Retained
 filters; elevation and deletion are command/skill workflows only.
 
+Eligible retained evals can be explicitly published to a dedicated Azure Blob
+container. Publication requires occurrence-aware retained schema v2, clean
+recorded agent provenance, and `execution_status: completed` for every
+canonical selected unit. A dry run validates and previews the payload without
+allocating a publication ID or accessing Azure:
+
+```bash
+uv run python -m src.eval_publication.cli publish ret_<retained-id> \
+  --dry-run --json
+
+AZURE_EVAL_RESULTS_ACCOUNT_URL=https://<account>.blob.core.windows.net \
+AZURE_EVAL_RESULTS_CONTAINER=eval-results \
+  uv run python -m src.eval_publication.cli publish ret_<retained-id> \
+  --yes --json
+```
+
+Each publish action creates a new immutable event under
+`projects/<project-key>/benchmarks/<benchmark-key>/v<version>/publications/`.
+Payload blobs are downloaded and hash-verified before
+`publication-manifest.json` is created as the discovery commit marker.
+
 ## AI Model Catalog
 
 The project-owned [`models.yaml`](models.yaml) enumerates selectable model
@@ -354,6 +378,7 @@ src/
   pipelines/
   evals/
   eval_lifecycle/
+  eval_publication/
 ```
 
 Working evals retain rich debugging detail through the active improvement loop.

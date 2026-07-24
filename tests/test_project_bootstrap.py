@@ -397,6 +397,7 @@ def test_template_manifest_covers_reusable_mvp_workbench_surfaces() -> None:
     assert ownership["model_catalog.py"] == "reusable_workbench"
     assert ownership["src/model_configuration.py"] == "reusable_workbench"
     assert ownership["src/eval_lifecycle"] == "reusable_workbench"
+    assert ownership["src/eval_publication"] == "reusable_workbench"
 
 
 def test_cli_emits_machine_readable_success(

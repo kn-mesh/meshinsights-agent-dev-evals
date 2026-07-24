@@ -8,12 +8,14 @@ from evaluation import (
     FieldEvaluation,
     OutputContractStatus,
     ScoringStatus,
+    build_eval_run_identity,
     build_run_identity,
     build_work_item_id,
     canonical_sha256,
     eval_attempt_from_dict,
     eval_attempt_performance_to_dict,
     eval_attempt_to_dict,
+    verify_eval_run_identity,
 )
 
 
@@ -32,6 +34,32 @@ def test_work_item_identity_is_stable_and_repetition_specific() -> None:
 
     assert first == again
     assert first != second
+
+
+def test_eval_occurrences_are_unique_while_binding_the_same_specification() -> None:
+    run_spec_sha256 = canonical_sha256({"model": "provider:model"})
+    first_id, first_seed = build_eval_run_identity(
+        run_spec_sha256=run_spec_sha256,
+        created_at_utc="2026-07-23T00:00:00+00:00",
+        nonce="first",
+    )
+    second_id, second_seed = build_eval_run_identity(
+        run_spec_sha256=run_spec_sha256,
+        created_at_utc="2026-07-23T00:00:00+00:00",
+        nonce="second",
+    )
+
+    assert first_id != second_id
+    assert verify_eval_run_identity(
+        first_id,
+        occurrence_seed=first_seed,
+        run_spec_sha256=run_spec_sha256,
+    )
+    assert verify_eval_run_identity(
+        second_id,
+        occurrence_seed=second_seed,
+        run_spec_sha256=run_spec_sha256,
+    )
 
 
 def test_eval_attempt_round_trip_preserves_typed_state() -> None:

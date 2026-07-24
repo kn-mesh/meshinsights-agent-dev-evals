@@ -272,7 +272,7 @@ class _ExplodingGrader:
         raise RuntimeError("simulated grader defect")
 
 
-def test_run_eval_writes_schema_v1_tracked_results_and_split_performance(
+def test_run_eval_writes_schema_v2_tracked_results_and_split_performance(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     benchmark = _benchmark()
@@ -285,34 +285,39 @@ def test_run_eval_writes_schema_v1_tracked_results_and_split_performance(
     )
 
     assert list(payload) == ["schema_version", "summary", "run", "artifacts"]
-    assert payload["schema_version"] == 1
-    assert payload["run"]["schema_version"] == 1
+    assert payload["schema_version"] == 2
+    assert payload["run"]["schema_version"] == 2
+    assert payload["run"]["eval_run_id"] == payload["run"]["run_id"]
+    assert payload["summary"]["timing"]["evaluation_active_wall_seconds"] >= 0
     assert payload["run"]["dimensions"]["evaluation_profile"]["id"] == (
         "spirax-failure-evaluation"
     )
     dimensions = payload["run"]["dimensions"]
-    assert not {
-        "agent_version",
-        "yaml_path",
-        "project_key",
-        "benchmark_name",
-        "benchmark_key",
-        "benchmark_version_id",
-        "benchmark_version_number",
-        "benchmark_published_at",
-        "benchmark_source_state_sha256",
-        "published_contract_schema_version",
-        "benchmark_source",
-        "evidence_source",
-        "evaluation_profile",
-        "runtime",
-        "max_workers",
-        "error_action",
-        "ai_provider",
-        "ai_model",
-        "ai_reasoning_effort",
-        "ai_execution_policies",
-    } & payload["run"].keys()
+    assert (
+        not {
+            "agent_version",
+            "yaml_path",
+            "project_key",
+            "benchmark_name",
+            "benchmark_key",
+            "benchmark_version_id",
+            "benchmark_version_number",
+            "benchmark_published_at",
+            "benchmark_source_state_sha256",
+            "published_contract_schema_version",
+            "benchmark_source",
+            "evidence_source",
+            "evaluation_profile",
+            "runtime",
+            "max_workers",
+            "error_action",
+            "ai_provider",
+            "ai_model",
+            "ai_reasoning_effort",
+            "ai_execution_policies",
+        }
+        & payload["run"].keys()
+    )
     assert dimensions["agent"]["agent_version_id"].startswith("av_")
     assert dimensions["agent"]["manifest_sha256"]
     assert dimensions["benchmark"]["name"] == "Phase 1 Benchmark"
@@ -388,10 +393,13 @@ def test_status_resolver_finds_new_working_layout(
     )
     run_dir = _run_dir(tmp_path)
 
-    assert eval_orchestration._find_run_directory(  # noqa: SLF001
-        payload["run"]["run_id"],
-        root=tmp_path,
-    ) == run_dir.resolve()
+    assert (
+        eval_orchestration._find_run_directory(  # noqa: SLF001
+            payload["run"]["run_id"],
+            root=tmp_path,
+        )
+        == run_dir.resolve()
+    )
 
 
 @pytest.mark.parametrize(
@@ -448,7 +456,7 @@ def test_result_integrity_rejects_any_materialized_content_edit(
     assert load_verified_result(result_path) == original
 
     mutations = (
-        lambda value: value.update({"schema_version": 2}),
+        lambda value: value.update({"schema_version": 1}),
         lambda value: value["summary"]["usage"].update({"attempts_with_usage": 999}),
         lambda value: value["run"]["dimensions"]["model"].update(
             {"id": "azure:edited"}
@@ -549,7 +557,8 @@ def test_review_capture_can_be_disabled_without_changing_result_contract(
     )
 
     assert payload["summary"]["scoring_coverage"]["scored_runs"] == 1
-    assert payload["run"]["run_id"] == captured["run"]["run_id"]
+    assert payload["run"]["run_id"] != captured["run"]["run_id"]
+    assert payload["run"]["run_spec_sha256"] == captured["run"]["run_spec_sha256"]
     run_dir = next((tmp_path / "off").glob("**/working/**/eval_*"))
     assert not (run_dir / "review").exists()
 
@@ -938,7 +947,7 @@ def test_incompatible_benchmark_target_type_fails_preflight(
         )
 
 
-def test_identical_run_resumes_without_duplicating_completed_work(
+def test_identical_spec_starts_fresh_and_exact_id_resumes_without_new_work(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     benchmark = _benchmark()
@@ -962,7 +971,6 @@ def test_identical_run_resumes_without_duplicating_completed_work(
         runtime="serial",
         output_root=tmp_path,
     )
-    first_performance = _performance(tmp_path)
     second = eval_orchestration.run_eval(
         Path("pipeline_configs/v1_3.ppln"),
         evaluation_profile_path=PROFILE_PATH,
@@ -972,22 +980,29 @@ def test_identical_run_resumes_without_duplicating_completed_work(
         output_root=tmp_path,
     )
 
-    assert first == second
-    assert calls == 1
-    payload = json.loads(second.read_text(encoding="utf-8"))
-    assert _performance(tmp_path) == first_performance
-    eval_orchestration.run_eval(
+    assert first != second
+    assert calls == 2
+    first_payload = json.loads(first.read_text(encoding="utf-8"))
+    second_payload = json.loads(second.read_text(encoding="utf-8"))
+    assert (
+        first_payload["run"]["run_spec_sha256"]
+        == second_payload["run"]["run_spec_sha256"]
+    )
+    resumed = eval_orchestration.run_eval(
         Path("pipeline_configs/v1_3.ppln"),
         evaluation_profile_path=PROFILE_PATH,
         benchmark_key=benchmark.benchmark_key,
         repository=_Repository(benchmark),
         runtime="serial",
+        expected_run_id=first.parent.name,
         materialize_only=True,
         output_root=tmp_path,
     )
-    assert _performance(tmp_path) == first_performance
-    assert calls == 1
-    recovery = payload["summary"]["execution_recovery"]
+    assert resumed == first
+    assert calls == 2
+    recovery = json.loads(resumed.read_text(encoding="utf-8"))["summary"][
+        "execution_recovery"
+    ]
     assert recovery["logical_work_items"] == 1
     assert recovery["execution_generations"] == 1
 
@@ -1037,6 +1052,7 @@ def test_failed_work_can_be_rerun_without_replacing_first_generation(
         benchmark_key=benchmark.benchmark_key,
         repository=_Repository(benchmark),
         runtime="serial",
+        expected_run_id=first.parent.name,
         resume_mode="failed",
         output_root=tmp_path,
     )
@@ -1092,6 +1108,7 @@ def test_interruption_preserves_completed_work_and_resume_runs_only_missing(
             runtime="serial",
             output_root=tmp_path,
         )
+    interrupted_run_id = _run_dir(tmp_path).name
 
     invocation_events = list(tmp_path.glob("**/performance/invocations/*.json"))
     assert any(path.name.endswith(".interrupted.json") for path in invocation_events)
@@ -1115,6 +1132,7 @@ def test_interruption_preserves_completed_work_and_resume_runs_only_missing(
         benchmark_key=benchmark.benchmark_key,
         repository=_Repository(benchmark),
         runtime="serial",
+        expected_run_id=interrupted_run_id,
         output_root=tmp_path,
     )
     payload = json.loads(path.read_text(encoding="utf-8"))
@@ -1139,9 +1157,7 @@ def test_dry_run_resolves_manifest_without_pipeline_execution(
                         review_event_id="review-event-a",
                         reviewer_display_name="Alex Labeler",
                         reviewer_project_role="domain_reviewer",
-                        submitted_at=datetime(
-                            2026, 3, 18, 8, tzinfo=timezone.utc
-                        ),
+                        submitted_at=datetime(2026, 3, 18, 8, tzinfo=timezone.utc),
                         explanation="Telemetry supports the published label.",
                         selected_for_publication=True,
                     ),
@@ -1149,9 +1165,7 @@ def test_dry_run_resolves_manifest_without_pipeline_execution(
                 verification=PublishedVerification(
                     source="operator_feedback",
                     note="Confirmed by customer.",
-                    recorded_at=datetime(
-                        2026, 3, 19, tzinfo=timezone.utc
-                    ),
+                    recorded_at=datetime(2026, 3, 19, tzinfo=timezone.utc),
                     source_content_sha256="e" * 64,
                     context_schema_key="spirax_customer_verification",
                     context_schema_version="1",
@@ -1184,7 +1198,10 @@ def test_dry_run_resolves_manifest_without_pipeline_execution(
     assert manifest["run_id"].startswith("eval_")
     assert len(manifest["work_items"]) == 1
     retained_example = manifest["eval_contract"]["examples"][0]
-    assert retained_example["source_snapshot_id"] == benchmark.examples[0].source_snapshot_id
+    assert (
+        retained_example["source_snapshot_id"]
+        == benchmark.examples[0].source_snapshot_id
+    )
     assert retained_example["raw_snapshot_content_sha256"] == "c" * 64
     assert [item["artifact_kind"] for item in retained_example["raw_artifacts"]] == [
         "telemetry",
@@ -1222,8 +1239,13 @@ def test_run_identity_excludes_progress_interval_but_includes_worker_limit(
     same = resolve(progress=99.0, workers=1)
     different = resolve(progress=1.0, workers=2)
 
-    assert first == same
+    assert first != same
     assert first.parent.name != different.parent.name
+    first_manifest = json.loads(first.read_text(encoding="utf-8"))
+    same_manifest = json.loads(same.read_text(encoding="utf-8"))
+    different_manifest = json.loads(different.read_text(encoding="utf-8"))
+    assert first_manifest["run_spec_sha256"] == same_manifest["run_spec_sha256"]
+    assert first_manifest["run_spec_sha256"] != different_manifest["run_spec_sha256"]
 
 
 def test_cli_outcome_reports_scoring_coverage(tmp_path: Path, capsys: Any) -> None:
@@ -1279,7 +1301,9 @@ def test_normal_cli_exposes_only_three_scope_forms_and_supported_runtimes() -> N
     defaults = parser.parse_args([])
     assert defaults.runtime == "threaded"
     assert defaults.runs_per_example == 1
-    assert eval_orchestration._resolve_cli_runtime(defaults, parser=parser) == "threaded"
+    assert (
+        eval_orchestration._resolve_cli_runtime(defaults, parser=parser) == "threaded"
+    )
 
 
 def test_named_section_resolves_label_and_explicit_list_is_distinct() -> None:
@@ -1300,11 +1324,12 @@ def test_named_section_resolves_label_and_explicit_list_is_distinct() -> None:
 
 def test_resume_command_is_shell_safe() -> None:
     command = eval_orchestration._resume_command(
-        ["pipeline configs/agent.ppln", "--all-examples"]
+        ["pipeline configs/agent.ppln", "--all-examples"],
+        run_id="eval_" + "a" * 24,
     )
 
     assert "'pipeline configs/agent.ppln'" in command
-    assert command.endswith("--all-examples")
+    assert command.endswith("--run-id eval_" + "a" * 24)
 
 
 def test_cost_estimate_uses_frozen_model_pricing(
@@ -1370,6 +1395,200 @@ def test_cost_estimate_prices_reasoning_at_output_rate_by_default(
     assert cost["estimated"]["priced_usage"]["reasoning_tokens"] == 40_000
 
 
+def test_cost_estimate_assumes_all_legacy_input_tokens_are_uncached(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        eval_orchestration,
+        "resolve_model_definition",
+        lambda model: ModelDefinition(
+            id=str(model),
+            api="openai_responses",
+            pricing=ModelPricing(
+                version="2026-07",
+                currency="USD",
+                input_per_million_tokens=2.0,
+                cached_input_per_million_tokens=0.2,
+                output_per_million_tokens=10.0,
+            ),
+        ),
+    )
+
+    cost = eval_orchestration._build_cost_observation(
+        ai_model="azure:test",
+        usage={
+            "input_tokens": 1_000_000,
+            "cached_input_tokens": 900_000,
+            "output_tokens": 0,
+        },
+        provider_cost=None,
+    )
+
+    assert cost["status"] == "estimated_complete"
+    assert cost["estimated"]["amount"] == 2.0
+    assert cost["estimated"]["input_pricing_policy"] == "assume_uncached"
+    assert cost["estimated"]["priced_usage"] == {"input_tokens": 1_000_000}
+
+
+@pytest.mark.parametrize(
+    ("pricing", "request_usage", "expected_amount", "expected_meters"),
+    [
+        (
+            ModelPricing(
+                version="azure-2026-07",
+                currency="USD",
+                billing_provider="azure_openai",
+                billing_plan="global-standard",
+                input_per_million_tokens=1.0,
+                cached_input_per_million_tokens=0.1,
+                cache_write_per_million_tokens=1.25,
+                output_per_million_tokens=6.0,
+            ),
+            {
+                "provider": "azure_openai",
+                "model": "gpt-5.6-luna",
+                "reported": {"input_tokens": 100, "output_tokens": 10},
+                "billable": {
+                    "input_uncached_tokens": 100,
+                    "input_cache_read_tokens": 0,
+                    "input_cache_write_tokens": 0,
+                    "input_cache_write_5m_tokens": 0,
+                    "input_cache_write_1h_tokens": 0,
+                    "output_visible_tokens": 10,
+                    "output_reasoning_tokens": 0,
+                },
+                "billable_usage_gaps": [],
+            },
+            0.00016,
+            {"input_tokens", "output_visible_tokens"},
+        ),
+        (
+            ModelPricing(
+                version="claude-2026-07",
+                currency="USD",
+                billing_provider="azure_claude",
+                billing_plan="foundry-ccu-list-price",
+                input_per_million_tokens=1.0,
+                cached_input_per_million_tokens=0.1,
+                cache_write_5m_per_million_tokens=1.25,
+                cache_write_1h_per_million_tokens=2.0,
+                output_per_million_tokens=5.0,
+            ),
+            {
+                "provider": "azure_claude",
+                "model": "claude-haiku-4-5",
+                "reported": {"input_tokens": 1_800, "output_tokens": 100},
+                "billable": {
+                    "input_uncached_tokens": 100,
+                    "input_cache_read_tokens": 500,
+                    "input_cache_write_tokens": 1_200,
+                    "input_cache_write_5m_tokens": 1_000,
+                    "input_cache_write_1h_tokens": 200,
+                    "output_visible_tokens": 100,
+                    "output_reasoning_tokens": 0,
+                },
+                "billable_usage_gaps": [],
+            },
+            0.0023,
+            {
+                "input_tokens",
+                "output_visible_tokens",
+            },
+        ),
+        (
+            ModelPricing(
+                version="google-2026-07",
+                currency="USD",
+                billing_provider="google_direct",
+                billing_plan="developer-api-standard",
+                input_per_million_tokens=0.25,
+                cached_input_per_million_tokens=0.025,
+                output_per_million_tokens=1.5,
+            ),
+            {
+                "provider": "google_direct",
+                "model": "gemini-3.1-flash-lite",
+                "reported": {"input_tokens": 50, "output_tokens": 500},
+                "billable": {
+                    "input_uncached_tokens": 40,
+                    "input_cache_read_tokens": 10,
+                    "input_cache_write_tokens": 0,
+                    "input_cache_write_5m_tokens": 0,
+                    "input_cache_write_1h_tokens": 0,
+                    "output_visible_tokens": 100,
+                    "output_reasoning_tokens": 400,
+                },
+                "billable_usage_gaps": [],
+            },
+            0.0007625,
+            {
+                "input_tokens",
+                "output_visible_tokens",
+                "output_reasoning_tokens",
+            },
+        ),
+    ],
+)
+def test_request_level_costing_assumes_provider_inputs_are_uncached(
+    pricing: ModelPricing,
+    request_usage: dict[str, Any],
+    expected_amount: float,
+    expected_meters: set[str],
+) -> None:
+    cost = eval_orchestration._estimate_cost_from_usage(  # noqa: SLF001
+        {"model_requests": [request_usage]},
+        pricing,
+    )
+
+    assert cost["status"] == "estimated_complete"
+    assert cost["estimated"]["amount"] == pytest.approx(expected_amount)
+    assert cost["estimated"]["input_pricing_policy"] == "assume_uncached"
+    assert {
+        line["meter"] for line in cost["estimated"]["requests"][0]["line_items"]
+    } == expected_meters
+
+
+def test_request_level_costing_ignores_cache_gaps_under_uncached_assumption() -> None:
+    cost = eval_orchestration._estimate_cost_from_usage(  # noqa: SLF001
+        {
+            "model_requests": [
+                {
+                    "provider": "azure_openai",
+                    "model": "gpt-5.6-luna",
+                    "reported": {"input_tokens": 1_100, "output_tokens": 10},
+                    "billable": {
+                        "input_uncached_tokens": 1_100,
+                        "input_cache_read_tokens": 0,
+                        "input_cache_write_tokens": 0,
+                        "input_cache_write_5m_tokens": 0,
+                        "input_cache_write_1h_tokens": 0,
+                        "output_visible_tokens": 10,
+                        "output_reasoning_tokens": 0,
+                    },
+                    "billable_usage_gaps": ["input_cache_write_tokens_unreported"],
+                }
+            ]
+        },
+        ModelPricing(
+            version="azure-2026-07",
+            currency="USD",
+            billing_provider="azure_openai",
+            input_per_million_tokens=1.0,
+            cached_input_per_million_tokens=0.1,
+            cache_write_per_million_tokens=1.25,
+            output_per_million_tokens=6.0,
+        ),
+    )
+
+    assert cost["status"] == "estimated_complete"
+    assert cost["estimated"]["amount"] == pytest.approx(0.00116)
+    assert cost["estimated"]["priced_usage"] == {
+        "input_tokens": 1_100,
+        "output_visible_tokens": 10,
+    }
+    assert cost["unpriced_usage"] == {}
+
+
 def test_run_identity_freezes_selected_pricing_snapshot(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -1403,6 +1622,8 @@ def test_run_identity_freezes_selected_pricing_snapshot(
     assert selected["version"] == "reviewed-2026-07"
     assert selected["input_per_million_tokens"] == 1.25
     assert len(selected["content_sha256"]) == 64
+    run_model = json.loads(manifest.read_text())["run_spec"]["model"]
+    assert run_model["input_pricing_policy"] == "assume_uncached"
 
 
 def test_cost_summary_reports_complete_partial_and_unavailable_unit_coverage() -> None:
@@ -1537,7 +1758,13 @@ def test_complete_working_eval_elevates_to_compact_verified_retained_artifacts(
         *(["agent.patch"] if (retained_dir / "agent.patch").exists() else []),
     }
     assert not any(path.is_dir() for path in retained_dir.iterdir())
+    retained_manifest = json.loads((retained_dir / "manifest.json").read_text())
+    retained_result = json.loads((retained_dir / "result.json").read_text())
     units = json.loads((retained_dir / "units.json").read_text())
+    assert retained_manifest["schema_version"] == 2
+    assert retained_manifest["identity_seed"]["source_eval_run_id"] == run_id
+    assert "artifacts" not in retained_manifest["identity_seed"]
+    assert retained_result["summary"]["timing"] == payload["summary"]["timing"]
     assert units["units"][0]["agent_output"]["classification"]["value"] == "Failure"
     assert units["units"][0]["benchmark_labels"]["classification"] == "Failure"
     assert units["units"][0]["evaluations"]["classification"]["correct"] is True
@@ -1578,15 +1805,11 @@ def test_complete_working_eval_elevates_to_compact_verified_retained_artifacts(
         limit=100,
     )
     assert attempts["rows"][0]["agent_output"]["classification"]["value"] == "Failure"
-    detail = backend.get_attempt(
-        retained_id, attempts["rows"][0]["execution_id"]
-    )
+    detail = backend.get_attempt(retained_id, attempts["rows"][0]["execution_id"])
     assert detail["review"] is None
     assert detail["performance"]["availability"] == "unavailable"
     assert (
-        backend.get_evidence(retained_id, benchmark.examples[0].example_id)[
-            "verified"
-        ]
+        backend.get_evidence(retained_id, benchmark.examples[0].example_id)["verified"]
         is True
     )
     unexpected = retained_dir / "unexpected"
@@ -1655,9 +1878,7 @@ def test_permanent_delete_preserves_shared_retained_agent_until_last_reference(
     assert removed_b["agent_version_removed"] is True
     assert not agent_dir.exists()
 
-    removed_working = service.delete_working(
-        first["run"]["run_id"], confirmed=True
-    )
+    removed_working = service.delete_working(first["run"]["run_id"], confirmed=True)
     assert removed_working["permanent"] is True
     assert removed_working["recoverable"] is False
 

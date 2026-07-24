@@ -46,7 +46,13 @@ class ModelPricing:
     input_per_million_tokens: float | None = None
     output_per_million_tokens: float | None = None
     cached_input_per_million_tokens: float | None = None
+    cache_write_per_million_tokens: float | None = None
+    cache_write_5m_per_million_tokens: float | None = None
+    cache_write_1h_per_million_tokens: float | None = None
     reasoning_per_million_tokens: float | None = None
+    billing_provider: str | None = None
+    billing_plan: str | None = None
+    estimator_version: int = 3
     effective_date: str | None = None
     source: str | None = None
 
@@ -57,7 +63,17 @@ class ModelPricing:
             "input_per_million_tokens": self.input_per_million_tokens,
             "output_per_million_tokens": self.output_per_million_tokens,
             "cached_input_per_million_tokens": (self.cached_input_per_million_tokens),
+            "cache_write_per_million_tokens": self.cache_write_per_million_tokens,
+            "cache_write_5m_per_million_tokens": (
+                self.cache_write_5m_per_million_tokens
+            ),
+            "cache_write_1h_per_million_tokens": (
+                self.cache_write_1h_per_million_tokens
+            ),
             "reasoning_per_million_tokens": self.reasoning_per_million_tokens,
+            "billing_provider": self.billing_provider,
+            "billing_plan": self.billing_plan,
+            "estimator_version": self.estimator_version,
             "effective_date": self.effective_date,
             "source": self.source,
         }
@@ -132,10 +148,14 @@ def load_model_pricing(path: Path = MODEL_PRICING_PATH) -> dict[str, ModelPricin
     rates: dict[str, ModelPricing] = {}
     for raw_key, value in raw_rates.items():
         if not isinstance(raw_key, str) or not raw_key.strip():
-            raise ValueError(f"Model pricing catalog contains an invalid rate key: {path}")
+            raise ValueError(
+                f"Model pricing catalog contains an invalid rate key: {path}"
+            )
         key = raw_key.strip()
         if key in rates:
-            raise ValueError(f"Model pricing catalog contains duplicate key '{key}': {path}")
+            raise ValueError(
+                f"Model pricing catalog contains duplicate key '{key}': {path}"
+            )
         resolved = _pricing_definition(value, field=f"rates.{key}", catalog="pricing")
         if resolved is None:
             raise ValueError(f"Model pricing catalog rate '{key}' cannot be null.")
@@ -216,10 +236,22 @@ def _pricing_definition(
         raise ValueError(f"{label} '{field}.version' is required.")
     if not isinstance(currency, str) or not currency.strip():
         raise ValueError(f"{label} '{field}.currency' is required.")
+    estimator_version = value.get("estimator_version", 3)
+    if (
+        not isinstance(estimator_version, int)
+        or isinstance(estimator_version, bool)
+        or estimator_version < 1
+    ):
+        raise ValueError(
+            f"{label} '{field}.estimator_version' must be a positive integer."
+        )
     rate_names = (
         "input_per_million_tokens",
         "output_per_million_tokens",
         "cached_input_per_million_tokens",
+        "cache_write_per_million_tokens",
+        "cache_write_5m_per_million_tokens",
+        "cache_write_1h_per_million_tokens",
         "reasoning_per_million_tokens",
     )
     rates: dict[str, float | None] = {}
@@ -234,9 +266,7 @@ def _pricing_definition(
         ):
             rates[name] = float(raw_rate)
         else:
-            raise ValueError(
-                f"{label} '{field}.{name}' must be non-negative."
-            )
+            raise ValueError(f"{label} '{field}.{name}' must be non-negative.")
     return ModelPricing(
         version=version.strip(),
         currency=currency.strip(),
@@ -244,6 +274,13 @@ def _pricing_definition(
             str(value["effective_date"]) if value.get("effective_date") else None
         ),
         source=str(value["source"]) if value.get("source") else None,
+        billing_provider=(
+            str(value["billing_provider"]) if value.get("billing_provider") else None
+        ),
+        billing_plan=(
+            str(value["billing_plan"]) if value.get("billing_plan") else None
+        ),
+        estimator_version=estimator_version,
         **rates,
     )
 

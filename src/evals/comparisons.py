@@ -203,7 +203,7 @@ def _validated_run_ids(
         for item in payloads
     ]
     if any(not item for item in run_ids):
-        raise ValueError("Only deterministic schema-v1 runs can be compared.")
+        raise ValueError("Only identified evaluation runs can be compared.")
     if len(set(run_ids)) != len(run_ids):
         raise ValueError("A comparison cannot contain the same run more than once.")
     return run_ids

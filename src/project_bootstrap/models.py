@@ -107,7 +107,13 @@ class ModelPricingSpec(StrictModel):
     input_per_million_tokens: float | None = Field(default=None, ge=0)
     output_per_million_tokens: float | None = Field(default=None, ge=0)
     cached_input_per_million_tokens: float | None = Field(default=None, ge=0)
+    cache_write_per_million_tokens: float | None = Field(default=None, ge=0)
+    cache_write_5m_per_million_tokens: float | None = Field(default=None, ge=0)
+    cache_write_1h_per_million_tokens: float | None = Field(default=None, ge=0)
     reasoning_per_million_tokens: float | None = Field(default=None, ge=0)
+    billing_provider: str | None = None
+    billing_plan: str | None = None
+    estimator_version: int = Field(default=3, ge=1)
     effective_date: str | None = None
     source: str | None = None
 

@@ -17,6 +17,47 @@ OutputT = TypeVar("OutputT", bound=BaseModel)
 
 
 @dataclass(frozen=True, slots=True)
+class AIModelRequestUsage:
+    """Disjoint billable usage for one provider model response."""
+
+    provider: str
+    model: str
+    input_tokens: int
+    output_tokens: int
+    input_uncached_tokens: int | None
+    input_cache_read_tokens: int
+    input_cache_write_tokens: int
+    input_cache_write_5m_tokens: int
+    input_cache_write_1h_tokens: int
+    output_visible_tokens: int | None
+    output_reasoning_tokens: int
+    billable_usage_gaps: tuple[str, ...] = ()
+    provider_details: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a stable JSON-serializable request usage record."""
+        return {
+            "provider": self.provider,
+            "model": self.model,
+            "reported": {
+                "input_tokens": self.input_tokens,
+                "output_tokens": self.output_tokens,
+            },
+            "billable": {
+                "input_uncached_tokens": self.input_uncached_tokens,
+                "input_cache_read_tokens": self.input_cache_read_tokens,
+                "input_cache_write_tokens": self.input_cache_write_tokens,
+                "input_cache_write_5m_tokens": self.input_cache_write_5m_tokens,
+                "input_cache_write_1h_tokens": self.input_cache_write_1h_tokens,
+                "output_visible_tokens": self.output_visible_tokens,
+                "output_reasoning_tokens": self.output_reasoning_tokens,
+            },
+            "billable_usage_gaps": list(self.billable_usage_gaps),
+            "provider_details": dict(self.provider_details),
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class AIUsage:
     """Normalized usage metrics shared across backends."""
 
@@ -24,9 +65,11 @@ class AIUsage:
     input_tokens: int = 0
     output_tokens: int = 0
     cached_input_tokens: int = 0
+    cache_write_tokens: int = 0
     reasoning_tokens: int = 0
     tool_calls: int = 0
     output_validation_attempts: int = 0
+    model_requests: tuple[AIModelRequestUsage, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

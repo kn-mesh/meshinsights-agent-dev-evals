@@ -130,12 +130,8 @@ class EvalLifecycleService:
             for name, payload in agent_artifacts.items():
                 _write_artifact(staged_agent / name, payload)
 
-            self._verify_artifact_manifest(
-                staged_eval, prepared["retained_manifest"]
-            )
-            agent_destination = (
-                self.retained_agents_root / prepared["agent_version_id"]
-            )
+            self._verify_artifact_manifest(staged_eval, prepared["retained_manifest"])
+            agent_destination = self.retained_agents_root / prepared["agent_version_id"]
             agent_created = False
             if agent_destination.exists():
                 self._verify_agent_artifacts(
@@ -171,26 +167,50 @@ class EvalLifecycleService:
     def verify(self, retained_eval_id: str) -> dict[str, Any]:
         retained_dir = self._find_retained(retained_eval_id)
         manifest = _read_json(retained_dir / "manifest.json")
-        if manifest.get("schema_version") != 1:
+        schema_version = manifest.get("schema_version")
+        if schema_version not in {1, 2}:
             raise EvalLifecycleError("Retained eval manifest schema is invalid.")
-        identity = {
-            key: manifest[key]
-            for key in (
-                "schema_version",
-                "lifecycle_state",
-                "source_run_id",
-                "source_run_spec_sha256",
-                "agent_version_id",
-                "benchmark",
-            )
-        }
+        if schema_version == 1:
+            identity = {
+                key: manifest[key]
+                for key in (
+                    "schema_version",
+                    "lifecycle_state",
+                    "source_run_id",
+                    "source_run_spec_sha256",
+                    "agent_version_id",
+                    "benchmark",
+                )
+            }
+        else:
+            identity = manifest.get("identity_seed")
+            if not isinstance(identity, dict) or identity.get("schema_version") != 2:
+                raise EvalLifecycleError("Retained eval identity seed is invalid.")
+            if any(manifest.get(key) != value for key, value in identity.items()):
+                raise EvalLifecycleError(
+                    "Retained eval manifest contradicts its identity seed."
+                )
         expected_id = f"ret_{canonical_sha256(identity)[:24]}"
-        if retained_eval_id != expected_id or manifest.get(
-            "retained_eval_id"
-        ) != expected_id:
+        if (
+            retained_eval_id != expected_id
+            or manifest.get("retained_eval_id") != expected_id
+        ):
             raise EvalLifecycleError("Retained eval identity is invalid.")
         self._verify_artifact_manifest(retained_dir, manifest)
         provenance = _read_json(retained_dir / "agent-provenance.json")
+        if schema_version == 2:
+            source_provenance = manifest.get("source_provenance")
+            git = provenance.get("git")
+            if not isinstance(source_provenance, dict) or not isinstance(git, dict):
+                raise EvalLifecycleError("Retained source provenance is invalid.")
+            if source_provenance != {
+                "git_revision": git.get("git_revision"),
+                "tree_state": git.get("tree_state"),
+                "dirty_overlay_sha256": git.get("dirty_overlay_sha256"),
+            }:
+                raise EvalLifecycleError(
+                    "Retained source provenance contradicts the agent artifact."
+                )
         patch_path = retained_dir / "agent.patch"
         patch = patch_path.read_text(encoding="utf-8") if patch_path.is_file() else None
         self._verify_agent_artifacts(
@@ -202,7 +222,12 @@ class EvalLifecycleService:
         result = _read_json(retained_dir / "result.json")
         if units.get("retained_eval_id") != retained_eval_id:
             raise EvalLifecycleError("Retained unit aggregate has the wrong identity.")
-        if result.get("run", {}).get("run_id") != manifest["source_run_id"]:
+        if (
+            result.get("run", {}).get(
+                "eval_run_id", result.get("run", {}).get("run_id")
+            )
+            != manifest["source_run_id"]
+        ):
             raise EvalLifecycleError("Retained result has the wrong source run.")
         return {
             "verified": True,
@@ -295,10 +320,8 @@ class EvalLifecycleService:
             )
             configured_agent = manifest.get("run_spec", {}).get("agent", {})
             if (
-                configured_agent.get("agent_version_id")
-                != candidate.agent_version_id
-                or configured_agent.get("manifest_sha256")
-                != candidate.manifest_sha256
+                configured_agent.get("agent_version_id") != candidate.agent_version_id
+                or configured_agent.get("manifest_sha256") != candidate.manifest_sha256
             ):
                 raise EvalLifecycleError(
                     "Working eval candidate contradicts its immutable run identity."
@@ -313,6 +336,7 @@ class EvalLifecycleService:
 
         benchmark = result["run"]["dimensions"]["benchmark"]
         created_at = datetime.now(timezone.utc).isoformat()
+        retained_schema_version = 2 if manifest.get("schema_version") == 2 else 1
         provisional_artifacts: dict[str, Any] = {
             "result.json": result,
             "units.json": units,
@@ -321,7 +345,7 @@ class EvalLifecycleService:
             **({"agent.patch": patch} if patch is not None else {}),
         }
         retained_identity = {
-            "schema_version": 1,
+            "schema_version": retained_schema_version,
             "lifecycle_state": "retained",
             "source_run_id": run_id,
             "source_run_spec_sha256": manifest["run_spec_sha256"],
@@ -332,6 +356,16 @@ class EvalLifecycleService:
                 "version_id": benchmark["version_id"],
             },
         }
+        if retained_schema_version == 2:
+            retained_identity.update(
+                {
+                    "source_eval_run_id": run_id,
+                    "agent_version_manifest_sha256": candidate.manifest_sha256,
+                }
+            )
+            retained_identity["benchmark"]["source_state_sha256"] = benchmark[
+                "source_state_sha256"
+            ]
         retained_eval_id = f"ret_{canonical_sha256(retained_identity)[:24]}"
         units["retained_eval_id"] = retained_eval_id
         provisional_artifacts["units.json"] = units
@@ -341,8 +375,28 @@ class EvalLifecycleService:
         }
         retained_manifest = {
             **retained_identity,
+            **(
+                {"identity_seed": retained_identity}
+                if retained_schema_version == 2
+                else {}
+            ),
             "created_at_utc": created_at,
             "artifacts": artifact_index,
+            **(
+                {
+                    "source_provenance": {
+                        "git_revision": candidate.identity["source"].get(
+                            "git_revision"
+                        ),
+                        "tree_state": candidate.identity["source"].get("tree_state"),
+                        "dirty_overlay_sha256": candidate.identity["source"].get(
+                            "dirty_overlay_sha256"
+                        ),
+                    }
+                }
+                if retained_schema_version == 2
+                else {}
+            ),
             "pruned_categories": [
                 "attempt_files",
                 "performance",
@@ -421,7 +475,9 @@ class EvalLifecycleService:
                         "planned_attempts": len(manifest.get("work_items", [])),
                         "recorded_attempts": len(records),
                         "review_status": (
-                            "available" if (run_dir / "review").is_dir() else "unavailable"
+                            "available"
+                            if (run_dir / "review").is_dir()
+                            else "unavailable"
                         ),
                         "file_count": file_count,
                         "bytes": byte_count,
@@ -533,9 +589,12 @@ class EvalLifecycleService:
             )
         examples = manifest.get("eval_contract", {}).get("examples")
         if not isinstance(examples, list) or not examples:
-            raise EvalLifecycleError("Working eval has no retained evidence references.")
+            raise EvalLifecycleError(
+                "Working eval has no retained evidence references."
+            )
+        schema_version = int(manifest.get("schema_version", 1))
         return {
-            "schema_version": 1,
+            "schema_version": 2 if schema_version == 2 else 1,
             "storage": {
                 "account_url": evidence["storage_account_url"],
                 "container": evidence["storage_container"],
@@ -543,9 +602,7 @@ class EvalLifecycleService:
             },
             "evidence_recipe_id": evidence["evidence_recipe_id"],
             "source_snapshot_contract": evidence["source_snapshot_contract"],
-            "benchmark_source_state_sha256": evidence[
-                "benchmark_source_state_sha256"
-            ],
+            "benchmark_source_state_sha256": evidence["benchmark_source_state_sha256"],
             "examples": [
                 {
                     key: example.get(key)
@@ -592,8 +649,9 @@ class EvalLifecycleService:
                         "flaky": False,
                     }
                 )
+        schema_version = store.read_manifest().get("schema_version")
         return {
-            "schema_version": 1,
+            "schema_version": 2 if schema_version == 2 else 1,
             "retained_eval_id": None,
             "source_run_id": run_id,
             "units": units,
@@ -607,8 +665,9 @@ class EvalLifecycleService:
         run_id: str,
     ) -> dict[str, Any]:
         run_spec = manifest["run_spec"]
+        schema_version = int(manifest.get("schema_version", 1))
         return {
-            "schema_version": 1,
+            "schema_version": 2 if schema_version == 2 else 1,
             "source_run_id": run_id,
             "agent_version_id": candidate.agent_version_id,
             "manifest_sha256": candidate.manifest_sha256,
@@ -628,9 +687,7 @@ class EvalLifecycleService:
                 "pipeline_resolved_override": run_spec["pipeline"][
                     "resolved_override_sha256"
                 ],
-                "evaluation_profile": run_spec["scoring"][
-                    "evaluation_profile_sha256"
-                ],
+                "evaluation_profile": run_spec["scoring"]["evaluation_profile_sha256"],
                 "grader_set": run_spec["scoring"]["grader_set_sha256"],
                 "resolved_scoring": run_spec["scoring"]["content_sha256"],
                 "source_manifest": run_spec["source_manifest"]["content_sha256"],
@@ -648,9 +705,9 @@ class EvalLifecycleService:
     def _agent_patch(
         self, run_dir: Path, *, candidate: AgentVersionManifest
     ) -> str | None:
-        overlay = (
-            candidate.identity.get("source", {}).get("dirty_overlay") or {}
-        ).get("entries", [])
+        overlay = (candidate.identity.get("source", {}).get("dirty_overlay") or {}).get(
+            "entries", []
+        )
         if not overlay:
             return None
         revision = candidate.identity["source"].get("git_revision")
@@ -707,9 +764,7 @@ class EvalLifecycleService:
                 )
 
     @staticmethod
-    def _verify_artifact_manifest(
-        directory: Path, manifest: dict[str, Any]
-    ) -> None:
+    def _verify_artifact_manifest(directory: Path, manifest: dict[str, Any]) -> None:
         children = tuple(directory.iterdir())
         if any(path.is_symlink() or not path.is_file() for path in children):
             raise EvalLifecycleError(
@@ -751,7 +806,9 @@ class EvalLifecycleService:
         patch_path = directory / "agent.patch"
         if agent_patch is None:
             if patch_path.exists():
-                raise EvalLifecycleError("Clean retained agent has an unexpected patch.")
+                raise EvalLifecycleError(
+                    "Clean retained agent has an unexpected patch."
+                )
         elif (
             not patch_path.is_file()
             or patch_path.read_text(encoding="utf-8") != agent_patch
@@ -802,9 +859,12 @@ def _shared_agent_provenance(provenance: dict[str, Any]) -> dict[str, Any]:
 def _artifact_bytes(payload: Any) -> bytes:
     if isinstance(payload, str):
         return payload.encode("utf-8")
-    return json.dumps(
-        payload, sort_keys=True, ensure_ascii=False, indent=2
-    ).encode("utf-8") + b"\n"
+    return (
+        json.dumps(payload, sort_keys=True, ensure_ascii=False, indent=2).encode(
+            "utf-8"
+        )
+        + b"\n"
+    )
 
 
 def _write_artifact(path: Path, payload: Any) -> None:

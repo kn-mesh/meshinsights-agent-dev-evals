@@ -19,6 +19,7 @@ from pydantic_ai.direct import model_request_sync
 from pydantic_ai.messages import (
     BinaryImage,
     ModelRequest,
+    ModelResponse,
     SystemPromptPart,
     TextPart,
     UserPromptPart,
@@ -41,6 +42,7 @@ from tenacity import (
 
 from mi.ai.backends.base import (
     AIBackend,
+    AIModelRequestUsage,
     AIUsage,
     AIUsageLimits,
     AgentRequest,
@@ -281,7 +283,11 @@ class PydanticAIBackend(AIBackend):
                 )
                 usage = self._combine_usage(
                     usage,
-                    self._extract_direct_usage(response),
+                    self._extract_direct_usage(
+                        response,
+                        provider=request.model.provider,
+                        model=request.model.model,
+                    ),
                 )
                 self._check_direct_usage_limits(request.usage_limits, usage)
                 raw_text = self._extract_text(response)
@@ -463,6 +469,15 @@ class PydanticAIBackend(AIBackend):
             setattr(error, "performance", performance)
             raise
         usage = result.usage
+        model_requests = tuple(
+            self._model_request_usage(
+                message,
+                provider=request.model.provider,
+                model=request.model.model,
+            )
+            for message in result.all_messages()
+            if isinstance(message, ModelResponse) and message.usage.has_values()
+        )
         duration_seconds = time.monotonic() - operation_started
         return AgentResult(
             output=result.output,
@@ -471,8 +486,10 @@ class PydanticAIBackend(AIBackend):
                 input_tokens=usage.input_tokens,
                 output_tokens=usage.output_tokens,
                 cached_input_tokens=getattr(usage, "cache_read_tokens", 0) or 0,
+                cache_write_tokens=getattr(usage, "cache_write_tokens", 0) or 0,
                 reasoning_tokens=self._reasoning_tokens(getattr(usage, "details", {})),
                 tool_calls=getattr(usage, "tool_calls", 0) or 0,
+                model_requests=model_requests,
             ),
             performance=self._operation_performance(
                 kind="agent",
@@ -705,6 +722,37 @@ class PydanticAIBackend(AIBackend):
         from pydantic_ai.models.anthropic import AnthropicModel
         from pydantic_ai.providers.anthropic import AnthropicProvider
 
+        class FoundryAnthropicModel(AnthropicModel):
+            """Preserve Foundry billing fields discarded by generic normalization."""
+
+            def _process_response(
+                self,
+                response: Any,
+                model_request_parameters: Any,
+                model_settings: Any,
+            ) -> ModelResponse:
+                mapped = super()._process_response(
+                    response,
+                    model_request_parameters,
+                    model_settings,
+                )
+                response_usage = response.usage
+                cache_creation = getattr(response_usage, "cache_creation", None)
+                if cache_creation is not None:
+                    mapped.usage.details["cache_write_5m_tokens"] = (
+                        getattr(cache_creation, "ephemeral_5m_input_tokens", 0) or 0
+                    )
+                    mapped.usage.details["cache_write_1h_tokens"] = (
+                        getattr(cache_creation, "ephemeral_1h_input_tokens", 0) or 0
+                    )
+                provider_details = dict(mapped.provider_details or {})
+                for key in ("inference_geo", "service_tier", "speed"):
+                    value = getattr(response_usage, key, None)
+                    if value is not None:
+                        provider_details[key] = value
+                mapped.provider_details = provider_details or None
+                return mapped
+
         if http_client is None:
             foundry_client = AsyncAnthropicFoundry()
         else:
@@ -713,7 +761,7 @@ class PydanticAIBackend(AIBackend):
                 max_retries=0,
             )
         anthropic_provider = AnthropicProvider(anthropic_client=foundry_client)
-        return AnthropicModel(model, provider=anthropic_provider)
+        return FoundryAnthropicModel(model, provider=anthropic_provider)
 
     def _build_google_model(
         self,
@@ -1095,17 +1143,30 @@ class PydanticAIBackend(AIBackend):
         ]
         return "\n".join(text_parts) if text_parts else None
 
-    def _extract_direct_usage(self, response: Any) -> AIUsage:
+    def _extract_direct_usage(
+        self,
+        response: Any,
+        *,
+        provider: str = "unknown",
+        model: str = "unknown",
+    ) -> AIUsage:
         req_usage = getattr(response, "usage", None)
         if req_usage is None:
             return AIUsage(requests=1)
+        request_usage = self._model_request_usage(
+            response,
+            provider=provider,
+            model=model,
+        )
         return AIUsage(
             requests=1,
             input_tokens=getattr(req_usage, "input_tokens", 0) or 0,
             output_tokens=getattr(req_usage, "output_tokens", 0) or 0,
             cached_input_tokens=getattr(req_usage, "cache_read_tokens", 0) or 0,
+            cache_write_tokens=getattr(req_usage, "cache_write_tokens", 0) or 0,
             reasoning_tokens=self._reasoning_tokens(getattr(req_usage, "details", {})),
             output_validation_attempts=1,
+            model_requests=(request_usage,),
         )
 
     def _combine_usage(self, current: AIUsage, additional: AIUsage) -> AIUsage:
@@ -1117,12 +1178,16 @@ class PydanticAIBackend(AIBackend):
             cached_input_tokens=(
                 current.cached_input_tokens + additional.cached_input_tokens
             ),
+            cache_write_tokens=(
+                current.cache_write_tokens + additional.cache_write_tokens
+            ),
             reasoning_tokens=current.reasoning_tokens + additional.reasoning_tokens,
             tool_calls=current.tool_calls + additional.tool_calls,
             output_validation_attempts=(
                 current.output_validation_attempts
                 + additional.output_validation_attempts
             ),
+            model_requests=current.model_requests + additional.model_requests,
         )
 
     @staticmethod
@@ -1132,8 +1197,85 @@ class PydanticAIBackend(AIBackend):
         return sum(
             int(value)
             for key, value in details.items()
-            if "reasoning" in str(key).lower()
+            if (
+                "reasoning" in str(key).lower()
+                or str(key).lower() in {"thoughts_tokens", "thought_tokens"}
+            )
             and isinstance(value, int)
             and not isinstance(value, bool)
             and value > 0
+        )
+
+    def _model_request_usage(
+        self,
+        response: Any,
+        *,
+        provider: str,
+        model: str,
+    ) -> AIModelRequestUsage:
+        """Normalize one provider response into disjoint billable buckets."""
+        req_usage = getattr(response, "usage", None)
+        details = dict(getattr(req_usage, "details", {}) or {})
+        input_tokens = getattr(req_usage, "input_tokens", 0) or 0
+        output_tokens = getattr(req_usage, "output_tokens", 0) or 0
+        cache_read = getattr(req_usage, "cache_read_tokens", 0) or 0
+        cache_write = getattr(req_usage, "cache_write_tokens", 0) or 0
+        cache_write_5m = details.get("cache_write_5m_tokens", 0) or 0
+        cache_write_1h = details.get("cache_write_1h_tokens", 0) or 0
+        reasoning = self._reasoning_tokens(details)
+        gaps: list[str] = []
+        input_children = cache_read + cache_write
+        output_children = reasoning
+        input_uncached = (
+            input_tokens - input_children if input_children <= input_tokens else None
+        )
+        output_visible = (
+            output_tokens - output_children
+            if output_children <= output_tokens
+            else None
+        )
+        if input_uncached is None:
+            gaps.append("inconsistent_input_token_buckets")
+        if output_visible is None:
+            gaps.append("inconsistent_output_token_buckets")
+        if (
+            provider == "azure"
+            and not model.startswith("claude")
+            and model.startswith("gpt-5.6")
+            and input_tokens >= 1_024
+        ):
+            # Azure documents that GPT-5.6 cache writes are billable but the
+            # Responses API does not report their quantity.
+            gaps.append("input_cache_write_tokens_unreported")
+        normalized_provider = (
+            "azure_claude"
+            if provider == "azure" and model.startswith("claude")
+            else "azure_openai"
+            if provider == "azure"
+            else "google_direct"
+            if provider == "google"
+            else provider
+        )
+        provider_details = {
+            key: value
+            for key, value in dict(
+                getattr(response, "provider_details", {}) or {}
+            ).items()
+            if isinstance(value, (str, int, float, bool)) or value is None
+        }
+        provider_details["reported_provider"] = getattr(response, "provider_name", None)
+        return AIModelRequestUsage(
+            provider=normalized_provider,
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            input_uncached_tokens=input_uncached,
+            input_cache_read_tokens=cache_read,
+            input_cache_write_tokens=cache_write,
+            input_cache_write_5m_tokens=cache_write_5m,
+            input_cache_write_1h_tokens=cache_write_1h,
+            output_visible_tokens=output_visible,
+            output_reasoning_tokens=reasoning,
+            billable_usage_gaps=tuple(gaps),
+            provider_details=provider_details,
         )

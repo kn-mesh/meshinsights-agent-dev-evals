@@ -25,6 +25,7 @@ from evaluation import (
     canonical_json_bytes,
     canonical_sha256,
     eval_attempt_from_dict,
+    verify_eval_run_identity,
 )
 
 
@@ -70,10 +71,12 @@ class LocalRunStore:
         if self.manifest_path.exists():
             existing = self.read_manifest()
             for key in (
+                "schema_version",
                 "run_id",
                 "run_spec_sha256",
                 "run_spec",
                 "work_items",
+                "occurrence_seed",
             ):
                 if existing.get(key) != manifest.get(key):
                     raise RunStoreIntegrityError(
@@ -101,8 +104,22 @@ class LocalRunStore:
             raise RunStoreIntegrityError(
                 f"Manifest run specification is invalid: {self.manifest_path}"
             )
-        derived_run_id, derived_hash = build_run_identity(run_spec)
-        if expected != derived_hash or self.run_id != derived_run_id:
+        derived_hash = canonical_sha256(run_spec)
+        schema_version = payload.get("schema_version")
+        valid_identity = False
+        if schema_version == 1:
+            derived_run_id, _ = build_run_identity(run_spec)
+            valid_identity = self.run_id == derived_run_id
+        elif schema_version == 2:
+            occurrence_seed = payload.get("occurrence_seed")
+            valid_identity = isinstance(
+                occurrence_seed, dict
+            ) and verify_eval_run_identity(
+                self.run_id,
+                occurrence_seed=occurrence_seed,
+                run_spec_sha256=derived_hash,
+            )
+        if expected != derived_hash or not valid_identity:
             raise RunStoreIntegrityError(
                 f"Manifest run specification identity is invalid: {self.manifest_path}"
             )
@@ -419,7 +436,7 @@ class LocalRunStore:
         completed_at_utc: str,
         latest_invocation_id: str,
     ) -> Path:
-        """Build and atomically replace the canonical schema-v1 eval summary."""
+        """Build and atomically replace the canonical eval summary."""
         payload = self.build_result(
             completed_at_utc=completed_at_utc,
             latest_invocation_id=latest_invocation_id,
@@ -435,8 +452,14 @@ class LocalRunStore:
 
     def _validate_result(self, payload: dict[str, Any]) -> None:
         """Require the canonical view of the manifest and latest attempts."""
-        if payload.get("schema_version") != 1:
-            raise RunStoreIntegrityError("Evaluation result schema must be v1.")
+        manifest_schema = self.read_manifest().get("schema_version")
+        if payload.get("schema_version") != manifest_schema or manifest_schema not in {
+            1,
+            2,
+        }:
+            raise RunStoreIntegrityError(
+                "Evaluation result schema must match the run manifest."
+            )
         config = payload.get("run")
         if not isinstance(config, dict):
             raise RunStoreIntegrityError("Evaluation result is missing run metadata.")
@@ -450,9 +473,20 @@ class LocalRunStore:
             raise RunStoreIntegrityError(
                 "Evaluation result latest_invocation_id is invalid."
             )
+        timing = payload.get("summary", {}).get("timing", {})
+        active_wall_seconds = timing.get("evaluation_active_wall_seconds")
+        if manifest_schema == 2 and (
+            not isinstance(active_wall_seconds, (int, float))
+            or isinstance(active_wall_seconds, bool)
+            or active_wall_seconds < 0
+        ):
+            raise RunStoreIntegrityError(
+                "Evaluation result active wall time is invalid."
+            )
         expected = self.build_result(
             completed_at_utc=completed_at_utc,
             latest_invocation_id=latest_invocation_id,
+            evaluation_active_wall_seconds=active_wall_seconds,
         )
         if canonical_json_bytes(payload) != canonical_json_bytes(expected):
             raise RunStoreIntegrityError(
@@ -464,8 +498,11 @@ class LocalRunStore:
         *,
         completed_at_utc: str,
         latest_invocation_id: str,
+        evaluation_active_wall_seconds: float | None = None,
     ) -> dict[str, Any]:
-        """Rebuild the compact schema-v1 summary from tracked eval evidence."""
+        """Rebuild the compact summary from tracked eval evidence."""
+        manifest = self.read_manifest()
+        schema_version = int(manifest["schema_version"])
         state = self._evaluation_state()
         expected_config = state["run"]
         expected_config["completed_at_utc"] = completed_at_utc
@@ -474,18 +511,25 @@ class LocalRunStore:
         # Lazy import avoids the orchestration -> comparison -> integrity cycle.
         from src.evals.eval_orchestration import _build_summary
 
-        return {
-            "schema_version": 1,
-            "summary": _build_summary(
-                state["summary_rows"],
-                profile=cast("EvaluationProfile", state["profile"]),
-                runs_per_example=int(expected_config["runs_per_example"]),
-                frozen_pricing=(
-                    expected_config.get("dimensions", {})
-                    .get("model", {})
-                    .get("pricing")
-                ),
+        summary = _build_summary(
+            state["summary_rows"],
+            profile=cast("EvaluationProfile", state["profile"]),
+            runs_per_example=int(expected_config["runs_per_example"]),
+            frozen_pricing=(
+                expected_config.get("dimensions", {}).get("model", {}).get("pricing")
             ),
+        )
+        if schema_version >= 2:
+            summary["timing"] = {
+                "evaluation_active_wall_seconds": (
+                    self.execution_invocation_wall_time_seconds()
+                    if evaluation_active_wall_seconds is None
+                    else float(evaluation_active_wall_seconds)
+                )
+            }
+        return {
+            "schema_version": schema_version,
+            "summary": summary,
             "run": expected_config,
             "artifacts": {
                 "manifest": "manifest.json",
@@ -493,6 +537,7 @@ class LocalRunStore:
                 "attempts": "attempts/",
             },
         }
+
     def evaluation_rows(self) -> list[dict[str, Any]]:
         """Return an on-demand detailed eval view without persisting duplication."""
         return list(self._evaluation_state()["rows"])
@@ -500,9 +545,13 @@ class LocalRunStore:
     def _evaluation_state(self) -> dict[str, Any]:
         manifest = self.read_manifest()
         contract = manifest.get("eval_contract")
-        if not isinstance(contract, dict) or contract.get("schema_version") != 1:
+        if (
+            not isinstance(contract, dict)
+            or contract.get("schema_version") != manifest.get("schema_version")
+            or contract.get("schema_version") not in {1, 2}
+        ):
             raise RunStoreIntegrityError(
-                "Run manifest is missing its schema-v1 eval contract."
+                "Run manifest is missing its matching eval contract."
             )
         expected_config = dict(contract.get("run", {}))
 

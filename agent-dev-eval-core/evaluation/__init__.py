@@ -18,10 +18,12 @@ from evaluation.graders import (
 )
 from evaluation.identity import (
     build_comparison_identity,
+    build_eval_run_identity,
     build_run_identity,
     build_work_item_id,
     canonical_json_bytes,
     canonical_sha256,
+    verify_eval_run_identity,
 )
 from evaluation.metrics import (
     MetricCounts,
@@ -99,6 +101,7 @@ __all__ = [
     "benchmark_source_reference",
     "build_comparison_identity",
     "build_default_grader_registry",
+    "build_eval_run_identity",
     "build_performance_summary",
     "build_run_identity",
     "build_reliability_summary",
@@ -118,6 +121,7 @@ __all__ = [
     "normalize_filename_token",
     "read_path",
     "validate_metadata_identity",
+    "verify_eval_run_identity",
     "write_json_exclusive",
     "query_attempt_rows",
 ]
