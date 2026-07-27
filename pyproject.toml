@@ -1,19 +1,23 @@
 [project]
 name = "mesh.insights.template"
 version = "0.3.0"
-description = "Mesh Insights Template"
+description = "MeshInsights Agent Workbench use-case project"
 readme = "README.md"
 requires-python = ">=3.13.5"
 dependencies = [
+    "agent-dev-eval-core",
+    "agent-dev-eval-ui",
     "mi-core[ai]",
     "pandas==2.3.3",
     "pandas-stubs>=2.3.3.251201",
-    "plotly==6.5.0",
-    "streamlit>=1.49.1",
+    "pyarrow>=23.0.1",
     "logfire>=4.22.0",
     "python-dotenv>=1.0.1",
-    "pydantic-ai>=1.55.0",
-
+    "pydantic-ai>=2.11.0",
+    "matplotlib>=3.10.8",
+    "azure-storage-blob>=12.28.0",
+    "azure-identity>=1.25.0",
+    "psycopg[binary]>=3.2.0",
 ]
 [build-system]
 requires = ["setuptools>=68", "wheel"]
@@ -28,17 +32,17 @@ dev-dependencies = [
 ]
 
 [tool.uv.sources]
+agent-dev-eval-core = { path = "agent-dev-eval-core", editable = true }
+agent-dev-eval-ui = { path = "agent-dev-eval-ui", editable = true }
 mi-core = { path = "mi-core/core", editable = true }
 meshinsights-cli = { path = "mi-core/cli", editable = true }
 
 [tool.pytest.ini_options]
-filterwarnings = [
-    # Ignore pytz internal use of deprecated utcfromtimestamp on Python 3.12+
-    "ignore:datetime\\.datetime\\.utcfromtimestamp\\(\\) is deprecated:DeprecationWarning:pytz(\\..*)?$",
-]
+pythonpath = ["."]
 
 [tool.basedpyright]
-include = ["src"]
+include = ["src", "agent-dev-eval-core/evaluation", "model_catalog.py"]
+extraPaths = ["agent-dev-eval-core", "agent-dev-eval-ui"]
 typeCheckingMode = "standard"
 pythonVersion = "3.13"
 venvPath = "."

@@ -1,0 +1,228 @@
+schema_version: 1
+
+# Reusable Workbench pricing snapshots. These are standard, pay-as-you-go,
+# per-million-token rates in USD. Eval runs freeze the resolved record, so
+# changing this file never changes the cost estimate for an existing run.
+rates:
+  anthropic:claude-haiku-4-5-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: anthropic
+    billing_plan: standard-list-price
+    estimator_version: 3
+    input_per_million_tokens: 1.0
+    output_per_million_tokens: 5.0
+    cached_input_per_million_tokens: 0.1
+    cache_write_5m_per_million_tokens: 1.25
+    cache_write_1h_per_million_tokens: 2.0
+    effective_date: 2026-07-23
+    source: https://platform.claude.com/docs/en/about-claude/pricing
+
+  anthropic:claude-sonnet-4-5-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: anthropic
+    billing_plan: standard-list-price
+    estimator_version: 3
+    input_per_million_tokens: 3.0
+    output_per_million_tokens: 15.0
+    cached_input_per_million_tokens: 0.3
+    cache_write_5m_per_million_tokens: 3.75
+    cache_write_1h_per_million_tokens: 6.0
+    effective_date: 2026-07-23
+    source: https://platform.claude.com/docs/en/about-claude/pricing
+
+  anthropic:claude-sonnet-4-6-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: anthropic
+    billing_plan: standard-list-price
+    estimator_version: 3
+    input_per_million_tokens: 3.0
+    output_per_million_tokens: 15.0
+    cached_input_per_million_tokens: 0.3
+    cache_write_5m_per_million_tokens: 3.75
+    cache_write_1h_per_million_tokens: 6.0
+    effective_date: 2026-07-23
+    source: https://platform.claude.com/docs/en/about-claude/pricing
+
+  anthropic:claude-opus-4-5-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: anthropic
+    billing_plan: standard-list-price
+    estimator_version: 3
+    input_per_million_tokens: 5.0
+    output_per_million_tokens: 25.0
+    cached_input_per_million_tokens: 0.5
+    cache_write_5m_per_million_tokens: 6.25
+    cache_write_1h_per_million_tokens: 10.0
+    effective_date: 2026-07-23
+    source: https://platform.claude.com/docs/en/about-claude/pricing
+
+  anthropic:claude-opus-4-6-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: anthropic
+    billing_plan: standard-list-price
+    estimator_version: 3
+    input_per_million_tokens: 5.0
+    output_per_million_tokens: 25.0
+    cached_input_per_million_tokens: 0.5
+    cache_write_5m_per_million_tokens: 6.25
+    cache_write_1h_per_million_tokens: 10.0
+    effective_date: 2026-07-23
+    source: https://platform.claude.com/docs/en/about-claude/pricing
+
+  azure:claude-haiku-4-5-foundry:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: azure_claude
+    billing_plan: foundry-ccu-list-price
+    estimator_version: 3
+    input_per_million_tokens: 1.0
+    output_per_million_tokens: 5.0
+    cached_input_per_million_tokens: 0.1
+    cache_write_5m_per_million_tokens: 1.25
+    cache_write_1h_per_million_tokens: 2.0
+    effective_date: 2026-07-23
+    source: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/claude-models-billing
+
+  azure:claude-sonnet-4-5-foundry:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: azure_claude
+    billing_plan: foundry-ccu-list-price
+    estimator_version: 3
+    input_per_million_tokens: 3.0
+    output_per_million_tokens: 15.0
+    cached_input_per_million_tokens: 0.3
+    cache_write_5m_per_million_tokens: 3.75
+    cache_write_1h_per_million_tokens: 6.0
+    effective_date: 2026-07-23
+    source: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/claude-models-billing
+
+  azure:claude-sonnet-4-6-foundry:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: azure_claude
+    billing_plan: foundry-ccu-list-price
+    estimator_version: 3
+    input_per_million_tokens: 3.0
+    output_per_million_tokens: 15.0
+    cached_input_per_million_tokens: 0.3
+    cache_write_5m_per_million_tokens: 3.75
+    cache_write_1h_per_million_tokens: 6.0
+    effective_date: 2026-07-23
+    source: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/claude-models-billing
+
+  azure:claude-opus-4-5-foundry:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: azure_claude
+    billing_plan: foundry-ccu-list-price
+    estimator_version: 3
+    input_per_million_tokens: 5.0
+    output_per_million_tokens: 25.0
+    cached_input_per_million_tokens: 0.5
+    cache_write_5m_per_million_tokens: 6.25
+    cache_write_1h_per_million_tokens: 10.0
+    effective_date: 2026-07-23
+    source: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/claude-models-billing
+
+  azure:claude-opus-4-6-foundry:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: azure_claude
+    billing_plan: foundry-ccu-list-price
+    estimator_version: 3
+    input_per_million_tokens: 5.0
+    output_per_million_tokens: 25.0
+    cached_input_per_million_tokens: 0.5
+    cache_write_5m_per_million_tokens: 6.25
+    cache_write_1h_per_million_tokens: 10.0
+    effective_date: 2026-07-23
+    source: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/claude-models-billing
+
+  google:gemini-3.5-flash-lite-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: google_direct
+    billing_plan: developer-api-standard
+    estimator_version: 3
+    input_per_million_tokens: 0.3
+    output_per_million_tokens: 2.5
+    cached_input_per_million_tokens: 0.03
+    effective_date: 2026-07-23
+    source: https://ai.google.dev/gemini-api/docs/pricing
+
+  google:gemini-3.5-flash-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: google_direct
+    billing_plan: developer-api-standard
+    estimator_version: 3
+    input_per_million_tokens: 1.5
+    output_per_million_tokens: 9.0
+    cached_input_per_million_tokens: 0.15
+    effective_date: 2026-07-23
+    source: https://ai.google.dev/gemini-api/docs/pricing
+
+  google:gemini-3.6-flash-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: google_direct
+    billing_plan: developer-api-standard
+    estimator_version: 3
+    input_per_million_tokens: 1.5
+    output_per_million_tokens: 7.5
+    cached_input_per_million_tokens: 0.15
+    effective_date: 2026-07-23
+    source: https://ai.google.dev/gemini-api/docs/pricing
+
+  openrouter:google-gemini-3.5-flash-standard:
+    version: official-list-2026-07-23
+    currency: USD
+    billing_provider: openrouter
+    billing_plan: standard
+    estimator_version: 3
+    input_per_million_tokens: 1.5
+    output_per_million_tokens: 9.0
+    effective_date: 2026-07-23
+    source: https://openrouter.ai/google/gemini-3.5-flash
+
+  azure:gpt-5.6-luna-standard-global:
+    version: azure-retail-2026-07-01
+    currency: USD
+    billing_provider: azure_openai
+    billing_plan: global-standard
+    estimator_version: 3
+    input_per_million_tokens: 1.0
+    output_per_million_tokens: 6.0
+    cached_input_per_million_tokens: 0.1
+    effective_date: 2026-07-01
+    source: https://prices.azure.com/api/retail/prices
+
+  azure:gpt-5.6-terra-standard-global:
+    version: azure-retail-2026-07-01
+    currency: USD
+    billing_provider: azure_openai
+    billing_plan: global-standard
+    estimator_version: 3
+    input_per_million_tokens: 2.5
+    output_per_million_tokens: 15.0
+    cached_input_per_million_tokens: 0.25
+    effective_date: 2026-07-01
+    source: https://prices.azure.com/api/retail/prices
+
+  azure:gpt-5.6-sol-standard-global:
+    version: azure-retail-2026-07-01
+    currency: USD
+    billing_provider: azure_openai
+    billing_plan: global-standard
+    estimator_version: 3
+    input_per_million_tokens: 5.0
+    output_per_million_tokens: 30.0
+    cached_input_per_million_tokens: 0.5
+    effective_date: 2026-07-01
+    source: https://prices.azure.com/api/retail/prices

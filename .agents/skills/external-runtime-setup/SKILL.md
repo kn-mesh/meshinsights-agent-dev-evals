@@ -1,211 +1,92 @@
 ---
 name: external-runtime-setup
-description: Configure external auth, environment bootstrap, provider credentials, telemetry, and runtime AI overrides for this repo. Use this skill when a request involves `.env` setup, `mi auth`, provider:model validation, Logfire setup, bootstrap startup order, or troubleshooting AI-enabled pipeline and eval runs.
+description: Configure external auth, environment bootstrap, provider credentials, hosted benchmark access, telemetry, model catalogs, pricing, and runtime AI overrides for this repo. Use for `.env`, `mi auth`, provider:model validation, Logfire, startup order, or AI runtime failures.
 ---
 
 # External Runtime Setup
 
-Use this skill for project-level setup that depends on external systems rather than pipeline business logic. It covers provider credentials, `.env` conventions, telemetry, and runtime override behavior for AI-enabled runners.
+Keep external-system setup in runners or application startup, separate from
+pipeline business logic. Preserve a coherent local setup unless the user asks
+to migrate it.
 
-## Scope Of This Skill
+Use `$pipeline-builder` for runner integration, `$ai-processor-builder` for
+processor behavior, and `$run-use-case-evals` for eval execution.
 
-This skill defines recommended runtime-setup patterns for an AI coding agent working in an `mi-core` style repo.
+## Boundaries
 
-Treat it as default guidance for auth, telemetry, and runtime override structure, not as a guarantee that every existing runner in the repo already implements every recommendation exactly as written.
+- Never commit secrets; use `.env`, CI secrets, or workload identity.
+- Keep provider validation, telemetry, and runtime overrides out of processors.
+- Treat `models.yaml` as the project model/API catalog and
+  `model_pricing.yaml` as reviewed reusable non-secret pricing.
+- Inspect current runners and editable `mi-core` source when behavior matters.
+- If the request explicitly authorizes the named reusable scope, proceed after
+  stating its ownership and focused tests. Otherwise, identify the exact
+  reusable paths/contracts and pause once for approval.
 
-Rules:
-- Prefer these patterns by default when adding or cleaning up runtime setup.
-- If the repo already has a different but coherent setup path, treat the local implementation as the source of truth unless the user asks to migrate it.
-- Keep concrete CLI usage, env-var names, and startup-order references accurate.
-- When this skill describes centralized validation or setup structure, read that as the preferred architecture for agent-built work unless the repo deliberately differs.
+## Startup Order
 
-Use this skill alongside:
-- `$pipeline-builder` when building pipeline runners.
-- `$ai-processor-builder` when AI processors need provider-backed execution.
-- `$agent-eval-builder` when eval orchestration depends on hosted models or tracing.
-
-## What Belongs Here
-
-Use this skill when the user asks you to:
-- configure `.env` or `.env` templates,
-- set up or troubleshoot `mi auth`,
-- validate `provider:model` identifiers,
-- wire provider credential checks into a runner,
-- configure Logfire or AI tracing,
-- debug AI startup failures caused by missing auth, env bootstrap, or telemetry setup.
-
-Do not put auth or telemetry setup logic inside processors.
-
-## Environment Bootstrap
-
-On current `mi-core`, pipeline and orchestrator execution bootstraps environment variables from `.env` automatically by default.
-
-Use that default for normal pipeline and eval runs.
-
-If a top-level script, app, or runner validates providers, initializes telemetry, or constructs AI backends before calling `pipeline.run()` or `orchestrator.run()`, call `bootstrap_environment()` explicitly at startup:
+Normal pipeline and orchestrator runs bootstrap `.env` and telemetry through
+current `mi-core` defaults. A top-level app or runner that validates providers
+or initializes observability before execution must call:
 
 ```python
-from mi.core import bootstrap_environment
+from mi.core import bootstrap_environment, bootstrap_telemetry
 
 bootstrap_environment()
+bootstrap_telemetry()
 ```
 
-Rules:
-- Never commit secrets.
-- Keep secret values in `.env` or CI secret stores.
-- Keep bootstrap logic in runners or app startup, not in processors.
-- Fail fast with explicit auth and validation errors.
+Instrument pydantic-ai afterward when prompt/response tracing is authorized.
+Content capture may contain sensitive data; disable it when policy requires
+metadata-only traces.
 
-## `.env` And Template Files
+## Configure The Runtime
 
-Create a `.env` file at repo root for local development.
+1. Create a root `.env` for local secrets. Keep a placeholder-only
+   `.env.template` or `.env.example` when provider discovery is useful.
+2. Prefer `uv run mi auth`; select only the providers the project needs.
+3. Treat `workbench.project.json` as the compatibility allow-list and CLI/env
+   values as connection inputs. Require the effective project, PostgreSQL host
+   and database, Blob account, and container to match that contract before any
+   query or run-state write. Use Entra/workload identity only; do not add
+   password, shared-key, SAS, local JSON, or filesystem fallbacks.
+4. Select a canonical `provider:model` from `models.yaml` and validate its
+   declared API family against available credentials before starting work.
+5. Use runtime `--ai-model` and `--ai-reasoning-effort` overrides for
+   experiments. Apply them only to AI entries in a temporary YAML and never
+   rewrite source pipeline config.
+6. Fail fast with the missing provider, API family, and credential names; do
+   not let auth failures surface deep inside a processor.
 
-If you want `mi auth` to detect the relevant providers more reliably, keep a template file in one of these supported names:
-- `.env.template`
-- `.env.example`
-- `env.template`
-- `env.example`
+Read [references/runtime-details.md](references/runtime-details.md) only when
+you need the current provider/env mapping, `mi auth` variants, hosted identity
+variables, Logfire alternatives, or focused troubleshooting.
 
-Template files should contain variable names and placeholders only, never real secrets.
+## Model Catalog And Pricing
 
-`mi auth` uses the template to:
-- detect which providers are relevant,
-- preserve comments and grouping,
-- seed a new `.env` from the template structure.
-
-## `mi auth`
-
-Prefer `uv run mi auth` so the CLI comes from the project environment.
-
-`mi auth` is provided by `meshinsights-cli`, not `mi-core` itself. If the repo-managed install is unreliable on a machine, a separately installed machine-level `mi auth` is an acceptable fallback.
-
-Common commands:
+Use the existing configuration workflow:
 
 ```bash
-uv run mi auth
-uv run mi auth --provider azure_openai
-uv run mi auth --provider azure_foundry
-uv run mi auth --provider anthropic
-uv run mi auth --provider google-gemini
-uv run mi auth --provider openrouter
-uv run mi auth --provider logfire
-uv run mi auth --env-file .env.local
+uv run python -m src.model_configuration list
+uv run python -m src.model_configuration set-default <provider:model>
 ```
 
-Fallback:
+Add reusable reviewed vendor rates to `model_pricing.yaml`, then reference
+their key from `models.yaml`. Rates must be non-negative. Never fetch or refresh
+prices during an eval. The selected pricing record must be frozen into run
+identity so historical cost estimates remain stable.
 
-```bash
-mi auth
-mi auth --provider azure_openai
-mi auth --provider logfire
-```
+## Acceptance Checks
 
-What it does:
-1. Scans `.env.template` or `.env.example` when present.
-2. Lets you choose providers.
-3. Retrieves credentials automatically where possible.
-4. Writes or updates `.env`.
+Select changed layers from the
+[repository verification matrix](../project-guide/references/verification-matrix.md).
 
-## Model Identifier Rules
-
-Use canonical `provider:model` format.
-
-Examples:
-- `azure:gpt-5.4-mini`
-- `azure:gpt-5.4`
-- `azure:claude-sonnet-4-6`
-- `google:gemini-3.1-flash-lite-preview`
-- `openrouter:google/gemini-3-flash-preview`
-
-Rules:
-- Keep provider support and credential mapping in runner validation, not in processor business logic.
-- Do not use unsupported `openai:*` identifiers.
-
-## Provider Credential Mapping
-
-Use centralized runner-side validation to map model prefixes to required environment variables.
-
-Common mapping:
-
-| Model prefix | Required env vars |
-|---|---|
-| `azure:gpt-*` | `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `OPENAI_API_VERSION` |
-| `azure:claude-*` | `ANTHROPIC_FOUNDRY_API_KEY`, plus `ANTHROPIC_FOUNDRY_RESOURCE` or `ANTHROPIC_FOUNDRY_BASE_URL` |
-| `anthropic:*` | `ANTHROPIC_API_KEY` |
-| `google:*` | `GOOGLE_API_KEY` or `GEMINI_API_KEY` |
-| `openrouter:*` | `OPENROUTER_API_KEY` |
-
-Notes:
-- `anthropic:*` may also use `ANTHROPIC_BASE_URL` for Anthropic-compatible Azure-hosted routing.
-- `azure:claude-*` should resolve credentials from environment variables directly; do not require explicit `provider_options` for the standard path.
-- If runner code supports provider option overrides such as Azure deployment overrides, keep that logic centralized there.
-
-## Runtime AI Overrides
-
-Prefer runtime overrides when comparing models or reasoning effort without editing source YAML:
-- `--ai-model <provider:model>`
-- `--ai-reasoning-effort <low|medium|high>`
-
-Recommended runner behavior:
-1. Create a temporary runtime YAML with overrides applied only to AI processor entries.
-2. Execute using the temporary YAML.
-3. Delete the temporary file after the run.
-
-Never modify the source YAML in place.
-
-## Telemetry And Tracing
-
-For normal pipeline and orchestrator runs on current `mi-core`, telemetry bootstrap is also automatic by default.
-
-For top-level apps or custom runners that initialize observability before pipeline execution, use this startup order:
-1. `bootstrap_environment()`
-2. `bootstrap_telemetry()`
-3. `logfire.instrument_pydantic_ai(include_content=True, include_binary_content=True)`
-
-If you skip pydantic-ai instrumentation, you will usually get pipeline spans but not full prompt and response payloads.
-
-### Logfire authentication options
-
-Option A with `mi auth`:
-- `uv run mi auth --provider logfire`
-- or `mi auth --provider logfire` if the CLI is installed separately
-
-Option B for local manual setup:
-
-```bash
-uv run logfire auth
-uv run logfire projects use <project-name>
-```
-
-Option C for CI or shared environments:
-- set `LOGFIRE_TOKEN` in the environment or secret store
-
-If `LOGFIRE_TOKEN` is set, it takes precedence over stored CLI credentials and project selection.
-
-## Data Sensitivity
-
-`include_content=True` captures prompt and response text. If policy requires metadata-only traces, set `include_content=False`.
-
-## Troubleshooting Checklist
-
-1. Provider validation fails:
-   verify the model prefix and required environment variables.
-2. Model identifier is rejected:
-   confirm `provider:model` format and avoid unsupported `openai:*` names.
-3. No telemetry appears:
-   verify auth or token setup, then confirm both telemetry bootstrap and pydantic-ai instrumentation are happening.
-4. Auth behaves unexpectedly:
-   check for conflicting environment variables that override CLI credentials, especially `LOGFIRE_TOKEN`.
-5. `mi auth` does not detect the right providers:
-   add or update an `.env.template` or `.env.example` file.
-6. Azure credential retrieval fails:
-   verify Azure CLI is installed and logged in, or fall back to manual `.env` entry.
-
-## Expected Behavior When Using This Skill
-
-When using this skill:
-- keep setup and validation in runners or app startup,
-- keep secrets out of the repo,
-- centralize provider-to-credential mapping,
-- use runtime overrides for comparisons instead of editing source YAML,
-- separate auth and tracing concerns from processor business logic.
+- Secrets remain outside tracked files.
+- Environment bootstrap precedes provider checks and telemetry.
+- Hosted publication/evidence access uses configured non-secret identities and
+  least-privilege Azure identity.
+- The selected model exists in `models.yaml`; its API family and credentials
+  validate centrally.
+- Runtime overrides leave source YAML unchanged.
+- Telemetry content capture matches data policy.
+- A focused startup or exact-example run proves the configured path.

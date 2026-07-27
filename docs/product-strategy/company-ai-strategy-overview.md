@@ -16,7 +16,7 @@ This is Mesh's strongest path to differentiation:
 
 Every reliable agent depends on one loop: define the decision, benchmark it, build the agent, learn from live results, raise the standard. Whoever runs that loop controls agent quality. Mesh should own the loop and let the platforms fight over the infrastructure.
 
-The practical handoff from Mesh's loop into production should be a **portable agent package**: a versioned artifact that describes the trigger contract, evidence recipe, prompt/assets, model configuration, output schema, action policy, eval results, known limitations, and feedback schema. MeshInsights should be where these packages are created, evaluated, and improved; Microsoft Foundry, a customer platform, or another approved runtime should be where the package runs when it is time for pilot or production.
+The practical handoff from Mesh's loop into production should be a **portable agent package**: a versioned artifact that describes the trigger contract, evidence recipe, prompt/assets, model configuration, output schema, action policy, eval results, known limitations, and feedback schema. **MeshInsights Benchmark Studio** (Benchmark Studio for short) should be where the labeled evidence and benchmarks behind these packages are created, versioned, and improved; **MeshInsights Agent Workbench** (Agent Workbench for short) should develop and evaluate agent variants against them; and Microsoft Foundry, a customer platform, or another approved runtime should be where the package runs when it is time for pilot or production.
 
 ## The Strategic Opening
 
@@ -98,7 +98,7 @@ The center of gravity is Mesh's stewardship of benchmark operations and the agen
 
 The agent technology stack is changing quickly — new models, tooling patterns, prompting methods, eval approaches, harnesses, and cost/performance techniques. Most connected-product businesses have no team dedicated to staying at that edge. Their analytics, data science, or ML teams are typically optimized for ad-hoc analysis, dashboards, alerts, predictive models, or RAG chatbots — not for automating decisions from complex multivariate sensor data.
 
-Mesh's advantage compounds across customers and use cases: customer data, labels, and benchmarks stay customer-specific, while Mesh reuses and improves its methods for data preparation, evidence packaging, prompt and tool design, benchmark design, eval harnesses, confidence thresholds, failure-mode analysis, model selection, runtime-adapter patterns, and improvement workflows. MeshInsights should be the R&D and eval environment that lets Mesh test agent variants quickly, compare quality and cost, expand benchmarks, and package validated improvements back to the production owner.
+Mesh's advantage compounds across customers and use cases: customer data, labels, and benchmarks stay customer-specific, while Mesh reuses and improves its methods for data preparation, evidence packaging, prompt and tool design, benchmark design, eval harnesses, confidence thresholds, failure-mode analysis, model selection, runtime-adapter patterns, and improvement workflows. Benchmark Studio should make benchmark operations repeatable, while Agent Workbench lets Mesh develop and test agent variants quickly, compare quality and cost, and package validated improvements back to the production owner.
 
 Codifying this learning into automation is a core part of the FDE job, not a side project. FDEs are expected to continuously build internal agents, skills, and loops that automate today's manual work: labeling setup, benchmark expansion, eval execution, variant testing, feedback review, and update packaging. Every engagement should leave the delivery system more automated than it found it — this is how per-engagement capacity grows without linear headcount, and how Mesh stays ahead of customers and platforms internalizing the loop.
 
@@ -134,23 +134,19 @@ Near-term targeting should prioritize opportunities with a compelling first-year
 
 ## Product Strategy
 
-Near-term product investment should support a productized FDE practice and MeshInsights tooling centered on agent R&D, evals, labeling, benchmark creation, and continuous improvement.
+Near-term product investment should support a productized FDE practice through two connected products: **MeshInsights Benchmark Studio**, for evidence review, labeling, benchmark creation, versioning, expansion, and feedback conversion; and **MeshInsights Agent Workbench**, for agent R&D, evaluation, comparison, and packaging. Use **Benchmark Studio** and **Agent Workbench** as the short product names after their first references. Neither product owns the production agent runtime.
 
-MeshInsights should move away from being the default production deployment platform. It can remain bridge infrastructure, but product direction should hone it toward what Mesh needs to own:
+The broader MeshInsights platform should move away from being the default production deployment platform. Product direction should concentrate each product on what Mesh needs to own:
 
-- Access connected-system data for evidence packages.
-- Usable labeling interfaces for FDE/SME review.
-- Benchmark creation, versioning, and expansion — ad-hoc and via automated hooks into pilot/production systems.
-- Agent R&D for connected-product use cases: run prototypes against benchmark versions; compare model, prompt, evidence, tool, and harness variants.
-- Pilot and production feedback capture through explicit hooks.
-- Regression evals against expanding benchmarks.
-- Portable agent package manifests, promotion workflows, and packaging of tested improvements for the production owner.
+- Benchmark Studio: access connected-system data for evidence packages; provide usable FDE/SME review and labeling interfaces; create, version, and expand benchmarks; and capture pilot and production feedback through explicit hooks.
+- Agent Workbench: run connected-product agent variants against published benchmark versions; compare model, prompt, evidence, tool, and harness choices; execute regression evals; and create portable agent package manifests and tested update packages for the production owner.
+- Product integration: preserve published benchmark identity and frozen evidence as the read-only handoff from Benchmark Studio into Agent Workbench.
 
-FDE capacity is the real constraint, and it differs by phase: during Agent Launch (readiness plus piloted live operation), an FDE can handle at most two concurrent projects (current estimate) — this work is intensive in use-case learning, labeling setup, leading SME label discussions, benchmark creation, and prototype iteration. In Agent Improvement, the burden is much lighter: five or more concurrent engagements per FDE is feasible. Launch capacity is therefore the near-term bottleneck on how many first agents move through the journey, while Agent Improvement scales with far better leverage. The two levers for growing capacity are the FDE automation mandate and a deliberate hiring pipeline; the strategy only scales if MeshInsights and FDE-built automation keep reducing the manual burden.
+FDE capacity is the real constraint, and it differs by phase: during Agent Launch (readiness plus piloted live operation), an FDE can handle at most two concurrent projects (current estimate) — this work is intensive in use-case learning, labeling setup, leading SME label discussions, benchmark creation, and prototype iteration. In Agent Improvement, the burden is much lighter: five or more concurrent engagements per FDE is feasible. Launch capacity is therefore the near-term bottleneck on how many first agents move through the journey, while Agent Improvement scales with far better leverage. The two levers for growing capacity are the FDE automation mandate and a deliberate hiring pipeline; the strategy only scales if Benchmark Studio, Agent Workbench, and FDE-built automation keep reducing the manual burden.
 
 The readiness environment should stay optimized for speed, flexibility, and measurement — deliberately separate from the production platform, as long as Mesh can package validated improvements into the selected runtime. Build integrations and adapters where they connect readiness work to production platforms; avoid overbuilding generic runtime features the market will provide.
 
-MeshInsights remains the readiness/R&D/eval environment; the portable agent package is the handoff artifact; the production runtime lives in the customer's Microsoft tenant or another approved customer runtime.
+Benchmark Studio is the benchmark-operations and eval-readiness environment; Agent Workbench is the agent R&D and eval-execution environment; the portable agent package is the handoff artifact; and the production runtime lives in the customer's Microsoft tenant or another approved customer runtime.
 
 ## Commercial Strategy
 
@@ -182,7 +178,7 @@ Early Warning and Service Resolution are the first marketing and delivery focus;
 
 - Stay focused on IoT-data-dependent use cases / agents.
 - Require value qualification before Agent Launch: a use-case value floor ($200K+/year, aim $500K+) plus a fundable budget (~$150K+), a real owner, and serious intent — no paid workshops or pilots as entry points.
-- Use MeshInsights as readiness tooling and bridge infrastructure, honed toward agent R&D, evals, labeling, benchmarks, feedback capture, and update packaging — not default production hosting.
+- Use Benchmark Studio for evidence review, labeling, benchmark operations, feedback conversion, and eval readiness; use Agent Workbench for agent R&D, eval execution, comparison, and update packaging; use neither for production hosting.
 - Validate Microsoft as the first ecosystem path (Foundry Agent Service for agent workflows; Azure IoT Operations for operator paths) while remaining customer-platform tolerant.
 - No black-box agents: the agent package should explain trigger inputs, evidence recipe, prompts, tool assumptions, model choices, output schema, eval results, action policy, feedback schema, and known limitations.
 - Keep production hosting and operations out of the packaged offers; Mesh- or partner-run production operations are a separately scoped exception, distinct from Agent Improvement in scope and pricing.
@@ -218,7 +214,7 @@ This is not just a labeling model. It is the contract that lets Mesh move the sa
 - Candidate discovery jobs scan alarms, scheduled workflows, source-system events, run lists, or historical data to identify units and decision timestamps worth reviewing or acting on.
 - Evidence-building pipelines retrieve source data for each unit/timestamp pair, apply lookback windows and domain transforms, and produce versioned evidence packages.
 - SME/FDE review converts evidence into labels, rubrics, inclusion guidance, and benchmark versions.
-- Agent-development and eval runners execute agent variants against the same evidence contract, comparing quality, cost, confidence, failure modes, and action policy fit across benchmark slices.
+- Agent Workbench runners execute agent variants against the same evidence contract, comparing quality, cost, confidence, failure modes, and action policy fit across benchmark slices.
 - Production decision agents run in the customer's chosen runtime, triggered by the same kinds of unit/timestamp events, using the validated evidence recipe to produce structured recommendations or actions.
 - Feedback and improvement jobs ingest live outcomes, missed cases, SME overrides, user feedback, and model/runtime changes, then promote selected cases back into review and regression benchmarks.
 

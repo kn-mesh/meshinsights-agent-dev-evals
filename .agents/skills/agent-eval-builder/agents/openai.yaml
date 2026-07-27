@@ -1,7 +1,7 @@
 interface:
   display_name: "Agent-Eval-Builder"
-  short_description: "Build rubric-based eval orchestration and result contracts"
-  default_prompt: "Use $agent-eval-builder to build or update rubric-based evaluation orchestration for an AI-enabled pipeline in this repo, including the receipt handoff contract, stable eval JSON output, and an optional results app if needed."
+  short_description: "Build the minimum useful agent evaluation path"
+  default_prompt: "Use $agent-eval-builder to complete the FDE's evaluation outcome through the simplest existing path, preserve strategic benchmark and evidence invariants, and defer unsupported infrastructure expansion."
 
 policy:
   allow_implicit_invocation: true

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Project Guide"
+  short_description: "Orient work in an Agent Workbench project"
+  default_prompt: "Use $project-guide to explain how this Agent Workbench repository fits together, where a change belongs, and which specialized skill should handle it."
+
+policy:
+  allow_implicit_invocation: true

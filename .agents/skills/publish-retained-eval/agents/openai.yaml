@@ -1,0 +1,4 @@
+interface:
+  display_name: "Publish Retained Eval"
+  short_description: "Publish a verified retained eval immutably"
+  default_prompt: "Use $publish-retained-eval to preview and explicitly publish one eligible retained eval to Azure."

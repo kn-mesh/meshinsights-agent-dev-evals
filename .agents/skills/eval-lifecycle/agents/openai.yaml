@@ -1,0 +1,4 @@
+interface:
+  display_name: "Eval Lifecycle"
+  short_description: "Elevate, verify, and permanently delete local evals"
+  default_prompt: "Use $eval-lifecycle to manage exact working and retained evaluation results safely."

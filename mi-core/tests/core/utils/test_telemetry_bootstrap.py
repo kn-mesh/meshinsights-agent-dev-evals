@@ -12,11 +12,12 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from opentelemetry.sdk.trace.sampling import Decision
 
 import builtins
 
 import mi.core.utils.telemetry as telemetry_mod
-from mi.core.utils.telemetry import bootstrap_telemetry
+from mi.core.utils.telemetry import bootstrap_telemetry, report_pipeline_error
 
 # Capture the real __import__ before any patching
 _real_import = builtins.__import__
@@ -50,6 +51,7 @@ class TestBootstrapIdempotency:
             bootstrap_telemetry()
 
         mock_logfire.configure.assert_called_once()
+        mock_logfire.instrument_pydantic_ai.assert_called_once()
 
     def test_bootstrapped_flag_set_after_first_call(self):
         assert telemetry_mod._bootstrapped is False
@@ -84,17 +86,35 @@ class TestBootstrapIdempotency:
 
 
 class TestBootstrapLogfirePath:
-    """When logfire is importable, bootstrap_telemetry() should call
-    logfire.configure() with safe defaults."""
+    """Logfire bootstrap should configure export and Pydantic AI tracing."""
 
     def test_calls_logfire_configure_with_safe_defaults(self):
         mock_logfire = MagicMock()
         with patch.dict(sys.modules, {"logfire": mock_logfire}):
             bootstrap_telemetry()
 
-        mock_logfire.configure.assert_called_once_with(
-            send_to_logfire="if-token-present",
-            console=False,
+        mock_logfire.configure.assert_called_once()
+        configure_kwargs = mock_logfire.configure.call_args.kwargs
+        assert configure_kwargs["send_to_logfire"] == "if-token-present"
+        assert configure_kwargs["console"] is False
+        mock_logfire.SamplingOptions.assert_called_once()
+        sampler = mock_logfire.SamplingOptions.call_args.kwargs["head"]
+        assert (
+            sampler.should_sample(
+                None,
+                1,
+                "pipeline.run",
+                attributes={telemetry_mod.ATTR_MI_CORE_SPAN: True},
+            ).decision
+            is Decision.DROP
+        )
+        assert (
+            sampler.should_sample(None, 1, "agent run", attributes={}).decision
+            is Decision.RECORD_AND_SAMPLE
+        )
+        mock_logfire.instrument_pydantic_ai.assert_called_once_with(
+            include_content=True,
+            include_binary_content=True,
         )
 
     def test_returns_after_logfire_success(self):
@@ -128,6 +148,53 @@ class TestBootstrapLogfirePath:
 
             # set_tracer_provider confirms path 2 executed
             mock_trace.set_tracer_provider.assert_called_once()
+
+
+class TestMiCoreSpanMarking:
+    def test_marks_spans_before_the_sampler_runs(self):
+        wrapped = MagicMock()
+        tracer = telemetry_mod._MiCoreTracer(wrapped)
+
+        tracer.start_as_current_span("pipeline.run", attributes={"custom": "value"})
+
+        wrapped.start_as_current_span.assert_called_once()
+        attributes = wrapped.start_as_current_span.call_args.kwargs["attributes"]
+        assert attributes == {
+            "custom": "value",
+            telemetry_mod.ATTR_MI_CORE_SPAN: True,
+        }
+
+
+class TestFocusedPipelineErrors:
+    def test_reports_error_once_with_pipeline_context(self):
+        mock_logfire = MagicMock()
+        exception = RuntimeError("bad input")
+
+        with patch.dict(sys.modules, {"logfire": mock_logfire}):
+            try:
+                raise exception
+            except RuntimeError as caught:
+                report_pipeline_error(
+                    caught,
+                    pipeline_name="eval-pipeline",
+                    pipeline_unit="unit-7",
+                    stage="process",
+                )
+                report_pipeline_error(
+                    caught,
+                    pipeline_name="eval-pipeline",
+                    pipeline_unit="unit-7",
+                    stage="pipeline",
+                )
+
+        mock_logfire.exception.assert_called_once_with(
+            "Pipeline error in {stage}",
+            stage="process",
+            pipeline_name="eval-pipeline",
+            pipeline_unit="unit-7",
+            exception_type="RuntimeError",
+            error="bad input",
+        )
 
 
 # ---------------------------------------------------------------------------

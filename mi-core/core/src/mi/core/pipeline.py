@@ -24,6 +24,7 @@ from mi.core.utils.telemetry import (
     bootstrap_telemetry,
     get_current_span,
     get_tracer,
+    report_pipeline_error,
     set_span_error,
     ATTR_COMPONENT_LAYER,
 )
@@ -38,6 +39,28 @@ _tracer = get_tracer("pipeline")
 
 PDO = TypeVar("PDO", bound=ProcessDataObject, default=ProcessDataObject)
 ADO = TypeVar("ADO", bound=ActionDataObject, default=ActionDataObject)
+
+
+def _record_stage_exception(stage_receipt: StageReceipt, error: Exception) -> None:
+    """Attach a bounded exception chain and provider diagnostics to a receipt."""
+    chain: list[dict[str, str | int]] = []
+    current: BaseException | None = error
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen and len(chain) < 8:
+        seen.add(id(current))
+        entry: dict[str, str | int] = {
+            "exception_type": type(current).__name__,
+            "message": str(current),
+        }
+        status_code = getattr(current, "status_code", None)
+        if isinstance(status_code, int):
+            entry["status_code"] = status_code
+        request_id = getattr(current, "request_id", None)
+        if isinstance(request_id, str) and request_id:
+            entry["request_id"] = request_id
+        chain.append(entry)
+        current = current.__cause__ or current.__context__
+    stage_receipt.set_metadata("error_details", {"exception_chain": chain})
 
 
 class PipelineMetadata(BaseModel):
@@ -466,6 +489,12 @@ class Pipeline(Generic[PDO, ADO]):
 
         except Exception as e:
             set_span_error(current_span, e)
+            report_pipeline_error(
+                e,
+                pipeline_name=self.config.name,
+                pipeline_unit=self.config.metadata.unit,
+                stage="pipeline",
+            )
             self.logger.error(f"Pipeline execution failed: {e}", exc_info=True)
             self.receipt.success = False
             current_span.set_attribute("pipeline.success", False)
@@ -538,8 +567,15 @@ class Pipeline(Generic[PDO, ADO]):
 
             except Exception as e:
                 set_span_error(span, e)
+                report_pipeline_error(
+                    e,
+                    pipeline_name=self.config.name,
+                    pipeline_unit=self.config.metadata.unit,
+                    stage="retrieve",
+                )
                 self.logger.error(f"Retrieve stage failed: {e}", exc_info=True)
                 stage_receipt.error = str(e)
+                _record_stage_exception(stage_receipt, e)
                 stage_receipt.success = False
                 if self.config.error_action == "stop":
                     raise
@@ -608,13 +644,28 @@ class Pipeline(Generic[PDO, ADO]):
 
             except Exception as e:
                 set_span_error(span, e)
+                report_pipeline_error(
+                    e,
+                    pipeline_name=self.config.name,
+                    pipeline_unit=self.config.metadata.unit,
+                    stage="process",
+                )
                 self.logger.error(f"Process stage failed: {e}", exc_info=True)
                 stage_receipt.error = str(e)
+                _record_stage_exception(stage_receipt, e)
                 stage_receipt.success = False
                 if self.config.error_action == "stop":
                     raise
 
             finally:
+                execution_telemetry = process_data.get_execution_telemetry()
+                if execution_telemetry is not None:
+                    stage_receipt.set_metadata(
+                        "execution_telemetry", execution_telemetry
+                    )
+                execution_review = process_data.get_execution_review()
+                if execution_review is not None:
+                    stage_receipt.set_metadata("execution_review", execution_review)
                 stage_receipt.execution_time_seconds = time.time() - stage_start
                 span.set_attribute(
                     "stage.duration_seconds", stage_receipt.execution_time_seconds
@@ -675,8 +726,15 @@ class Pipeline(Generic[PDO, ADO]):
 
             except Exception as e:
                 set_span_error(span, e)
+                report_pipeline_error(
+                    e,
+                    pipeline_name=self.config.name,
+                    pipeline_unit=self.config.metadata.unit,
+                    stage="act",
+                )
                 self.logger.error(f"Act stage failed: {e}", exc_info=True)
                 stage_receipt.error = str(e)
+                _record_stage_exception(stage_receipt, e)
                 stage_receipt.success = False
                 if self.config.error_action == "stop":
                     raise

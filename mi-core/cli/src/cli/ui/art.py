@@ -5,7 +5,6 @@ from __future__ import annotations
 import random
 
 import pyfiglet
-from rich.console import Console
 from rich.text import Text
 
 from .terminal import term_width
@@ -95,21 +94,3 @@ def figlet_gradient(
                 r, g, b = _lerp_color(_GRADIENT_STOPS, t)
                 result.append(ch, style=f"bold #{r:02x}{g:02x}{b:02x}")
     return result
-
-
-# ── Misc utilities (kept for backward compat) ──────────────────────────
-
-
-def print_art(art: str, *, console: Console | None = None) -> None:
-    """Print pre-styled ASCII art (contains Rich markup)."""
-    con = console or Console()
-    con.print(art, highlight=False)
-
-
-def divider(*, console: Console | None = None) -> None:
-    """Print a pipe-style divider line."""
-    con = console or Console()
-    w = min(term_width(), 56)
-    pattern = "=-=~"
-    repeated = (pattern * ((w // len(pattern)) + 1))[:w]
-    con.print(f"  {repeated}", style="bright_blue", highlight=False)

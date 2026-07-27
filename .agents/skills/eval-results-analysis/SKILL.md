@@ -1,76 +1,99 @@
 ---
 name: eval-results-analysis
-description: Review evaluation results for a specific pipeline version, prompt revision, or data-input change in this repo. Use this skill when the user wants to understand why accuracy changed, which units regressed, or what prompt or pipeline changes to consider based on versioned eval JSON outputs. Do not run evals or edit prompts unless the user explicitly asks.
+description: Review evaluation results for a specific pipeline, prompt, model, tool, grader, configuration, or evidence change. Use to explain accuracy changes, regressions, reliability failures, or likely next changes from versioned eval outputs. Do not run evals or edit prompts unless the user explicitly asks.
 ---
 
 # Eval Results Analysis
 
-## Overview
-
-Use this skill to analyze eval outcomes after a pipeline change, prompt change, and/or data input change. The goal is to explain what improved or regressed, identify likely causes grounded in the actual unit data, and propose targeted next changes that improve accuracy without overfitting to a small eval set.
-
-## Scope Of This Skill
-
-This skill defines a recommended analysis workflow for an AI coding agent reviewing eval outputs in an `mi-core` style repo.
-
-Treat it as default analysis guidance, not as a guarantee that every repo organizes eval outputs or supporting context in exactly the same way.
-
-Rules:
-- Prefer this workflow when investigating regressions or improvements.
-- If the repo uses a different but coherent eval layout or naming scheme, treat the current repo outputs as the source of truth for local analysis.
-- Keep concrete paths and file-layout references accurate.
-- When this skill describes a typical results layout, interpret that as the default pattern rather than a universal requirement.
+Explain what changed and why from concrete unit evidence without overfitting.
+Treat current repository outputs and inspection code as authoritative.
 
 ## Workflow
 
-1. Confirm scope from the user.
-   The user will usually tell you which pipeline versions, runs, or prompt revisions matter. Focus on those runs first instead of diffing every eval folder in the repo.
-2. Read the relevant eval results.
-   Start in versioned folders such as `src/evals/eval_results_v1_2` or `src/evals/eval_results_v2`.
-   Typical result files live under `src/evals/eval_results_<version>/<rubric>/all/*.json`.
-3. Identify the main regression or improvement pattern.
-   Use the top-level `summary` and then drill into `results`.
-   Look for misses by classification, root cause, confidence band, and repeated failure modes across multiple units.
-4. Inspect individual units behind the pattern.
-   For the most informative correct and incorrect examples, review each unit's `runs` payload and compare the model explanation to the expected label.
-5. Propose changes before editing anything.
-   Explain the specific prompt, pipeline, or data-shaping changes you want to make and why those changes should address the observed failure pattern.
+1. Confirm the exact eval IDs, variants, or revisions in scope. Do not diff
+   every result by default.
+2. Resolve lifecycle state:
 
-## What To Look At
+   ```bash
+   uv run python -m src.eval_lifecycle.cli inspect <eval-id> --json
+   ```
 
-- `summary`
-  Use this for overall accuracy, class splits, confidence splits, and root-cause breakdowns.
-- `run_config`
-  Use this to confirm the pipeline config, rubric, model, reasoning effort, and retrieval snapshot settings used for that run.
-- `results[].runs[]`
-  Use this for unit-level expected vs actual outcomes, confidence, and explanation quality.
+   Working evals may retain attempts, review, and performance. Retained evals
+   contain compact aggregates and intentionally prune tool/intermediate traces.
+   Before reading retained artifacts directly, verify the bundle:
 
+   ```bash
+   uv run python -m src.eval_lifecycle.cli verify <retained-id> --json
+   ```
 
-## Analysis Standards
+   The explorer also satisfies this gate because its retained backend verifies
+   the selected bundle before returning retained content.
+3. For a working eval, start with bounded inspection:
 
-- Anchor every recommendation in concrete evidence from the eval JSON
-- Prioritize repeated failure patterns over one-off anecdotes.
-- Separate these questions:
-  Is the model reading the data/charts incorrectly?
-  Is the prompt asking the wrong question or weighting the wrong cues?
-  Is the pipeline giving the model incomplete or misleading context?
-  Is the rubric or expected label itself uncertain?
-- Prefer changes that are likely to generalize across similar units, not just fix a single example.
-- Treat the eval set as a proxy for production accuracy, not the final objective. The target is better real-world performance with limited overfitting.
+   ```bash
+   uv run python -m src.evals.inspection_cli summary --run <run-id>
+   uv run python -m src.evals.inspection_cli list \
+     --run <run-id> --filter incorrect --limit 20
+   ```
 
-## Guardrails
+   Use `incorrect`, `invalid`, `failed`, `flaky`, `unscored`, or
+   `review-unavailable` as relevant. For retained evals, use the verified
+   explorer or bounded rows from `units.json` only after lifecycle verification.
+4. Inspect only representative units:
 
-- Do not run evals unless the user explicitly gives permission.
-- Do not directly edit prompts unless the user explicitly asks for that change.
-- First present the exact changes you want to make, the evidence behind them, and the expected tradeoffs.
-- If the evidence is mixed, say so clearly instead of forcing a prompt tweak.
+   ```bash
+   uv run python -m src.evals.inspection_cli example \
+     --run <run-id> --example '<example-id>'
+   uv run python -m src.evals.inspection_cli execution \
+     --run <run-id> --execution '<execution-id>' \
+     --section model_interactions --resolve-text
+   ```
 
-## Expected Output
+5. Separate repeated quality errors from execution, output-contract, grader,
+   review-capture, and evidence-integrity failures.
+6. Propose targeted changes with evidence and overfitting risk before editing.
+7. Preserve a working-eval diagnosis with
+   `src.evals.inspection_cli diagnose` only when requested. That command resolves
+   working evals only. For a retained eval, keep its bundle immutable: return
+   the analysis or write an explicitly requested note outside the retained bundle,
+   keyed by exact retained ID.
 
-When using this skill, give the user a concise analysis that covers:
+## Evidence Rules
 
-1. Which run or pipeline version was reviewed.
-2. The main accuracy changes or error clusters.
-3. A few representative unit IDs with chart-grounded explanations of why the model likely succeeded or failed.
-4. The proposed next changes, why they should help, and what overfitting risk they introduce.
-5. A clear note that no evals were rerun and no prompts were edited unless the user asked for it.
+- Use `run` and `run.dimensions` to confirm benchmark, pipeline, model,
+  reasoning, agent, grader, configuration, and source-snapshot identity.
+- Use accuracy only for valid scored attempts. Analyze reliability and scoring
+  coverage separately.
+- For working detail, use bounded commands or
+  `LocalRunStore.evaluation_rows()`. Attempts supply `agent_output`,
+  `evaluations`, contract errors, usage, cost, and failures; missing attempts
+  make detailed analysis unavailable, not invalid.
+- Retained `units.json` preserves final outputs and grading. Verify its bundle
+  before direct reads, and state when a question requires traces that elevation
+  pruned.
+- Resolve evidence through the working manifest or retained
+  `evidence-references.json`; verify exact snapshot and artifact hashes. Never
+  substitute current membership or an unverified local copy.
+- Use chart-specific analysis only when the selected use-case adapter supplies charts.
+- Treat `performance/summary.json` and review artifacts as optional disposable
+  diagnostics. Access review objects only through the inspection CLI.
+- Report unavailable review by its typed reason, such as `capture_failed`,
+  rather than calling the durable attempt failed.
+
+Read
+[the current evaluation contracts](../agent-eval-builder/references/current-evaluation-contracts.md)
+only when exact result fields, layouts, capture states, or lifecycle mechanics
+matter; otherwise inspect the selected result and source directly.
+
+## Guardrails And Output
+
+- Do not run evals, edit prompts, publish artifacts, or mutate lifecycle state
+  without explicit authorization.
+- Do not reconstruct missing traces, infer retry counts, or treat disposable
+  diagnostics as benchmark truth.
+- Prefer repeated patterns over anecdotes; distinguish model interpretation,
+  prompt framing, evidence preparation, pipeline handoff, grader behavior, and
+  uncertain labels.
+- Give the reviewed identity, main changes/clusters, representative unit IDs
+  with evidence-grounded explanations, recommended next changes and risks, and
+  a clear statement of whether anything was rerun or edited.

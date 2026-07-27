@@ -222,25 +222,6 @@ class JsonRetriever(BaseRetriever):
         self.logger.info("Retrieved %d records from %s", len(df), self._file_path.name)
         return df
 
-    def _validate_schema_pandas(self, df: Any) -> None:
-        """Deprecated: retained for backward compatibility."""
-        validate_schema(
-            df,
-            self._fields,
-            strict=self._strict,
-            logger=self.logger,
-            context="JSON",
-        )
-
-    def _apply_type_conversions_pandas(self, df: Any) -> Any:
-        """Deprecated: retained for backward compatibility."""
-        return apply_type_conversions(
-            df,
-            self._fields,
-            strict=self._strict,
-            logger=self.logger,
-        )
-
     def _apply_metadata_filter(
         self, df: pd.DataFrame, metadata: PipelineMetadata | None
     ) -> pd.DataFrame:

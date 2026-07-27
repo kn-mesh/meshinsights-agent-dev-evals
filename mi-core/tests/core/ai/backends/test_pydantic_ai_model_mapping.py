@@ -89,7 +89,12 @@ class TestResolveModel:
         monkeypatch.setenv("ANTHROPIC_FOUNDRY_API_KEY", "test-key")
         monkeypatch.setenv("ANTHROPIC_FOUNDRY_RESOURCE", "test-resource")
         monkeypatch.delenv("ANTHROPIC_FOUNDRY_BASE_URL", raising=False)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-api-key")
+        monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://test.openai.azure.com")
+        monkeypatch.setenv("AZURE_OPENAI_API_KEY", "test-azure-api-key")
+        monkeypatch.setenv("OPENAI_API_VERSION", "2025-01-01-preview")
         monkeypatch.setenv("GOOGLE_API_KEY", "test-google-api-key")
+        monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-api-key")
 
     def test_azure_gpt_returns_string(self, backend: PydanticAIBackend) -> None:
         model, settings_id = backend._resolve_model("azure", "gpt-5", {})
@@ -102,6 +107,38 @@ class TestResolveModel:
         )
         assert model == "azure:my-gpt5-deploy"
         assert settings_id == "azure:my-gpt5-deploy"
+
+    def test_azure_responses_model_uses_v1_endpoint(
+        self, backend: PydanticAIBackend
+    ) -> None:
+        from pydantic_ai.models.openai import OpenAIResponsesModel
+
+        model, settings_id = backend._resolve_model(
+            "azure",
+            "gpt-5.6-luna",
+            {},
+            backend_options={"model_api": "openai_responses"},
+            transport_retries=3,
+        )
+
+        assert isinstance(model, OpenAIResponsesModel)
+        assert settings_id == "azure:gpt-5.6-luna"
+        assert str(model.client.base_url) == "https://test.openai.azure.com/openai/v1/"
+        assert model.client.max_retries == 0
+
+    def test_azure_chat_model_rejects_responses_metadata_mismatch(
+        self, backend: PydanticAIBackend
+    ) -> None:
+        with pytest.raises(
+            ValueError, match="requires model_api=openai_chat_completions"
+        ):
+            backend._resolve_model(
+                "azure",
+                "gpt-5.6-luna",
+                {},
+                backend_options={"model_api": "google_generate_content"},
+                transport_retries=3,
+            )
 
     def test_azure_claude_returns_anthropic_model(
         self, backend: PydanticAIBackend
@@ -152,6 +189,75 @@ class TestResolveModel:
         )
         assert model == "openrouter:google/gemini-3-flash-preview"
         assert settings_id == "openrouter:google/gemini-3-flash-preview"
+
+    @pytest.mark.parametrize(
+        ("provider", "model_name", "expected_class_name"),
+        [
+            ("azure", "gpt-5", "OpenAIChatModel"),
+            ("anthropic", "claude-sonnet-4-5", "AnthropicModel"),
+            ("google", "gemini-3.1-flash-lite-preview", "GoogleModel"),
+            (
+                "openrouter",
+                "google/gemini-3-flash-preview",
+                "OpenRouterModel",
+            ),
+            ("azure", "claude-sonnet-4-5", "FoundryAnthropicModel"),
+        ],
+    )
+    def test_transport_retries_use_explicit_provider_models(
+        self,
+        backend: PydanticAIBackend,
+        provider: str,
+        model_name: str,
+        expected_class_name: str,
+    ) -> None:
+        model, _ = backend._resolve_model(
+            provider,
+            model_name,
+            {},
+            transport_retries=3,
+        )
+
+        assert type(model).__name__ == expected_class_name
+
+    @pytest.mark.parametrize(
+        ("provider", "model_name"),
+        [
+            ("azure", "gpt-5"),
+            ("anthropic", "claude-sonnet-4-5"),
+            ("openrouter", "google/gemini-3-flash-preview"),
+            ("azure", "claude-sonnet-4-5"),
+        ],
+    )
+    def test_transport_retries_disable_provider_sdk_retry_layers(
+        self,
+        backend: PydanticAIBackend,
+        provider: str,
+        model_name: str,
+    ) -> None:
+        model, _ = backend._resolve_model(
+            provider,
+            model_name,
+            {},
+            transport_retries=3,
+        )
+
+        assert model.client.max_retries == 0
+
+    def test_transport_retries_disable_google_sdk_retry_layer(
+        self,
+        backend: PydanticAIBackend,
+    ) -> None:
+        model, _ = backend._resolve_model(
+            "google",
+            "gemini-3.1-flash-lite-preview",
+            {},
+            transport_retries=3,
+        )
+
+        retry_options = model.client._api_client._http_options.retry_options
+        assert retry_options is not None
+        assert retry_options.attempts == 1
 
 
 class TestReasoningSpecMatching:

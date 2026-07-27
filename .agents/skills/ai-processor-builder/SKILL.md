@@ -1,208 +1,103 @@
 ---
 name: ai-processor-builder
-description: Build or update AI workflow and agent processors in this repo using mi.ai. Use this skill when a request involves adding structured-output AI processors, multimodal user messages, DataFrame-to-string inputs, tool-enabled agent processors, or stable AI artifact attachment for downstream hydrators and evals.
+description: Build or update structured-output mi.ai workflow or agent processors in this repo. Use for multimodal inputs, tool-enabled agents, reusable toolsets, progressively disclosed capabilities or Agent Skills, typed processor configuration, and stable AI artifacts for downstream hydrators and evals. Do not add AI when deterministic logic is sufficient.
 ---
 
 # AI Processor Builder
 
-Use this skill for AI processor implementation work in this repo. It is grounded in the lightweight repo guidance plus the actual `mi.ai` API available in the project environment.
+Build the smallest justified AI processor against the editable `mi.ai` source
+under `mi-core/core/src/mi/`. Preserve coherent local contracts unless the user
+asks to migrate them.
 
-## Scope Of This Skill
+Use `$pipeline-builder` for a measurable pipeline variant,
+`$external-runtime-setup` for auth or model runtime setup, and
+`$agent-eval-builder` for eval contract changes.
 
-This skill defines recommended AI processor patterns for an AI coding agent building on top of `mi.ai` and `mi-core`.
+## Boundaries
 
-Treat it as default implementation guidance, not as a guarantee that every existing processor in the repo already follows the exact artifact names or handoff contracts described here.
+- Prefer deterministic logic when it solves the task reliably.
+- Keep use-case prompts, schemas, and business rules under project-owned paths.
+- Inspect `mi-core/core/src/mi/docs/ai.md` and current source when exact message,
+  tool, capability, skill, retry, limit, or backend behavior matters.
+- If the request explicitly authorizes the named reusable scope, proceed after
+  stating its ownership and focused tests. Otherwise, identify the exact
+  reusable paths/contracts and pause once for approval.
 
-Rules:
-- Prefer these patterns by default when building new AI processors.
-- If the repo already uses a different but coherent processor contract, preserve that local contract unless the user asks to migrate it.
-- Keep concrete API details and referenced package behavior accurate to the local environment.
-- When this skill describes a stable artifact or downstream handoff pattern, read that as the preferred agent-facing default unless the repo has a deliberate local alternative.
+## Choose The Processor Shape
 
-Use `$external-runtime-setup` when the task also depends on provider auth, tracing, or runtime AI overrides. Use `$agent-eval-builder` when the processor output must remain compatible with eval orchestration.
+Use a workflow for one structured model call with fixed evidence. Inherit from
+`AIWorkflowMixin[ProcessObject, OutputSchema]` and
+`BaseProcessor[ProcessObject]`.
 
-## When To Use It
+Use an agent only when multi-turn, targeted tool use materially improves the
+decision. Inherit from `AIAgentMixin[ProcessObject, OutputSchema]` and
+`BaseProcessor[ProcessObject]`; give it bounded tools and an appropriate
+`max_turns`.
 
-Use this skill when the user asks you to:
-- build a new AI workflow processor,
-- build a tool-enabled AI agent processor,
-- add structured model output with a Pydantic schema,
-- attach DataFrames or images to AI inputs,
-- fix unstable AI artifact or usage attachment behavior.
+For agent composition, choose the smallest mechanism:
 
-Do not add an AI processor when compute-only logic already solves the use case reliably enough.
+- standalone tool: one bounded operation;
+- `ToolSet`: reusable related tools and shared instructions;
+- `AICapability`: one cohesive, optionally deferred specialist workflow;
+- `AISkill`: an Agent Skills-compatible runbook that benefits from progressive
+  disclosure.
 
-## Processor Shapes
+Keep universal rules eager. Defer only specialist behavior that most runs do
+not need. Runtime authority comes from concrete tools attached by application
+code, not skill metadata.
 
-Choose one processor shape before coding.
+## Define Contracts First
 
-### Workflow processor
+1. Define a dedicated Pydantic output model; forbid extra fields when the
+   contract is strict.
+2. Use `AIProcessorConfig` or a small typed subclass. Keep prompts and business
+   logic out of config.
+3. Build messages with `UserMessage` helpers for text, dataframes, and images.
+   Use deterministic, readable image rendering and fail on empty evidence.
+4. Use plain strings for static prompts and f-strings only when interpolating
+   values. Put unit-specific facts in the user message.
+5. Write a stable serializable artifact when downstream hydrators or evals need
+   a model-independent key.
 
-Use for one-shot structured generation with no tool loop.
-
-Inherit from:
-- `AIWorkflowMixin[YourProcessObject, YourOutputSchema]`
-- `BaseProcessor[YourProcessObject]`
-
-Required members:
-- `output_schema`
-- `system_prompt` or `_build_system_prompt(...)`
-- `_build_user_message(...)`
-
-Optional overrides:
-- `_attach_response(...)`
-- `_attach_usage(...)`
-
-### Agent processor
-
-Use for multi-turn reasoning with tools.
-
-Inherit from:
-- `AIAgentMixin[YourProcessObject, YourOutputSchema]`
-- `BaseProcessor[YourProcessObject]`
-
-Required members:
-- `output_schema`
-- `system_prompt` or `_build_system_prompt(...)`
-- `_build_user_message(...)`
-- `_build_tools(...)`
-
-Agent processors also require `max_turns` in `AIProcessorConfig`.
-
-## Config Surface
-
-Use `AIProcessorConfig` or a small subclass of it for processor config.
-
-Important fields from the installed `mi.ai` package:
-- `model`: required provider/model identifier such as `azure:gpt-5.4`
-- `backend`: defaults to `"auto"`
-- `reasoning_effort`: defaults to `medium`
-- `max_turns`: defaults to `10`
-- `attach_usage`: defaults to `True`
-- `attach_response`: defaults to `True`
-- `timeout`
-- `retries`: defaults to `3`
-- `output_retries`
-- `tool_timeout`
-- `provider_options`
-- `backend_options`
-
-Keep config focused. Do not bury prompt content or business logic in config objects.
-
-## Structured Outputs
-
-AI outputs should be structured Pydantic models, not raw strings.
-
-Recommended pattern:
-- define a dedicated `BaseModel`,
-- set `output_schema = YourSchema`,
-- forbid extra fields when the output contract matters.
-
-```python
-from pydantic import BaseModel, ConfigDict, Field
-
-
-class ClassificationResult(BaseModel):
-    """Structured AI classification output."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    classification: str = Field(...)
-    confidence: str = Field(...)
-    explanation: str = Field(...)
-```
-
-## Message Construction
-
-`mi.ai` accepts `UserMessage` or `UserMessageBuilder`. Either is valid because the mixin resolves builders automatically.
-
-Use these helpers:
-- `UserMessage().add_text(...)`
-- `UserMessage().add_dataframe(df, string_format="csv")`
-- `UserMessage().add_image_bytes(data, media_type="image/png")`
-- `ImageContent.from_bytes(...)`
-- `convert_dataframe_to_string(df, "csv" | "json" | "markdown" | "dataframe")`
-
-Prefer `"csv"` for DataFrame inputs unless the task clearly benefits from another format.
-
-## Prompt Style
-
-- Write system prompts as explicit f-strings.
-- Write user text blocks as explicit f-strings.
-- Do not use adjacent string-literal concatenation for prompts.
-- Keep system prompts narrow: task, rules, output criteria.
-- Put unit-specific facts in the user message, not the system prompt.
-
-## Input Shapes
-
-### Text
-
-Use `add_text(...)` for instructions, context, and derived observations.
-
-### Tabular
-
-Use `add_dataframe(...)` or `convert_dataframe_to_string(...)` instead of ad hoc table formatting.
-
-Supported DataFrame string formats from the installed `mi.ai` package:
-- `"csv"`
-- `"json"`
-- `"markdown"`
-- `"dataframe"`
-
-```python
-from mi.ai import UserMessage
-
-
-def _build_user_message(self, data_object: YourProcessObject) -> UserMessage:
-    """Build the user message for the current unit."""
-
-    return (
-        UserMessage()
-        .add_text(f"Analyze unit {data_object.unit_id}.")
-        .add_dataframe(data_object.get_window_dataframe(), string_format="csv")
-    )
-```
-
-### Images
-
-Use deterministic static rendering for AI-facing plots or charts. In AI paths:
-- render with a deterministic backend,
-- keep labels and legend readable,
-- fail fast on empty data windows,
-- do not send blank fallback images.
-
-Attach image content with:
-- `UserMessage.add_image_bytes(...)`
-- `UserMessage.add_image(...)`
-- `ImageContent.from_bytes(...)`
-
-## Workflow Skeleton
+The registry discovers the processor config from its concrete annotation. Use
+this pattern:
 
 ```python
 from mi.ai import AIProcessorConfig, AIWorkflowMixin, UserMessage
 from mi.core.processors import BaseProcessor
+from pydantic import BaseModel, ConfigDict
+
+
+class ClassificationResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    classification: str
+    explanation: str
 
 
 class ClassificationProcessorConfig(AIProcessorConfig):
-    """AI config for classification workflow."""
+    """Typed configuration for this workflow."""
 
 
 class ClassificationProcessor(
     AIWorkflowMixin[YourProcessObject, ClassificationResult],
     BaseProcessor[YourProcessObject],
 ):
-    """Run one structured AI classification call."""
-
     output_schema = ClassificationResult
+    config: ClassificationProcessorConfig
+
+    def __init__(
+        self,
+        config: ClassificationProcessorConfig | None = None,
+    ) -> None:
+        resolved_config = config or ClassificationProcessorConfig()
+        super().__init__(resolved_config)
+        self.config = resolved_config
 
     def _build_system_prompt(self, data_object: YourProcessObject) -> str:
-        """Build the system prompt."""
-
-        return f"You classify the unit outcome using the provided evidence."
+        return "Classify the unit from the supplied evidence."
 
     def _build_user_message(self, data_object: YourProcessObject) -> UserMessage:
-        """Build the user message."""
-
         return (
             UserMessage()
             .add_text(f"Unit ID: {data_object.unit_id}")
@@ -210,83 +105,54 @@ class ClassificationProcessor(
         )
 
     def _attach_response(
-        self, data_object: YourProcessObject, response: ClassificationResult
+        self,
+        data_object: YourProcessObject,
+        response: ClassificationResult,
     ) -> None:
-        """Store a stable artifact for downstream hydrators."""
-
-        data_object.set_artifact("ai_classification", response)
+        data_object.set_artifact("ai_classification", response.model_dump())
 ```
 
-## Agent Tool Patterns
+## Tool And Evidence Rules
 
-Prefer small, deterministic tools with clear names and docstrings.
+- Keep tools deterministic, narrowly named, documented, and bounded.
+- Do deterministic computation outside the model loop.
+- Do not expose filesystem, network, or other authority the task does not need.
+- Use synchronous tools unless current `mi.ai` source explicitly supports the
+  required async path.
+- Do not send blank fallback images or ad hoc table serialization.
+- Leave enough turn and tool-call budget for deferred discovery, execution, and
+  final structured output.
 
-Use `@ai_tool(...)` when possible:
+Read `mi-core/core/src/mi/docs/ai.md` only when implementing these advanced
+surfaces; it owns current constructors, supported return shapes, loaders, and
+provider behavior.
 
-```python
-from mi.ai import ToolContext, ai_tool
+## Stable Pipeline Handoff
 
+The default response artifact includes processor and model names. Override
+`_attach_response(...)` when downstream code needs a stable key or multiple
+models share one pipeline contract.
 
-@ai_tool(name="fetch_recent_events")
-def fetch_recent_events(ctx: ToolContext[YourProcessObject], limit: int = 5) -> str:
-    """Return recent events relevant to the current unit."""
+Keep this chain explicit:
 
-    return ctx.data_object.get_recent_events(limit=limit)
-```
+1. Processor stores `response.model_dump()` under a stable process artifact.
+2. Process-to-action hydration copies it into the action decision.
+3. Finalization writes the decision payload into receipt metadata.
+4. Eval extraction reads that declared receipt contract.
 
-Tool context is inferred if the first parameter is annotated as `ToolContext[...]` or named `ctx`.
+Do not wrap normalized mixin errors unless adding actionable context. Fail
+clearly on missing artifacts, empty evidence, or unsupported inputs.
 
-Supported tool return shapes from `mi.ai`:
-- `str`
-- one `ContentBlock`
-- `list[ContentBlock]`
-- `pd.DataFrame` converted automatically to CSV text
+## Acceptance Checks
 
-Keep tools bounded. If a tool can compute the answer deterministically, prefer doing that outside the model loop entirely.
+Select affected layers from the
+[repository verification matrix](../project-guide/references/verification-matrix.md).
 
-## Attachment Behavior
-
-This is the most important default to understand from `mi.ai`:
-
-- If you do not override `_attach_response(...)`, the mixin stores `response.model_dump()` under the artifact key `{processor_name}_{model_name}_response`.
-- If you do not override `_attach_usage(...)`, the mixin stores usage under `{processor_name}_{model_name}_usage`.
-
-That default is often wrong for pipeline contracts because downstream hydrators and evals usually need a stable artifact key such as `ai_classification`.
-
-Override `_attach_response(...)` when:
-- downstream hydrators expect a stable artifact name,
-- multiple models may run against the same pipeline contract,
-- eval orchestration reads a specific payload from receipt metadata.
-
-If the processor output drives evals, keep this chain stable:
-1. AI processor writes a stable artifact on the process object.
-2. Process-to-action hydrator copies that artifact into the action decision payload.
-3. Finalize action hydrator writes the final payload into act-stage receipt metadata.
-
-Use `$agent-eval-builder` for the eval-side contract.
-
-## Error Handling
-
-The mixins already normalize raised exceptions into `ValueError` with the processor name prefix. Do not wrap errors again unless you are adding materially better context.
-
-Private helpers can assume validated inputs. Public processor behavior should fail clearly on missing required artifacts, empty data windows, or unsupported prompt inputs.
-
-## Implementation Checklist
-
-Before finishing an AI processor:
-1. Confirm AI is justified over compute-only logic.
-2. Define the output schema first.
-3. Choose workflow or agent shape deliberately.
-4. Build the user message with `mi.ai` helpers instead of custom serializers.
-5. Override `_attach_response(...)` if downstream code needs a stable artifact key.
-6. Keep the final AI determination flowing into receipt metadata if the pipeline exposes it as an output.
-7. Verify prompts are explicit f-strings and easy to edit.
-
-## When Exact API Details Matter
-
-This skill is based on the installed package in the local environment. If you need exact behavior beyond the guidance above, inspect:
-- `mi.ai.message`
-- `mi.ai.mixins.base`
-- `mi.ai.mixins.workflow`
-- `mi.ai.mixins.agent`
-- `mi.ai.tools`
+- AI is justified and the workflow-versus-agent choice is explicit.
+- Output and typed config contracts are registry-discoverable.
+- Prompts are concise; tools and deferred behavior are minimal.
+- The stable artifact reaches the declared receipt/eval path.
+- Focused tests pass.
+- One exact, explicitly versioned published benchmark example runs through the
+  pipeline runner. Do not create a one-example eval occurrence for this
+  development check.

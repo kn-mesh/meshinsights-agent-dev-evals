@@ -1,0 +1,17 @@
+[project]
+name = "agent-dev-eval-ui"
+version = "0.1.0"
+description = "Reusable local web application for Agent Workbench eval exploration"
+requires-python = ">=3.13.5"
+dependencies = [
+    "agent-dev-eval-core",
+    "fastapi>=0.124.0",
+    "uvicorn[standard]>=0.38.0",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["agent_eval_ui"]

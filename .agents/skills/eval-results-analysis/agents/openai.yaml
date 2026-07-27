@@ -1,7 +1,7 @@
 interface:
-  display_name: "Eval-Results-Analysis"
-  short_description: "Analyze pipeline eval results from results and charts"
-  default_prompt: "Use $eval-results-analysis to review a specific pipeline eval run(s), inspect the relevant unit charts, and propose changes without rerunning evals or editing prompts unless I ask."
+  display_name: "Eval Results Analysis"
+  short_description: "Explain eval changes from concrete evidence"
+  default_prompt: "Use $eval-results-analysis to explain changes or regressions in completed eval results from concrete available evidence without rerunning evals or editing prompts."
 
 policy:
   allow_implicit_invocation: true

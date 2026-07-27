@@ -1,0 +1,76 @@
+schema_version: 1
+profile_id: spirax-failure-evaluation
+profile_version: 1
+
+benchmark_compatibility:
+  schema_keys:
+    - spirax-steam-trap-label
+
+output_fields:
+  - key: classification
+    actual:
+      receipt_metadata_path: [agent_output, classification, value]
+      type: string
+    presence: required
+    confidence:
+      receipt_metadata_path: [agent_output, classification, confidence]
+      values: [High, Low]
+    evaluation:
+      benchmark_label_path: [classification]
+      grader:
+        id: core.exact
+        version: 1
+
+  - key: root_cause
+    actual:
+      receipt_metadata_path: [agent_output, root_cause, value]
+      type: string
+    presence:
+      conditional:
+        equals:
+          path: [benchmark, labels, classification]
+          value: Failure
+    confidence:
+      receipt_metadata_path: [agent_output, root_cause, confidence]
+      values: [High, Low]
+    evaluation:
+      benchmark_label_path: [root_cause]
+      grader:
+        id: core.exact
+        version: 1
+
+slices:
+  - key: healthy
+    label: Healthy
+    where:
+      equals:
+        path: [benchmark, labels, classification]
+        value: Healthy
+
+  - key: expected-failure
+    label: Expected Failure
+    where:
+      equals:
+        path: [benchmark, labels, classification]
+        value: Failure
+
+  - key: open-failure
+    label: Open Failure
+    where:
+      equals:
+        path: [benchmark, labels, root_cause]
+        value: Open Failure
+
+  - key: closed-failure
+    label: Closed Failure
+    where:
+      equals:
+        path: [benchmark, labels, root_cause]
+        value: Closed Failure
+
+  - key: unknown-failure
+    label: Unknown Failure
+    where:
+      equals:
+        path: [benchmark, labels, root_cause]
+        value: Unknown

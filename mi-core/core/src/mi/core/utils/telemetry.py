@@ -23,7 +23,7 @@ See docs/utilities.md for telemetry configuration guidance.
 
 import logging
 import os
-from typing import Any
+from typing import Any, Mapping, Sequence
 
 from opentelemetry import trace
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
@@ -31,6 +31,7 @@ from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapProp
 # Semantic conventions for mi-core spans
 ATTR_COMPONENT_LAYER = "component.layer"
 ATTR_COMPONENT_TYPE = "component.type"
+ATTR_MI_CORE_SPAN = "meshinsights.span"
 
 logging.getLogger("opentelemetry.sdk.resources").setLevel(logging.CRITICAL)
 
@@ -38,6 +39,65 @@ _propagator = TraceContextTextMapPropagator()
 _configured = False
 _tracer_provider: Any = None
 _bootstrapped = False
+
+
+class _MiCoreTracer:
+    """Mark mi-core spans so Logfire can exclude routine pipeline telemetry."""
+
+    def __init__(self, tracer: trace.Tracer) -> None:
+        self._tracer = tracer
+
+    @staticmethod
+    def _marked_attributes(attributes: Mapping[str, Any] | None) -> dict[str, Any]:
+        marked = dict(attributes or {})
+        marked[ATTR_MI_CORE_SPAN] = True
+        return marked
+
+    def start_as_current_span(
+        self,
+        name: str,
+        context: Any = None,
+        kind: trace.SpanKind = trace.SpanKind.INTERNAL,
+        attributes: Mapping[str, Any] | None = None,
+        links: Sequence[trace.Link] | None = None,
+        start_time: int | None = None,
+        record_exception: bool = True,
+        set_status_on_exception: bool = True,
+        end_on_exit: bool = True,
+    ) -> Any:
+        return self._tracer.start_as_current_span(
+            name,
+            context=context,
+            kind=kind,
+            attributes=self._marked_attributes(attributes),
+            links=links,
+            start_time=start_time,
+            record_exception=record_exception,
+            set_status_on_exception=set_status_on_exception,
+            end_on_exit=end_on_exit,
+        )
+
+    def start_span(
+        self,
+        name: str,
+        context: Any = None,
+        kind: trace.SpanKind = trace.SpanKind.INTERNAL,
+        attributes: Mapping[str, Any] | None = None,
+        links: Sequence[trace.Link] | None = None,
+        start_time: int | None = None,
+        record_exception: bool = True,
+        set_status_on_exception: bool = True,
+    ) -> trace.Span:
+        return self._tracer.start_span(
+            name,
+            context=context,
+            kind=kind,
+            attributes=self._marked_attributes(attributes),
+            links=links,
+            start_time=start_time,
+            record_exception=record_exception,
+            set_status_on_exception=set_status_on_exception,
+        )
 
 
 def _ensure_configured() -> None:
@@ -120,7 +180,7 @@ def get_tracer(
         if _tracer_provider is not None:
             return _tracer_provider.get_tracer(tracer_name)
         # SDK not available — fall through to global provider (API no-op)
-    return trace.get_tracer_provider().get_tracer(tracer_name)
+    return _MiCoreTracer(trace.get_tracer_provider().get_tracer(tracer_name))  # type: ignore[return-value]
 
 
 def get_current_span() -> trace.Span:
@@ -142,6 +202,39 @@ def set_span_error(span: trace.Span, exception: BaseException) -> None:
     span.set_status(trace.Status(trace.StatusCode.ERROR, str(exception)))
 
 
+def report_pipeline_error(
+    exception: BaseException,
+    *,
+    pipeline_name: str,
+    pipeline_unit: str,
+    stage: str,
+) -> None:
+    """Send a single, focused Logfire error event for a pipeline failure."""
+    marker = "_meshinsights_logfire_reported"
+    if getattr(exception, marker, False):
+        return
+    try:
+        setattr(exception, marker, True)
+    except Exception:
+        pass
+
+    try:
+        import logfire  # pyright: ignore[reportMissingImports]
+
+        logfire.exception(
+            "Pipeline error in {stage}",
+            stage=stage,
+            pipeline_name=pipeline_name,
+            pipeline_unit=pipeline_unit,
+            exception_type=type(exception).__name__,
+            error=str(exception),
+        )
+    except Exception:
+        logging.getLogger(__name__).debug(
+            "Unable to report pipeline error to Logfire", exc_info=True
+        )
+
+
 def bootstrap_telemetry() -> None:
     """Auto-detect and initialize application-level telemetry.
 
@@ -150,11 +243,13 @@ def bootstrap_telemetry() -> None:
 
     Detection order:
         1. If ``logfire`` is installed (comes with the ``[ai]`` extra),
-           call ``logfire.configure()``.  Logfire reads its own env vars
+           call ``logfire.configure()`` with routine mi-core spans filtered out,
+           then enable Pydantic AI instrumentation.
+           Logfire reads its own env vars
            (``LOGFIRE_TOKEN``, ``LOGFIRE_SEND_TO_LOGFIRE``, etc.) and sets
            the global TracerProvider.  When no token is present it still
-           configures a local-only provider that instruments pydantic-ai
-           and other integrations.
+           configures a local-only provider. Pydantic AI instrumentation records
+           model prompts, responses, tool calls, and binary content.
         2. Otherwise, if ``OTEL_EXPORTER_OTLP_ENDPOINT`` is set **and**
            the OpenTelemetry SDK is available, configure a basic global
            TracerProvider with OTLP export.
@@ -173,10 +268,48 @@ def bootstrap_telemetry() -> None:
     # --- 1. Try Logfire (installed via [ai] extra) ---
     try:
         import logfire  # pyright: ignore[reportMissingImports]
+        from opentelemetry.sdk.trace.sampling import (
+            Decision,
+            SamplingResult,
+            TraceIdRatioBased,
+        )
+
+        class _AiAndErrorsSampler(TraceIdRatioBased):
+            """Keep AI/error spans while dropping marked mi-core pipeline spans."""
+
+            def __init__(self) -> None:
+                super().__init__(1.0)
+
+            def should_sample(
+                self,
+                parent_context: Any,
+                trace_id: int,
+                name: str,
+                kind: trace.SpanKind | None = None,
+                attributes: Mapping[str, Any] | None = None,
+                links: Sequence[trace.Link] | None = None,
+                trace_state: trace.TraceState | None = None,
+            ) -> SamplingResult:
+                if attributes and attributes.get(ATTR_MI_CORE_SPAN):
+                    return SamplingResult(Decision.DROP, trace_state=trace_state)
+                return super().should_sample(
+                    parent_context,
+                    trace_id,
+                    name,
+                    kind,
+                    attributes,
+                    links,
+                    trace_state,
+                )
 
         logfire.configure(
             send_to_logfire="if-token-present",
             console=False,
+            sampling=logfire.SamplingOptions(head=_AiAndErrorsSampler()),
+        )
+        logfire.instrument_pydantic_ai(
+            include_content=True,
+            include_binary_content=True,
         )
         logger.debug("Telemetry bootstrapped via Logfire")
         return

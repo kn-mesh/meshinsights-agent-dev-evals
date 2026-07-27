@@ -1,0 +1,35 @@
+name: pulse_alarm_failure_analysis_v1_3
+version: 1.3.0
+
+metadata_class: BenchmarkExamplePipelineMetadata
+
+benchmark_contract:
+  published_contract_schema_version: 2
+  evidence_recipe_id: spirax-steam-trap-evidence@v2
+  source_snapshot_contract: azure-blob-sha256-v1
+  required_artifact_kinds: [telemetry, alarms]
+
+objects:
+  process: PulseFailureAnalysisProcessObject
+  action: PulseFailureAnalysisActionObject
+
+retrieve:
+  hydrator: V1_3RetrieveToProcessHydrator
+  retrievers:
+    - retriever: SpiraxFrozenEvidenceRetriever
+
+process:
+  hydrator: V1_3ProcessToActionHydrator
+  processors:
+    - processor: V1_3TemperatureGraphsProcessor
+      window_days_list: [7, 30, 365]
+      segment_count: 4
+    - processor: V1_3AlarmClassificationAIWorkflowProcessor
+      timeout: 120
+      transport_retries: 3
+      output_retries: 0
+
+action:
+  hydrator: V1_3FinalizeActionHydrator
+  actions:
+    - action: NoOpAction

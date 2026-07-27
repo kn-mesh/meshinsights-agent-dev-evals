@@ -4,7 +4,17 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, TypeAlias, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Sequence,
+    TypeAlias,
+    TypeVar,
+    get_origin,
+    get_type_hints,
+)
 
 from mi.ai.message import ContentBlock, ToolContentResult, normalize_content_blocks
 
@@ -58,10 +68,26 @@ class Tool:
         if annotation is inspect.Signature.empty:
             return first.name == "ctx"
 
+        try:
+            annotation = get_type_hints(
+                self.function,
+                include_extras=True,
+            ).get(first.name, annotation)
+        except (NameError, TypeError):
+            pass
+
+        if isinstance(annotation, str):
+            annotation_name = (
+                annotation.split("[", maxsplit=1)[0]
+                .strip(" '\"")
+                .rsplit(".", maxsplit=1)[-1]
+            )
+            return annotation_name == "ToolContext" or first.name == "ctx"
+
         if annotation is ToolContext:
             return True
 
-        return getattr(annotation, "__origin__", None) is ToolContext
+        return get_origin(annotation) is ToolContext or first.name == "ctx"
 
 
 ToolLike = Tool | Callable[..., ToolContentResult]
@@ -69,9 +95,12 @@ ToolLike = Tool | Callable[..., ToolContentResult]
 
 @dataclass(slots=True)
 class ToolSet:
-    """Container for an explicit set of tools."""
+    """Reusable collection of tools with optional shared instructions."""
 
     tools: list[Tool] = field(default_factory=list)
+    instructions: str | None = None
+    id: str | None = None
+    defer_loading: bool = False
 
     @classmethod
     def builder(cls) -> "ToolSetBuilder":
@@ -83,6 +112,9 @@ class ToolSetBuilder:
     """Fluent builder for composing tool sets."""
 
     _tools: list[Tool] = field(default_factory=list)
+    _instructions: str | None = None
+    _id: str | None = None
+    _defer_loading: bool = False
 
     def add(self, tool: ToolLike) -> "ToolSetBuilder":
         self._tools.append(as_tool(tool))
@@ -93,8 +125,28 @@ class ToolSetBuilder:
             self._tools.append(as_tool(tool))
         return self
 
+    def with_instructions(self, instructions: str) -> "ToolSetBuilder":
+        """Attach instructions that travel with this toolset."""
+        self._instructions = instructions
+        return self
+
+    def with_id(self, toolset_id: str) -> "ToolSetBuilder":
+        """Assign a stable identifier to this toolset."""
+        self._id = toolset_id
+        return self
+
+    def deferred(self, enabled: bool = True) -> "ToolSetBuilder":
+        """Control whether tools are exposed through deferred discovery."""
+        self._defer_loading = enabled
+        return self
+
     def build(self) -> ToolSet:
-        return ToolSet(tools=list(self._tools))
+        return ToolSet(
+            tools=list(self._tools),
+            instructions=self._instructions,
+            id=self._id,
+            defer_loading=self._defer_loading,
+        )
 
 
 ToolCollectionLike: TypeAlias = Sequence[ToolLike] | ToolSet | ToolSetBuilder
@@ -148,3 +200,8 @@ def normalize_tools(value: ToolCollectionLike) -> list[Tool]:
     if isinstance(value, ToolSet):
         return list(value.tools)
     return [as_tool(tool) for tool in value]
+
+
+def normalize_toolsets(value: Sequence[ToolSet | ToolSetBuilder]) -> list[ToolSet]:
+    """Normalize explicit and builder-based toolset collections."""
+    return [item.build() if isinstance(item, ToolSetBuilder) else item for item in value]

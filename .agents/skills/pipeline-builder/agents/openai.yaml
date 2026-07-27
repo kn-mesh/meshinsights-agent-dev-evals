@@ -1,7 +1,7 @@
 interface:
   display_name: "Pipeline-Builder"
-  short_description: "Build staged repo pipelines from visualization to eval-ready runs"
-  default_prompt: "Use $pipeline-builder to build or evolve a use-case pipeline in this repo, following the staged workflow from visualization to YAML control pipeline, optional AI, and eval-ready receipt outputs."
+  short_description: "Build exact-example pipelines with eval-ready receipts"
+  default_prompt: "Use $pipeline-builder to build or evolve an exact-example use-case pipeline with stable receipt outputs and a clean handoff to eval orchestration."
 
 policy:
   allow_implicit_invocation: true

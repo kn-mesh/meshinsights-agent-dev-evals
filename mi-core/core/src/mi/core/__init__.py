@@ -18,6 +18,7 @@ from .retrievers import *
 from .actions import *
 from .hydrators import *
 from .registry import *
+from .versioning import *
 
 from .pipeline_receipt import PipelineReceipt, StageReceipt
 from .pipeline import Pipeline, PipelineConfig, PipelineMetadata

@@ -26,17 +26,24 @@ class AIWorkflowMixin(AIProcessorMixin[PDO, OutputT]):
                 output_schema=self._get_output_schema(),
                 reasoning_spec=self._get_reasoning_spec(),
                 reasoning_effort=self._get_reasoning_effort(),
-                retries=self._get_retries(),
+                transport_retries=self._get_transport_retries(),
+                output_retries=self._get_effective_output_retries(),
+                usage_limits=self._get_usage_limits(request_limit=None),
                 timeout=self._get_timeout(),
                 provider_options=self._get_provider_options(),
                 backend_options=self._get_backend_options(),
+                capture_review=self._review_capture_enabled(metadata),
             )
 
             self.logger.info(
-                f"AI workflow: model={request.model.canonical()}, backend={self.config.backend}, retries={request.retries}"
+                f"AI workflow: model={request.model.canonical()}, backend={self.config.backend}, transport_retries={request.transport_retries}, output_retries={request.output_retries}"
             )
 
             result = backend.run_workflow(request)
+            self._attach_performance(data_object, result.performance)
+
+            if request.capture_review:
+                self._attach_review(data_object, result.review)
 
             if self._should_attach_response():
                 self._attach_response(data_object, result.output)
@@ -47,4 +54,10 @@ class AIWorkflowMixin(AIProcessorMixin[PDO, OutputT]):
                 )
 
         except Exception as exc:
+            performance = getattr(exc, "performance", None)
+            if isinstance(performance, dict):
+                self._attach_performance(data_object, performance)
+            review = getattr(exc, "review", None)
+            if isinstance(review, dict) and self._review_capture_enabled(metadata):
+                self._attach_review(data_object, review)
             raise self._normalize_error(exc, "Workflow") from exc
