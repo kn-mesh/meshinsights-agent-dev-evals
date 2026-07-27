@@ -1,6 +1,6 @@
 ---
 name: external-runtime-setup
-description: Configure external auth, environment bootstrap, provider credentials, hosted benchmark access, telemetry, model catalogs, pricing, and runtime AI overrides for this repo. Use for `.env`, `mi auth`, provider:model validation, Logfire, startup order, or AI runtime failures.
+description: "Configure Agent Workbench external runtime integration: auth, environment bootstrap, provider credentials, hosted benchmark access, telemetry, model catalogs, pricing, and AI overrides. Use for `.env`, `mi auth`, provider:model validation, Logfire, or runtime failures."
 ---
 
 # External Runtime Setup
@@ -17,16 +17,14 @@ processor behavior, and `$run-use-case-evals` for eval execution.
 - Never commit secrets; use `.env`, CI secrets, or workload identity.
 - Keep provider validation, telemetry, and runtime overrides out of processors.
 - Treat `models.yaml` as the project model/API catalog and
-  `model_pricing.yaml` as reviewed reusable non-secret pricing.
-- Inspect current runners and editable `mi-core` source when behavior matters.
-- If the request explicitly authorizes the named reusable scope, proceed after
-  stating its ownership and focused tests. Otherwise, identify the exact
-  reusable paths/contracts and pause once for approval.
+  `model-pricing.yaml` as reviewed reusable non-secret pricing.
+- Inspect current runners and editable `packages/mi-core/` source when behavior
+  matters.
 
 ## Startup Order
 
 Normal pipeline and orchestrator runs bootstrap `.env` and telemetry through
-current `mi-core` defaults. A top-level app or runner that validates providers
+current `packages/mi-core/` defaults. A top-level app or runner that validates providers
 or initializes observability before execution must call:
 
 ```python
@@ -67,11 +65,11 @@ variables, Logfire alternatives, or focused troubleshooting.
 Use the existing configuration workflow:
 
 ```bash
-uv run python -m src.model_configuration list
-uv run python -m src.model_configuration set-default <provider:model>
+uv run python -m workbench.models.configuration list
+uv run python -m workbench.models.configuration set-default <provider:model>
 ```
 
-Add reusable reviewed vendor rates to `model_pricing.yaml`, then reference
+Add reusable reviewed vendor rates to `model-pricing.yaml`, then reference
 their key from `models.yaml`. Rates must be non-negative. Never fetch or refresh
 prices during an eval. The selected pricing record must be frozen into run
 identity so historical cost estimates remain stable.

@@ -5,12 +5,12 @@ requires-python = ">=3.13.5"
 [[package]]
 name = "agent-dev-eval-core"
 version = "0.1.0"
-source = { editable = "agent-dev-eval-core" }
+source = { editable = "packages/eval-core" }
 
 [[package]]
 name = "agent-dev-eval-ui"
 version = "0.1.0"
-source = { editable = "agent-dev-eval-ui" }
+source = { editable = "packages/eval-ui" }
 dependencies = [
     { name = "agent-dev-eval-core" },
     { name = "fastapi" },
@@ -1163,7 +1163,7 @@ wheels = [
 [[package]]
 name = "mesh-insights-template"
 version = "0.3.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "agent-dev-eval-core" },
     { name = "agent-dev-eval-ui" },
@@ -1190,13 +1190,13 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-dev-eval-core", editable = "agent-dev-eval-core" },
-    { name = "agent-dev-eval-ui", editable = "agent-dev-eval-ui" },
+    { name = "agent-dev-eval-core", editable = "packages/eval-core" },
+    { name = "agent-dev-eval-ui", editable = "packages/eval-ui" },
     { name = "azure-identity", specifier = ">=1.25.0" },
     { name = "azure-storage-blob", specifier = ">=12.28.0" },
     { name = "logfire", specifier = ">=4.22.0" },
     { name = "matplotlib", specifier = ">=3.10.8" },
-    { name = "mi-core", extras = ["ai"], editable = "mi-core/core" },
+    { name = "mi-core", extras = ["ai"], editable = "packages/mi-core/core" },
     { name = "pandas", specifier = "==2.3.3" },
     { name = "pandas-stubs", specifier = ">=2.3.3.251201" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.0" },
@@ -1208,7 +1208,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "basedpyright", specifier = ">=1.32.1" },
-    { name = "meshinsights-cli", editable = "mi-core/cli" },
+    { name = "meshinsights-cli", editable = "packages/mi-core/cli" },
     { name = "pytest", specifier = ">=7.0.0" },
     { name = "ruff", specifier = ">=0.1.0" },
 ]
@@ -1216,7 +1216,7 @@ dev = [
 [[package]]
 name = "meshinsights-cli"
 version = "0.5.2"
-source = { editable = "mi-core/cli" }
+source = { editable = "packages/mi-core/cli" }
 dependencies = [
     { name = "mi-core" },
     { name = "pyfiglet" },
@@ -1226,7 +1226,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mi-core", editable = "mi-core/core" },
+    { name = "mi-core", editable = "packages/mi-core/core" },
     { name = "pyfiglet", specifier = ">=1.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
@@ -1238,7 +1238,7 @@ provides-extras = ["dev"]
 [[package]]
 name = "mi-core"
 version = "0.5.2"
-source = { editable = "mi-core/core" }
+source = { editable = "packages/mi-core/core" }
 dependencies = [
     { name = "cachetools" },
     { name = "opentelemetry-api" },

@@ -1,7 +1,8 @@
 # Runtime Details
 
 Read this reference only while configuring or diagnosing external runtime
-integration. Confirm fast-moving names against current runner and `mi-core`
+integration. Confirm fast-moving names against current runner and
+`packages/mi-core/`
 source before changing code.
 
 ## Hosted Benchmark And Evidence Identity

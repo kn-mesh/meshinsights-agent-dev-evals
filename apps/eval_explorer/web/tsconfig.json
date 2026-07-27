@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@eval-ui/*": ["../../../packages/eval-ui/web/src/*"],
+      "@use-case/*": ["../../../use_case/explorer/*"],
+      "@tanstack/react-query": ["node_modules/@tanstack/react-query"],
+      "plotly.js": ["node_modules/@types/plotly.js"],
+      "react": ["node_modules/@types/react"],
+      "react/jsx-runtime": ["node_modules/@types/react/jsx-runtime.d.ts"],
+      "react-plotly.js/factory": ["node_modules/@types/react-plotly.js/factory.d.ts"]
+    },
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "types": ["vite/client"]
+  },
+  "include": ["src", "../../../packages/eval-ui/web/src", "../../../use_case/explorer"],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "../../../packages/eval-ui/web/src/**/*.test.ts",
+    "../../../packages/eval-ui/web/src/**/*.test.tsx",
+    "../../../use_case/explorer/**/*.test.ts",
+    "../../../use_case/explorer/**/*.test.tsx"
+  ]
+}

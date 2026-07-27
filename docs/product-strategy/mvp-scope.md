@@ -9,6 +9,13 @@ The MVP is focused on enabling a Mesh FDE to evaluate an agent, inspect the
 results, improve the agent, and repeat. It is not intended to prove the full
 Agent Launch journey or create the portable agent package.
 
+
+## Strategy - at MVP scope
+1. There is a `core` set of code/libraries/helpers which has zero use case specific code. These are building blocks which are not modified when creating a new project (unless there are new core features...so these are treated more as product/platform)
+2. There is a standard project structure which seprates the core code from the code structure that will be modified / populated (e.g. directory of empty folders that defines the structure, configurations of selectable LLMs which evolve over time and need to be easily editable)
+3. This MVP codebase has a reference use case (spirax steam trap failure classifications) which is used to test and build out functionality as well as show what this would look like for a new use case. Each use case gets it's own repo that includes the core code + template structure which is then populated with the necessary code. 
+
+
 ## Current MVP Boundary
 
 ### In scope
@@ -31,10 +38,11 @@ Agent Launch journey or create the portable agent package.
 
 ## Out of Scope
 
-This section makes the scope horizon explicit. A capability that is deferred
-beyond the MVP is not necessarily rejected permanently. A capability excluded
-from both the MVP and the near-term broader scope should not attract design or
-implementation work without a new product decision.
+- Mobile view (it's web browser only focused app)
+
+This section makes the scope horizon explicit. A capability that is deferred beyond the MVP is not necessarily rejected permanently. A capability excluded from both the MVP and the near-term broader scope should not attract design or implementation work without a new product decision.
+
+
 
 ### Deferred beyond the MVP
 
@@ -231,7 +239,7 @@ Cost estimates require a pricing snapshot for the selected model, including at
 least input-token and output-token rates. Vendor pricing is reusable Workbench
 configuration, not use-case configuration: `models.yaml` selects models and
 references billing identities, while reviewed rates live in
-`model_pricing.yaml` and can be shared by multiple provider aliases. The run
+`model-pricing.yaml` and can be shared by multiple provider aliases. The run
 must retain the resolved pricing snapshot so later price changes do not rewrite
 the historical estimate.
 
@@ -290,7 +298,7 @@ The product-level target is a visible separation between working and retained
 evals:
 
 ```text
-eval_results/
+.workbench/evals/
   working/
     <benchmark-key>/
       <benchmark-version>/
@@ -384,8 +392,7 @@ artifact meaning.
 
 ## Decision 4: Reusable Core Versus Reference Use Case
 
-**Status:** Decided for MVP. The physical migration remains feature-planning
-work.
+**Status:** Decided and physically implemented for MVP.
 
 ### Repository role
 
@@ -427,7 +434,7 @@ stable enough that its release overhead costs less than continued co-development
 ### Required replaceable boundary
 
 Reusable ownership must be clear, but it does not require one physical `core/`
-directory. In particular, `mi-core/` is an actual forked library with its own
+directory. In particular, `packages/mi-core/` is an actual forked library with its own
 pipeline-runtime purpose. Other reusable Workbench code must not be moved into
 or conflated with `mi-core`.
 
@@ -437,24 +444,31 @@ The target logical layout is:
 .agents/skills/
   root-level generic and use-case development skills
 
-mi-core/
-  forked reusable pipeline and AI runtime library
+packages/
+  mi-core/       forked reusable pipeline and AI runtime library
+  eval-core/     reusable evaluation library
+  eval-ui/       reusable review application library and UI shell
 
-agent-dev-eval-core/
-  reusable evaluation library
-
-agent-dev-eval-ui/
-  reusable review application library and UI shell
-
-<other use-case-neutral Workbench paths>
-  orchestration, bootstrap, versioning, and shared operator mechanics
+workbench/
+  reusable orchestration, bootstrap, versioning, model, lifecycle, publication,
+  storage, and shared operator mechanics
 
 use_case/
   project identity and Benchmark Studio connection
   durable use-case documentation
   objects, retrievers, evidence adapters, hydrators, processors, and actions
   pipeline, evaluation, and agent-version configurations
-  use-case-specific review UI schema and composition
+  use-case-specific review UI schema and adapters
+
+apps/
+  fixed application composition roots that connect workbench and use_case
+
+tests/
+  architecture/  cross-boundary, ownership, bootstrap, and skill contracts
+  workbench/     use-case-neutral reusable Workbench behavior
+
+.workbench/
+  ignored generated eval and promoted-agent-version artifacts
 ```
 
 Agent skills remain under the root-level `.agents/skills/` convention. Generic
@@ -462,10 +476,11 @@ skills ship with every template. Any Spirax-specific skills are removed or
 rewritten from that root directory when creating the new use case; they are not
 buried inside the use-case folder.
 
-The exact use-case directory name and the relocation of currently mixed root
-paths will be decided during feature planning. The required outcome is that a
-new project can replace one documented set of reference-use-case paths without
-deleting, searching through, or accidentally modifying reusable code.
+The fixed replaceable root is `use_case/`. Reference documentation,
+configurations, pipeline components, evidence adapters, explorer UI, and
+behavior tests live beneath it. Bootstrap clears exactly that directory and
+immediately creates the neutral standard skeleton; reusable product and project
+configuration remain in place.
 
 Repository-level environment bootstrap, dependency management, eval lifecycle
 commands, generic skills, and local result folders may remain outside the
@@ -513,7 +528,6 @@ All strategic deviations reviewed for the MVP now have a product-scope
 decision. The following implementation or longer-horizon decisions remain
 deferred:
 
-- the exact physical migration that creates the replaceable use-case seam;
 - the eventual split into independently versioned repositories or published
   packages;
 - automatic upgrade propagation among use-case repositories;

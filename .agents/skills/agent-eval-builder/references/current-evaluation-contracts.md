@@ -19,31 +19,32 @@ it into another use case.
 
 ## Ownership Map
 
-- `src/benchmarks/models.py` defines published benchmark, full label payload,
+- `workbench/benchmarks/models.py` defines published benchmark, full label payload,
   frozen label schema, example, and source-artifact models.
-- `src/benchmarks/postgres_repository.py` loads published-contract schema
+- `workbench/benchmarks/postgres_repository.py` loads published-contract schema
   version 2 directly from Azure PostgreSQL with Entra authentication.
-- `evaluation_configs/*.eval.yaml` contains project-owned evaluation profiles.
-- `src/evals/evaluation_profile.py` validates profiles, predicates, preflight,
+- `use_case/evaluation_configs/*.eval.yaml` contains project-owned evaluation profiles.
+- `workbench/evals/evaluation_profile.py` validates profiles, predicates, preflight,
   and local slice membership.
-- `src/evals/scoring.py` validates configured outputs and invokes graders.
-- `src/evals/eval_orchestration.py` coordinates selection, execution,
+- `workbench/evals/scoring.py` validates configured outputs and invokes graders.
+- `workbench/evals/eval_orchestration.py` coordinates selection, execution,
   aggregation, result materialization, and current CLI options.
-- `src/evals/run_specs.py` and `src/evals/run_store.py` implement deterministic
+- `workbench/evals/run_specs.py` and `workbench/evals/run_store.py` implement deterministic
   run-spec identity, unique eval occurrences, attempts, locking, exact-ID
   resume/rerun selection, and materialization.
-- `agent-dev-eval-core/evaluation/` contains shared attempt, grader, metric,
+- `packages/eval-core/evaluation/` contains shared attempt, grader, metric,
   execution, serialization, review, and explorer-query mechanics.
-- `src/agent_versions/` resolves and promotes content-addressed candidate
+- `workbench/agent_versions/` resolves and promotes content-addressed candidate
   versions using Git/source state, policies, contracts, assets, and a local CAS.
-- `src/evals/inspection.py`, `src/evals/inspection_cli.py`, and
-  `agent-dev-eval-core/evaluation/review.py` implement local review capture and
+- `workbench/evals/inspection.py`, `workbench/evals/inspection_cli.py`, and
+  `packages/eval-core/evaluation/review.py` implement local review capture and
   inspection.
-- `src/apps/eval_explorer.py`, `agent-dev-eval-ui/`, and `www/` implement the
+- `workbench/apps/eval_explorer.py`, `packages/eval-ui/`, and
+  `apps/eval_explorer/web/` implement the
   local human explorer.
-- `src/eval_lifecycle/` implements the supported working/retained lifecycle,
+- `workbench/eval_lifecycle/` implements the supported working/retained lifecycle,
   compact elevation, retained verification, and permanent exact deletion.
-- `src/eval_publication/` implements retained-eval publication preflight, the
+- `workbench/eval_publication/` implements retained-eval publication preflight, the
   versioned cloud subset, dry run, Azure conditional creation, and verification.
 
 ## Current Execution Path
@@ -116,7 +117,7 @@ New evals use occurrence-aware schema version 2 and retain compact top-level
 
 Every new run begins under:
 
-- `eval_results/working/<benchmark>/v<version>/<run-id>/`
+- `.workbench/evals/working/<benchmark>/v<version>/<run-id>/`
 
 The rich working layout separates:
 
@@ -143,7 +144,7 @@ is complete: zero planned work items are missing and every planned work item
 has a latest recorded attempt. Its scope may be all examples, named sections,
 or explicit units/examples. Complete selected occurrences may be elevated to:
 
-- `eval_results/retained/<benchmark>/v<version>/<retained-eval-id>/`
+- `.workbench/evals/retained/<benchmark>/v<version>/<retained-eval-id>/`
 
 Elevation always creates a schema-v2 retained eval with a non-circular identity
 seed bound to the occurrence, benchmark, source state, and agent version. It is
@@ -152,7 +153,7 @@ a compact aggregate containing `manifest.json`,
 `evidence-references.json`, and an optional `agent.patch`. Retained evals never
 contain per-unit files, performance detail, review objects, or local copies of
 Azure evidence. Shared meaningful agent-version records live under
-`eval_results/retained/agent_versions/`. After retained verification succeeds,
+`.workbench/evals/retained/agent_versions/`. After retained verification succeeds,
 elevation permanently removes the source working occurrence so one eval is not
 listed in both lifecycle states.
 
@@ -186,7 +187,7 @@ to solve a presentation or filtering task.
 
 ## Local Lifecycle Maintenance
 
-`src/eval_lifecycle/` is the supported MVP lifecycle. It lists explicit working
+`workbench/eval_lifecycle/` is the supported MVP lifecycle. It lists explicit working
 and retained evals, previews and elevates complete selected occurrences,
 verifies compact retained artifacts, and permanently deletes an exact working
 or retained eval.

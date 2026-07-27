@@ -19,11 +19,8 @@ dependencies = [
     "azure-identity>=1.25.0",
     "psycopg[binary]>=3.2.0",
 ]
-[build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [tool.uv]
+package = false
 dev-dependencies = [
     "pytest>=7.0.0",
     "ruff>=0.1.0",
@@ -32,23 +29,23 @@ dev-dependencies = [
 ]
 
 [tool.uv.sources]
-agent-dev-eval-core = { path = "agent-dev-eval-core", editable = true }
-agent-dev-eval-ui = { path = "agent-dev-eval-ui", editable = true }
-mi-core = { path = "mi-core/core", editable = true }
-meshinsights-cli = { path = "mi-core/cli", editable = true }
+agent-dev-eval-core = { path = "packages/eval-core", editable = true }
+agent-dev-eval-ui = { path = "packages/eval-ui", editable = true }
+mi-core = { path = "packages/mi-core/core", editable = true }
+meshinsights-cli = { path = "packages/mi-core/cli", editable = true }
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 
 [tool.basedpyright]
-include = ["src", "agent-dev-eval-core/evaluation", "model_catalog.py"]
-extraPaths = ["agent-dev-eval-core", "agent-dev-eval-ui"]
+include = ["workbench", "use_case", "apps", "packages/eval-core/evaluation"]
+extraPaths = ["packages/eval-core", "packages/eval-ui"]
 typeCheckingMode = "standard"
 pythonVersion = "3.13"
 venvPath = "."
 venv = ".venv"
 
 [tool.meshinsights-pipeline]
-scan_paths = ["src/**/*.py"]
+scan_paths = ["workbench/**/*.py", "use_case/**/*.py"]
 exclude_paths = ["**/tests/**", ".venv/**"]
 auto_scan = true

@@ -1,5 +1,5 @@
 interface:
-  display_name: "Pipeline-Builder"
+  display_name: "Pipeline Builder"
   short_description: "Build exact-example pipelines with eval-ready receipts"
   default_prompt: "Use $pipeline-builder to build or evolve an exact-example use-case pipeline with stable receipt outputs and a clean handoff to eval orchestration."
 

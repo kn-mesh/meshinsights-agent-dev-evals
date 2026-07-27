@@ -1,6 +1,6 @@
 ---
 name: port-eval-explorer-use-case
-description: Port a use case from an existing MeshInsights Benchmark Studio app into the Agent Workbench eval explorer. Use when an AI coding agent must reuse the generic run, attempt, review, and evidence-loading core while implementing the use-case-specific frozen-evidence normalization, schema, and charts.
+description: Port a Benchmark Studio use case into the Agent Workbench eval explorer. Use for project-specific frozen-evidence normalization, schema, and charts while reusing the generic explorer core. Do not use for pipeline or agent behavior changes.
 ---
 
 # Port Eval Explorer Use Case
@@ -24,22 +24,19 @@ database code. Benchmark Studio remains the source of benchmark truth.
 
 Reuse these generic layers without adding use-case names or artifact fields:
 
-- `agent-dev-eval-core/evaluation/`: result querying and state classification;
-- `agent-dev-eval-ui/agent_eval_ui/`: local read-only API and static hosting; and
-- `agent-dev-eval-ui/web/src/`: run picker, filters, attempt detail, tool trace,
+- `packages/eval-core/evaluation/`: result querying and state classification;
+- `packages/eval-ui/agent_eval_ui/`: local read-only API and static hosting; and
+- `packages/eval-ui/web/src/`: run picker, filters, attempt detail, tool trace,
   tabs, JSON views, and generic chart primitives.
 
 Put custom behavior only in:
 
-- `src/evidence/`: verified artifact decoding, normalization, and the project
+- `use_case/evidence/`: verified artifact decoding, normalization, and the project
   evidence envelope; and
-- `www/src/use_case/`: schema validation and evidence composition/charts.
+- `use_case/explorer/`: schema validation and evidence composition/charts.
 
-If the request explicitly authorizes the named reusable scope, proceed after
-stating its ownership and focused tests. Otherwise, identify the exact reusable
-paths/contracts and pause once for approval. Keep business meaning, artifact
-names, thresholds, and domain-specific layout in manifest-declared reference
-paths.
+Keep business meaning, artifact names, thresholds, and domain-specific layout
+in manifest-declared reference paths.
 
 ## 3. Port The Evidence Path
 
@@ -52,10 +49,10 @@ paths.
    `EvidenceStore`; preserve hash/size verification and the decision timestamp
    cutoff. Do not re-query the current publication catalog for historical runs.
 3. Recreate Benchmark Studio's normalization and derived fields in
-   `src/evidence/`. Never query a live source system or infer data from labels.
+   `use_case/evidence/`. Never query a live source system or infer data from labels.
 4. Return a versioned, JSON-serializable envelope containing provenance,
    example identity, normalized evidence, coverage, and known gaps.
-5. Define the matching Zod schema in `www/src/use_case/` and compose core UI
+5. Define the matching Zod schema in `use_case/explorer/` and compose core UI
    primitives into the domain views. A custom React component is the escape
    hatch; do not force every use case into one declarative chart grammar.
 6. Register the project adapter in the root UI. Do not add a switch statement

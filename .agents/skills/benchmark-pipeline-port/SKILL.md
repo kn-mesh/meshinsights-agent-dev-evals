@@ -1,6 +1,6 @@
 ---
 name: benchmark-pipeline-port
-description: Port a working use-case evidence pipeline from MeshInsights Benchmark Studio into a clean Agent Workbench project. Use for adapting retrieval, normalization, visualization, objects, deterministic processors, dependencies, pipeline wiring, and tests as the base for agent development. For later pipeline evolution use pipeline-builder.
+description: Port an initial Benchmark Studio evidence pipeline into Agent Workbench. Use for frozen-evidence retrieval, decoding, normalization, control wiring, receipts, and tests. For later variants use pipeline-builder; for explorer-only work use port-eval-explorer-use-case.
 ---
 
 # Benchmark Pipeline Port
@@ -19,14 +19,12 @@ Use `$pipeline-builder` for the target shape,
   source files.
 - Confirm the target has no customer code that would be overwritten. Ask before
   proceeding when source changes or target ownership overlap is ambiguous.
-- Read both repositories' instructions, target `docs/use_case/`, source recipe,
+- Read both repositories' instructions, target `use_case/docs/`, source recipe,
   label schema, pipeline, visualization, dependencies, and focused tests.
 - Benchmark Studio owns benchmark, label, review, and publication truth. The
   target consumes published versions and frozen evidence read-only.
 - Keep use-case decoding and business rules in manifest-declared reference
-  paths. If the request explicitly authorizes the named reusable scope, proceed
-  after stating its ownership and focused tests. Otherwise, identify the exact
-  reusable paths/contracts and pause once for approval.
+  paths.
 
 Do not port Studio routes, databases, workflow UI, authorization, live
 source-system retrieval, mutable labels, secrets, generated evidence, or AI
@@ -63,14 +61,14 @@ Ask only for facts unavailable from those sources.
    evidence recipe, snapshot contract, and required artifact kinds in
    `benchmark_contract`; keep large evidence out of the final receipt.
 5. **Add the candidate policy.** Create
-   `agent_version_configs/<pipeline-stem>.agent.yaml` with the matching source
+   `use_case/agent_version_configs/<pipeline-stem>.agent.yaml` with the matching source
    pipeline, receipt contracts, action policy, evidence recipe, and permitted
    model/reasoning overrides.
 6. **Wire exact execution.** Require explicit project, benchmark key/version,
    and example ID. The target must run without the Studio checkout or live
    source system.
 7. **Update operator handoff.** Replace the control-pipeline portion of
-   `EvalRunbook.md` with validated pipeline/policy paths and the exact-example
+   `EVAL_RUNBOOK.md` with validated pipeline/policy paths and the exact-example
    command. Leave
    `agent-workbench-eval-runbook-status: bootstrap-placeholder` until
    `$agent-eval-builder` adds the first complete eval command.

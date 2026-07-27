@@ -1,5 +1,15 @@
 # Agent Workbench Development Backlog
 
+## New MVP Features
+
+### 1. Agent Improvement Loop 
+Mechanism to review eval results, create proposed fixes and run evals to validate results.
+
+- Guidance/mechanism to create a new agent version, so that the currently evalutated agent doesn't change & that this new experiment isn't immediately treated like a long-living agent version...need to prove out it's output quality first -> then have a pattern for elevated this version 
+- Limit to a single loop to start, must ask the user for permission for more loops (to avoid running up costs that are too high)
+
+
+
 ## Post-MVP Features
 
 

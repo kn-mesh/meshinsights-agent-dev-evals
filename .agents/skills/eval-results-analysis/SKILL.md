@@ -1,6 +1,6 @@
 ---
 name: eval-results-analysis
-description: Review evaluation results for a specific pipeline, prompt, model, tool, grader, configuration, or evidence change. Use to explain accuracy changes, regressions, reliability failures, or likely next changes from versioned eval outputs. Do not run evals or edit prompts unless the user explicitly asks.
+description: Analyze completed eval results for a pipeline, prompt, model, tool, grader, configuration, or evidence change. Use to explain accuracy shifts, regressions, reliability failures, and likely next changes. Do not run evals or edit behavior without explicit authorization.
 ---
 
 # Eval Results Analysis
@@ -15,7 +15,7 @@ Treat current repository outputs and inspection code as authoritative.
 2. Resolve lifecycle state:
 
    ```bash
-   uv run python -m src.eval_lifecycle.cli inspect <eval-id> --json
+   uv run python -m workbench.eval_lifecycle.cli inspect <eval-id> --json
    ```
 
    Working evals may retain attempts, review, and performance. Retained evals
@@ -23,7 +23,7 @@ Treat current repository outputs and inspection code as authoritative.
    Before reading retained artifacts directly, verify the bundle:
 
    ```bash
-   uv run python -m src.eval_lifecycle.cli verify <retained-id> --json
+   uv run python -m workbench.eval_lifecycle.cli verify <retained-id> --json
    ```
 
    The explorer also satisfies this gate because its retained backend verifies
@@ -31,8 +31,8 @@ Treat current repository outputs and inspection code as authoritative.
 3. For a working eval, start with bounded inspection:
 
    ```bash
-   uv run python -m src.evals.inspection_cli summary --run <run-id>
-   uv run python -m src.evals.inspection_cli list \
+   uv run python -m workbench.evals.inspection_cli summary --run <run-id>
+   uv run python -m workbench.evals.inspection_cli list \
      --run <run-id> --filter incorrect --limit 20
    ```
 
@@ -42,9 +42,9 @@ Treat current repository outputs and inspection code as authoritative.
 4. Inspect only representative units:
 
    ```bash
-   uv run python -m src.evals.inspection_cli example \
+   uv run python -m workbench.evals.inspection_cli example \
      --run <run-id> --example '<example-id>'
-   uv run python -m src.evals.inspection_cli execution \
+   uv run python -m workbench.evals.inspection_cli execution \
      --run <run-id> --execution '<execution-id>' \
      --section model_interactions --resolve-text
    ```
@@ -53,7 +53,7 @@ Treat current repository outputs and inspection code as authoritative.
    review-capture, and evidence-integrity failures.
 6. Propose targeted changes with evidence and overfitting risk before editing.
 7. Preserve a working-eval diagnosis with
-   `src.evals.inspection_cli diagnose` only when requested. That command resolves
+   `workbench.evals.inspection_cli diagnose` only when requested. That command resolves
    working evals only. For a retained eval, keep its bundle immutable: return
    the analysis or write an explicitly requested note outside the retained bundle,
    keyed by exact retained ID.

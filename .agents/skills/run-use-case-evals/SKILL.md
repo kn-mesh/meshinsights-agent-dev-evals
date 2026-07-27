@@ -1,11 +1,11 @@
 ---
 name: run-use-case-evals
-description: Prepare, execute, or troubleshoot published-benchmark evals for this Agent Workbench use case. Use to select an explicit pipeline, benchmark version, model, scope, repetitions, and runtime or to monitor a requested run. Do not change orchestration contracts, validate a developing agent on one unit, or analyze regressions with this skill.
+description: Prepare, execute, monitor, or troubleshoot an existing published-benchmark eval. Use for an explicit pipeline, benchmark version, model, scope, repetitions, and runtime. Do not change eval contracts, validate one developing example, or analyze completed-result regressions.
 ---
 
 # Run Use-Case Evals
 
-Read `EvalRunbook.md` completely; it owns commands and project defaults. If it
+Read `EVAL_RUNBOOK.md` completely; it owns commands and project defaults. If it
 contains `agent-workbench-eval-runbook-status: bootstrap-placeholder`, do not infer or
 execute an eval. Route control-path completion to
 `$benchmark-pipeline-port` and eval/runbook completion to
@@ -16,7 +16,7 @@ execute an eval. Route control-path completion to
 1. Determine whether the user wants guidance, troubleshooting, or one live
    occurrence. Do not execute for a command-only request.
 2. Resolve a concrete selectable model from `models.yaml`, its pricing record
-   from `model_pricing.yaml`, and its API-family compatibility. Use the
+   from `model-pricing.yaml`, and its API-family compatibility. Use the
    catalog default only when explicitly requested and supported; otherwise
    retain the runbook placeholder.
 3. Resolve the exact currently published benchmark key/version through the

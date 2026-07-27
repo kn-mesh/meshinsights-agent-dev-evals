@@ -2,154 +2,64 @@
   "schema_version": 1,
   "ownership": [
     {
-      "path": "mi-core",
+      "path": "packages/mi-core",
       "owner": "reusable_library",
-      "description": "Forked mi-core pipeline and AI runtime library"
+      "description": "Forked mi-core pipeline, AI runtime, and CLI library"
     },
     {
-      "path": "agent-dev-eval-core",
+      "path": "packages/eval-core",
       "owner": "reusable_library",
       "description": "Reusable evaluation contracts and execution mechanics"
     },
     {
-      "path": "agent-dev-eval-ui",
+      "path": "packages/eval-ui",
       "owner": "reusable_library",
-      "description": "Reusable read-only evaluation explorer API and UI shell"
+      "description": "Reusable evaluation explorer API and UI shell"
     },
     {
-      "path": ".agents/skills",
-      "owner": "root_infrastructure",
-      "description": "Root-level generic and project-configured Codex workflows"
-    },
-    {
-      "path": "bootstrap_configs",
-      "owner": "root_infrastructure",
-      "description": "Reviewed non-secret examples for new-project initialization"
-    },
-    {
-      "path": "model_catalog.py",
+      "path": "workbench",
       "owner": "reusable_workbench",
-      "description": "Reusable project model-catalog and frozen-pricing contracts"
+      "description": "Use-case-neutral Agent Workbench Python product"
     },
     {
-      "path": "src/model_configuration.py",
-      "owner": "reusable_workbench",
-      "description": "Reusable model and frozen-pricing configuration CLI"
-    },
-    {
-      "path": "src/agent_versions",
-      "owner": "reusable_workbench",
-      "description": "Reusable agent provenance and retention mechanics"
-    },
-    {
-      "path": "src/apps",
-      "owner": "reusable_workbench",
-      "description": "Reusable Workbench application composition"
-    },
-    {
-      "path": "src/benchmarks",
-      "owner": "reusable_workbench",
-      "description": "Read-only published benchmark contracts"
-    },
-    {
-      "path": "src/evals",
-      "owner": "reusable_workbench",
-      "description": "Reusable evaluation orchestration and result handling"
-    },
-    {
-      "path": "src/eval_lifecycle",
-      "owner": "reusable_workbench",
-      "description": "Supported working and retained evaluation lifecycle"
-    },
-    {
-      "path": "src/eval_publication",
-      "owner": "reusable_workbench",
-      "description": "Selective immutable publication of retained evaluations"
-    },
-    {
-      "path": "src/pipelines",
-      "owner": "reusable_workbench",
-      "description": "Generic pipeline runners"
-    },
-    {
-      "path": "src/project_bootstrap",
-      "owner": "reusable_workbench",
-      "description": "Template initialization and validation"
-    },
-    {
-      "path": "src/storage",
-      "owner": "reusable_workbench",
-      "description": "Reusable storage adapters"
-    },
-    {
-      "path": "src/utils",
-      "owner": "reusable_workbench",
-      "description": "Reusable project utilities"
-    },
-    {
-      "path": "docs/use_case",
+      "path": "use_case",
       "owner": "reference_use_case",
-      "description": "Replaceable durable use-case context"
+      "description": "Single replaceable use-case implementation, configuration, explorer, context, and tests"
+    },
+    {
+      "path": "apps",
+      "owner": "root_infrastructure",
+      "description": "Runnable project application compositions"
     },
     {
       "path": "tests",
       "owner": "reusable_workbench",
-      "description": "Reusable Workbench and generated-project contract tests"
+      "description": "Neutral Workbench, architecture, bootstrap, and integration tests"
     },
     {
-      "path": "tests/use_case",
-      "owner": "reference_use_case",
-      "description": "Replaceable reference-use-case tests"
+      "path": "scripts",
+      "owner": "reusable_workbench",
+      "description": "Reusable Workbench maintenance and verification scripts"
     },
     {
-      "path": "pipeline_configs",
-      "owner": "reference_use_case",
-      "description": "Replaceable use-case pipeline variants"
+      "path": "examples",
+      "owner": "root_infrastructure",
+      "description": "Reviewed non-secret project bootstrap examples"
     },
     {
-      "path": "evaluation_configs",
-      "owner": "reference_use_case",
-      "description": "Replaceable evaluation fields, graders, and named sections"
+      "path": ".agents/skills",
+      "owner": "root_infrastructure",
+      "description": "Generic and project-configured Codex workflows"
     },
     {
-      "path": "agent_version_configs",
-      "owner": "reference_use_case",
-      "description": "Replaceable agent policies and configuration"
+      "path": "docs",
+      "owner": "root_infrastructure",
+      "description": "Template-authoring and product-strategy documentation"
     },
     {
-      "path": "src/actions",
-      "owner": "reference_use_case",
-      "description": "Replaceable use-case terminal actions"
-    },
-    {
-      "path": "src/evidence",
-      "owner": "reference_use_case",
-      "description": "Replaceable evidence projection and explorer adapter"
-    },
-    {
-      "path": "src/hydrators",
-      "owner": "reference_use_case",
-      "description": "Replaceable use-case stage normalization"
-    },
-    {
-      "path": "src/objects",
-      "owner": "reference_use_case",
-      "description": "Replaceable use-case process and action contracts"
-    },
-    {
-      "path": "src/processors",
-      "owner": "reference_use_case",
-      "description": "Replaceable deterministic and AI agent logic"
-    },
-    {
-      "path": "src/retrievers",
-      "owner": "reference_use_case",
-      "description": "Replaceable evidence retrieval and decoding"
-    },
-    {
-      "path": "www/src/use_case",
-      "owner": "reference_use_case",
-      "description": "Replaceable review evidence schema and visual composition"
+      "path": "AGENTS.md",
+      "owner": "root_infrastructure",
+      "description": "Repository-wide agent guidance and ownership rules"
     },
     {
       "path": "README.md",
@@ -157,19 +67,34 @@
       "description": "Generated project on-ramp"
     },
     {
-      "path": "EvalRunbook.md",
+      "path": "EVAL_RUNBOOK.md",
       "owner": "root_infrastructure",
-      "description": "Generated project eval workflow"
+      "description": "Generated project evaluation workflow"
     },
     {
-      "path": "models.yaml",
+      "path": ".env.example",
       "owner": "root_infrastructure",
-      "description": "Project-owned model selection and reusable pricing references"
+      "description": "Non-secret environment identity and credential placeholders"
     },
     {
-      "path": "model_pricing.yaml",
-      "owner": "reusable_workbench",
-      "description": "Reusable reviewed provider pricing snapshots"
+      "path": ".gitignore",
+      "owner": "root_infrastructure",
+      "description": "Repository-wide generated and sensitive file exclusions"
+    },
+    {
+      "path": "pyproject.toml",
+      "owner": "root_infrastructure",
+      "description": "Root dependency, test, type-check, and registry configuration"
+    },
+    {
+      "path": "uv.lock",
+      "owner": "root_infrastructure",
+      "description": "Locked root Python dependency graph"
+    },
+    {
+      "path": "workbench.template.json",
+      "owner": "root_infrastructure",
+      "description": "Template ownership and reset contract"
     },
     {
       "path": "workbench.project.json",
@@ -177,30 +102,24 @@
       "description": "Generated non-secret project contract"
     },
     {
-      "path": "eval_results",
-      "owner": "generated_local",
-      "description": "Local working and retained evaluation results"
+      "path": "models.yaml",
+      "owner": "root_infrastructure",
+      "description": "Project-owned model selection"
     },
     {
-      "path": "agent_versions",
+      "path": "model-pricing.yaml",
+      "owner": "reusable_workbench",
+      "description": "Reusable reviewed provider pricing snapshots"
+    },
+    {
+      "path": ".workbench",
       "owner": "generated_local",
-      "description": "Legacy local promoted agent-version artifacts"
+      "description": "Local evaluations, retained artifacts, and agent-version objects"
     }
   ],
   "reference_reset": {
     "clear_directories": [
-      "docs/use_case",
-      "pipeline_configs",
-      "evaluation_configs",
-      "agent_version_configs",
-      "src/actions",
-      "src/evidence",
-      "src/hydrators",
-      "src/objects",
-      "src/processors",
-      "src/retrievers",
-      "www/src/use_case",
-      "tests/use_case"
+      "use_case"
     ],
     "remove_directories": [
       "docs/development-backlog",
@@ -208,29 +127,14 @@
       "docs/product-strategy"
     ],
     "remove_files": [
-      "EvalRunbook.md",
-      "www/src/eval-explorer-app.test.tsx"
-    ],
-    "root_skills_with_project_defaults": [
-      ".agents/skills/run-use-case-evals/SKILL.md",
-      ".agents/skills/external-runtime-setup/SKILL.md"
+      "EVAL_RUNBOOK.md",
+      "apps/eval_explorer/web/src/eval-explorer-app.test.tsx"
     ],
     "leak_scan_paths": [
       "README.md",
-      "EvalRunbook.md",
+      "EVAL_RUNBOOK.md",
       ".agents/skills",
-      "docs/use_case",
-      "pipeline_configs",
-      "evaluation_configs",
-      "agent_version_configs",
-      "src/actions",
-      "src/evidence",
-      "src/hydrators",
-      "src/objects",
-      "src/processors",
-      "src/retrievers",
-      "www/src/use_case",
-      "tests/use_case"
+      "use_case"
     ],
     "forbidden_terms": [
       "spirax",

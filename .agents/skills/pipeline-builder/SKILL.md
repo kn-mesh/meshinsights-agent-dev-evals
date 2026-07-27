@@ -1,6 +1,6 @@
 ---
 name: pipeline-builder
-description: Build or evolve stage-based use-case pipelines in this repo. Use for retrievers, hydrators, process or action objects, pipeline YAML, exact-example runners, receipt contracts, processor variants, matching agent policies, or progression from deterministic logic to optional AI and eval support.
+description: Build or evolve stage-based use-case pipelines after the initial port. Use for retrievers, hydrators, typed objects, processors, YAML, exact-example runners, receipts, variants, and agent policies. Use other skills for AI internals, runtime setup, or eval infrastructure.
 ---
 
 # Pipeline Builder
@@ -12,13 +12,10 @@ execution, and `$agent-eval-builder` for eval contract changes.
 
 ## Boundaries
 
-- Read `docs/use_case/`, current pipeline configs, objects, receipts, runners,
+- Read `use_case/docs/`, current pipeline configs, objects, receipts, runners,
   and focused tests before editing.
 - Keep use-case rules in manifest-declared reference paths. Reuse `mi.core`,
   `mi.ai`, and existing helpers.
-- If the request explicitly authorizes the named reusable scope, proceed after
-  stating its ownership and focused tests. Otherwise, identify the exact
-  reusable paths/contracts and pause once for approval.
 - Use `$external-runtime-setup` for provider auth, telemetry, model catalogs, or
   runtime compatibility. Do not reproduce those details here.
 
@@ -28,12 +25,12 @@ Design receipt-first: keep intermediate data on typed process artifacts and
 place the compact, serializable business outcome in act-stage
 `PipelineReceipt` metadata.
 
-Organize variant-specific processors under `src/processors/<variant>/` and
-shared processors under `src/processors/common/`. Reuse objects and hydrators
+Organize variant-specific processors under `use_case/processors/<variant>/` and
+shared processors under `use_case/processors/common/`. Reuse objects and hydrators
 when the variant hypothesis does not require changing them.
 
-Every evaluable `pipeline_configs/<stem>.ppln` needs a matching
-`agent_version_configs/<stem>.agent.yaml`. Components own declarations for
+Every evaluable `use_case/pipeline_configs/<stem>.ppln` needs a matching
+`use_case/agent_version_configs/<stem>.agent.yaml`. Components own declarations for
 their behavior-bearing assets and contracts through `version_assets()` and
 `version_contracts()`. The policy supplements that graph with:
 
@@ -60,8 +57,9 @@ declaration sources, and prove the complete graph was captured.
    arguments, and a `benchmark_contract` declaring the published schema,
    evidence recipe, source snapshot contract, and required artifact kinds.
    Inject exact benchmark/example metadata at runtime; never store secrets.
-   Inspect current `pipeline_configs/` and `mi-core` pipeline docs for syntax
-   rather than copying a generic example.
+   Inspect current `use_case/pipeline_configs/` and
+   `packages/mi-core/core/src/mi/docs/` for syntax rather than copying a generic
+   example.
 4. **Validate one exact example.** The runner owns only unit-level execution.
    `run_pipeline(...)` receives the exact `BenchmarkVersion` and
    `BenchmarkExample`, verifies raw artifacts before decoding, and returns a
@@ -73,9 +71,9 @@ declaration sources, and prove the complete graph was captured.
 6. **Resolve the candidate.** Report immutable identity without promotion:
 
    ```bash
-   uv run python -m src.agent_versions.cli --json resolve \
-     --pipeline pipeline_configs/<variant>.ppln \
-     --agent-policy agent_version_configs/<variant>.agent.yaml \
+   uv run python -m workbench.agent_versions.cli --json resolve \
+     --pipeline use_case/pipeline_configs/<variant>.ppln \
+     --agent-policy use_case/agent_version_configs/<variant>.agent.yaml \
      --dirty-policy capture
    ```
 

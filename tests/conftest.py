@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-import src.agent_versions.resolver as agent_version_resolver
+import workbench.agent_versions.resolver as agent_version_resolver
 
 
 @pytest.fixture(autouse=True)

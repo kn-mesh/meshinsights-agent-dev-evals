@@ -1,6 +1,6 @@
 ---
 name: project-guide
-description: Orient developers in a MeshInsights Agent Workbench repository. Use to explain how the project fits together, where a change belongs, how to customize the template, whether behavior is use-case-specific or reusable, which files define current behavior, and which specialized repo skill should handle a task.
+description: Orient work in an Agent Workbench repository. Use to explain architecture, ownership, template customization, current behavior, route to specialized repo skills, or coordinate a multi-skill agent improvement loop.
 ---
 
 # Project Guide
@@ -15,43 +15,29 @@ or the production agent runtime.
 Read, in order:
 
 1. The request and named files.
-2. Durable `docs/use_case/` context.
+2. Durable `use_case/docs/` context.
 3. Current source, configs, tests, and runnable entry points.
 4. The specialized repo skill.
-5. Editable `mi-core/` source when framework behavior matters.
+5. Editable `packages/mi-core/` source when framework behavior matters.
 6. `README.md` for on-ramp context.
 
 Current coherent code defines local behavior. For architecture or product
 choices, use `docs/product-strategy/` when that template-repository directory
 exists; generated projects instead use `workbench.project.json`,
-`docs/use_case/`, and this skill's boundaries.
+`use_case/docs/`, and this skill's boundaries.
 
-Use `uv run` for Python commands. Use the package manager declared by each
-non-Python workspace. Treat `mi-core/` as editable reusable source, not
-automatic scope.
-
-## Ownership And Approval
-
-- `mi-core/`: reusable pipeline/AI runtime mechanics.
-- Reusable Workbench paths: eval, explorer shell, bootstrap, versioning,
-  orchestration, lifecycle, and operator mechanics.
-- Manifest-declared reference paths: use-case data, rules, prompts, variants,
-  evidence projection, and UI composition.
-- `.agents/skills/`: concise repository workflows.
-
-Use `workbench.template.json` as the ownership map. If the request explicitly
-authorizes the named reusable scope, proceed after stating its ownership and
-focused tests. Otherwise, identify the exact reusable paths/contracts and pause
-once for approval. Record the canonical upstream target or pending action for
-an approved shared fix.
+Follow root `AGENTS.md` for commands, ownership, authorization, and verification.
+Treat `packages/mi-core/` as editable reusable source, not automatic scope.
 
 ## Repository Layout
 
 Use `workbench.template.json` as the authoritative path inventory. Its
 `ownership` entries distinguish reusable, reference-use-case, root, and
-generated-local paths. Common project paths are `pipeline_configs/`,
-`evaluation_configs/`, `agent_version_configs/`, `src/{retrievers,objects,hydrators,processors,actions,evidence}/`,
-and `www/src/use_case/`. Treat examples as starting patterns.
+generated-local paths. Common project paths are `use_case/pipeline_configs/`,
+`use_case/evaluation_configs/`, `use_case/agent_version_configs/`,
+`use_case/{retrievers,objects,hydrators,processors,actions,evidence}/`, and
+`use_case/{graders,explorer,tests}/`. The fixed application composition roots
+live under `apps/`. Treat examples as starting patterns.
 
 ## Gate New Work
 
@@ -63,6 +49,7 @@ only behavior supported by cross-use-case evidence; name adjacent work to defer.
 
 | Task | Skill |
 |---|---|
+| Repository orientation or multi-skill coordination | `$project-guide` |
 | Bootstrap a separate project | `$create-use-case-project` |
 | Initial Studio evidence-pipeline port | `$benchmark-pipeline-port` |
 | Port explorer evidence/schema/charts | `$port-eval-explorer-use-case` |
@@ -77,12 +64,50 @@ only behavior supported by cross-use-case evidence; name adjacent work to defer.
 
 Use multiple skills only when the request truly spans them.
 
+## Improve An Agent Variant
+
+For requests to improve agent accuracy, reliability, coverage, or cost, treat
+the work as one measured candidate loop:
+
+1. **Establish the baseline.** Select exact completed eval IDs or revisions and
+   use `$eval-results-analysis` to identify repeated failure patterns. If no
+   suitable completed eval exists, use `$run-use-case-evals` only for an
+   explicitly requested and authorized baseline measurement.
+2. **State one hypothesis.** Name the behavior expected to improve, the metric
+   or failure cluster that will measure it, and the benchmark, evidence,
+   grader, model, and other dimensions to hold constant.
+3. **Check measurability.** Use `$agent-eval-builder` only when the existing
+   profile, grader, orchestration, result, or explorer path cannot measure or
+   inspect the hypothesis. Do not change eval infrastructure by default.
+4. **Build an isolated candidate.** Use `$pipeline-builder` for the measurable
+   variant and `$ai-processor-builder` only for AI internals. Preserve the
+   baseline identity, resolve a new candidate `agent_version_id`, and do not
+   treat the candidate as a retained or long-lived version yet.
+5. **Validate one exact example.** Run focused tests and the explicitly
+   versioned exact-example pipeline runner. Do not create a one-example eval
+   occurrence as a development check.
+6. **Measure once.** Use `$run-use-case-evals` for the requested scope and one
+   authorized occurrence. Keep the hypothesis and held-constant dimensions in
+   the handoff.
+7. **Compare exact results.** Use `$eval-results-analysis` with the baseline and
+   candidate occurrence IDs. Separate decision quality, reliability, coverage,
+   usage, and cost; do not declare success from a single anecdote.
+8. **Decide explicitly.** Revise the candidate and repeat from the hypothesis,
+   stop with the evidence, or use `$eval-lifecycle` to elevate a complete
+   selected occurrence that represents meaningful progress. Use
+   `$publish-retained-eval` only when the user explicitly requests publication
+   of that exact retained eval.
+
+Do not silently broaden the benchmark scope, create duplicate occurrences,
+overwrite the baseline, retain a candidate, or publish results as part of an
+ordinary improvement request.
+
 ## Guide Template Customization
 
-Use `$create-use-case-project`, then capture `docs/use_case/`, set project and
+Use `$create-use-case-project`, then capture `use_case/docs/`, set project and
 benchmark identities, configure models, replace manifest-declared reference
 paths, and validate one control pipeline. Keep reusable Workbench and
-`mi-core/` mechanics distinct from use-case rules.
+`packages/mi-core/` mechanics distinct from use-case rules.
 
 ## Development Sequence
 
