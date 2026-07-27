@@ -14,7 +14,7 @@ non-Python workspace.
 
 Use `workbench.template.json` as the authoritative ownership and path inventory:
 
-- `reusable_library`: shared library mechanics such as `mi-core/`.
+- `reusable_library`: independently packaged shared libraries under `packages/`.
 - `reusable_workbench`: shared evaluation, explorer, bootstrap, versioning,
   lifecycle, publication, storage, and runner mechanics.
 - `reference_use_case`: replaceable project data, rules, prompts, pipelines,
@@ -45,4 +45,4 @@ integration check blocked by credentials, cost, or authorization.
 
 For repository-skill changes, validate each changed skill with the installed
 `skill-creator` `quick_validate.py`, then run
-`uv run pytest tests/test_repository_skills.py -q`.
+`uv run pytest tests/architecture/test_repository_skills.py -q`.

@@ -5,7 +5,7 @@ description: Preview and explicitly publish one eligible retained eval as a new 
 
 # Publish Retained Eval
 
-Use `src.eval_publication.cli`. Publication is a create-only handoff from one
+Use `workbench.eval_publication.cli`. Publication is a create-only handoff from one
 verified local retained eval to the separate eval-results container. It never
 changes local lifecycle state or Benchmark Studio truth.
 
@@ -14,14 +14,14 @@ changes local lifecycle state or Benchmark Studio truth.
 1. Resolve and verify the exact retained eval:
 
    ```bash
-   uv run python -m src.eval_lifecycle.cli inspect ret_<hash> --json
-   uv run python -m src.eval_lifecycle.cli verify ret_<hash> --json
+   uv run python -m workbench.eval_lifecycle.cli inspect ret_<hash> --json
+   uv run python -m workbench.eval_lifecycle.cli verify ret_<hash> --json
    ```
 
 2. Run the storage-free preview:
 
    ```bash
-   uv run python -m src.eval_publication.cli publish ret_<hash> \
+   uv run python -m workbench.eval_publication.cli publish ret_<hash> \
      --dry-run --json
    ```
 
@@ -42,7 +42,7 @@ changes local lifecycle state or Benchmark Studio truth.
 4. Publish only after the user's request clearly authorizes that exact target:
 
    ```bash
-   uv run python -m src.eval_publication.cli publish ret_<hash> \
+   uv run python -m workbench.eval_publication.cli publish ret_<hash> \
      --yes --json
    ```
 

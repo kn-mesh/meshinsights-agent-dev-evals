@@ -1,6 +1,6 @@
 """Reference-project model catalog expectations."""
 
-from model_catalog import load_model_catalog
+from workbench.models.catalog import load_model_catalog
 
 
 def test_reference_catalog_defines_expected_model_choices() -> None:

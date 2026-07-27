@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.apps.evidence import ProjectEvidenceAdapter
+from workbench.apps.evidence import ProjectEvidenceAdapter
 from use_case.evidence.spirax import SpiraxEvidenceAdapter, build_spirax_evidence_view
-from src.storage.azure_blob import AzureBlobEvidenceStore
+from workbench.storage.azure_blob import AzureBlobEvidenceStore
 
 
 def create_project_evidence_adapter(

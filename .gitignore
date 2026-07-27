@@ -30,14 +30,5 @@ wheels/
 .ruff_cache/
 .pytest_cache/
 
-# Local immutable agent-version manifests and content-addressed objects
-/agent_versions/
-
-# Evaluation results are generated local data. Working runs, retained evals,
-# model outputs, reviewer context, and publication-ready bundles must never be
-# committed to the source repository.
-/eval_results/
-
-
-# Frozen legacy lifecycle state remains machine-local and unsupported.
+# Generated Workbench state: evals, retained artifacts, and agent versions.
 /.workbench/

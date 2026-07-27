@@ -13,8 +13,8 @@ from mi.core.pipeline import PipelineMetadata
 from mi.core.retrievers import BaseRetriever, BaseRetrieverConfig
 from mi.core.versioning import VersionAssetRole, VersionContractDeclaration
 
-from src.benchmarks import BenchmarkExamplePipelineMetadata, SourceArtifact
-from src.storage.azure_blob import AzureBlobEvidenceStore, EvidenceStore
+from workbench.benchmarks import BenchmarkExamplePipelineMetadata, SourceArtifact
+from workbench.storage.azure_blob import AzureBlobEvidenceStore, EvidenceStore
 
 
 class SpiraxFrozenEvidenceRetrieverConfig(BaseRetrieverConfig):

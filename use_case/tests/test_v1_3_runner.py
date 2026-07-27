@@ -14,14 +14,14 @@ from use_case.processors.v1_3.v1_3_alarm_classification_ai_workflow_processor im
     V1_3AlarmClassificationAIWorkflowProcessorConfig,
 )
 
-from src.benchmarks.models import (
+from workbench.benchmarks.models import (
     BenchmarkExample,
     BenchmarkVersion,
     PublishedLabelSchema,
     PublishedReviewContext,
     SourceArtifact,
 )
-from src.pipelines.pipeline_run_from_yaml import (
+from workbench.pipelines.pipeline_run_from_yaml import (
     _apply_runtime_overrides,
     _load_pipeline_config,
 )

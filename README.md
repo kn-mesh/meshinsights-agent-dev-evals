@@ -1,7 +1,8 @@
 # MeshInsights Agent Workbench
 
-This repository combines the full `mi-core` source with a root-level use-case
-Agent Workbench project for building and evaluating connected-system agents.
+This repository is an Agent Workbench template with the Spirax implementation
+included as its reference use case. A future template repository will keep the
+same structure but replace `use_case/` with a neutral starter.
 The runtime and operator tooling are Python, with dependencies managed by `uv`;
 the local eval-results explorer also includes a TypeScript/React frontend managed
 by `pnpm`.
@@ -14,7 +15,7 @@ The source snapshots were imported from:
   `6ba259c958a4f073e52575370eaec4d4866c2e00`.
 
 The root project uses editable path dependencies for `mi-core` and the CLI, so
-changes under `mi-core/` are immediately available through the root `uv`
+changes under `packages/mi-core/` are immediately available through the root `uv`
 environment. The local Spirax operator reads published benchmark identity and
 approved labels directly from Azure PostgreSQL with a short-lived Entra token,
 then downloads the exact immutable raw evidence from Azure Blob Storage using
@@ -22,19 +23,23 @@ container-scoped RBAC.
 
 Use this README as the quick on-ramp. Keep durable use-case context in `use_case/docs/`. For development guidance, ask Codex: the repo skills under `.agents/skills/` provide the project-specific playbooks, and the current codebase remains the source of truth.
 
-## What To Edit
+## Where Code Belongs
 
-The repository has three practical editing zones:
+The root is divided by responsibility:
 
-- Reusable product code lives in `mi-core/`, `agent-dev-eval-core/`,
-  `agent-dev-eval-ui/`, and reusable `src/` modules. It must remain
-  use-case-neutral.
-- Project configuration lives at the repository root, including
-  `workbench.project.json`, `models.yaml`, `.env.example`, and the frontend
-  composition harness in `www/`.
-- Use-case implementation lives entirely under `use_case/`: context,
-  configurations, pipeline components, evidence adapters, graders, explorer
-  UI, and reference behavior tests.
+| Path | Purpose | May know about Spirax? |
+|---|---|---|
+| `packages/` | Independently packaged libraries: pipeline runtime, evaluation contracts, and reusable UI | No |
+| `workbench/` | Reusable Python application mechanics for projects built from this template | No |
+| `use_case/` | The replaceable implementation: domain context, configs, pipeline stages, graders, evidence, and UI adapters | Yes |
+| `apps/` | Fixed application entry points that compose `workbench/` with `use_case/` | Only at the composition boundary |
+| `tests/architecture/` | Ownership, dependency-boundary, bootstrap, and skill-contract checks | May inspect both sides |
+| `tests/workbench/` | Use-case-neutral tests for reusable Workbench behavior | No |
+| `.workbench/` | Ignored local output such as working/retained evals and promoted agent versions | Generated data only |
+
+Root files are repository-wide configuration and operator entry points:
+`workbench.project.json`, `models.yaml`, `model-pricing.yaml`,
+`workbench.template.json`, `EVAL_RUNBOOK.md`, and the Python/tooling manifests.
 
 `workbench.template.json` is the authoritative ownership inventory. Creating a
 new project preserves the reusable and root zones and replaces the single
@@ -46,7 +51,7 @@ new project preserves the reusable and root zones and replaces the single
 2. `uv` installed.
 3. Node.js `>=22.13.0` for the eval-results explorer frontend.
 4. pnpm `>=11.9.0` (the exact package-manager version is recorded in
-   `www/package.json`).
+   `apps/eval_explorer/web/package.json`).
 
 ## Quickstart (with `uv`)
 
@@ -88,7 +93,7 @@ Execute Python project commands through `uv run`:
 ```bash
 uv run python -m <module>
 uv run pytest
-uv run ruff check src/
+uv run ruff check workbench/
 uv run basedpyright
 uv run mi auth
 ```
@@ -114,7 +119,7 @@ uv run python -c "import inspect; from mi.core.pipeline_orchestrator import Pipe
 
 Use the same pattern for `mi.ai` or any other installed dependency.
 For non-Python workspaces, use the package manager declared by that workspace;
-for example, run the explorer frontend's `pnpm` commands from `www/`.
+for example, run the explorer frontend's `pnpm` commands from `apps/eval_explorer/web/`.
 
 ### Add dependencies
 
@@ -138,44 +143,44 @@ Use `uv sync` after pulling branch changes that touch `pyproject.toml` or `uv.lo
 
 ```bash
 # Initialize or validate a new use-case Agent Workbench repository
-uv run python -m src.project_bootstrap.cli --help
+uv run python -m workbench.project_bootstrap.cli --help
 
 # YAML pipeline runner CLI
-uv run python -m src.pipelines.pipeline_run_from_yaml --help
-uv run python -m src.pipelines.pipeline_run_from_yaml use_case/pipeline_configs/v1_3.ppln \
+uv run python -m workbench.pipelines.pipeline_run_from_yaml --help
+uv run python -m workbench.pipelines.pipeline_run_from_yaml use_case/pipeline_configs/v1_3.ppln \
   --benchmark-key <published-benchmark-key> \
   --benchmark-version <version-number> \
   --example-id '<unit-id>|<decision-timestamp>'
 
 # Eval orchestration CLI
-uv run python -m src.evals.eval_orchestration --help
+uv run python -m workbench.evals.eval_orchestration --help
 
 # Model selection and frozen-pricing configuration
-uv run python -m src.model_configuration list
-uv run python -m src.model_configuration upsert --help
+uv run python -m workbench.models.configuration list
+uv run python -m workbench.models.configuration upsert --help
 
 # Local-only ephemeral eval review CLI
-uv run python -m src.evals.inspection_cli --help
+uv run python -m workbench.evals.inspection_cli --help
 
-# Local human eval-results explorer (after building www/)
+# Local human eval-results explorer (after building apps/eval_explorer/web/)
 APP_PROJECT_KEY=<benchmark-studio-project-key> \
-  uv run python -m use_case.apps.eval_explorer
+  uv run python -m apps.eval_explorer.server
 
 # Working/retained elevation, verification, and permanent deletion
-uv run python -m src.eval_lifecycle.cli --help
+uv run python -m workbench.eval_lifecycle.cli --help
 
 # Explicit publication of eligible retained evals
-uv run python -m src.eval_publication.cli --help
+uv run python -m workbench.eval_publication.cli --help
 ```
 
-See [`EvalRunbook.md`](EvalRunbook.md) for the explicit, reproducible eval
+See [`EVAL_RUNBOOK.md`](EVAL_RUNBOOK.md) for the explicit, reproducible eval
 command shape. Prefer it over the slower interactive benchmark chooser.
 
 The explorer has two UI layers:
 
-- `agent-dev-eval-ui/web/` is the reusable React shell for run, attempt, review,
+- `packages/eval-ui/web/` is the reusable React shell for run, attempt, review,
   and evidence navigation.
-- `www/` is the project frontend that composes that shell with the Spirax-owned
+- `apps/eval_explorer/web/` is the project frontend that composes that shell with the Spirax-owned
   evidence schema and charts in `use_case/explorer/`.
 
 Evidence inspection uses the exact selected-example source snapshot and raw
@@ -183,17 +188,17 @@ artifact hashes retained in each current run manifest; it does not re-query the
 current published benchmark catalog. Runs created before that retained evidence
 contract must be rerun before their Evidence package can be rendered.
 
-Install, test, and build the frontend from `www/` before starting the Python
+Install, test, and build the frontend from `apps/eval_explorer/web/` before starting the Python
 explorer backend:
 
 ```bash
-cd www
+cd apps/eval_explorer/web
 pnpm install --frozen-lockfile
 pnpm test
 pnpm build
-cd ..
+cd ../../..
 APP_PROJECT_KEY=<benchmark-studio-project-key> \
-  uv run python -m use_case.apps.eval_explorer
+  uv run python -m apps.eval_explorer.server
 ```
 
 A new use case replaces the project-owned `use_case/explorer/` adapters without
@@ -213,18 +218,18 @@ short hypothesis and lineage.
 
 Use the bootstrap CLI to create a separate repository from an exact standard
 template revision. Start by copying and reviewing
-[`bootstrap_configs/example.project.json`](bootstrap_configs/example.project.json).
+[`examples/project-bootstrap.json`](examples/project-bootstrap.json).
 The specification records project identity, the read-only Benchmark Studio
 surface, published benchmark contracts, label/evidence identities, and the
 project model catalog. It must not contain credentials.
 
 ```bash
-uv run python -m src.project_bootstrap.cli --json init ../customer-agent-workbench \
-  --spec bootstrap_configs/customer.project.json \
+uv run python -m workbench.project_bootstrap.cli --json init ../customer-agent-workbench \
+  --spec examples/customer.project.json \
   --template-source https://github.com/Mesh-Systems-Eng/mesh.insights.templates.git \
   --template-ref <branch-tag-or-commit>
 
-uv run python -m src.project_bootstrap.cli --json validate \
+uv run python -m workbench.project_bootstrap.cli --json validate \
   ../customer-agent-workbench
 ```
 
@@ -235,7 +240,7 @@ Git state, `.env`, credentials, virtual environments, caches, local eval
 results, and promoted agent-version data.
 
 `workbench.template.json` is the versioned ownership and reference-reset
-contract. It keeps `mi-core/`, the reusable eval packages, and generic Workbench
+contract. It keeps `packages/mi-core/`, the reusable eval packages, and generic Workbench
 mechanics distinct while declaring the exact reference-use-case paths that are
 cleared in a new repository. Root skills remain under `.agents/skills/`.
 Validation rejects reference identifiers in generated project-facing paths.
@@ -262,13 +267,13 @@ contracts, dependency lock, and the model override policy in
 Resolve explicitly when diagnosing provenance:
 
 ```bash
-uv run python -m src.agent_versions.cli --json resolve \
+uv run python -m workbench.agent_versions.cli --json resolve \
   --pipeline use_case/pipeline_configs/v1_3.ppln \
   --dirty-policy capture
 ```
 
 The supported meaningful-version workflow elevates a complete selected
-occurrence through `src.eval_lifecycle.cli`. It retains the candidate's Git
+occurrence through `workbench.eval_lifecycle.cli`. It retains the candidate's Git
 identity, configuration hashes, and relevant patch with the compact retained
 eval; it does not copy the complete source tree.
 
@@ -283,12 +288,12 @@ than local evidence copies. After verification, elevation permanently removes
 the source working eval so the explorer shows only the retained row.
 
 ```bash
-uv run python -m src.eval_lifecycle.cli list --state all --json
-uv run python -m src.eval_lifecycle.cli elevate eval_<run-id> --dry-run --json
-uv run python -m src.eval_lifecycle.cli elevate eval_<run-id> --yes --json
-uv run python -m src.eval_lifecycle.cli verify ret_<retained-id> --json
-uv run python -m src.eval_lifecycle.cli delete working eval_<run-id> --yes --json
-uv run python -m src.eval_lifecycle.cli delete retained ret_<retained-id> \
+uv run python -m workbench.eval_lifecycle.cli list --state all --json
+uv run python -m workbench.eval_lifecycle.cli elevate eval_<run-id> --dry-run --json
+uv run python -m workbench.eval_lifecycle.cli elevate eval_<run-id> --yes --json
+uv run python -m workbench.eval_lifecycle.cli verify ret_<retained-id> --json
+uv run python -m workbench.eval_lifecycle.cli delete working eval_<run-id> --yes --json
+uv run python -m workbench.eval_lifecycle.cli delete retained ret_<retained-id> \
   --confirm-retained ret_<retained-id> --json
 ```
 
@@ -304,12 +309,12 @@ canonical selected unit. A dry run validates and previews the payload without
 allocating a publication ID or accessing Azure:
 
 ```bash
-uv run python -m src.eval_publication.cli publish ret_<retained-id> \
+uv run python -m workbench.eval_publication.cli publish ret_<retained-id> \
   --dry-run --json
 
 AZURE_EVAL_RESULTS_ACCOUNT_URL=https://<account>.blob.core.windows.net \
 AZURE_EVAL_RESULTS_CONTAINER=eval-results \
-  uv run python -m src.eval_publication.cli publish ret_<retained-id> \
+  uv run python -m workbench.eval_publication.cli publish ret_<retained-id> \
   --yes --json
 ```
 
@@ -323,7 +328,7 @@ Payload blobs are downloaded and hash-verified before
 The project-owned [`models.yaml`](models.yaml) enumerates selectable model
 identifiers, declares the interactive default and API family, and references
 reusable billing identities. Reviewed non-secret rates live separately in the
-Workbench-owned [`model_pricing.yaml`](model_pricing.yaml), so vendor pricing is
+Workbench-owned [`model-pricing.yaml`](model-pricing.yaml), so vendor pricing is
 not re-entered for every use case. Eval runs resolve and freeze the selected
 pricing snapshot; they never fetch or silently refresh prices. `mi-core`
 validates generic `provider:model` identifiers without owning either catalog.
@@ -349,7 +354,8 @@ Example questions:
 
 - “Use `$project-guide` to explain where this feature belongs and which existing code is the closest pattern.”
 - “Use `$pipeline-builder` to add the next pipeline stage and verify the relevant tests.”
-- “Which layer should own this behavior: the use-case project or `mi-core`?”
+- “Which layer should own this behavior: `use_case/`, `workbench/`, or a library
+  under `packages/`?”
 
 Before implementation, populate the relevant files in `use_case/docs/` with durable business context. Do not use those files as implementation logs, and do not update them unless the user explicitly asks.
 
@@ -357,68 +363,47 @@ Before implementation, populate the relevant files in `use_case/docs/` with dura
 
 ```text
 .agents/
-agent-dev-eval-core/
-  evaluation/
-  tests/
-data/
-eval_results/
-  working/<benchmark>/v<version>/<run-id>/
-    manifest.json
-    agent-version.json
-    attempts/                  # rich local per-unit results
-    result.json
-    performance/               # disposable timings/retries
-    review/                    # local prompts/tools/traces
-  retained/<benchmark>/v<version>/<retained-eval-id>/
-    manifest.json
-    result.json
-    units.json
-    agent-provenance.json
-    evidence-references.json
-    agent.patch                # only for relevant dirty/untracked content
-  retained/agent_versions/<agent-version-id>/
+  skills/                      # repository-specific Codex workflows
+apps/
+  eval_explorer/
+    server.py                  # Python composition root
+    web/                       # React composition/build workspace
 docs/
   development-current/
   product-strategy/
-mi-core/
-  core/
-  cli/
-src/
-  agent_versions/
-  apps/
-  benchmarks/
-  pipelines/
-  evals/
-  eval_lifecycle/
-  eval_publication/
-  project_bootstrap/
-  storage/
+examples/
+  project-bootstrap.json
+packages/
+  mi-core/                     # pipeline and AI runtime plus CLI
+  eval-core/                   # evaluation contracts and result mechanics
+  eval-ui/                     # reusable explorer API and React shell
+workbench/
+  agent_versions/              # reusable candidate identity and promotion
+  benchmarks/                  # published benchmark access/contracts
+  evals/                       # orchestration, inspection, scoring, run store
+  eval_lifecycle/              # working/retained lifecycle
+  eval_publication/            # explicit retained-eval publication
+  models/                      # model catalog and pricing configuration
+  pipelines/                   # generic YAML runner
+  project_bootstrap/           # neutral use-case repository generation
 use_case/
-  docs/
-  pipeline_configs/
-    v1_3.ppln
-  evaluation_configs/
-    spirax-failure-evaluation.eval.yaml
-  agent_version_configs/
-    v1_3.agent.yaml
-  apps/
-  actions/
-  evidence/
-  hydrators/
-  objects/
-  processors/
-  retrievers/
-  graders/
-  explorer/
-  tests/
-www/
-  src/                         # project frontend composition
+  docs/                        # durable Spirax/domain context
+  *_configs/                   # pipeline, eval, and agent-version configs
+  actions/ ... retrievers/     # use-case pipeline implementation
+  evidence/ graders/ explorer/ # use-case contracts and UI adapters
+  tests/                       # reference-use-case behavior tests
+tests/
+  architecture/
+  workbench/
+.workbench/
+  evals/                       # working and retained local eval artifacts
+  agent-versions/              # promoted local agent-version artifacts
 ```
 
 Working evals retain rich debugging detail through the active improvement loop.
 Retained evals keep a small number of aggregate files with full final AI
 outputs, expected outputs, grading, usage, cost, provenance, and immutable
-evidence references. Use `EvalRunbook.md` for execution and `$eval-lifecycle`
+evidence references. Use `EVAL_RUNBOOK.md` for execution and `$eval-lifecycle`
 for formal preservation or deletion.
 
 ## Notes

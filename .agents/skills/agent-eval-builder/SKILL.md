@@ -87,7 +87,7 @@ writes.
 5. Test only the contracts touched: benchmark handoff, profile/grader,
    orchestration/result, inspection/UI, or explicitly requested lifecycle.
 6. When the first pipeline, agent policy, and profile are operable, finalize
-   `EvalRunbook.md` with validated exact-example, discovery, eval, inspection,
+   `EVAL_RUNBOOK.md` with validated exact-example, discovery, eval, inspection,
    lifecycle, and publication commands; then remove
    `agent-workbench-eval-runbook-status: bootstrap-placeholder`.
 7. Report the outcome, evidence, limitation, and deferred infrastructure.
@@ -100,5 +100,5 @@ Read
 [references/current-evaluation-contracts.md](references/current-evaluation-contracts.md)
 only when changing or diagnosing an existing schema, run store, candidate
 version, review capture, explorer API, hosted input, publication, or lifecycle
-contract. Use `EvalRunbook.md` and `$run-use-case-evals` for commands, and
+contract. Use `EVAL_RUNBOOK.md` and `$run-use-case-evals` for commands, and
 `$eval-results-analysis` for regression analysis without system changes.

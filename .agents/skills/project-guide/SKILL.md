@@ -18,7 +18,7 @@ Read, in order:
 2. Durable `use_case/docs/` context.
 3. Current source, configs, tests, and runnable entry points.
 4. The specialized repo skill.
-5. Editable `mi-core/` source when framework behavior matters.
+5. Editable `packages/mi-core/` source when framework behavior matters.
 6. `README.md` for on-ramp context.
 
 Current coherent code defines local behavior. For architecture or product
@@ -27,7 +27,7 @@ exists; generated projects instead use `workbench.project.json`,
 `use_case/docs/`, and this skill's boundaries.
 
 Follow root `AGENTS.md` for commands, ownership, authorization, and verification.
-Treat `mi-core/` as editable reusable source, not automatic scope.
+Treat `packages/mi-core/` as editable reusable source, not automatic scope.
 
 ## Repository Layout
 
@@ -36,7 +36,8 @@ Use `workbench.template.json` as the authoritative path inventory. Its
 generated-local paths. Common project paths are `use_case/pipeline_configs/`,
 `use_case/evaluation_configs/`, `use_case/agent_version_configs/`,
 `use_case/{retrievers,objects,hydrators,processors,actions,evidence}/`, and
-`use_case/{apps,graders,explorer,tests}/`. Treat examples as starting patterns.
+`use_case/{graders,explorer,tests}/`. The fixed application composition roots
+live under `apps/`. Treat examples as starting patterns.
 
 ## Gate New Work
 
@@ -106,7 +107,7 @@ ordinary improvement request.
 Use `$create-use-case-project`, then capture `use_case/docs/`, set project and
 benchmark identities, configure models, replace manifest-declared reference
 paths, and validate one control pipeline. Keep reusable Workbench and
-`mi-core/` mechanics distinct from use-case rules.
+`packages/mi-core/` mechanics distinct from use-case rules.
 
 ## Development Sequence
 

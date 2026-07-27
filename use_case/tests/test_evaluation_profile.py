@@ -6,7 +6,7 @@ import pytest
 import yaml
 
 from evaluation import build_default_grader_registry
-from src.evals.evaluation_profile import (
+from workbench.evals.evaluation_profile import (
     EvaluationProfile,
     evaluate_predicate,
     load_evaluation_profile,

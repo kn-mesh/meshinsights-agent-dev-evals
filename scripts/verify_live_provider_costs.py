@@ -21,8 +21,8 @@ from mi.ai.message import UserMessage
 from mi.ai.model_config import ModelRef, ReasoningEffort, ReasoningSpec
 from mi.core import bootstrap_environment
 
-from model_catalog import resolve_model_definition
-from src.evals.eval_orchestration import _estimate_cost_from_usage
+from workbench.models.catalog import resolve_model_definition
+from workbench.evals.eval_orchestration import _estimate_cost_from_usage
 
 
 DEFAULT_MODELS = (

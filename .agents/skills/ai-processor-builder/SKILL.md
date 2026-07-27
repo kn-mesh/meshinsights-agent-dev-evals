@@ -6,7 +6,7 @@ description: Build structured-output `mi.ai` runtime workflow or agent processor
 # AI Processor Builder
 
 Build the smallest justified AI processor against the editable `mi.ai` source
-under `mi-core/core/src/mi/`. Preserve coherent local contracts unless the user
+under `packages/mi-core/core/src/mi/`. Preserve coherent local contracts unless the user
 asks to migrate them.
 
 This skill's `AISkill` means the `mi.ai` runtime abstraction, not a Codex
@@ -18,7 +18,7 @@ repository skill. Use `$pipeline-builder` for a measurable pipeline variant,
 
 - Prefer deterministic logic when it solves the task reliably.
 - Keep use-case prompts, schemas, and business rules under project-owned paths.
-- Inspect `mi-core/core/src/mi/docs/ai.md` and current source when exact message,
+- Inspect `packages/mi-core/core/src/mi/docs/ai.md` and current source when exact message,
   tool, capability, skill, retry, limit, or backend behavior matters.
 
 ## Choose The Processor Shape
@@ -121,7 +121,7 @@ class ClassificationProcessor(
 - Leave enough turn and tool-call budget for deferred discovery, execution, and
   final structured output.
 
-Read `mi-core/core/src/mi/docs/ai.md` only when implementing these advanced
+Read `packages/mi-core/core/src/mi/docs/ai.md` only when implementing these advanced
 surfaces; it owns current constructors, supported return shapes, loaders, and
 provider behavior.
 

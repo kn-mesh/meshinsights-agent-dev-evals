@@ -57,8 +57,9 @@ declaration sources, and prove the complete graph was captured.
    arguments, and a `benchmark_contract` declaring the published schema,
    evidence recipe, source snapshot contract, and required artifact kinds.
    Inject exact benchmark/example metadata at runtime; never store secrets.
-   Inspect current `use_case/pipeline_configs/` and `mi-core` pipeline docs for syntax
-   rather than copying a generic example.
+   Inspect current `use_case/pipeline_configs/` and
+   `packages/mi-core/core/src/mi/docs/` for syntax rather than copying a generic
+   example.
 4. **Validate one exact example.** The runner owns only unit-level execution.
    `run_pipeline(...)` receives the exact `BenchmarkVersion` and
    `BenchmarkExample`, verifies raw artifacts before decoding, and returns a
@@ -70,7 +71,7 @@ declaration sources, and prove the complete graph was captured.
 6. **Resolve the candidate.** Report immutable identity without promotion:
 
    ```bash
-   uv run python -m src.agent_versions.cli --json resolve \
+   uv run python -m workbench.agent_versions.cli --json resolve \
      --pipeline use_case/pipeline_configs/<variant>.ppln \
      --agent-policy use_case/agent_version_configs/<variant>.agent.yaml \
      --dirty-policy capture

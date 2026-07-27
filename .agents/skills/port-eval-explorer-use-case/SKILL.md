@@ -24,9 +24,9 @@ database code. Benchmark Studio remains the source of benchmark truth.
 
 Reuse these generic layers without adding use-case names or artifact fields:
 
-- `agent-dev-eval-core/evaluation/`: result querying and state classification;
-- `agent-dev-eval-ui/agent_eval_ui/`: local read-only API and static hosting; and
-- `agent-dev-eval-ui/web/src/`: run picker, filters, attempt detail, tool trace,
+- `packages/eval-core/evaluation/`: result querying and state classification;
+- `packages/eval-ui/agent_eval_ui/`: local read-only API and static hosting; and
+- `packages/eval-ui/web/src/`: run picker, filters, attempt detail, tool trace,
   tabs, JSON views, and generic chart primitives.
 
 Put custom behavior only in:

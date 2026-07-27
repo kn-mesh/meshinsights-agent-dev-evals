@@ -5,7 +5,7 @@ description: Manage local working and retained evals. Use to list or inspect exa
 
 # Eval Lifecycle
 
-Use `src.eval_lifecycle.cli`. Deletion and post-elevation source removal are
+Use `workbench.eval_lifecycle.cli`. Deletion and post-elevation source removal are
 permanent; there is no quarantine, restore, or recovery layer.
 
 ## Contract
@@ -26,31 +26,31 @@ permanent; there is no quarantine, restore, or recovery layer.
    coverage, and path:
 
    ```bash
-   uv run python -m src.eval_lifecycle.cli list --state all --json
-   uv run python -m src.eval_lifecycle.cli inspect <eval-id> --json
+   uv run python -m workbench.eval_lifecycle.cli list --state all --json
+   uv run python -m workbench.eval_lifecycle.cli inspect <eval-id> --json
    ```
 
 2. Preview elevation and review preservation/pruning. Refuse incomplete or
    inconsistent runs:
 
    ```bash
-   uv run python -m src.eval_lifecycle.cli elevate eval_<hash> --dry-run --json
+   uv run python -m workbench.eval_lifecycle.cli elevate eval_<hash> --dry-run --json
    ```
 
 3. After explicit confirmation, elevate and verify. Report retained eval and
    agent-version IDs, and confirm source removal happened only after verify:
 
    ```bash
-   uv run python -m src.eval_lifecycle.cli elevate eval_<hash> --yes --json
-   uv run python -m src.eval_lifecycle.cli verify ret_<hash> --json
+   uv run python -m workbench.eval_lifecycle.cli elevate eval_<hash> --yes --json
+   uv run python -m workbench.eval_lifecycle.cli verify ret_<hash> --json
    ```
 
 4. Confirm the exact target before permanent deletion unless the request
    already authorizes that ID:
 
    ```bash
-   uv run python -m src.eval_lifecycle.cli delete working eval_<hash> --yes --json
-   uv run python -m src.eval_lifecycle.cli delete retained ret_<hash> \
+   uv run python -m workbench.eval_lifecycle.cli delete working eval_<hash> --yes --json
+   uv run python -m workbench.eval_lifecycle.cli delete retained ret_<hash> \
      --confirm-retained ret_<hash> --json
    ```
 

@@ -68,7 +68,7 @@ Ask only for facts unavailable from those sources.
    and example ID. The target must run without the Studio checkout or live
    source system.
 7. **Update operator handoff.** Replace the control-pipeline portion of
-   `EvalRunbook.md` with validated pipeline/policy paths and the exact-example
+   `EVAL_RUNBOOK.md` with validated pipeline/policy paths and the exact-example
    command. Leave
    `agent-workbench-eval-runbook-status: bootstrap-placeholder` until
    `$agent-eval-builder` adds the first complete eval command.

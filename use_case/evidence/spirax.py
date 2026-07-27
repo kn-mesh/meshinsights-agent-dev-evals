@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from src.benchmarks import BenchmarkExample, BenchmarkExamplePipelineMetadata
+from workbench.benchmarks import BenchmarkExample, BenchmarkExamplePipelineMetadata
 from use_case.retrievers.spirax_frozen_evidence_retriever import (
     SpiraxFrozenEvidenceRetriever,
 )
-from src.storage.azure_blob import EvidenceStore
+from workbench.storage.azure_blob import EvidenceStore
 
 
 EVIDENCE_SCHEMA_VERSION = "spirax-evidence-view/v1"

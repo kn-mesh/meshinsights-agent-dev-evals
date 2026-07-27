@@ -14,11 +14,11 @@ libraries by hand.
    libraries, reusable Workbench paths, replaceable reference paths, root
    skills, and generated local state.
 2. Review a non-secret bootstrap spec based on
-   `bootstrap_configs/example.project.json`. Never put credentials in it.
+   `examples/project-bootstrap.json`. Never put credentials in it.
 3. Initialize a new, separate Git repository from an exact template revision:
 
    ```bash
-   uv run python -m src.project_bootstrap.cli --json init <destination> \
+   uv run python -m workbench.project_bootstrap.cli --json init <destination> \
      --spec <bootstrap-spec.json> \
      --template-source <template-repository> \
      --template-ref <tag-branch-or-commit>
@@ -27,26 +27,26 @@ libraries by hand.
 4. Inspect the reported template revision and run validation:
 
    ```bash
-   uv run python -m src.project_bootstrap.cli --json validate <destination>
+   uv run python -m workbench.project_bootstrap.cli --json validate <destination>
    ```
 
 5. Confirm:
    - reusable libraries and generic root skills were preserved;
-   - `tests/test_repository_skills.py` was preserved and passes in the generated
+   - `tests/architecture/test_repository_skills.py` was preserved and passes in the generated
      project after the reference-only `use_case/tests/` seam was cleared;
    - the single manifest-declared `use_case/` reference root was cleared and
      rebuilt as the neutral standard skeleton;
    - local evals, retained versions, credentials, caches, and build output were
      not copied;
-   - `README.md`, `EvalRunbook.md`, `.env.example`, `models.yaml`, and
+   - `README.md`, `EVAL_RUNBOOK.md`, `.env.example`, `models.yaml`, and
      `workbench.project.json` contain the new project identity;
-   - reusable `model_pricing.yaml` remains valid and satisfies every
+   - reusable `model-pricing.yaml` remains valid and satisfies every
      `models.yaml` pricing reference without use-case identity; and
    - validation reports no reference-identity leakage.
    - the neutral frontend tests and build pass before project-specific explorer
      code is added.
 6. Capture durable domain context in `use_case/docs/PROJECT_CONTEXT.md`.
-   Treat the generated `EvalRunbook.md` as a marked bootstrap placeholder, not
+   Treat the generated `EVAL_RUNBOOK.md` as a marked bootstrap placeholder, not
    an executable eval guide.
 7. Hand off evidence and control-pipeline work to
    `$benchmark-pipeline-port`, then use `$port-eval-explorer-use-case` for the
@@ -59,7 +59,7 @@ for any template or bootstrap implementation change.
 ## Boundaries
 
 - Keep every skill under root `.agents/skills/`.
-- Keep `mi-core/` distinct; do not move unrelated Workbench code into it.
+- Keep `packages/mi-core/` distinct; do not move unrelated Workbench code into it.
 - Do not initialize over a non-empty destination.
 - Do not use a branch in an existing use-case repository as the new project.
 - Do not copy Benchmark Studio workflow code, mutable benchmark truth, secrets,

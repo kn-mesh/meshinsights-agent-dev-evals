@@ -238,7 +238,7 @@ Cost estimates require a pricing snapshot for the selected model, including at
 least input-token and output-token rates. Vendor pricing is reusable Workbench
 configuration, not use-case configuration: `models.yaml` selects models and
 references billing identities, while reviewed rates live in
-`model_pricing.yaml` and can be shared by multiple provider aliases. The run
+`model-pricing.yaml` and can be shared by multiple provider aliases. The run
 must retain the resolved pricing snapshot so later price changes do not rewrite
 the historical estimate.
 
@@ -297,7 +297,7 @@ The product-level target is a visible separation between working and retained
 evals:
 
 ```text
-eval_results/
+.workbench/evals/
   working/
     <benchmark-key>/
       <benchmark-version>/
@@ -433,7 +433,7 @@ stable enough that its release overhead costs less than continued co-development
 ### Required replaceable boundary
 
 Reusable ownership must be clear, but it does not require one physical `core/`
-directory. In particular, `mi-core/` is an actual forked library with its own
+directory. In particular, `packages/mi-core/` is an actual forked library with its own
 pipeline-runtime purpose. Other reusable Workbench code must not be moved into
 or conflated with `mi-core`.
 
@@ -443,24 +443,31 @@ The target logical layout is:
 .agents/skills/
   root-level generic and use-case development skills
 
-mi-core/
-  forked reusable pipeline and AI runtime library
+packages/
+  mi-core/       forked reusable pipeline and AI runtime library
+  eval-core/     reusable evaluation library
+  eval-ui/       reusable review application library and UI shell
 
-agent-dev-eval-core/
-  reusable evaluation library
-
-agent-dev-eval-ui/
-  reusable review application library and UI shell
-
-<other use-case-neutral Workbench paths>
-  orchestration, bootstrap, versioning, and shared operator mechanics
+workbench/
+  reusable orchestration, bootstrap, versioning, model, lifecycle, publication,
+  storage, and shared operator mechanics
 
 use_case/
   project identity and Benchmark Studio connection
   durable use-case documentation
   objects, retrievers, evidence adapters, hydrators, processors, and actions
   pipeline, evaluation, and agent-version configurations
-  use-case-specific review UI schema and composition
+  use-case-specific review UI schema and adapters
+
+apps/
+  fixed application composition roots that connect workbench and use_case
+
+tests/
+  architecture/  cross-boundary, ownership, bootstrap, and skill contracts
+  workbench/     use-case-neutral reusable Workbench behavior
+
+.workbench/
+  ignored generated eval and promoted-agent-version artifacts
 ```
 
 Agent skills remain under the root-level `.agents/skills/` convention. Generic

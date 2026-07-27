@@ -46,14 +46,13 @@ non_execution_exclusions:
   - use_case/docs/**
   - use_case/evaluation_configs/**
   - use_case/tests/**
-  - mi-core/core/src/mi/docs/**
+  - packages/mi-core/core/src/mi/docs/**
   - tests/**
-  - eval_results/**
-  - src/evals/**
-  - src/benchmarks/**
-  - src/agent_versions/**
-  - src/apps/**
-  - use_case/apps/**
+  - .workbench/evals/**
+  - workbench/evals/**
+  - workbench/benchmarks/**
+  - workbench/agent_versions/**
+  - workbench/apps/**
   - use_case/evidence/**
   - use_case/explorer/**
   - use_case/graders/**

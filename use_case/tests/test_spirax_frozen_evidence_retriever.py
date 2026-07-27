@@ -9,11 +9,11 @@ from datetime import datetime, timezone
 import pandas as pd
 import pytest
 
-from src.benchmarks import BenchmarkExamplePipelineMetadata, SourceArtifact
+from workbench.benchmarks import BenchmarkExamplePipelineMetadata, SourceArtifact
 from use_case.retrievers.spirax_frozen_evidence_retriever import (
     SpiraxFrozenEvidenceRetriever,
 )
-from src.storage.azure_blob import AzureBlobEvidenceStore
+from workbench.storage.azure_blob import AzureBlobEvidenceStore
 
 
 def _artifact(kind: str, key: str, content_type: str, content: bytes) -> SourceArtifact:
