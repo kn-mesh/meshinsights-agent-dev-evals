@@ -26,7 +26,8 @@ choices, use `docs/product-strategy/` when that template-repository directory
 exists; generated projects instead use `workbench.project.json`,
 `docs/use_case/`, and this skill's boundaries.
 
-Run commands with `uv run`. Treat `mi-core/` as editable reusable source, not
+Use `uv run` for Python commands. Use the package manager declared by each
+non-Python workspace. Treat `mi-core/` as editable reusable source, not
 automatic scope.
 
 ## Ownership And Approval

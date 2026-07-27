@@ -475,8 +475,9 @@ are recorded in `workbench.project.json`.
 4. Run one exact benchmark example before a broader evaluation.
 5. Use `EvalRunbook.md` and the root skills under `.agents/skills/`.
 
-Run repository commands through `uv run`. Reusable libraries are editable local
-source, but coding agents must obtain user approval before modifying them.
+Use `uv run` for Python commands and the package manager declared by each
+non-Python workspace. Reusable libraries are editable local source, but coding
+agents must obtain user approval before modifying them.
 """,
         encoding="utf-8",
     )

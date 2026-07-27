@@ -65,7 +65,7 @@ If you need tracing, set up Logfire during auth as well. For deeper auth, teleme
 
 ### Run commands in project env
 
-Always execute project commands through `uv run`:
+Execute Python project commands through `uv run`:
 
 ```bash
 uv run python -m <module>
@@ -95,6 +95,8 @@ uv run python -c "import inspect; from mi.core.pipeline_orchestrator import Pipe
 ```
 
 Use the same pattern for `mi.ai` or any other installed dependency.
+For non-Python workspaces, use the package manager declared by that workspace;
+for example, run the explorer frontend's `pnpm` commands from `www/`.
 
 ### Add dependencies
 

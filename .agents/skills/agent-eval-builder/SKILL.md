@@ -1,6 +1,6 @@
 ---
 name: agent-eval-builder
-description: Build or change the minimum Agent Workbench evaluation capability needed to measure, inspect, and improve agent variants against published benchmarks. Use for benchmark/evidence handoffs, evaluation profiles, graders, orchestration, result contracts, or eval-result applications. To run an existing eval use run-use-case-evals; to analyze one use eval-results-analysis.
+description: Build or change the minimum Agent Workbench evaluation capability needed to measure, inspect, and improve agent variants against published benchmarks. Use for evaluation profiles, graders, orchestration, result or lifecycle contracts, and eval-result applications. Do not use for initial evidence-pipeline ports or explorer-use-case ports; use benchmark-pipeline-port or port-eval-explorer-use-case. To run an existing eval use run-use-case-evals; to analyze one use eval-results-analysis.
 ---
 
 # Agent Eval Builder

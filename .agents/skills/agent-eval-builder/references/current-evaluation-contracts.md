@@ -132,20 +132,22 @@ command starts a new occurrence. Resume requires the exact existing
 `eval_run_id` and verifies the supplied resolved specification.
 
 `LocalRunStore.evaluation_rows()` reconstructs detailed rows from the manifest
-and retained attempt generations. Removing attempts gives up resume,
-rematerialization, detailed inspection, and attempt verification while leaving
-the compact result.
+and selected immutable attempt-generation files in the working bundle.
+Removing attempts gives up resume, rematerialization, detailed inspection, and
+attempt verification while leaving the compact result.
 
-A selected occurrence may be elevated when it is complete: zero planned work
-items are missing and every planned work item has a latest recorded attempt.
-Its scope may be all examples, named sections, or explicit units/examples.
-Complete selected occurrences may be elevated to:
+Lifecycle discovery and elevation support occurrence-aware schema-v2 working
+bundles only. Legacy schema-v1 working bundles are rejected rather than
+migrated or elevated. A selected schema-v2 occurrence may be elevated when it
+is complete: zero planned work items are missing and every planned work item
+has a latest recorded attempt. Its scope may be all examples, named sections,
+or explicit units/examples. Complete selected occurrences may be elevated to:
 
 - `eval_results/retained/<benchmark>/v<version>/<retained-eval-id>/`
 
-Each new retained eval uses schema version 2 with a non-circular identity seed
-bound to the occurrence, benchmark, source state, and agent version. It is a
-compact aggregate containing `manifest.json`,
+Elevation always creates a schema-v2 retained eval with a non-circular identity
+seed bound to the occurrence, benchmark, source state, and agent version. It is
+a compact aggregate containing `manifest.json`,
 `result.json`, `units.json`, `agent-provenance.json`,
 `evidence-references.json`, and an optional `agent.patch`. Retained evals never
 contain per-unit files, performance detail, review objects, or local copies of
@@ -198,11 +200,12 @@ retained ID twice, and a shared agent version remains until its last retained
 eval reference is deleted. The read-only explorer may filter and inspect both
 lifecycle states but must not elevate, delete, edit, or annotate them.
 
-An explicitly selected schema-v2 retained eval may be published when every
-canonical unit completed and its recorded agent surface is clean. Each publish
-creates a new event. Payloads are downloaded and hash-verified before
-`publication-manifest.json` is created last as the discovery marker.
-Publication does not alter the local lifecycle or Benchmark Studio truth.
+Publication accepts schema-v2 retained evals only. An explicitly selected
+retained eval may be published when every canonical unit completed and its
+recorded agent surface is clean. Each publish creates a new event. Payloads are
+downloaded and hash-verified before `publication-manifest.json` is created last
+as the discovery marker. Publication does not alter the local lifecycle or
+Benchmark Studio truth.
 
 ## Hosted Inputs
 

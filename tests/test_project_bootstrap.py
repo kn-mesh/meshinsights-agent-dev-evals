@@ -303,9 +303,12 @@ def test_non_git_bootstrap_renders_and_validates_safe_project(tmp_path: Path) ->
     )
     assert reusable_test.returncode == 0, reusable_test.stdout + reusable_test.stderr
     assert "APP_PROJECT_KEY=acme-pumps" in (destination / ".env.example").read_text()
-    assert (
-        (destination / "README.md").read_text().startswith("# Acme Pump Reliability\n")
-    )
+    generated_readme = (destination / "README.md").read_text()
+    normalized_readme = " ".join(generated_readme.split())
+    assert generated_readme.startswith("# Acme Pump Reliability\n")
+    assert "Use `uv run` for Python commands" in generated_readme
+    assert "package manager declared by each non-Python workspace" in normalized_readme
+    assert "Run repository commands through `uv run`" not in generated_readme
     assert 'name = "acme-pump-agent"' in (destination / "pyproject.toml").read_text()
     assert (
         yaml.safe_load((destination / "models.yaml").read_text())["default_model"]

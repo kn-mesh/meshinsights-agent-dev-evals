@@ -255,7 +255,7 @@ def test_lifecycle_skill_defines_complete_selected_occurrence() -> None:
         assert "complete full run" not in content.lower()
         assert "full-run elevation" not in content.lower()
     assert "every planned work item" in lifecycle
-    assert "zero planned work\nitems are missing" in contracts
+    assert "zero planned work items are missing" in " ".join(contracts.split())
 
 
 def test_explorer_port_skill_supports_working_and_retained_evidence() -> None:
@@ -340,6 +340,7 @@ def test_preserved_skills_treat_removed_product_strategy_as_optional() -> None:
 
 def test_project_guide_uses_manifest_paths_and_unique_routes() -> None:
     content = (SKILLS / "project-guide" / "SKILL.md").read_text(encoding="utf-8")
+    normalized = " ".join(content.split())
     layout = content.split("## Repository Layout", 1)[1].split(
         "## Gate New Work", 1
     )[0]
@@ -351,6 +352,38 @@ def test_project_guide_uses_manifest_paths_and_unique_routes() -> None:
     assert "`data/`" not in layout
     assert "src/experimental_core" not in content
     assert routes.count("$external-runtime-setup") == 1
+    assert "Use `uv run` for Python commands" in content
+    assert "package manager declared by each non-Python workspace" in normalized
+    assert "Run commands with `uv run`" not in content
+
+
+def test_agent_eval_builder_scope_excludes_initial_porting_workflows() -> None:
+    content = (SKILLS / "agent-eval-builder" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    frontmatter = yaml.safe_load(content.split("---", 2)[1])
+    description = frontmatter["description"]
+
+    assert "benchmark/evidence handoffs" not in description
+    assert "evaluation profiles, graders, orchestration" in description
+    assert "Do not use for initial evidence-pipeline ports" in description
+    assert "benchmark-pipeline-port" in description
+    assert "port-eval-explorer-use-case" in description
+
+
+def test_current_evaluation_contracts_state_schema_boundaries() -> None:
+    contracts = (
+        SKILLS
+        / "agent-eval-builder"
+        / "references"
+        / "current-evaluation-contracts.md"
+    ).read_text(encoding="utf-8")
+
+    assert "selected immutable attempt-generation files" in contracts
+    assert "Legacy schema-v1 working bundles are rejected" in contracts
+    assert "Elevation always creates a schema-v2 retained eval" in contracts
+    assert "Publication accepts schema-v2 retained evals only" in contracts
+    assert "retained attempt generations" not in contracts
 
 
 def test_skill_ui_metadata_matches_scope_and_safety_boundaries() -> None:
