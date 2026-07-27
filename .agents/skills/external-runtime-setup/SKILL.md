@@ -1,6 +1,6 @@
 ---
 name: external-runtime-setup
-description: Configure external auth, environment bootstrap, provider credentials, hosted benchmark access, telemetry, model catalogs, pricing, and runtime AI overrides for this repo. Use for `.env`, `mi auth`, provider:model validation, Logfire, startup order, or AI runtime failures.
+description: "Configure Agent Workbench external runtime integration: auth, environment bootstrap, provider credentials, hosted benchmark access, telemetry, model catalogs, pricing, and AI overrides. Use for `.env`, `mi auth`, provider:model validation, Logfire, or runtime failures."
 ---
 
 # External Runtime Setup
@@ -19,9 +19,6 @@ processor behavior, and `$run-use-case-evals` for eval execution.
 - Treat `models.yaml` as the project model/API catalog and
   `model_pricing.yaml` as reviewed reusable non-secret pricing.
 - Inspect current runners and editable `mi-core` source when behavior matters.
-- If the request explicitly authorizes the named reusable scope, proceed after
-  stating its ownership and focused tests. Otherwise, identify the exact
-  reusable paths/contracts and pause once for approval.
 
 ## Startup Order
 

@@ -22,6 +22,11 @@
       "description": "Root-level generic and project-configured Codex workflows"
     },
     {
+      "path": "AGENTS.md",
+      "owner": "root_infrastructure",
+      "description": "Durable repository-wide Codex guidance and ownership rules"
+    },
+    {
       "path": "bootstrap_configs",
       "owner": "root_infrastructure",
       "description": "Reviewed non-secret examples for new-project initialization"

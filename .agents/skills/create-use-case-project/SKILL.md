@@ -1,6 +1,6 @@
 ---
 name: create-use-case-project
-description: Create and validate a separate Git repository for a new Agent Workbench use case from an exact template revision. Use when an FDE wants to bootstrap a project, clear the template reference seam, configure non-secret Benchmark Studio and model identities, verify reusable source was preserved, or hand the clean project to the benchmark pipeline and explorer port workflows.
+description: Create and validate a separate Agent Workbench use-case repository from an exact template revision. Use to bootstrap project identity, clear reference-use-case paths, preserve reusable source, and prepare pipeline and explorer ports.
 ---
 
 # Create Use-Case Project
@@ -52,16 +52,6 @@ libraries by hand.
 Use the
 [repository verification matrix](../project-guide/references/verification-matrix.md)
 for any template or bootstrap implementation change.
-
-## Reusable-Code Approval
-
-If the request explicitly authorizes the named reusable scope, proceed after
-stating its ownership and focused tests. Otherwise, identify the exact reusable
-paths/contracts and pause once for approval.
-
-If an approved shared fix is made locally, record the canonical template or
-library target and the upstream issue, PR, commit, or pending action before
-calling the work complete.
 
 ## Boundaries
 

@@ -1,6 +1,6 @@
 ---
 name: eval-lifecycle
-description: Manage the formal local lifecycle of Agent Workbench eval results. Use to explain working versus retained evals, list or inspect exact IDs, preview/elevate one complete selected occurrence, verify retained artifacts, or permanently delete an exact eval. Do not run or analyze evals, publish retained evals, perform recoverable deletion, or mutate through UI.
+description: Manage local working and retained evals. Use to list or inspect exact IDs, preview or elevate one complete occurrence, verify retained artifacts, or permanently delete an exact eval. Do not run, analyze, publish, or perform recoverable deletion.
 ---
 
 # Eval Lifecycle
@@ -66,8 +66,5 @@ permanent; there is no quarantine, restore, or recovery layer.
 - `$agent-eval-builder`: change lifecycle schemas or explorer behavior.
 - The explorer is read-only for All/Working/Retained. Never add elevation,
   deletion, annotation, automatic sync, or Benchmark Studio writes.
-- If the request explicitly authorizes the named reusable scope, proceed after
-  stating its ownership and focused tests. Otherwise, identify the exact
-  reusable paths/contracts and pause once for approval.
 - For implementation changes, select every affected layer in the
   [repository verification matrix](../project-guide/references/verification-matrix.md).

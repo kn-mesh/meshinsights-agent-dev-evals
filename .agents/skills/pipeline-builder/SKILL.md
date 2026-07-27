@@ -1,6 +1,6 @@
 ---
 name: pipeline-builder
-description: Build or evolve stage-based use-case pipelines in this repo. Use for retrievers, hydrators, process or action objects, pipeline YAML, exact-example runners, receipt contracts, processor variants, matching agent policies, or progression from deterministic logic to optional AI and eval support.
+description: Build or evolve stage-based use-case pipelines after the initial port. Use for retrievers, hydrators, typed objects, processors, YAML, exact-example runners, receipts, variants, and agent policies. Use other skills for AI internals, runtime setup, or eval infrastructure.
 ---
 
 # Pipeline Builder
@@ -16,9 +16,6 @@ execution, and `$agent-eval-builder` for eval contract changes.
   and focused tests before editing.
 - Keep use-case rules in manifest-declared reference paths. Reuse `mi.core`,
   `mi.ai`, and existing helpers.
-- If the request explicitly authorizes the named reusable scope, proceed after
-  stating its ownership and focused tests. Otherwise, identify the exact
-  reusable paths/contracts and pause once for approval.
 - Use `$external-runtime-setup` for provider auth, telemetry, model catalogs, or
   runtime compatibility. Do not reproduce those details here.
 

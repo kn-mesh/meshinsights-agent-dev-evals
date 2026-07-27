@@ -1,6 +1,6 @@
 ---
 name: agent-eval-builder
-description: Build or change the minimum Agent Workbench evaluation capability needed to measure, inspect, and improve agent variants against published benchmarks. Use for evaluation profiles, graders, orchestration, result or lifecycle contracts, and eval-result applications. Do not use for initial evidence-pipeline ports or explorer-use-case ports; use benchmark-pipeline-port or port-eval-explorer-use-case. To run an existing eval use run-use-case-evals; to analyze one use eval-results-analysis.
+description: "Build or change Agent Workbench evaluation capability: profiles, graders, orchestration, result or lifecycle contracts, and eval-result apps. Use when existing eval tooling must be implemented or modified. Use dedicated port, run, and analysis skills for those workflows."
 ---
 
 # Agent Eval Builder
@@ -18,9 +18,6 @@ that outcome.
   mechanics with the same meaning across real use cases.
 - Do not add Studio writes, local benchmark truth, production hosting, or
   generic runtime infrastructure.
-- If the request explicitly authorizes the named reusable scope, proceed after
-  stating its ownership and focused tests. Otherwise, identify the exact
-  reusable paths/contracts and pause once for approval.
 
 For product choices, read `docs/product-strategy/` when it exists. In generated
 projects use `workbench.project.json`, `docs/use_case/`, and these boundaries.

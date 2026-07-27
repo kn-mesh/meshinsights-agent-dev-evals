@@ -1,6 +1,6 @@
 ---
 name: port-eval-explorer-use-case
-description: Port a use case from an existing MeshInsights Benchmark Studio app into the Agent Workbench eval explorer. Use when an AI coding agent must reuse the generic run, attempt, review, and evidence-loading core while implementing the use-case-specific frozen-evidence normalization, schema, and charts.
+description: Port a Benchmark Studio use case into the Agent Workbench eval explorer. Use for project-specific frozen-evidence normalization, schema, and charts while reusing the generic explorer core. Do not use for pipeline or agent behavior changes.
 ---
 
 # Port Eval Explorer Use Case
@@ -35,11 +35,8 @@ Put custom behavior only in:
   evidence envelope; and
 - `www/src/use_case/`: schema validation and evidence composition/charts.
 
-If the request explicitly authorizes the named reusable scope, proceed after
-stating its ownership and focused tests. Otherwise, identify the exact reusable
-paths/contracts and pause once for approval. Keep business meaning, artifact
-names, thresholds, and domain-specific layout in manifest-declared reference
-paths.
+Keep business meaning, artifact names, thresholds, and domain-specific layout
+in manifest-declared reference paths.
 
 ## 3. Port The Evidence Path
 

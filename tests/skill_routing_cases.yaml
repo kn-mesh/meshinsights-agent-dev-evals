@@ -1,0 +1,146 @@
+schema_version: 1
+cases:
+  - id: orient_repository
+    prompt: "Explain where a change to benchmark evidence normalization belongs."
+    tags: [positive, neighbor]
+    expected_sequence: [project-guide]
+    excluded: [pipeline-builder]
+    confirmation: none
+
+  - id: bootstrap_project
+    prompt: "Create a separate use-case repository from template commit abc123."
+    tags: [positive, neighbor]
+    expected_sequence: [create-use-case-project]
+    excluded: [benchmark-pipeline-port]
+    confirmation: none
+
+  - id: port_initial_pipeline
+    prompt: "Port the initial frozen-evidence pipeline from Benchmark Studio."
+    tags: [positive, neighbor]
+    expected_sequence: [benchmark-pipeline-port]
+    excluded: [pipeline-builder, port-eval-explorer-use-case]
+    confirmation: none
+
+  - id: port_explorer_only
+    prompt: "Port the evidence schema and charts into the eval explorer; the pipeline already works."
+    tags: [positive, neighbor]
+    expected_sequence: [port-eval-explorer-use-case]
+    excluded: [benchmark-pipeline-port, pipeline-builder]
+    confirmation: none
+
+  - id: make_pipeline_variant
+    prompt: "Make a new variant of the existing pipeline with a different deterministic threshold."
+    tags: [positive, neighbor, common_language]
+    expected_sequence: [pipeline-builder]
+    excluded: [benchmark-pipeline-port, agent-eval-builder]
+    confirmation: none
+
+  - id: build_mi_ai_processor
+    prompt: "Implement a structured-output mi.ai processor with one bounded diagnostic tool."
+    tags: [positive, neighbor]
+    expected_sequence: [ai-processor-builder]
+    excluded: [agent-eval-builder, project-guide]
+    confirmation: none
+
+  - id: change_eval_grader
+    prompt: "Add a numeric-tolerance grader and expose its result in the eval explorer."
+    tags: [positive, neighbor]
+    expected_sequence: [agent-eval-builder]
+    excluded: [run-use-case-evals, eval-results-analysis]
+    confirmation: none
+
+  - id: prepare_existing_eval
+    prompt: "Prepare the exact command to run the existing control pipeline on benchmark version 7."
+    tags: [positive, neighbor]
+    expected_sequence: [run-use-case-evals]
+    excluded: [agent-eval-builder, eval-results-analysis]
+    confirmation: none
+
+  - id: compare_runs
+    prompt: "Compare these runs: eval_123 and eval_456, and explain the reliability regression."
+    tags: [positive, neighbor, common_language]
+    expected_sequence: [eval-results-analysis]
+    excluded: [run-use-case-evals, pipeline-builder]
+    confirmation: none
+
+  - id: inspect_lifecycle
+    prompt: "List working and retained evals and verify retained ID ret_123."
+    tags: [positive, neighbor]
+    expected_sequence: [eval-lifecycle]
+    excluded: [run-use-case-evals, publish-retained-eval]
+    confirmation: none
+
+  - id: publish_exact_retained
+    prompt: "Publish retained eval ret_123 to the configured immutable Azure destination."
+    tags: [positive, neighbor, high_risk]
+    expected_sequence: [publish-retained-eval]
+    excluded: [eval-lifecycle, run-use-case-evals]
+    confirmation: authorized_by_prompt
+
+  - id: configure_runtime
+    prompt: "Fix Azure provider authentication and Logfire startup configuration."
+    tags: [positive, neighbor]
+    expected_sequence: [external-runtime-setup]
+    excluded: [pipeline-builder, ai-processor-builder]
+    confirmation: none
+
+  - id: improve_agent
+    prompt: "Improve the agent using the last completed eval, then measure whether the change worked."
+    tags: [composite, common_language]
+    expected_sequence:
+      - project-guide
+      - eval-results-analysis
+      - pipeline-builder
+      - run-use-case-evals
+      - eval-results-analysis
+    excluded: [agent-eval-builder]
+    confirmation: concrete_paid_run
+
+  - id: compare_then_variant
+    prompt: "Compare these runs, identify the repeated failure, and make a new variant to address it."
+    tags: [composite, common_language]
+    expected_sequence: [eval-results-analysis, pipeline-builder]
+    excluded: [agent-eval-builder, eval-lifecycle]
+    confirmation: none
+
+  - id: variant_then_eval
+    prompt: "Make a new variant and evaluate it on the named regression section."
+    tags: [composite, common_language]
+    expected_sequence: [pipeline-builder, run-use-case-evals]
+    excluded: [benchmark-pipeline-port, eval-lifecycle]
+    confirmation: concrete_paid_run
+
+  - id: share_results
+    prompt: "Share these results."
+    tags: [composite, common_language, high_risk]
+    expected_sequence: [project-guide, eval-lifecycle, publish-retained-eval]
+    excluded: [run-use-case-evals]
+    confirmation: exact_retained_eval
+
+  - id: repair_runtime_then_run
+    prompt: "Fix the provider credentials, then run the requested benchmark section."
+    tags: [composite, high_risk]
+    expected_sequence: [external-runtime-setup, run-use-case-evals]
+    excluded: [pipeline-builder]
+    confirmation: concrete_paid_run
+
+  - id: delete_unspecified_eval
+    prompt: "Delete the old retained eval."
+    tags: [high_risk, neighbor]
+    expected_sequence: [eval-lifecycle]
+    excluded: [publish-retained-eval]
+    confirmation: exact_eval_id
+
+  - id: publish_unspecified_result
+    prompt: "Publish the latest good result."
+    tags: [high_risk, neighbor]
+    expected_sequence: [publish-retained-eval]
+    excluded: [run-use-case-evals]
+    confirmation: exact_retained_eval
+
+  - id: broad_paid_eval
+    prompt: "Run the agent against the full published benchmark."
+    tags: [high_risk, neighbor]
+    expected_sequence: [run-use-case-evals]
+    excluded: [agent-eval-builder]
+    confirmation: concrete_paid_run

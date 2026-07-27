@@ -1,6 +1,6 @@
 ---
 name: ai-processor-builder
-description: Build or update structured-output mi.ai workflow or agent processors in this repo. Use for multimodal inputs, tool-enabled agents, reusable toolsets, progressively disclosed capabilities or Agent Skills, typed processor configuration, and stable AI artifacts for downstream hydrators and evals. Do not add AI when deterministic logic is sufficient.
+description: Build structured-output `mi.ai` runtime workflow or agent processors with multimodal inputs, tools, capabilities, runtime `AISkill` runbooks, and stable artifacts. Use for processor implementation, not Codex `.agents/skills` authoring; prefer deterministic logic when sufficient.
 ---
 
 # AI Processor Builder
@@ -9,7 +9,8 @@ Build the smallest justified AI processor against the editable `mi.ai` source
 under `mi-core/core/src/mi/`. Preserve coherent local contracts unless the user
 asks to migrate them.
 
-Use `$pipeline-builder` for a measurable pipeline variant,
+This skill's `AISkill` means the `mi.ai` runtime abstraction, not a Codex
+repository skill. Use `$pipeline-builder` for a measurable pipeline variant,
 `$external-runtime-setup` for auth or model runtime setup, and
 `$agent-eval-builder` for eval contract changes.
 
@@ -19,9 +20,6 @@ Use `$pipeline-builder` for a measurable pipeline variant,
 - Keep use-case prompts, schemas, and business rules under project-owned paths.
 - Inspect `mi-core/core/src/mi/docs/ai.md` and current source when exact message,
   tool, capability, skill, retry, limit, or backend behavior matters.
-- If the request explicitly authorizes the named reusable scope, proceed after
-  stating its ownership and focused tests. Otherwise, identify the exact
-  reusable paths/contracts and pause once for approval.
 
 ## Choose The Processor Shape
 

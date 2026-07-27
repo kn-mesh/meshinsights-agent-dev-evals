@@ -1,6 +1,6 @@
 ---
 name: run-use-case-evals
-description: Prepare, execute, or troubleshoot published-benchmark evals for this Agent Workbench use case. Use to select an explicit pipeline, benchmark version, model, scope, repetitions, and runtime or to monitor a requested run. Do not change orchestration contracts, validate a developing agent on one unit, or analyze regressions with this skill.
+description: Prepare, execute, monitor, or troubleshoot an existing published-benchmark eval. Use for an explicit pipeline, benchmark version, model, scope, repetitions, and runtime. Do not change eval contracts, validate one developing example, or analyze completed-result regressions.
 ---
 
 # Run Use-Case Evals

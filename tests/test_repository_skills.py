@@ -15,6 +15,7 @@ from src.agent_versions.resolver import (
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / ".agents" / "skills"
+ROUTING_CASES = ROOT / "tests" / "skill_routing_cases.yaml"
 REUSABLE_CHANGE_SKILLS = (
     "agent-eval-builder",
     "ai-processor-builder",
@@ -27,11 +28,18 @@ REUSABLE_CHANGE_SKILLS = (
     "project-guide",
     "publish-retained-eval",
 )
-REUSABLE_AUTHORIZATION_RULE = (
-    "if the request explicitly authorizes the named reusable scope, proceed "
-    "after stating its ownership and focused tests. otherwise, identify the "
-    "exact reusable paths/contracts and pause once for approval."
-)
+
+
+def _skill_names() -> set[str]:
+    return {path.parent.name for path in SKILLS.glob("*/SKILL.md")}
+
+
+def _routing_cases() -> list[dict[str, object]]:
+    payload = yaml.safe_load(ROUTING_CASES.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == 1
+    cases = payload["cases"]
+    assert isinstance(cases, list)
+    return cases
 
 
 def test_all_repository_skills_stay_under_root_skills_directory() -> None:
@@ -84,18 +92,125 @@ def test_skill_packages_use_only_direct_supported_resources() -> None:
             assert not markdown_link.search(content), reference
 
 
-def test_reusable_change_skills_share_one_authorization_rule() -> None:
+def test_root_agents_owns_shared_repository_policy() -> None:
+    guidance = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+    manifest = json.loads((ROOT / "workbench.template.json").read_text())
+    ownership = {item["path"]: item["owner"] for item in manifest["ownership"]}
+
+    assert ownership["AGENTS.md"] == "root_infrastructure"
+    for required in (
+        "Use `workbench.template.json` as the authoritative ownership",
+        "Before changing a reusable library or reusable Workbench path",
+        "Proceed when the request clearly requires a change",
+        "ask\nonce before expanding scope",
+        "Use `uv run` for Python commands",
+        "verification-matrix.md",
+        "quick_validate.py",
+        "tests/test_repository_skills.py",
+    ):
+        assert required in guidance
+
+    duplicated_policy = "If the request explicitly authorizes the named reusable scope"
     for name in REUSABLE_CHANGE_SKILLS:
-        content = " ".join(
-            (SKILLS / name / "SKILL.md").read_text(encoding="utf-8").lower().split()
+        content = (SKILLS / name / "SKILL.md").read_text(encoding="utf-8")
+        assert duplicated_policy not in content, name
+
+
+def test_skill_descriptions_are_compact_and_disambiguated() -> None:
+    descriptions = {}
+    for path in sorted(SKILLS.glob("*/SKILL.md")):
+        frontmatter = yaml.safe_load(
+            path.read_text(encoding="utf-8").split("---", 2)[1]
         )
-        assert REUSABLE_AUTHORIZATION_RULE in content, name
+        descriptions[path.parent.name] = frontmatter["description"]
+
+    assert all(len(description) <= 280 for description in descriptions.values())
+    assert sum(map(len, descriptions.values())) <= 3_100
+    ai_description = descriptions["ai-processor-builder"]
+    assert "`mi.ai` runtime" in ai_description
+    assert "not Codex `.agents/skills` authoring" in ai_description
+
+
+def test_all_skill_references_resolve_and_router_covers_every_skill() -> None:
+    skill_names = _skill_names()
+    reference_pattern = re.compile(r"\$([a-z][a-z0-9-]+)")
+    referenced = set()
+    for path in sorted(SKILLS.glob("*/SKILL.md")):
+        referenced.update(reference_pattern.findall(path.read_text(encoding="utf-8")))
+
+    assert referenced <= skill_names
+
+    guide = (SKILLS / "project-guide" / "SKILL.md").read_text(encoding="utf-8")
+    router = guide.split("## Route To Specialized Skills", 1)[1].split(
+        "## Improve An Agent Variant", 1
+    )[0]
+    routed = re.findall(r"\|\s*[^|]+\|\s*`\$([a-z][a-z0-9-]+)`\s*\|", router)
+    assert len(routed) == len(set(routed))
+    assert set(routed) == skill_names
+
+
+def test_routing_case_corpus_covers_portfolio_behavior() -> None:
+    skill_names = _skill_names()
+    cases = _routing_cases()
+    allowed_tags = {"positive", "neighbor", "composite", "high_risk", "common_language"}
+    allowed_confirmations = {
+        "none",
+        "authorized_by_prompt",
+        "concrete_paid_run",
+        "exact_eval_id",
+        "exact_retained_eval",
+    }
+
+    ids = [case["id"] for case in cases]
+    assert len(ids) == len(set(ids))
+    for case in cases:
+        assert isinstance(case["prompt"], str) and case["prompt"].strip()
+        tags = set(case["tags"])
+        sequence = case["expected_sequence"]
+        excluded = set(case["excluded"])
+        assert tags and tags <= allowed_tags
+        assert isinstance(sequence, list) and sequence
+        assert set(sequence) <= skill_names
+        assert excluded <= skill_names
+        assert not excluded.intersection(sequence)
+        assert case["confirmation"] in allowed_confirmations
+
+    positive_primary = {
+        case["expected_sequence"][0] for case in cases if "positive" in case["tags"]
+    }
+    assert positive_primary == skill_names
+
+    neighbor_cases = [case for case in cases if "neighbor" in case["tags"]]
+    assert len(neighbor_cases) >= len(skill_names)
+    assert all(case["excluded"] for case in neighbor_cases)
+
+    composite_cases = [case for case in cases if "composite" in case["tags"]]
+    assert len(composite_cases) >= 4
+    assert all(len(case["expected_sequence"]) >= 2 for case in composite_cases)
+
+    high_risk_cases = [case for case in cases if "high_risk" in case["tags"]]
+    assert high_risk_cases
+    assert all(case["confirmation"] != "none" for case in high_risk_cases)
+    assert {
+        "concrete_paid_run",
+        "exact_eval_id",
+        "exact_retained_eval",
+    } <= {case["confirmation"] for case in high_risk_cases}
+
+    common_prompts = " ".join(
+        case["prompt"].lower() for case in cases if "common_language" in case["tags"]
+    )
+    for phrase in (
+        "improve the agent",
+        "compare these runs",
+        "make a new variant",
+        "share these results",
+    ):
+        assert phrase in common_prompts
 
 
 def test_change_skills_route_to_complete_repository_verification() -> None:
-    matrix_path = (
-        SKILLS / "project-guide" / "references" / "verification-matrix.md"
-    )
+    matrix_path = SKILLS / "project-guide" / "references" / "verification-matrix.md"
     matrix = matrix_path.read_text(encoding="utf-8")
 
     for required in (
@@ -126,8 +241,8 @@ def test_create_project_skill_has_valid_discovery_metadata() -> None:
     )["interface"]
 
     assert frontmatter["name"] == "create-use-case-project"
-    assert "separate Git repository" in frontmatter["description"]
-    assert interface["display_name"] == "Create Use-Case Project"
+    assert "separate Agent Workbench" in frontmatter["description"]
+    assert interface["display_name"] == "Create Use Case Project"
     assert "$create-use-case-project" in interface["default_prompt"]
     assert "reusable `model_pricing.yaml` remains valid" in content
     assert "`model_pricing.yaml` contain the new project identity" not in content
@@ -146,15 +261,10 @@ def test_retained_eval_publication_skill_matches_product_and_code() -> None:
         encoding="utf-8"
     )
     lifecycle = (SKILLS / "eval-lifecycle" / "SKILL.md").read_text(encoding="utf-8")
-    builder = (SKILLS / "agent-eval-builder" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
+    builder = (SKILLS / "agent-eval-builder" / "SKILL.md").read_text(encoding="utf-8")
     guide = (SKILLS / "project-guide" / "SKILL.md").read_text(encoding="utf-8")
     contracts = (
-        SKILLS
-        / "agent-eval-builder"
-        / "references"
-        / "current-evaluation-contracts.md"
+        SKILLS / "agent-eval-builder" / "references" / "current-evaluation-contracts.md"
     ).read_text(encoding="utf-8")
     strategy_path = ROOT / "docs/product-strategy/mvp-scope.md"
 
@@ -175,9 +285,7 @@ def test_retained_eval_publication_skill_matches_product_and_code() -> None:
 
 
 def test_ai_processor_skill_uses_registry_discoverable_typed_config() -> None:
-    content = (SKILLS / "ai-processor-builder" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
+    content = (SKILLS / "ai-processor-builder" / "SKILL.md").read_text(encoding="utf-8")
 
     for required in (
         "config: ClassificationProcessorConfig",
@@ -190,9 +298,7 @@ def test_ai_processor_skill_uses_registry_discoverable_typed_config() -> None:
 
 
 def test_ai_processor_skill_does_not_require_static_f_strings() -> None:
-    content = (SKILLS / "ai-processor-builder" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
+    content = (SKILLS / "ai-processor-builder" / "SKILL.md").read_text(encoding="utf-8")
 
     assert "Use plain strings for static prompts" in content
     assert "explicit f-strings" not in content
@@ -221,9 +327,7 @@ def test_every_evaluable_pipeline_has_a_valid_matching_agent_policy() -> None:
 
 
 def test_pipeline_skill_requires_explicit_version_for_recorded_validation() -> None:
-    content = (SKILLS / "pipeline-builder" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
+    content = (SKILLS / "pipeline-builder" / "SKILL.md").read_text(encoding="utf-8")
 
     assert "Require explicit benchmark version and example identity" in content
     assert "latest-version resolution only for interactive discovery" in content
@@ -231,9 +335,7 @@ def test_pipeline_skill_requires_explicit_version_for_recorded_validation() -> N
 
 
 def test_pipeline_skill_matches_candidate_asset_ownership() -> None:
-    content = (SKILLS / "pipeline-builder" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
+    content = (SKILLS / "pipeline-builder" / "SKILL.md").read_text(encoding="utf-8")
 
     assert "`version_assets()` and\n`version_contracts()`" in content
     assert "`additional_assets` only for behavior-bearing files" in content
@@ -241,13 +343,9 @@ def test_pipeline_skill_matches_candidate_asset_ownership() -> None:
 
 
 def test_lifecycle_skill_defines_complete_selected_occurrence() -> None:
-    lifecycle = (SKILLS / "eval-lifecycle" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
+    lifecycle = (SKILLS / "eval-lifecycle" / "SKILL.md").read_text(encoding="utf-8")
     contracts = (
-        SKILLS
-        / "agent-eval-builder"
-        / "references/current-evaluation-contracts.md"
+        SKILLS / "agent-eval-builder" / "references/current-evaluation-contracts.md"
     ).read_text(encoding="utf-8")
 
     for content in (lifecycle, contracts):
@@ -288,9 +386,7 @@ def test_eval_analysis_distinguishes_working_and_retained_handoffs() -> None:
 
 
 def test_eval_runner_skill_documents_occurrence_and_dry_run_contracts() -> None:
-    content = (SKILLS / "run-use-case-evals" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
+    content = (SKILLS / "run-use-case-evals" / "SKILL.md").read_text(encoding="utf-8")
 
     assert "one new occurrence of the requested scope" in content
     assert "Eval `--dry-run` is stateful" in content
@@ -303,15 +399,9 @@ def test_skills_assign_generated_eval_runbook_ownership() -> None:
     create = (SKILLS / "create-use-case-project" / "SKILL.md").read_text(
         encoding="utf-8"
     )
-    port = (SKILLS / "benchmark-pipeline-port" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
-    builder = (SKILLS / "agent-eval-builder" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
-    runner = (SKILLS / "run-use-case-evals" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
+    port = (SKILLS / "benchmark-pipeline-port" / "SKILL.md").read_text(encoding="utf-8")
+    builder = (SKILLS / "agent-eval-builder" / "SKILL.md").read_text(encoding="utf-8")
+    runner = (SKILLS / "run-use-case-evals" / "SKILL.md").read_text(encoding="utf-8")
     marker = "agent-workbench-eval-runbook-status: bootstrap-placeholder"
 
     assert "marked bootstrap placeholder" in create
@@ -340,10 +430,7 @@ def test_preserved_skills_treat_removed_product_strategy_as_optional() -> None:
 
 def test_project_guide_uses_manifest_paths_and_unique_routes() -> None:
     content = (SKILLS / "project-guide" / "SKILL.md").read_text(encoding="utf-8")
-    normalized = " ".join(content.split())
-    layout = content.split("## Repository Layout", 1)[1].split(
-        "## Gate New Work", 1
-    )[0]
+    layout = content.split("## Repository Layout", 1)[1].split("## Gate New Work", 1)[0]
     routes = content.split("## Route To Specialized Skills", 1)[1].split(
         "## Guide Template Customization", 1
     )[0]
@@ -351,32 +438,37 @@ def test_project_guide_uses_manifest_paths_and_unique_routes() -> None:
     assert "`workbench.template.json` as the authoritative path inventory" in layout
     assert "`data/`" not in layout
     assert "src/experimental_core" not in content
-    assert routes.count("$external-runtime-setup") == 1
-    assert "Use `uv run` for Python commands" in content
-    assert "package manager declared by each non-Python workspace" in normalized
+    assert "| Task | Skill |" in routes
+    assert "Follow root `AGENTS.md`" in content
+    assert "Use `uv run` for Python commands" not in content
     assert "Run commands with `uv run`" not in content
 
 
-def test_agent_eval_builder_scope_excludes_initial_porting_workflows() -> None:
-    content = (SKILLS / "agent-eval-builder" / "SKILL.md").read_text(
-        encoding="utf-8"
+def test_project_guide_defines_measured_agent_improvement_loop() -> None:
+    content = (SKILLS / "project-guide" / "SKILL.md").read_text(encoding="utf-8")
+    loop = content.split("## Improve An Agent Variant", 1)[1].split(
+        "## Guide Template Customization", 1
+    )[0]
+    improvement_case = next(
+        case for case in _routing_cases() if case["id"] == "improve_agent"
     )
-    frontmatter = yaml.safe_load(content.split("---", 2)[1])
-    description = frontmatter["description"]
+    routed_sequence = improvement_case["expected_sequence"][1:]
+    cursor = 0
+    for skill in routed_sequence:
+        cursor = loop.index(f"${skill}", cursor) + len(skill) + 1
 
-    assert "benchmark/evidence handoffs" not in description
-    assert "evaluation profiles, graders, orchestration" in description
-    assert "Do not use for initial evidence-pipeline ports" in description
-    assert "benchmark-pipeline-port" in description
-    assert "port-eval-explorer-use-case" in description
+    loop_references = set(re.findall(r"\$([a-z][a-z0-9-]+)", loop))
+    assert {
+        "agent-eval-builder",
+        "ai-processor-builder",
+        "eval-lifecycle",
+        "publish-retained-eval",
+    } <= loop_references
 
 
 def test_current_evaluation_contracts_state_schema_boundaries() -> None:
     contracts = (
-        SKILLS
-        / "agent-eval-builder"
-        / "references"
-        / "current-evaluation-contracts.md"
+        SKILLS / "agent-eval-builder" / "references" / "current-evaluation-contracts.md"
     ).read_text(encoding="utf-8")
 
     assert "selected immutable attempt-generation files" in contracts
@@ -386,38 +478,21 @@ def test_current_evaluation_contracts_state_schema_boundaries() -> None:
     assert "retained attempt generations" not in contracts
 
 
-def test_skill_ui_metadata_matches_scope_and_safety_boundaries() -> None:
-    expected = {
-        "project-guide": {
-            "display_name": "Project Guide",
-            "short_description": "Orient work in an Agent Workbench project",
-            "prompt_terms": ("Agent Workbench", "specialized skill"),
-        },
-        "ai-processor-builder": {
-            "display_name": "AI Processor Builder",
-            "short_description": "Build the simplest useful mi.ai processor",
-            "prompt_terms": ("simplest justified", "structured output"),
-        },
-        "eval-results-analysis": {
-            "display_name": "Eval Results Analysis",
-            "short_description": "Explain eval changes from concrete evidence",
-            "prompt_terms": ("concrete available evidence", "without rerunning evals"),
-        },
-        "run-use-case-evals": {
-            "display_name": "Run Use-Case Evals",
-            "short_description": "Run reproducible benchmark evaluations safely",
-            "prompt_terms": ("explicit benchmark", "cost-aware settings"),
-        },
-    }
-
-    for name, contract in expected.items():
+def test_skill_ui_metadata_uses_one_human_facing_convention() -> None:
+    display_names = []
+    for name in sorted(_skill_names()):
         metadata = yaml.safe_load(
             (SKILLS / name / "agents/openai.yaml").read_text(encoding="utf-8")
         )
         interface = metadata["interface"]
-        assert interface["display_name"] == contract["display_name"]
-        assert interface["short_description"] == contract["short_description"]
+        display_name = interface["display_name"]
+        display_names.append(display_name)
+
+        assert "-" not in display_name
+        assert all(
+            token == "mi.ai" or token[0].isupper() for token in display_name.split()
+        )
         assert 25 <= len(interface["short_description"]) <= 64
         assert f"${name}" in interface["default_prompt"]
-        for term in contract["prompt_terms"]:
-            assert term in interface["default_prompt"]
+
+    assert len(display_names) == len(set(display_names))

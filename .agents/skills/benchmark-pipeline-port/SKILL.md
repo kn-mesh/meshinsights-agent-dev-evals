@@ -1,6 +1,6 @@
 ---
 name: benchmark-pipeline-port
-description: Port a working use-case evidence pipeline from MeshInsights Benchmark Studio into a clean Agent Workbench project. Use for adapting retrieval, normalization, visualization, objects, deterministic processors, dependencies, pipeline wiring, and tests as the base for agent development. For later pipeline evolution use pipeline-builder.
+description: Port an initial Benchmark Studio evidence pipeline into Agent Workbench. Use for frozen-evidence retrieval, decoding, normalization, control wiring, receipts, and tests. For later variants use pipeline-builder; for explorer-only work use port-eval-explorer-use-case.
 ---
 
 # Benchmark Pipeline Port
@@ -24,9 +24,7 @@ Use `$pipeline-builder` for the target shape,
 - Benchmark Studio owns benchmark, label, review, and publication truth. The
   target consumes published versions and frozen evidence read-only.
 - Keep use-case decoding and business rules in manifest-declared reference
-  paths. If the request explicitly authorizes the named reusable scope, proceed
-  after stating its ownership and focused tests. Otherwise, identify the exact
-  reusable paths/contracts and pause once for approval.
+  paths.
 
 Do not port Studio routes, databases, workflow UI, authorization, live
 source-system retrieval, mutable labels, secrets, generated evidence, or AI

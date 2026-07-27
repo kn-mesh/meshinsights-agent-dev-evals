@@ -1,6 +1,6 @@
 ---
 name: eval-results-analysis
-description: Review evaluation results for a specific pipeline, prompt, model, tool, grader, configuration, or evidence change. Use to explain accuracy changes, regressions, reliability failures, or likely next changes from versioned eval outputs. Do not run evals or edit prompts unless the user explicitly asks.
+description: Analyze completed eval results for a pipeline, prompt, model, tool, grader, configuration, or evidence change. Use to explain accuracy shifts, regressions, reliability failures, and likely next changes. Do not run evals or edit behavior without explicit authorization.
 ---
 
 # Eval Results Analysis

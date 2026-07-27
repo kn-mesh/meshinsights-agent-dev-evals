@@ -1,5 +1,5 @@
 interface:
-  display_name: "Agent-Eval-Builder"
+  display_name: "Agent Eval Builder"
   short_description: "Build the minimum useful agent evaluation path"
   default_prompt: "Use $agent-eval-builder to complete the FDE's evaluation outcome through the simplest existing path, preserve strategic benchmark and evidence invariants, and defer unsupported infrastructure expansion."
 

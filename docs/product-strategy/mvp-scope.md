@@ -9,6 +9,13 @@ The MVP is focused on enabling a Mesh FDE to evaluate an agent, inspect the
 results, improve the agent, and repeat. It is not intended to prove the full
 Agent Launch journey or create the portable agent package.
 
+
+## Strategy - at MVP scope
+1. There is a `core` set of code/libraries/helpers which has zero use case specific code. These are building blocks which are not modified when creating a new project (unless there are new core features...so these are treated more as product/platform)
+2. There is a standard project structure which seprates the core code from the code structure that will be modified / populated (e.g. directory of empty folders that defines the structure, configurations of selectable LLMs which evolve over time and need to be easily editable)
+3. This MVP codebase has a reference use case (spirax steam trap failure classifications) which is used to test and build out functionality as well as show what this would look like for a new use case. Each use case gets it's own repo that includes the core code + template structure which is then populated with the necessary code. 
+
+
 ## Current MVP Boundary
 
 ### In scope

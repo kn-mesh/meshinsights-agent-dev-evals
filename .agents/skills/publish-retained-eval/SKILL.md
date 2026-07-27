@@ -1,6 +1,6 @@
 ---
 name: publish-retained-eval
-description: Preview and explicitly publish one eligible retained Agent Workbench eval as a new immutable Azure Blob event. Use when an FDE asks to publish, upload, or durably share an exact retained eval. Do not use for elevation, deletion, automatic synchronization, working evals, or Benchmark Studio writes.
+description: Preview and explicitly publish one eligible retained eval as a new immutable Azure Blob event. Use to upload or durably share an exact retained eval. Do not use for working evals, elevation, deletion, automatic synchronization, or Benchmark Studio writes.
 ---
 
 # Publish Retained Eval
@@ -60,8 +60,5 @@ changes local lifecycle state or Benchmark Studio truth.
   attempts, retries, tool traces, intermediate responses, or detailed timing.
 - Use `$eval-lifecycle` to elevate, verify, or delete local evals.
 - Use `$external-runtime-setup` for Azure identity troubleshooting.
-- If the request explicitly authorizes the named reusable scope, proceed after
-  stating its ownership and focused tests. Otherwise, identify the exact
-  reusable paths/contracts and pause once for approval.
 - For implementation changes, select every affected layer in the
   [repository verification matrix](../project-guide/references/verification-matrix.md).

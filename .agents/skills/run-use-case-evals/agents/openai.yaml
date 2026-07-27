@@ -1,4 +1,4 @@
 interface:
-  display_name: "Run Use-Case Evals"
+  display_name: "Run Use Case Evals"
   short_description: "Run reproducible benchmark evaluations safely"
   default_prompt: "Use $run-use-case-evals to prepare or run one reproducible evaluation with explicit benchmark, model, scope, and cost-aware settings."
