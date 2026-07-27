@@ -75,7 +75,13 @@ const row = {
   scoring_status: "scored",
   complete_evaluation_correct: false,
   benchmark_labels: { classification: "Failure" },
-  agent_output: { classification: { value: "Healthy" } },
+  agent_output: {
+    classification: {
+      value: "Healthy",
+      confidence: "High",
+      explanation: "The observed pattern supports a healthy classification.",
+    },
+  },
   evaluations: { classification: { correct: false } },
   usage: {
     requests: 2,
@@ -126,7 +132,7 @@ const benchmarkContext = {
   }],
   verification: {
     source: "operator_feedback",
-    note: "Confirmed during the customer review.",
+    note: null,
     recorded_at: "2026-07-21T11:00:00Z",
     source_content_sha256: "f".repeat(64),
     context_schema_key: "spirax_customer_verification",
@@ -297,6 +303,25 @@ describe("EvalExplorerApp workflow", () => {
     expect(new URL(window.location.href).searchParams.get("offset")).toBeNull();
   });
 
+  it("makes attempt browsing and selection visually explicit", async () => {
+    window.history.replaceState(null, "", "/?run=run-a&execution=execution-a.1");
+    installFetch(route);
+    await render();
+    await waitFor(() => container.textContent?.includes("Expected and actual output") === true);
+
+    const attempt = container.querySelector('[data-testid="attempt-row"]');
+    if (!(attempt instanceof HTMLButtonElement)) throw new Error("Missing attempt row.");
+
+    expect(container.querySelector('[aria-label="Attempt list"]')).not.toBeNull();
+    expect(container.textContent).toContain("1 selected");
+    expect(container.textContent).toContain("Attempt list");
+    expect(container.textContent).not.toContain("Attempt queue");
+    expect(attempt.getAttribute("aria-current")).toBe("true");
+    expect(attempt.className).toContain("hover:bg-accent");
+    expect(attempt.className).toContain("bg-accent");
+    expect(attempt.className).toContain("ring-primary/25");
+  });
+
   it("keeps the initial run analysis in one coherent loading state", async () => {
     window.history.replaceState(null, "", "/?run=run-a");
     const attemptsResponse = deferred<unknown>();
@@ -372,6 +397,13 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).toContain("Failure");
     expect(container.textContent).toContain("Healthy");
     expect(container.textContent).toContain("Mismatch");
+    expect(container.textContent).toContain("Benchmark answer");
+    expect(container.textContent).toContain("Agent answer");
+    expect(container.textContent).toContain("Approved expected result");
+    expect(container.textContent).toContain("The observed pattern supports a healthy classification.");
+    expect(container.querySelector('[aria-label="Classification comparison"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Model rationale"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="AI output comparison"] summary')).toBeNull();
     expect(container.textContent).toContain("Run summary");
     expect(container.textContent).toContain("Failure classification accuracy");
     expect(container.textContent).toContain("High confidence");
@@ -388,13 +420,82 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).toContain("2m 10s");
     expect(container.textContent).toContain("Alex Labeler");
     expect(container.textContent).toContain("revision 2");
-    expect(container.textContent).toContain("Customer verified");
+    expect(container.textContent).toContain("Customer verification record");
+    expect(container.textContent).toContain("Immutable source");
+    expect(container.textContent).toContain("Imported from frozen source data");
+    expect(container.textContent).toContain("Source fingerprint");
+    expect(container.textContent).not.toContain("Reviewer verification note");
     expect(container.textContent).toContain("Selected label");
     expect(container.textContent).toContain("Trap failed closed");
     expect(container.textContent).toContain("Replaced the trap");
     expect(container.querySelector('[aria-label="Run metrics"]')).not.toBeNull();
     expect(container.querySelector(".benchmark-context")?.hasAttribute("open")).toBe(true);
     expect(container.querySelector("pre")).toBeNull();
+  });
+
+  it("identifies reviewer verification notes separately from customer source records", async () => {
+    window.history.replaceState(null, "", "/?run=run-a&execution=execution-a.1");
+    installFetch((url) => {
+      if (url.endsWith("/attempts/execution-a.1")) {
+        return {
+          row,
+          performance: attemptPerformance,
+          benchmark_context: {
+            ...benchmarkContext,
+            verification: {
+              source: "operator_feedback",
+              note: "Customer validated through operator feedback in the Phase 1 pilot validation sheet.",
+              recorded_at: null,
+              source_content_sha256: null,
+              context_schema_key: null,
+              context_schema_version: null,
+              source_fields: null,
+            },
+          },
+        };
+      }
+      return route(url);
+    });
+    await render();
+    await waitFor(() => container.textContent?.includes("Reviewer verification attestation") === true);
+
+    expect(container.textContent).toContain("Selected label");
+    expect(container.textContent).toContain("it is not a customer source record");
+    expect(container.textContent).toContain("Reviewer verification note");
+    expect(container.textContent).toContain("Customer validated through operator feedback");
+    expect(container.textContent).toContain("Attached to Alex Labeler");
+    expect(container.querySelector('[aria-label="Reviewer verification note"]')).not.toBeNull();
+    expect(container.textContent).not.toContain("Legacy verification note");
+  });
+
+  it("shows reviewer notes when no verification was frozen", async () => {
+    window.history.replaceState(null, "", "/?run=run-a&execution=execution-a.1");
+    installFetch((url) => {
+      if (url.endsWith("/attempts/execution-a.1")) {
+        return {
+          row: {
+            ...row,
+            benchmark_labels: {
+              ...row.benchmark_labels,
+              review_notes: "Sustained increase in condensate temperature over one month.",
+            },
+          },
+          performance: attemptPerformance,
+          benchmark_context: {
+            ...benchmarkContext,
+            verification: null,
+          },
+        };
+      }
+      return route(url);
+    });
+    await render();
+    await waitFor(() => container.textContent?.includes("Sustained increase in condensate temperature") === true);
+
+    expect(container.querySelector('[aria-label="Reviewer notes"]')).not.toBeNull();
+    expect(container.textContent).toContain("Review Notes");
+    expect(container.textContent).toContain("No customer or onsite verification was frozen");
+    expect(container.querySelector('[aria-label="Review Notes comparison"]')).toBeNull();
   });
 
   it("labels partial pricing coverage without presenting missing percentiles", async () => {

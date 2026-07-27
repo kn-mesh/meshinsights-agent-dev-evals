@@ -29,6 +29,7 @@ import type {
   CostSummary,
   EvidenceView,
   PerformanceSummary,
+  PublishedReviewerCoverage,
   RunEntry,
   SourceVerificationSchema,
   UseCaseAdapter,
@@ -320,15 +321,17 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
             </section>
           ) : null}
 
-          <main className="mx-5 my-4 grid min-h-[calc(100vh-11rem)] grid-cols-[340px_minmax(0,1fr)] overflow-clip rounded-xl border bg-card shadow-sm max-[900px]:grid-cols-1">
+          <main className="mx-5 my-4 grid min-h-[calc(100vh-11rem)] grid-cols-[380px_minmax(0,1fr)] overflow-clip rounded-xl border bg-card shadow-sm max-[900px]:grid-cols-1">
             <aside className="min-w-0 border-r bg-muted/25 max-[900px]:border-b max-[900px]:border-r-0">
               <div className="flex min-h-[3.75rem] items-center justify-between gap-3 border-b bg-card px-3.5">
                 <div className="flex items-baseline gap-2">
                   <h2 className="text-sm font-semibold">Attempts</h2>
-                  <span className="text-[0.65rem] text-muted-foreground">{attempts.data?.matched ?? 0} results</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[0.65rem] font-medium text-muted-foreground">
+                    {attempts.data?.matched ?? 0} results
+                  </span>
                 </div>
                 <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {state === "all" ? "All states" : humanize(state)}
+                  {executionId ? "1 selected" : "No selection"}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2 border-b bg-card p-3.5">
@@ -374,6 +377,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                 <Select
                   aria-label="Evaluation slice"
                   value={sliceKey}
+                  className="col-span-2"
                   onValueChange={(value) => {
                     setSliceKey(value);
                     resetAttemptSelection();
@@ -385,10 +389,13 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
               </div>
               {attempts.error ? <QueryError error={attempts.error} compact /> : null}
               <div className="flex items-center justify-between gap-3 border-b bg-muted/40 px-3.5 py-2.5 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
-                <span>Attempt queue</span>
+                <span>Attempt list</span>
                 {attempts.data ? <span>{pageRange(attempts.data, offset)}</span> : null}
               </div>
-              <div className="max-h-[calc(100vh-15rem)] overflow-y-auto">
+              <div
+                aria-label="Attempt list"
+                className="max-h-[calc(100vh-15rem)] overflow-y-auto bg-card/50 max-[900px]:max-h-80"
+              >
                 {attempts.isPending ? <LoadingState label="Loading attempts…" compact /> : null}
                 {attempts.data && !attempts.data.rows.length ? (
                   <EmptyState className="m-3 min-h-28 p-4">No attempts match these filters.</EmptyState>
@@ -399,20 +406,32 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                     key={row.execution_id}
                     onClick={() => setExecutionId(row.execution_id)}
                     aria-current={row.execution_id === executionId ? "true" : undefined}
+                    data-testid="attempt-row"
                     className={cn(
-                      "block w-full border-t border-l-2 border-l-transparent px-3.5 py-3 text-left outline-none transition-colors first:border-t-0 hover:bg-card focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                      row.execution_id === executionId && "border-l-primary bg-card",
+                      "group relative block w-full border-t border-l-4 border-l-transparent px-3.5 py-3.5 text-left outline-none transition-[background-color,border-color,box-shadow] first:border-t-0 hover:border-l-primary/40 hover:bg-accent/70 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                      row.execution_id === executionId
+                        && "z-[1] border-l-primary bg-accent text-accent-foreground ring-1 ring-inset ring-primary/25 shadow-sm hover:border-l-primary hover:bg-accent",
                     )}
                   >
                     <div className="flex items-center justify-between gap-3 text-[0.8125rem] font-semibold">
-                      <span className="truncate">{row.unit_id}</span>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <ChevronRight
+                          aria-hidden="true"
+                          className={cn(
+                            "size-3.5 shrink-0 text-primary opacity-0 transition-opacity group-hover:opacity-50",
+                            row.execution_id === executionId && "opacity-100 group-hover:opacity-100",
+                          )}
+                        />
+                        <span className="truncate">{row.unit_id}</span>
+                      </span>
                       <Status row={row} />
                     </div>
-                    <small className="text-[0.6875rem] text-muted-foreground">
+                    <small className="mt-1 block truncate pl-5 text-[0.6875rem] text-muted-foreground">
                       {row.example_id} · repetition {row.run_index}
                     </small>
-                    <div className="mt-1.5 truncate text-[0.6875rem] text-foreground/70">
-                      AI output · {summarizeOutput(row.agent_output)}
+                    <div className="mt-2 flex min-w-0 items-baseline gap-1.5 pl-5 text-[0.6875rem]">
+                      <span className="shrink-0 font-semibold uppercase tracking-wide text-muted-foreground">Output</span>
+                      <span className="truncate text-foreground/75">{summarizeOutput(row.agent_output)}</span>
                     </div>
                   </button>
                 ))}
@@ -1126,7 +1145,7 @@ function Evaluation({
   adapter: UseCaseAdapter;
 }) {
   const fields = Array.from(new Set([
-    ...Object.keys(row.benchmark_labels),
+    ...Object.keys(row.evaluations),
     ...Object.keys(row.agent_output),
   ]));
   return (
@@ -1140,25 +1159,56 @@ function Evaluation({
           Compare scored fields, then open the evidence when a result needs investigation.
         </p>
       </section>
-      <section aria-label="AI output comparison" className="overflow-hidden rounded-lg border shadow-sm">
-        <div
-          aria-hidden="true"
-          className="grid grid-cols-[minmax(110px,0.7fr)_minmax(140px,1fr)_minmax(180px,1.3fr)_88px] items-center gap-4 bg-muted px-4 py-2.5 text-[0.675rem] font-semibold uppercase tracking-wide text-muted-foreground"
-        >
-          <span>Field</span><span>Benchmark</span><span>AI output</span><span>Result</span>
-        </div>
+      <section aria-label="AI output comparison" className="grid gap-3">
         {fields.map((fieldName) => {
           const result = fieldResult(row.evaluations[fieldName]);
+          const output = asRecord(row.agent_output[fieldName]);
+          const confidence = typeof output?.confidence === "string" ? output.confidence : null;
+          const explanation = typeof output?.explanation === "string" ? output.explanation : null;
           return (
-            <div
+            <article
               key={fieldName}
-              className="grid grid-cols-[minmax(110px,0.7fr)_minmax(140px,1fr)_minmax(180px,1.3fr)_88px] items-start gap-4 border-t px-4 py-3.5 text-[0.8125rem]"
+              aria-label={`${humanize(fieldName)} comparison`}
+              className="overflow-hidden rounded-xl border bg-card shadow-sm"
             >
-              <strong className="font-semibold">{humanize(fieldName)}</strong>
-              <span className="min-w-0 break-words leading-relaxed">{displayValue(row.benchmark_labels[fieldName])}</span>
-              <AiOutputValue value={row.agent_output[fieldName]} />
-              <ComparisonResultBadge result={result} />
-            </div>
+              <header className="flex items-center justify-between gap-4 border-b bg-muted/60 px-4 py-3">
+                <h4 className="text-[0.8125rem] font-semibold">{humanize(fieldName)}</h4>
+                <ComparisonResultBadge result={result} />
+              </header>
+              <div className="grid grid-cols-2 divide-x max-[720px]:grid-cols-1 max-[720px]:divide-x-0 max-[720px]:divide-y">
+                <section className="min-w-0 px-4 py-4">
+                  <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Benchmark answer
+                  </div>
+                  <strong className="mt-2 block break-words font-heading text-lg font-semibold leading-snug">
+                    {displayValue(row.benchmark_labels[fieldName])}
+                  </strong>
+                  <p className="mt-1.5 text-[0.7rem] leading-relaxed text-muted-foreground">
+                    Approved expected result
+                  </p>
+                </section>
+                <section className="min-w-0 px-4 py-4">
+                  <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Agent answer
+                  </div>
+                  <strong className="mt-2 block break-words font-heading text-lg font-semibold leading-snug">
+                    {displayValue(row.agent_output[fieldName])}
+                  </strong>
+                  <p className="mt-1.5 text-[0.7rem] leading-relaxed text-muted-foreground">
+                    {confidence ? `${confidence} confidence` : "Confidence not provided"}
+                  </p>
+                </section>
+              </div>
+              <section aria-label="Model rationale" className="border-t bg-accent/45 px-4 py-4">
+                <div className="flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-wider text-accent-foreground">
+                  <StickyNote className="size-3.5" />
+                  Model rationale
+                </div>
+                <p className="mt-2 max-w-5xl text-[0.8rem] leading-relaxed text-foreground/85">
+                  {explanation ?? "No model rationale was captured for this answer."}
+                </p>
+              </section>
+            </article>
           );
         })}
       </section>
@@ -1205,6 +1255,9 @@ function BenchmarkContextPanel({
 }) {
   const reviewerCoverage = context.reviewer_coverage ?? [];
   const verification = context.verification;
+  const selectedReviewer = reviewerCoverage.find((reviewer) => reviewer.is_selected_label_revision);
+  const verificationProvenance = verification ? publishedVerificationProvenance(verification) : null;
+  const publishedLabelNotes = benchmarkLabelNotes(benchmarkLabels, fieldLabels);
   return (
     <details open className="benchmark-context group overflow-hidden rounded-lg border">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-muted/60 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
@@ -1239,6 +1292,12 @@ function BenchmarkContextPanel({
                   {reviewer.is_selected_label_revision ? (
                     <span className="justify-self-end text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Selected label</span>
                   ) : null}
+                  <ReviewerNotes
+                    notes={[
+                      ...(reviewer.note ? [{ label: "Reviewer note", value: reviewer.note }] : []),
+                      ...(reviewer.is_selected_label_revision ? publishedLabelNotes : []),
+                    ]}
+                  />
                 </article>
               ))}
             </div>
@@ -1248,13 +1307,32 @@ function BenchmarkContextPanel({
         </section>
 
         <section className="min-w-0 border-l p-4 max-[900px]:border-l-0 max-[900px]:border-t">
-          <h4 className="mb-2.5 text-[0.78rem] font-semibold">{verification ? verificationSourceLabel(verification.source) : "Customer verification"}</h4>
+          <h4 className="text-[0.78rem] font-semibold">Verification provenance</h4>
           {verification ? (
             <>
-              <p className="text-[0.75rem] leading-relaxed text-muted-foreground">
-                The following frozen benchmark labels were covered by this verification.
-              </p>
-              <dl className="mt-2.5 grid grid-cols-2 gap-2">
+              <div className="mt-2.5 rounded-lg border bg-card p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <strong className="text-[0.78rem] font-semibold">
+                    {verificationProvenance === "source_record"
+                      ? "Customer verification record"
+                      : "Reviewer verification attestation"}
+                  </strong>
+                  <Badge variant={verificationProvenance === "source_record" ? "primary" : "neutral"}>
+                    {verificationProvenance === "source_record" ? "Immutable source" : "Selected label"}
+                  </Badge>
+                </div>
+                <p className="mt-1.5 text-[0.72rem] leading-relaxed text-muted-foreground">
+                  {verificationProvenance === "source_record"
+                    ? "Imported from frozen source data and kept separate from notes entered during labeling."
+                    : selectedReviewer
+                      ? `Recorded with the selected label by ${selectedReviewer.reviewer_display_name}; it is not a customer source record.`
+                      : "Recorded during labeling; it is not a customer source record."}
+                </p>
+              </div>
+              <div className="mt-3 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                Labels covered by this verification
+              </div>
+              <dl className="mt-2 grid grid-cols-2 gap-2">
                 {Object.entries(benchmarkLabels).map(([key, value]) => (
                   <div className="min-w-0 rounded-md bg-muted px-2.5 py-2" key={key}>
                     <dt className="text-[0.625rem] text-muted-foreground">{fieldLabels[key] ?? humanize(key)}</dt>
@@ -1262,7 +1340,12 @@ function BenchmarkContextPanel({
                   </div>
                 ))}
               </dl>
-              <VerificationDetails verification={verification} schemas={verificationSchemas} />
+              <VerificationDetails
+                verification={verification}
+                provenance={verificationProvenance!}
+                schemas={verificationSchemas}
+                selectedReviewer={selectedReviewer}
+              />
             </>
           ) : (
             <p className="text-[0.75rem] leading-relaxed text-muted-foreground">No customer or onsite verification was frozen with this benchmark example.</p>
@@ -1273,12 +1356,55 @@ function BenchmarkContextPanel({
   );
 }
 
+function ReviewerNotes({ notes }: { notes: Array<{ label: string; value: string }> }) {
+  const uniqueNotes = notes.filter(
+    (note, index) => notes.findIndex((candidate) => candidate.value === note.value) === index,
+  );
+  return (
+    <section aria-label="Reviewer notes" className="col-span-2 mt-1 border-t pt-2.5">
+      <div className="text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">
+        Reviewer notes
+      </div>
+      {uniqueNotes.length ? (
+        <div className="mt-2 grid gap-2">
+          {uniqueNotes.map((note) => (
+            <div key={`${note.label}:${note.value}`} className="rounded-md bg-accent/45 px-2.5 py-2">
+              <div className="text-[0.625rem] font-medium text-accent-foreground">{note.label}</div>
+              <p className="mt-1 whitespace-pre-wrap text-[0.72rem] leading-relaxed">{note.value}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-1 text-[0.68rem] leading-relaxed text-muted-foreground">
+          No reviewer note was frozen with this revision.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function benchmarkLabelNotes(
+  benchmarkLabels: Record<string, unknown>,
+  fieldLabels: Record<string, string>,
+) {
+  return Object.entries(benchmarkLabels).flatMap(([key, value]) => {
+    if (!/(^|_)notes?$/i.test(key)) return [];
+    const displayed = displayValue(value);
+    if (displayed === "—") return [];
+    return [{ label: fieldLabels[key] ?? humanize(key), value: displayed }];
+  });
+}
+
 function VerificationDetails({
   verification,
+  provenance,
   schemas,
+  selectedReviewer,
 }: {
   verification: NonNullable<Extract<BenchmarkContext, { availability: "available" }>["verification"]>;
+  provenance: "source_record" | "reviewer_attestation";
   schemas: SourceVerificationSchema[];
+  selectedReviewer?: PublishedReviewerCoverage;
 }) {
   const schema = schemas.find((candidate) =>
     candidate.schema_key === verification.context_schema_key
@@ -1287,10 +1413,26 @@ function VerificationDetails({
   const fields = verification.source_fields ?? {};
   return (
     <div className="mt-3.5 border-t pt-3">
-      {verification.note ? <p className="mb-2.5 text-[0.75rem] leading-relaxed">{verification.note}</p> : null}
+      {verification.note ? (
+        <section aria-label={provenance === "source_record" ? "Legacy verification note" : "Reviewer verification note"} className="mb-3 rounded-lg border bg-muted/55 p-3">
+          <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+            {provenance === "source_record" ? "Legacy verification note · origin not recorded" : "Reviewer verification note"}
+          </div>
+          <p className="mt-1.5 text-[0.75rem] leading-relaxed">{verification.note}</p>
+          {provenance === "source_record" ? (
+            <p className="mt-1.5 text-[0.68rem] leading-relaxed text-muted-foreground">
+              This older benchmark does not identify whether this prose came from labeling or the customer source record.
+            </p>
+          ) : selectedReviewer ? (
+            <small className="mt-1.5 block text-[0.65rem] text-muted-foreground">
+              Attached to {selectedReviewer.reviewer_display_name}&apos;s selected label · {formatRunDate(selectedReviewer.submitted_at)}
+            </small>
+          ) : null}
+        </section>
+      ) : null}
       {schema ? (
         <>
-          <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">{schema.title} · Immutable source record</div>
+          <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">{schema.title} fields</div>
           <dl className="mt-2.5 grid grid-cols-2 gap-2">
             {schema.fields.flatMap((field) => {
               const value = fields[field.key];
@@ -1310,15 +1452,42 @@ function VerificationDetails({
           </dl>
         </>
       ) : null}
-      {verification.recorded_at ? (
-        <small className="mt-2.5 block text-[0.625rem] text-muted-foreground">Recorded {formatRunDate(verification.recorded_at)}</small>
-      ) : null}
+      <dl className="mt-3 grid gap-1 border-t pt-3 text-[0.65rem] text-muted-foreground">
+        <div className="flex flex-wrap justify-between gap-2">
+          <dt>Verification method</dt>
+          <dd className="font-medium text-foreground/75">{verificationSourceLabel(verification.source)}</dd>
+        </div>
+        {verification.recorded_at ? (
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt>Source recorded</dt>
+            <dd className="font-medium text-foreground/75">{formatRunDate(verification.recorded_at)}</dd>
+          </div>
+        ) : null}
+        {verification.source_content_sha256 ? (
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt>Source fingerprint</dt>
+            <dd className="font-mono font-medium text-foreground/75">{verification.source_content_sha256.slice(0, 12)}…</dd>
+          </div>
+        ) : null}
+      </dl>
     </div>
   );
 }
 
 function verificationSourceLabel(source: "direct_observation" | "operator_feedback") {
-  return source === "operator_feedback" ? "Customer verified" : "Verified by direct observation";
+  return source === "operator_feedback" ? "Operator feedback" : "Direct observation";
+}
+
+function publishedVerificationProvenance(
+  verification: NonNullable<Extract<BenchmarkContext, { availability: "available" }>["verification"]>,
+) {
+  const hasStructuredSource = Boolean(
+    verification.source_content_sha256
+    || verification.context_schema_key
+    || verification.context_schema_version
+    || Object.keys(verification.source_fields ?? {}).length,
+  );
+  return hasStructuredSource ? "source_record" as const : "reviewer_attestation" as const;
 }
 
 function Execution({
@@ -1366,26 +1535,6 @@ function ReviewFact({ label, value }: { label: string; value: string }) {
     <div className="grid gap-0.5 border-l px-3.5 py-2.5 first:border-l-0">
       <small className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">{label}</small>
       <strong className="text-[0.75rem] font-semibold">{humanize(value)}</strong>
-    </div>
-  );
-}
-
-function AiOutputValue({ value }: { value: unknown }) {
-  const record = asRecord(value);
-  const confidence = typeof record?.confidence === "string" ? record.confidence : null;
-  const explanation = typeof record?.explanation === "string" ? record.explanation : null;
-  return (
-    <div className="grid min-w-0 gap-1">
-      <span className="break-words font-medium leading-relaxed">{displayValue(value)}</span>
-      {confidence ? <small className="text-[0.6875rem] text-muted-foreground">{confidence} confidence</small> : null}
-      {explanation ? (
-        <details className="mt-0.5">
-          <summary className="w-fit cursor-pointer text-[0.7rem] font-semibold text-primary [&::-webkit-details-marker]:hidden">
-            Model rationale
-          </summary>
-          <p className="mt-1.5 text-[0.75rem] font-normal leading-relaxed text-foreground/80">{explanation}</p>
-        </details>
-      ) : null}
     </div>
   );
 }

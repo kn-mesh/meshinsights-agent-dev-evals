@@ -521,6 +521,7 @@ def _normalize_published_review_context(value: Any) -> Any:
                 "is_selected_label_revision": item.get(
                     "selected_for_publication", False
                 ),
+                "note": item.get("explanation"),
             }
             for index, item in enumerate(notes, start=1)
         ],

@@ -68,6 +68,7 @@ export interface PublishedReviewerCoverage {
   reviewer_project_role: string;
   submitted_at: string;
   is_selected_label_revision: boolean;
+  note?: string | null;
 }
 
 export interface PublishedVerification {

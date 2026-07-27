@@ -563,6 +563,7 @@ def test_project_backend_reads_legacy_labeler_notes_for_context_and_evidence(
             "reviewer_project_role": "domain_reviewer",
             "submitted_at": "2026-07-20T09:30:00Z",
             "is_selected_label_revision": True,
+            "note": "Legacy reviewer explanation.",
         }
     ]
     assert evidence["verified"] is True
@@ -570,6 +571,7 @@ def test_project_backend_reads_legacy_labeler_notes_for_context_and_evidence(
     retained_context = evidence_adapter.identity["example"].published_review_context
     assert retained_context.reviewer_coverage[0].review_event_id == "legacy-review-a"
     assert retained_context.reviewer_coverage[0].is_selected_label_revision is True
+    assert retained_context.reviewer_coverage[0].note == "Legacy reviewer explanation."
 
 
 def test_project_backend_rejects_evidence_outside_retained_run_scope(

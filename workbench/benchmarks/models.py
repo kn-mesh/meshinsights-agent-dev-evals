@@ -58,6 +58,7 @@ class PublishedReviewerCoverage(BaseModel):
     reviewer_project_role: str
     submitted_at: datetime
     is_selected_label_revision: bool
+    note: str | None = None
 
 
 class PublishedVerification(BaseModel):
