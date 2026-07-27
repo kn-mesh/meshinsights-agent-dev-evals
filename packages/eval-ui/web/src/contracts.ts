@@ -129,6 +129,8 @@ export interface AttemptRow {
   benchmark_labels: Record<string, unknown>;
   agent_output: Record<string, unknown>;
   evaluations: Record<string, unknown>;
+  usage?: Record<string, unknown> | null;
+  cost?: Record<string, unknown> | null;
   slice_keys: string[];
   flaky: boolean;
   review_status: string;

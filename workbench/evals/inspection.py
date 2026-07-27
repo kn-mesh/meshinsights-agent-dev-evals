@@ -12,6 +12,9 @@ from workbench.evals.result_integrity import ResultIntegrityError, load_verified
 from workbench.evals.run_store import LocalRunStore
 
 
+_INSPECTION_PROJECTION_VERSION = 2
+
+
 def find_run_directory(run_id: str, *, root: Path = Path(".workbench/evals")) -> Path:
     """Resolve exactly one deterministic run directory beneath a local root."""
     normalized = run_id.strip()
@@ -123,6 +126,7 @@ def materialize_review_index(run_dir: Path) -> Path:
         )
     )
     payload = {
+        "inspection_projection_version": _INSPECTION_PROJECTION_VERSION,
         "result_schema_version": result.get("schema_version"),
         "result_sha256": canonical_sha256(result),
         "attempt_state_sha256": _attempt_state_sha256(run_store),
@@ -283,14 +287,20 @@ def _ensure_index(run_dir: Path) -> dict[str, Any]:
         store = _store(run_dir)
         sources = _index_sources(run_dir, store=store)
         index = store.read_index() if store.index_path.exists() else {}
-        if index.get("review_index_schema_version") != 2 or any(
-            index.get(key) != value for key, value in sources.items()
+        if (
+            index.get("review_index_schema_version") != 2
+            or index.get("inspection_projection_version")
+            != _INSPECTION_PROJECTION_VERSION
+            or any(index.get(key) != value for key, value in sources.items())
         ):
             materialize_review_index(run_dir)
             index = store.read_index()
         current = _index_sources(run_dir, store=store)
-        if index.get("review_index_schema_version") == 2 and all(
-            index.get(key) == value for key, value in current.items()
+        if (
+            index.get("review_index_schema_version") == 2
+            and index.get("inspection_projection_version")
+            == _INSPECTION_PROJECTION_VERSION
+            and all(index.get(key) == value for key, value in current.items())
         ):
             return index
     raise ReviewStoreError("Review index inputs changed repeatedly during refresh.")
@@ -339,14 +349,29 @@ def _unstable_examples(rows: list[dict[str, Any]]) -> set[str]:
     for example in rows:
         if not isinstance(example, dict):
             continue
-        outputs = {
-            canonical_sha256(run.get("agent_output") or {})
+        decisions = {
+            _evaluated_decision_sha256(run)
             for run in example.get("runs", [])
             if isinstance(run, dict) and run.get("scoring_status") == "scored"
         }
-        if len(outputs) > 1:
+        decisions.discard(None)
+        if len(decisions) > 1:
             unstable.add(str(example.get("example_id", "")))
     return unstable
+
+
+def _evaluated_decision_sha256(run: dict[str, Any]) -> str | None:
+    evaluations = run.get("evaluations")
+    if not isinstance(evaluations, dict):
+        return None
+    actuals = {
+        str(key): evaluation.get("actual")
+        for key, evaluation in evaluations.items()
+        if isinstance(evaluation, dict)
+        and evaluation.get("graded") is True
+        and evaluation.get("applicable") is True
+    }
+    return canonical_sha256(actuals) if actuals else None
 
 
 def _read_object(path: Path) -> dict[str, Any]:

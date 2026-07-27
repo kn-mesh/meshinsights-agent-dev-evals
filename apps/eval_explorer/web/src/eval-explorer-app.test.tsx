@@ -77,6 +77,18 @@ const row = {
   benchmark_labels: { classification: "Failure" },
   agent_output: { classification: { value: "Healthy" } },
   evaluations: { classification: { correct: false } },
+  usage: {
+    requests: 2,
+    input_tokens: 1000,
+    output_tokens: 250,
+    total_tokens: 1250,
+    tool_calls: 3,
+  },
+  cost: {
+    status: "estimated_complete",
+    actual: null,
+    estimated: { amount: 0.0123, currency: "USD" },
+  },
   slice_keys: ["priority"],
   flaky: false,
   review_status: "complete",
@@ -141,6 +153,20 @@ const performance = {
       median: 9.1,
       p5: 6.2,
       p95: 130.2,
+    },
+  },
+};
+
+const attemptPerformance = {
+  availability: "available",
+  metrics: {
+    duration_seconds: 12.4,
+    retry_telemetry: {
+      availability: "available",
+      observed_model_requests: 2,
+      observed_tool_calls: 3,
+      observed_transport_attempts: 3,
+      observed_transport_retry_categories: { rate_limit: 1 },
     },
   },
 };
@@ -271,6 +297,32 @@ describe("EvalExplorerApp workflow", () => {
     expect(new URL(window.location.href).searchParams.get("offset")).toBeNull();
   });
 
+  it("keeps the initial run analysis in one coherent loading state", async () => {
+    window.history.replaceState(null, "", "/?run=run-a");
+    const attemptsResponse = deferred<unknown>();
+    const performanceResponse = deferred<unknown>();
+    installFetch((url) => {
+      if (url.startsWith("/api/runs/run-a/attempts?")) return attemptsResponse.promise;
+      if (url === "/api/runs/run-a/performance") return performanceResponse.promise;
+      return route(url);
+    });
+
+    await render();
+    await waitFor(() => container.textContent?.includes("Loading run analysis…") === true);
+
+    expect(container.textContent).not.toContain("1201/1201");
+    expect(container.textContent).not.toContain("all (0)");
+    expect(container.textContent).not.toContain("Loading duration observations…");
+
+    attemptsResponse.resolve(attemptsPayload(row));
+    performanceResponse.resolve(performance);
+    await waitFor(() => container.textContent?.includes("1201/1201") === true);
+
+    expect(container.textContent).toContain("all (1201)");
+    expect(container.textContent).toContain("6m 44s");
+    expect(container.textContent).not.toContain("Loading run analysis…");
+  });
+
   it("keeps an evidence failure inside the evidence tab", async () => {
     window.history.replaceState(null, "", "/?run=run-a&execution=execution-a.1&tab=evidence");
     installFetch((url) => url.includes("/evidence") ? failure("Frozen evidence unavailable") : route(url));
@@ -283,7 +335,7 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).not.toContain("Frozen evidence unavailable");
   });
 
-  it("keeps technical trace secondary while loading run-level duration data", async () => {
+  it("shows the compact execution overview without raw trace data", async () => {
     window.history.replaceState(null, "", "/?run=run-a&execution=execution-a.1&tab=execution");
     const requested: string[] = [];
     installFetch((url) => {
@@ -291,17 +343,25 @@ describe("EvalExplorerApp workflow", () => {
       if (url.endsWith("/attempts/execution-a.1")) {
         return {
           row: { ...row, review_status: "unavailable", review_unavailable_reason: { code: "purged" } },
-          review: null,
+          performance: attemptPerformance,
           benchmark_context: benchmarkContext,
         };
       }
       return route(url);
     });
     await render();
-    await waitFor(() => container.textContent?.includes("Detailed review unavailable (purged)") === true);
+    await waitFor(() => container.textContent?.includes("Provider / model") === true);
     expect(new URL(window.location.href).searchParams.get("execution")).toBe("execution-a.1");
     expect(requested.some((url) => url.includes("/runs/run-a/performance"))).toBe(true);
-    expect(container.textContent).not.toContain("Performance diagnostics");
+    expect(container.textContent).toContain("provider:model");
+    expect(container.textContent).toContain("Low");
+    expect(container.textContent).toContain("12.4 s");
+    expect(container.textContent).toContain("1,250");
+    expect(container.textContent).toContain("$0.0123 estimated");
+    expect(container.textContent).toContain("Completed");
+    expect(container.querySelector('[aria-label="Execution overview"]')).not.toBeNull();
+    expect(container.querySelector("pre")).toBeNull();
+    expect(container.querySelector("details")).toBeNull();
   });
 
   it("shows benchmark and AI values without raw JSON walls", async () => {
@@ -452,7 +512,11 @@ function route(url: string): unknown {
   if (url === "/api/runs/run-a/performance") return performance;
   if (url.startsWith("/api/runs/run-a/attempts?")) return attemptsPayload(row);
   if (url === "/api/runs/run-a/attempts/execution-a.1") {
-    return { row, review: { model_interactions: {} }, benchmark_context: benchmarkContext };
+    return {
+      row,
+      performance: attemptPerformance,
+      benchmark_context: benchmarkContext,
+    };
   }
   if (url.includes("/evidence")) return { example: { example_id: "example-a", unit_id: "unit-a", decision_timestamp: "2026-01-01T00:00:00Z", metadata: {} }, window: { start: "2025-01-01", end: "2026-01-01", basis: "lookback" }, evidence: {}, metadata: {} };
   throw new Error(`Unhandled fetch: ${url}`);
@@ -474,6 +538,14 @@ function failure(message: string) {
 
 function isFailure(value: unknown): value is ReturnType<typeof failure> {
   return typeof value === "object" && value !== null && "__failure" in value;
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
 }
 
 function byLabel(label: string) {

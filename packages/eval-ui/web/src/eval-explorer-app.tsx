@@ -42,7 +42,15 @@ type AttemptsPayload = {
 };
 type AttemptPayload = {
   row: AttemptRow;
-  review: Record<string, unknown> | null;
+  performance:
+    | {
+        availability: "available";
+        metrics?: Record<string, unknown>;
+      }
+    | {
+        availability: "unavailable";
+        reason: string;
+      };
   benchmark_context: BenchmarkContext;
 };
 
@@ -80,6 +88,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
   );
   const [runSearch, setRunSearch] = useState(initial.get("q") ?? "");
   const [runSort, setRunSort] = useState(initial.get("sort") ?? defaultRunSort);
+  const [readyRunId, setReadyRunId] = useState("");
   const initialTab = initial.get("tab");
   const [tab, setTab] = useState(
     reviewTabs.includes(initialTab as (typeof reviewTabs)[number]) ? initialTab! : "evaluation",
@@ -155,6 +164,16 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
     staleTime: Infinity,
   });
   const runUnavailable = Boolean(runId && runs.isSuccess && !selectedRun);
+  const runAnalysisPending = Boolean(
+    runId
+    && selectedRun
+    && readyRunId !== runId,
+  );
+  useEffect(() => {
+    if (selectedRun && !attempts.isPending && !performance.isPending) {
+      setReadyRunId(runId);
+    }
+  }, [attempts.isPending, performance.isPending, runId, selectedRun]);
   const selectRun = (selectedRunId: string) => {
     setRunId(selectedRunId);
     setExecutionId("");
@@ -243,7 +262,8 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
         </main>
       ) : null}
 
-      {runId && runs.isSuccess && !runUnavailable ? (
+      {runAnalysisPending ? <LoadingState label="Loading run analysis…" /> : null}
+      {runId && runs.isSuccess && !runUnavailable && !runAnalysisPending ? (
         <>
           <section className="flex flex-wrap items-center justify-between gap-4 border-b bg-card px-5 py-3">
             <div className="flex min-w-0 items-center gap-4">
@@ -485,7 +505,13 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
                       <EvidenceDisplay evidence={evidence.data} />
                     ) : null
                   ) : null}
-                  {tab === "execution" ? <Execution review={detail.data.review} row={detail.data.row} /> : null}
+                  {tab === "execution" ? (
+                    <Execution
+                      performance={detail.data.performance}
+                      row={detail.data.row}
+                      run={selectedRun!}
+                    />
+                  ) : null}
                 </>
               ) : null}
             </article>
@@ -1295,34 +1321,43 @@ function verificationSourceLabel(source: "direct_observation" | "operator_feedba
   return source === "operator_feedback" ? "Customer verified" : "Verified by direct observation";
 }
 
-function Execution({ review, row }: { review: Record<string, unknown> | null; row: AttemptRow }) {
-  if (!review) return <ReviewUnavailable row={row} />;
+function Execution({
+  performance,
+  row,
+  run,
+}: {
+  performance: AttemptPayload["performance"];
+  row: AttemptRow;
+  run: RunEntry;
+}) {
+  const usage = asRecord(row.usage);
+  const metrics = performance.availability === "available"
+    ? asRecord(performance.metrics)
+    : null;
+  const retries = asRecord(metrics?.retry_telemetry);
   return (
-    <div className="grid gap-3.5 px-5 py-5 pb-10">
-      <section aria-label="Attempt status" className="grid grid-cols-4 overflow-hidden rounded-lg border bg-muted max-[560px]:grid-cols-2">
-        <ReviewFact label="Execution" value={row.execution_status} />
-        <ReviewFact label="Output contract" value={row.output_contract_status} />
-        <ReviewFact label="Scoring" value={row.scoring_status} />
-        <ReviewFact label="Stability" value={row.flaky ? "Flaky" : "Stable"} />
+    <div className="px-5 py-5 pb-10">
+      <section aria-label="Execution overview" className="grid grid-cols-3 gap-2.5 max-[760px]:grid-cols-2 max-[480px]:grid-cols-1">
+        <ExecutionFact label="Provider / model" value={run.model ?? "—"} />
+        <ExecutionFact label="Reasoning effort" value={run.reasoning_effort ? humanize(run.reasoning_effort) : "—"} />
+        <ExecutionFact label="Total duration" value={formatDuration(numberValue(metrics?.duration_seconds))} />
+        <ExecutionFact label="Request count" value={formatCount(numberValue(usage?.requests) ?? numberValue(retries?.observed_model_requests))} />
+        <ExecutionFact label="Tokens" value={formatCount(totalTokens(usage))} />
+        <ExecutionFact label="Cost" value={attemptCost(row.cost)} />
+        <ExecutionFact label="Retries" value={formatCount(retryCount(retries))} />
+        <ExecutionFact label="Tool calls" value={formatCount(numberValue(usage?.tool_calls) ?? numberValue(retries?.observed_tool_calls))} />
+        <ExecutionFact label="Final status" value={humanize(row.execution_status)} />
       </section>
-      <p className="max-w-lg text-[0.75rem] leading-relaxed text-muted-foreground">
-        Technical trace data is collapsed by default so it does not compete with output and evidence review.
-      </p>
-      <CollapsibleJson title="Model interactions and tool activity" value={review.model_interactions ?? { unavailable: true }} />
-      <CollapsibleJson title="Pipeline trace" value={review.pipeline ?? { unavailable: true }} />
-      <CollapsibleJson title="Attempt outcome" value={review.attempt_outcome ?? { unavailable: true }} />
     </div>
   );
 }
 
-function CollapsibleJson({ title, value }: { title: string; value: unknown }) {
+function ExecutionFact({ label, value }: { label: string; value: string }) {
   return (
-    <details className="group overflow-hidden rounded-lg border bg-card">
-      <summary className="cursor-pointer px-3.5 py-3 text-[0.8125rem] font-semibold group-open:border-b [&::-webkit-details-marker]:hidden">
-        {title}
-      </summary>
-      <Json value={value} className="max-h-96 rounded-none" />
-    </details>
+    <div className="grid min-h-20 content-center gap-1 rounded-lg border bg-card px-3.5 py-3">
+      <small className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">{label}</small>
+      <strong className="break-words text-[0.8125rem] font-semibold">{value}</strong>
+    </div>
   );
 }
 
@@ -1352,16 +1387,6 @@ function AiOutputValue({ value }: { value: unknown }) {
         </details>
       ) : null}
     </div>
-  );
-}
-
-function ReviewUnavailable({ row }: { row: AttemptRow }) {
-  const reason = row.review_unavailable_reason;
-  return (
-    <EmptyState className="m-5 min-h-40">
-      Detailed review unavailable ({reason?.code ?? "absent"})
-      {reason?.message ? `: ${reason.message}` : "."}
-    </EmptyState>
   );
 }
 
@@ -1506,6 +1531,47 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
     : null;
+}
+
+function numberValue(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function formatCount(value: number | null) {
+  return value == null ? "—" : new Intl.NumberFormat().format(value);
+}
+
+function totalTokens(usage: Record<string, unknown> | null) {
+  const reported = numberValue(usage?.total_tokens);
+  if (reported != null) return reported;
+  const input = numberValue(usage?.input_tokens);
+  const output = numberValue(usage?.output_tokens);
+  return input == null && output == null ? null : (input ?? 0) + (output ?? 0);
+}
+
+function retryCount(retries: Record<string, unknown> | null) {
+  if (!retries || retries.availability === "unavailable") return null;
+  const categories = asRecord(retries.observed_transport_retry_categories);
+  if (categories) {
+    return Object.values(categories).reduce<number>(
+      (total, value) => total + (numberValue(value) ?? 0),
+      0,
+    );
+  }
+  const attempts = numberValue(retries.observed_transport_attempts);
+  const requests = numberValue(retries.observed_model_requests);
+  return attempts == null || requests == null ? null : Math.max(0, attempts - requests);
+}
+
+function attemptCost(value: Record<string, unknown> | null | undefined) {
+  const cost = asRecord(value);
+  const actual = asRecord(cost?.actual);
+  const estimated = asRecord(cost?.estimated);
+  const observation = actual ?? estimated;
+  const amount = numberValue(observation?.amount);
+  const currency = typeof observation?.currency === "string" ? observation.currency : null;
+  if (amount == null || !currency) return "—";
+  return `${formatCost(amount, currency)}${actual ? " actual" : " estimated"}`;
 }
 
 function uniqueValues(values: Array<string | null | undefined>) {

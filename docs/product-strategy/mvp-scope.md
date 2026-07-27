@@ -38,10 +38,11 @@ Agent Launch journey or create the portable agent package.
 
 ## Out of Scope
 
-This section makes the scope horizon explicit. A capability that is deferred
-beyond the MVP is not necessarily rejected permanently. A capability excluded
-from both the MVP and the near-term broader scope should not attract design or
-implementation work without a new product decision.
+- Mobile view (it's web browser only focused app)
+
+This section makes the scope horizon explicit. A capability that is deferred beyond the MVP is not necessarily rejected permanently. A capability excluded from both the MVP and the near-term broader scope should not attract design or implementation work without a new product decision.
+
+
 
 ### Deferred beyond the MVP
 

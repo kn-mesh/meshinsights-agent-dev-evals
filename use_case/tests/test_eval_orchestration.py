@@ -344,6 +344,7 @@ def test_run_eval_writes_schema_v2_tracked_results_and_split_performance(
     assert result["benchmark_labels"]["review_notes"].startswith("Useful context")
     assert set(result["slice_keys"]) == {"expected-failure", "closed-failure"}
     assert result["runs"][0]["evaluations"]["classification"]["correct"] is True
+    assert result["runs"][0]["evaluations"]["classification"]["actual"] == "Failure"
     assert result["runs"][0]["agent_output"]["classification"]["value"] == "Failure"
     performance = _performance(tmp_path)
     assert performance["schema_version"] == 1
@@ -1851,7 +1852,7 @@ def test_complete_working_eval_elevates_to_compact_verified_retained_artifacts(
     )
     assert attempts["rows"][0]["agent_output"]["classification"]["value"] == "Failure"
     detail = backend.get_attempt(retained_id, attempts["rows"][0]["execution_id"])
-    assert detail["review"] is None
+    assert "review" not in detail
     assert detail["performance"]["availability"] == "unavailable"
     retained_evidence = backend.get_evidence(
         retained_id, benchmark.examples[0].example_id

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @source "../../../../packages/eval-ui/web/src";
+@source "../../../../use_case/explorer";
 
 @layer theme {
   :root {

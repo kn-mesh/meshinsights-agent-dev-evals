@@ -25,6 +25,7 @@ from evaluation import (
 
 from workbench.evals import inspection_cli
 from workbench.evals.inspection import (
+    _unstable_examples,
     inspect_example,
     inspection_summary,
     list_inspection_rows,
@@ -41,6 +42,54 @@ def test_inspection_cli_excludes_partial_review_purge() -> None:
     )
 
     assert "purge" not in commands
+
+
+def test_stability_uses_evaluated_decisions_not_free_form_output() -> None:
+    rows = [
+        {
+            "example_id": "example-a",
+            "runs": [
+                {
+                    "scoring_status": "scored",
+                    "evaluations": {
+                        "classification": {
+                            "applicable": True,
+                            "graded": True,
+                            "actual": "Failure",
+                        }
+                    },
+                    "agent_output": {
+                        "classification": {
+                            "value": "Failure",
+                            "explanation": "First rationale.",
+                        }
+                    },
+                },
+                {
+                    "scoring_status": "scored",
+                    "evaluations": {
+                        "classification": {
+                            "applicable": True,
+                            "graded": True,
+                            "actual": "Failure",
+                        }
+                    },
+                    "agent_output": {
+                        "classification": {
+                            "value": "Failure",
+                            "explanation": "Different rationale, same decision.",
+                        }
+                    },
+                },
+            ],
+        }
+    ]
+
+    assert _unstable_examples(rows) == set()
+
+    rows[0]["runs"][1]["evaluations"]["classification"]["actual"] = "Healthy"
+
+    assert _unstable_examples(rows) == {"example-a"}
 
 
 def _run_fixture(tmp_path: Path) -> tuple[Path, str, str]:
@@ -316,6 +365,20 @@ def test_inspection_replaces_old_disposable_index_schema(tmp_path: Path) -> None
     list_inspection_rows(run_dir)
 
     assert store.read_index()["review_index_schema_version"] == 2
+
+
+def test_inspection_refreshes_old_projection_semantics(tmp_path: Path) -> None:
+    run_dir, run_id, digest = _run_fixture(tmp_path)
+    store = LocalReviewStore(run_dir, run_id=run_id)
+    store.initialize(run_spec_sha256=digest)
+    materialize_review_index(run_dir)
+    stale = store.read_index()
+    stale["inspection_projection_version"] = 1
+    store.index_path.write_text(json.dumps(stale), encoding="utf-8")
+
+    list_inspection_rows(run_dir)
+
+    assert store.read_index()["inspection_projection_version"] == 2
 
 
 def test_inspection_refreshes_index_for_manifest_commit(

@@ -22,7 +22,6 @@ from workbench.apps.evidence import (
 )
 from workbench.evals.inspection import (
     all_inspection_rows,
-    inspect_execution,
     inspection_summary,
 )
 from workbench.evals.result_integrity import load_verified_result
@@ -211,14 +210,6 @@ class ProjectExplorerBackend:
             raise FileNotFoundError(
                 f"Expected one attempt {execution_id}; found {len(matching)}."
             )
-        review = None
-        if (
-            entry["lifecycle_state"] == "working"
-            and matching[0].get("review_status") != "unavailable"
-        ):
-            review = inspect_execution(
-                run_dir, execution_id=execution_id, resolve_text=True
-            )
         performance = (
             {
                 "availability": "unavailable",
@@ -233,7 +224,6 @@ class ProjectExplorerBackend:
         return {
             "run_id": run_id,
             "row": matching[0],
-            "review": review,
             "performance": performance,
             "benchmark_context": benchmark_context,
         }

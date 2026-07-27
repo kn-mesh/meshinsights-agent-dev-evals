@@ -472,6 +472,7 @@ def test_project_backend_exposes_optional_correlated_performance(
         == "available"
     )
     attempt = backend.get_attempt(run_id, execution_id)
+    assert "review" not in attempt
     assert attempt["performance"]["availability"] == "available"
     assert attempt["performance"]["metrics"]["duration_seconds"] == 12.0
     assert attempt["benchmark_context"]["availability"] == "available"

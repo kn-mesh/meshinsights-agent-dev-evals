@@ -716,6 +716,7 @@ def _materialized_attempt(
         fields[key] = {
             "applicable": key in attempt.applicable_fields,
             "graded": bool(contract.get("graded")),
+            "actual": attempt.actual_values.get(key),
             "confidence": attempt.confidence_values.get(key),
             "correct": evaluation.correct if evaluation is not None else None,
             "normalized_expected": (
