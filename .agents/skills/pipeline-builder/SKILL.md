@@ -12,7 +12,7 @@ execution, and `$agent-eval-builder` for eval contract changes.
 
 ## Boundaries
 
-- Read `docs/use_case/`, current pipeline configs, objects, receipts, runners,
+- Read `use_case/docs/`, current pipeline configs, objects, receipts, runners,
   and focused tests before editing.
 - Keep use-case rules in manifest-declared reference paths. Reuse `mi.core`,
   `mi.ai`, and existing helpers.
@@ -25,12 +25,12 @@ Design receipt-first: keep intermediate data on typed process artifacts and
 place the compact, serializable business outcome in act-stage
 `PipelineReceipt` metadata.
 
-Organize variant-specific processors under `src/processors/<variant>/` and
-shared processors under `src/processors/common/`. Reuse objects and hydrators
+Organize variant-specific processors under `use_case/processors/<variant>/` and
+shared processors under `use_case/processors/common/`. Reuse objects and hydrators
 when the variant hypothesis does not require changing them.
 
-Every evaluable `pipeline_configs/<stem>.ppln` needs a matching
-`agent_version_configs/<stem>.agent.yaml`. Components own declarations for
+Every evaluable `use_case/pipeline_configs/<stem>.ppln` needs a matching
+`use_case/agent_version_configs/<stem>.agent.yaml`. Components own declarations for
 their behavior-bearing assets and contracts through `version_assets()` and
 `version_contracts()`. The policy supplements that graph with:
 
@@ -57,7 +57,7 @@ declaration sources, and prove the complete graph was captured.
    arguments, and a `benchmark_contract` declaring the published schema,
    evidence recipe, source snapshot contract, and required artifact kinds.
    Inject exact benchmark/example metadata at runtime; never store secrets.
-   Inspect current `pipeline_configs/` and `mi-core` pipeline docs for syntax
+   Inspect current `use_case/pipeline_configs/` and `mi-core` pipeline docs for syntax
    rather than copying a generic example.
 4. **Validate one exact example.** The runner owns only unit-level execution.
    `run_pipeline(...)` receives the exact `BenchmarkVersion` and
@@ -71,8 +71,8 @@ declaration sources, and prove the complete graph was captured.
 
    ```bash
    uv run python -m src.agent_versions.cli --json resolve \
-     --pipeline pipeline_configs/<variant>.ppln \
-     --agent-policy agent_version_configs/<variant>.agent.yaml \
+     --pipeline use_case/pipeline_configs/<variant>.ppln \
+     --agent-policy use_case/agent_version_configs/<variant>.agent.yaml \
      --dirty-policy capture
    ```
 

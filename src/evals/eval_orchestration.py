@@ -36,6 +36,7 @@ from evaluation import (
     RuntimeType,
     ScoringStatus,
     build_reliability_summary,
+    build_default_grader_registry,
     build_eval_run_identity,
     build_work_item_id,
     benchmark_source_reference,
@@ -94,7 +95,6 @@ from src.evals.evaluation_profile import (
     preflight_evaluation,
     slice_memberships,
 )
-from src.evals.graders import build_project_grader_registry
 from src.evals.inspection import (
     find_run_directory as find_inspection_run_directory,
     materialize_review_index,
@@ -110,6 +110,10 @@ from src.evals.run_store import (
 )
 from src.model_configuration import format_model
 from src.pipelines.pipeline_run_from_yaml import run_pipeline
+from src.project_layout import (
+    USE_CASE_EVALUATION_CONFIGS,
+    USE_CASE_PIPELINE_CONFIGS,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -430,7 +434,7 @@ def run_eval(
     profile = load_evaluation_profile(evaluation_profile_path)
     project_contract = load_project_contract(yaml_path)
     dimensions = _validate_configuration_dimensions(configuration_dimensions or {})
-    registry = grader_registry or build_project_grader_registry()
+    registry = grader_registry or build_default_grader_registry()
     benchmark_repository = repository or AzurePostgresBenchmarkRepository(
         project_key=project_key
     )
@@ -2682,11 +2686,13 @@ def _resolve_path(
 ) -> Path:
     if explicit is not None:
         return explicit
-    if not sys.stdin.isatty():
-        parser.error(f"{label} is required when stdin is not interactive.")
     paths = sorted(Path(directory).glob(pattern))
     if not paths:
-        parser.error(f"No {label} files were found under {directory}/.")
+        parser.error(
+            f"Use case not configured: no {label} files were found under {directory}/."
+        )
+    if not sys.stdin.isatty():
+        parser.error(f"{label} is required when stdin is not interactive.")
     selected = prompt_select_option(f"Choose {label}:", [str(path) for path in paths])
     return Path(selected)
 
@@ -2971,14 +2977,14 @@ def main() -> None:
     model_catalog = load_model_catalog()
     yaml_path = _resolve_path(
         args.yaml_path,
-        directory="pipeline_configs",
+        directory=USE_CASE_PIPELINE_CONFIGS,
         pattern="*.ppln",
         label="pipeline config",
         parser=parser,
     )
     evaluation_profile_path = _resolve_path(
         args.evaluation_profile,
-        directory="evaluation_configs",
+        directory=USE_CASE_EVALUATION_CONFIGS,
         pattern="*.eval.yaml",
         label="evaluation profile",
         parser=parser,

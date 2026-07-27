@@ -26,6 +26,16 @@ from src.project_bootstrap.models import (
     TemplateOwnershipManifest,
     TemplateProvenance,
 )
+from src.project_layout import (
+    USE_CASE_AGENT_VERSION_CONFIGS,
+    USE_CASE_DIRECTORIES,
+    USE_CASE_DOCS,
+    USE_CASE_EVALUATION_CONFIGS,
+    USE_CASE_EXPLORER,
+    USE_CASE_PIPELINE_CONFIGS,
+    USE_CASE_PYTHON_DIRECTORIES,
+    USE_CASE_ROOT,
+)
 
 
 DEFAULT_TEMPLATE_SOURCE = (
@@ -55,22 +65,11 @@ _EXCLUDED_PARTS = frozenset(
     }
 )
 _REQUIRED_DIRECTORIES = (
-    "docs/use_case",
-    "pipeline_configs",
-    "evaluation_configs",
-    "agent_version_configs",
+    *USE_CASE_DIRECTORIES,
     "eval_results",
-    "src/actions",
-    "src/evidence",
-    "src/hydrators",
-    "src/objects",
-    "src/processors",
-    "src/retrievers",
     "src/pipelines",
     "src/evals",
-    "www/src/use_case",
     "tests",
-    "tests/use_case",
 )
 
 
@@ -160,7 +159,7 @@ def validate_project(project_root: Path) -> dict[str, Any]:
             "models.yaml",
             "model_pricing.yaml",
             ".env.example",
-            "docs/use_case/PROJECT_CONTEXT.md",
+            f"{USE_CASE_DOCS}/PROJECT_CONTEXT.md",
             *_REQUIRED_DIRECTORIES,
         )
         if not (root / relative).exists()
@@ -389,17 +388,16 @@ def _render_project(
         directory = root / relative
         directory.mkdir(parents=True, exist_ok=True)
         if relative in {
-            "pipeline_configs",
-            "evaluation_configs",
-            "agent_version_configs",
+            USE_CASE_PIPELINE_CONFIGS,
+            USE_CASE_EVALUATION_CONFIGS,
+            USE_CASE_AGENT_VERSION_CONFIGS,
             "eval_results",
-            "www/src/use_case",
-            "tests/use_case",
+            USE_CASE_EXPLORER,
         } and not any(directory.iterdir()):
             (directory / ".gitkeep").touch()
-    for directory in _REQUIRED_DIRECTORIES:
-        if directory.startswith("src/"):
-            (root / directory / "__init__.py").touch(exist_ok=True)
+    for directory in USE_CASE_PYTHON_DIRECTORIES:
+        (root / directory).mkdir(parents=True, exist_ok=True)
+        (root / directory / "__init__.py").touch(exist_ok=True)
     _write_use_case_placeholders(root)
 
     contract = ProjectContract(
@@ -425,7 +423,7 @@ def _render_project(
         encoding="utf-8",
     )
     (root / ".env.example").write_text(_environment_template(spec), encoding="utf-8")
-    context_path = root / "docs/use_case/PROJECT_CONTEXT.md"
+    context_path = root / USE_CASE_DOCS / "PROJECT_CONTEXT.md"
     if not context_path.exists():
         context_path.write_text(_project_context(spec), encoding="utf-8")
     return contract
@@ -466,11 +464,22 @@ This repository is a Mesh Agent Workbench project initialized from an exact
 template revision. Non-secret project, benchmark, evidence, and model identities
 are recorded in `workbench.project.json`.
 
+## Editing Zones
+
+- Reusable product: `mi-core/`, `agent-dev-eval-core/`,
+  `agent-dev-eval-ui/`, and reusable `src/` modules.
+- Project configuration: root identity, model, environment, runbook, and
+  `www/` composition files.
+- Use-case implementation: everything beneath the fixed `use_case/` root.
+
+Keep project meaning in `use_case/`. Change reusable product code only for an
+approved cross-use-case capability and record its canonical upstream target.
+
 ## Start Here
 
-1. Document durable domain context in `docs/use_case/PROJECT_CONTEXT.md`.
-2. Port the published-benchmark evidence pipeline into the replaceable use-case
-   paths declared by `workbench.template.json`.
+1. Document durable domain context in `use_case/docs/PROJECT_CONTEXT.md`.
+2. Port the published-benchmark evidence pipeline into the fixed
+   `use_case/` structure.
 3. Add project pipeline, evaluation, and agent-version configurations.
 4. Run one exact benchmark example before a broader evaluation.
 5. Use `EvalRunbook.md` and the root skills under `.agents/skills/`.
@@ -566,32 +575,72 @@ Do not use this file as an implementation log.
 
 def _write_use_case_placeholders(root: Path) -> None:
     """Write import-safe extension points for the not-yet-ported use case."""
-    (root / "src/evidence/__init__.py").write_text(
+    (root / USE_CASE_ROOT / "__init__.py").write_text(
+        '"""Project-owned use-case implementation."""\n',
+        encoding="utf-8",
+    )
+    (root / USE_CASE_ROOT / "evidence/__init__.py").write_text(
         '''"""Project-owned evidence adapter extension point."""
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Protocol
 
-from src.benchmarks.models import BenchmarkExample
-
-
-class ProjectEvidenceAdapter(Protocol):
-    def build_view(
-        self,
-        *,
-        benchmark_key: str,
-        benchmark_version_id: str,
-        version_number: int,
-        example: BenchmarkExample,
-    ) -> dict[str, Any]: ...
+from src.apps.evidence import (
+    ProjectEvidenceAdapter,
+    create_unconfigured_project_evidence_adapter,
+)
 
 
-def create_project_evidence_adapter(project_root: Path) -> ProjectEvidenceAdapter:
-    raise RuntimeError(
-        "Port the use-case evidence adapter before starting the eval explorer."
+def create_project_evidence_adapter(
+    project_root: Path,
+    *,
+    account_url: str | None = None,
+    container: str | None = None,
+) -> ProjectEvidenceAdapter:
+    return create_unconfigured_project_evidence_adapter(
+        project_root,
+        account_url=account_url,
+        container=container,
     )
+''',
+        encoding="utf-8",
+    )
+    (root / USE_CASE_ROOT / "apps/eval_explorer.py").write_text(
+        '''"""Compose the reusable explorer with the project evidence adapter."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from src.apps.eval_explorer import build_app, serve_app
+from use_case.evidence import create_project_evidence_adapter
+
+
+def build_project_app(*, project_root: Path | None = None) -> Any:
+    return build_app(
+        project_root=project_root,
+        evidence_adapter_factory=create_project_evidence_adapter,
+    )
+
+
+app = build_project_app()
+
+
+def main(argv: list[str] | None = None) -> None:
+    serve_app(app, argv)
+
+
+if __name__ == "__main__":
+    main()
+''',
+        encoding="utf-8",
+    )
+    (root / USE_CASE_ROOT / "explorer/adapter.tsx").write_text(
+        '''export {
+  unconfiguredUseCaseAdapter as projectUseCaseAdapter,
+} from "@eval-ui/unconfigured-use-case";
 ''',
         encoding="utf-8",
     )

@@ -27,9 +27,54 @@
       "description": "Durable repository-wide Codex guidance and ownership rules"
     },
     {
+      "path": ".env.example",
+      "owner": "root_infrastructure",
+      "description": "Non-secret environment identity and credential placeholders"
+    },
+    {
+      "path": ".gitignore",
+      "owner": "root_infrastructure",
+      "description": "Repository-wide generated and sensitive file exclusions"
+    },
+    {
       "path": "bootstrap_configs",
       "owner": "root_infrastructure",
       "description": "Reviewed non-secret examples for new-project initialization"
+    },
+    {
+      "path": "docs",
+      "owner": "root_infrastructure",
+      "description": "Template-authoring, product-strategy, and project documentation"
+    },
+    {
+      "path": "pyproject.toml",
+      "owner": "root_infrastructure",
+      "description": "Root project packaging, dependency, test, and type-check configuration"
+    },
+    {
+      "path": "scripts",
+      "owner": "reusable_workbench",
+      "description": "Reusable Workbench maintenance and verification scripts"
+    },
+    {
+      "path": "src",
+      "owner": "reusable_workbench",
+      "description": "Default owner for reusable Workbench Python source"
+    },
+    {
+      "path": "uv.lock",
+      "owner": "root_infrastructure",
+      "description": "Locked root Python dependency graph"
+    },
+    {
+      "path": "workbench.template.json",
+      "owner": "root_infrastructure",
+      "description": "Template ownership and reset contract"
+    },
+    {
+      "path": "www",
+      "owner": "root_infrastructure",
+      "description": "Project-configured frontend build and composition harness"
     },
     {
       "path": "model_catalog.py",
@@ -92,69 +137,14 @@
       "description": "Reusable project utilities"
     },
     {
-      "path": "docs/use_case",
-      "owner": "reference_use_case",
-      "description": "Replaceable durable use-case context"
-    },
-    {
       "path": "tests",
       "owner": "reusable_workbench",
       "description": "Reusable Workbench and generated-project contract tests"
     },
     {
-      "path": "tests/use_case",
+      "path": "use_case",
       "owner": "reference_use_case",
-      "description": "Replaceable reference-use-case tests"
-    },
-    {
-      "path": "pipeline_configs",
-      "owner": "reference_use_case",
-      "description": "Replaceable use-case pipeline variants"
-    },
-    {
-      "path": "evaluation_configs",
-      "owner": "reference_use_case",
-      "description": "Replaceable evaluation fields, graders, and named sections"
-    },
-    {
-      "path": "agent_version_configs",
-      "owner": "reference_use_case",
-      "description": "Replaceable agent policies and configuration"
-    },
-    {
-      "path": "src/actions",
-      "owner": "reference_use_case",
-      "description": "Replaceable use-case terminal actions"
-    },
-    {
-      "path": "src/evidence",
-      "owner": "reference_use_case",
-      "description": "Replaceable evidence projection and explorer adapter"
-    },
-    {
-      "path": "src/hydrators",
-      "owner": "reference_use_case",
-      "description": "Replaceable use-case stage normalization"
-    },
-    {
-      "path": "src/objects",
-      "owner": "reference_use_case",
-      "description": "Replaceable use-case process and action contracts"
-    },
-    {
-      "path": "src/processors",
-      "owner": "reference_use_case",
-      "description": "Replaceable deterministic and AI agent logic"
-    },
-    {
-      "path": "src/retrievers",
-      "owner": "reference_use_case",
-      "description": "Replaceable evidence retrieval and decoding"
-    },
-    {
-      "path": "www/src/use_case",
-      "owner": "reference_use_case",
-      "description": "Replaceable review evidence schema and visual composition"
+      "description": "Single replaceable use-case implementation, configuration, explorer, context, and tests"
     },
     {
       "path": "README.md",
@@ -194,18 +184,7 @@
   ],
   "reference_reset": {
     "clear_directories": [
-      "docs/use_case",
-      "pipeline_configs",
-      "evaluation_configs",
-      "agent_version_configs",
-      "src/actions",
-      "src/evidence",
-      "src/hydrators",
-      "src/objects",
-      "src/processors",
-      "src/retrievers",
-      "www/src/use_case",
-      "tests/use_case"
+      "use_case"
     ],
     "remove_directories": [
       "docs/development-backlog",
@@ -216,26 +195,11 @@
       "EvalRunbook.md",
       "www/src/eval-explorer-app.test.tsx"
     ],
-    "root_skills_with_project_defaults": [
-      ".agents/skills/run-use-case-evals/SKILL.md",
-      ".agents/skills/external-runtime-setup/SKILL.md"
-    ],
     "leak_scan_paths": [
       "README.md",
       "EvalRunbook.md",
       ".agents/skills",
-      "docs/use_case",
-      "pipeline_configs",
-      "evaluation_configs",
-      "agent_version_configs",
-      "src/actions",
-      "src/evidence",
-      "src/hydrators",
-      "src/objects",
-      "src/processors",
-      "src/retrievers",
-      "www/src/use_case",
-      "tests/use_case"
+      "use_case"
     ],
     "forbidden_terms": [
       "spirax",

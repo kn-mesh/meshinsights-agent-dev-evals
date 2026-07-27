@@ -13,8 +13,8 @@ the current environment, then substitute them into this command. This command
 evaluates every example in that selected version once:
 
 ```bash
-uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
-  --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
+uv run python -m src.evals.eval_orchestration use_case/pipeline_configs/v1_3.ppln \
+  --evaluation-profile use_case/evaluation_configs/spirax-failure-evaluation.eval.yaml \
   --project-key spirax-pulse \
   --azure-postgres-host misprx-lb-dv-pg-qdol4f5j2ozla.postgres.database.azure.com \
   --azure-postgres-database label_benchmark \
@@ -44,8 +44,8 @@ explicitly. This skips the slow interactive benchmark-catalog query and makes
 the run reproducible.
 
 ```bash
-uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
-  --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
+uv run python -m src.evals.eval_orchestration use_case/pipeline_configs/v1_3.ppln \
+  --evaluation-profile use_case/evaluation_configs/spirax-failure-evaluation.eval.yaml \
   --project-key spirax-pulse \
   --azure-postgres-host <postgres-host> \
   --azure-postgres-database <postgres-database> \
@@ -68,7 +68,7 @@ Replace every angle-bracket placeholder. Choose `--ai-model` from
 the non-interactive CLI requires it rather than silently selecting latest.
 
 Every run automatically resolves the matching
-`agent_version_configs/<pipeline-stem>.agent.yaml`, creates an immutable
+`use_case/agent_version_configs/<pipeline-stem>.agent.yaml`, creates an immutable
 candidate manifest, and writes it beside the durable run. Use
 `--agent-version-id av_<hash>` or `--require-promoted-agent-version` when a run
 must use content already promoted into the local catalog.
@@ -114,7 +114,7 @@ through the exact-example pipeline runner before considering the agent ready
 for evaluation:
 
 ```bash
-uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1_3.ppln \
+uv run python -m src.pipelines.pipeline_run_from_yaml use_case/pipeline_configs/v1_3.ppln \
   --project-key spirax-pulse \
   --azure-postgres-host <postgres-host> \
   --azure-postgres-database <postgres-database> \
@@ -155,8 +155,8 @@ For example, run every approved Open Failure example once with the catalog
 default model after substituting a key and version confirmed by discovery:
 
 ```bash
-uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
-  --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
+uv run python -m src.evals.eval_orchestration use_case/pipeline_configs/v1_3.ppln \
+  --evaluation-profile use_case/evaluation_configs/spirax-failure-evaluation.eval.yaml \
   --project-key spirax-pulse \
   --benchmark-key <published-benchmark-key> \
   --benchmark-version <version-number> \
@@ -174,8 +174,8 @@ Before a new live run, or whenever the environment or catalog may have changed,
 run the interactive chooser with the hosted data-plane identities explicit:
 
 ```bash
-uv run python -m src.evals.eval_orchestration pipeline_configs/v1_3.ppln \
-  --evaluation-profile evaluation_configs/spirax-failure-evaluation.eval.yaml \
+uv run python -m src.evals.eval_orchestration use_case/pipeline_configs/v1_3.ppln \
+  --evaluation-profile use_case/evaluation_configs/spirax-failure-evaluation.eval.yaml \
   --project-key spirax-pulse \
   --azure-postgres-host misprx-lb-dv-pg-qdol4f5j2ozla.postgres.database.azure.com \
   --azure-postgres-database label_benchmark \
@@ -412,7 +412,7 @@ cd www
 pnpm install
 pnpm build
 cd ..
-APP_PROJECT_KEY=spirax-pulse uv run python -m src.apps.eval_explorer
+APP_PROJECT_KEY=spirax-pulse uv run python -m use_case.apps.eval_explorer
 ```
 
 Open `http://127.0.0.1:8765`. Select a working run to filter attempts and

@@ -14,7 +14,7 @@
     "baseUrl": ".",
     "paths": {
       "@eval-ui/*": ["../agent-dev-eval-ui/web/src/*"],
-      "@use-case/*": ["src/use_case/*"],
+      "@use-case/*": ["../use_case/explorer/*"],
       "@tanstack/react-query": ["node_modules/@tanstack/react-query"],
       "plotly.js": ["node_modules/@types/plotly.js"],
       "react": ["node_modules/@types/react"],
@@ -27,5 +27,13 @@
     "jsx": "react-jsx",
     "types": ["vite/client"]
   },
-  "include": ["src", "../agent-dev-eval-ui/web/src"]
+  "include": ["src", "../agent-dev-eval-ui/web/src", "../use_case/explorer"],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "../agent-dev-eval-ui/web/src/**/*.test.ts",
+    "../agent-dev-eval-ui/web/src/**/*.test.tsx",
+    "../use_case/explorer/**/*.test.ts",
+    "../use_case/explorer/**/*.test.tsx"
+  ]
 }

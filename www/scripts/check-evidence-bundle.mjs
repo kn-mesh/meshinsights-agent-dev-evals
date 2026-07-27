@@ -4,6 +4,17 @@ import { gzipSync } from "node:zlib";
 const assetsDirectory = new URL("../dist/assets/", import.meta.url);
 const matches = readdirSync(assetsDirectory).filter((name) => name.startsWith("plotly-cartesian.min-") && name.endsWith(".js"));
 
+if (matches.length === 0) {
+  const projectAdapter = readFileSync(
+    new URL("../../use_case/explorer/adapter.tsx", import.meta.url),
+    "utf8",
+  );
+  if (projectAdapter.includes("unconfiguredUseCaseAdapter")) {
+    console.log("Neutral use-case adapter: no evidence-chart bundle expected.");
+    process.exit(0);
+  }
+}
+
 if (matches.length !== 1) {
   throw new Error(`Expected one lazy evidence-chart bundle; found ${matches.length}.`);
 }

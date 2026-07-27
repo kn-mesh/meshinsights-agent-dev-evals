@@ -391,8 +391,7 @@ artifact meaning.
 
 ## Decision 4: Reusable Core Versus Reference Use Case
 
-**Status:** Decided for MVP. The physical migration remains feature-planning
-work.
+**Status:** Decided and physically implemented for MVP.
 
 ### Repository role
 
@@ -469,10 +468,11 @@ skills ship with every template. Any Spirax-specific skills are removed or
 rewritten from that root directory when creating the new use case; they are not
 buried inside the use-case folder.
 
-The exact use-case directory name and the relocation of currently mixed root
-paths will be decided during feature planning. The required outcome is that a
-new project can replace one documented set of reference-use-case paths without
-deleting, searching through, or accidentally modifying reusable code.
+The fixed replaceable root is `use_case/`. Reference documentation,
+configurations, pipeline components, evidence adapters, explorer UI, and
+behavior tests live beneath it. Bootstrap clears exactly that directory and
+immediately creates the neutral standard skeleton; reusable product and project
+configuration remain in place.
 
 Repository-level environment bootstrap, dependency management, eval lifecycle
 commands, generic skills, and local result folders may remain outside the
@@ -520,7 +520,6 @@ All strategic deviations reviewed for the MVP now have a product-scope
 decision. The following implementation or longer-horizon decisions remain
 deferred:
 
-- the exact physical migration that creates the replaceable use-case seam;
 - the eventual split into independently versioned repositories or published
   packages;
 - automatic upgrade propagation among use-case repositories;

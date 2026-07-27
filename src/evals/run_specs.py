@@ -12,6 +12,9 @@ from evaluation import canonical_sha256
 
 _SOURCE_GLOBS = (
     "src/**/*.py",
+    "use_case/**/*.py",
+    "use_case/**/*.ppln",
+    "use_case/**/*.yaml",
     "agent-dev-eval-core/evaluation/*.py",
     "mi-core/core/src/mi/**/*.py",
 )

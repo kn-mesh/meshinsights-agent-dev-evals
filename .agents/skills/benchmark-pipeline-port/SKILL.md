@@ -19,7 +19,7 @@ Use `$pipeline-builder` for the target shape,
   source files.
 - Confirm the target has no customer code that would be overwritten. Ask before
   proceeding when source changes or target ownership overlap is ambiguous.
-- Read both repositories' instructions, target `docs/use_case/`, source recipe,
+- Read both repositories' instructions, target `use_case/docs/`, source recipe,
   label schema, pipeline, visualization, dependencies, and focused tests.
 - Benchmark Studio owns benchmark, label, review, and publication truth. The
   target consumes published versions and frozen evidence read-only.
@@ -61,7 +61,7 @@ Ask only for facts unavailable from those sources.
    evidence recipe, snapshot contract, and required artifact kinds in
    `benchmark_contract`; keep large evidence out of the final receipt.
 5. **Add the candidate policy.** Create
-   `agent_version_configs/<pipeline-stem>.agent.yaml` with the matching source
+   `use_case/agent_version_configs/<pipeline-stem>.agent.yaml` with the matching source
    pipeline, receipt contracts, action policy, evidence recipe, and permitted
    model/reasoning overrides.
 6. **Wire exact execution.** Require explicit project, benchmark key/version,

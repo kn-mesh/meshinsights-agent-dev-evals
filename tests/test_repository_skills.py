@@ -306,7 +306,7 @@ def test_ai_processor_skill_does_not_require_static_f_strings() -> None:
 
 
 def test_every_evaluable_pipeline_has_a_valid_matching_agent_policy() -> None:
-    pipelines = sorted((ROOT / "pipeline_configs").glob("*.ppln"))
+    pipelines = sorted((ROOT / "use_case/pipeline_configs").glob("*.ppln"))
     for pipeline in pipelines:
         policy_path = default_policy_path(pipeline, root=ROOT)
         assert policy_path.is_file(), pipeline.name
@@ -425,7 +425,7 @@ def test_preserved_skills_treat_removed_product_strategy_as_optional() -> None:
             or "when it exists" in normalized
         )
         assert "workbench.project.json" in content
-        assert "docs/use_case/" in content
+        assert "use_case/docs/" in content
 
 
 def test_project_guide_uses_manifest_paths_and_unique_routes() -> None:

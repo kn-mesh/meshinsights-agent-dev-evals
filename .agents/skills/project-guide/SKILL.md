@@ -15,7 +15,7 @@ or the production agent runtime.
 Read, in order:
 
 1. The request and named files.
-2. Durable `docs/use_case/` context.
+2. Durable `use_case/docs/` context.
 3. Current source, configs, tests, and runnable entry points.
 4. The specialized repo skill.
 5. Editable `mi-core/` source when framework behavior matters.
@@ -24,7 +24,7 @@ Read, in order:
 Current coherent code defines local behavior. For architecture or product
 choices, use `docs/product-strategy/` when that template-repository directory
 exists; generated projects instead use `workbench.project.json`,
-`docs/use_case/`, and this skill's boundaries.
+`use_case/docs/`, and this skill's boundaries.
 
 Follow root `AGENTS.md` for commands, ownership, authorization, and verification.
 Treat `mi-core/` as editable reusable source, not automatic scope.
@@ -33,9 +33,10 @@ Treat `mi-core/` as editable reusable source, not automatic scope.
 
 Use `workbench.template.json` as the authoritative path inventory. Its
 `ownership` entries distinguish reusable, reference-use-case, root, and
-generated-local paths. Common project paths are `pipeline_configs/`,
-`evaluation_configs/`, `agent_version_configs/`, `src/{retrievers,objects,hydrators,processors,actions,evidence}/`,
-and `www/src/use_case/`. Treat examples as starting patterns.
+generated-local paths. Common project paths are `use_case/pipeline_configs/`,
+`use_case/evaluation_configs/`, `use_case/agent_version_configs/`,
+`use_case/{retrievers,objects,hydrators,processors,actions,evidence}/`, and
+`use_case/{apps,graders,explorer,tests}/`. Treat examples as starting patterns.
 
 ## Gate New Work
 
@@ -102,7 +103,7 @@ ordinary improvement request.
 
 ## Guide Template Customization
 
-Use `$create-use-case-project`, then capture `docs/use_case/`, set project and
+Use `$create-use-case-project`, then capture `use_case/docs/`, set project and
 benchmark identities, configure models, replace manifest-declared reference
 paths, and validate one control pipeline. Keep reusable Workbench and
 `mi-core/` mechanics distinct from use-case rules.

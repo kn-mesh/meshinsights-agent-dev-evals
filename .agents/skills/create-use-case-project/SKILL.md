@@ -33,8 +33,9 @@ libraries by hand.
 5. Confirm:
    - reusable libraries and generic root skills were preserved;
    - `tests/test_repository_skills.py` was preserved and passes in the generated
-     project after the reference-only `tests/use_case/` seam was cleared;
-   - manifest-declared reference paths were cleared;
+     project after the reference-only `use_case/tests/` seam was cleared;
+   - the single manifest-declared `use_case/` reference root was cleared and
+     rebuilt as the neutral standard skeleton;
    - local evals, retained versions, credentials, caches, and build output were
      not copied;
    - `README.md`, `EvalRunbook.md`, `.env.example`, `models.yaml`, and
@@ -42,7 +43,9 @@ libraries by hand.
    - reusable `model_pricing.yaml` remains valid and satisfies every
      `models.yaml` pricing reference without use-case identity; and
    - validation reports no reference-identity leakage.
-6. Capture durable domain context in `docs/use_case/PROJECT_CONTEXT.md`.
+   - the neutral frontend tests and build pass before project-specific explorer
+     code is added.
+6. Capture durable domain context in `use_case/docs/PROJECT_CONTEXT.md`.
    Treat the generated `EvalRunbook.md` as a marked bootstrap placeholder, not
    an executable eval guide.
 7. Hand off evidence and control-pipeline work to

@@ -26,7 +26,6 @@ from .ui.runner import (
 )
 from .ui.theme import get_console
 
-# TODO: this is hardcoded, and really should be fed some other way, but I don't have a good answer
 DEFAULT_TEMPLATE_REPO = (
     "https://github.com/Mesh-Systems-Eng/mesh.insights.templates.git"
 )
@@ -52,12 +51,6 @@ PIPELINE_TEMPLATES: list[TemplateOption] = [
         label="Hotseat pipeline",
         repo=DEFAULT_TEMPLATE_REPO,
         ref="hotseat",
-    ),
-    TemplateOption(
-        key="spirax",
-        label="Spirax reference pipeline",
-        repo=DEFAULT_TEMPLATE_REPO,
-        ref="reference_spirax",
     ),
 ]
 TEMPLATE_BY_KEY = {template.key: template for template in PIPELINE_TEMPLATES}

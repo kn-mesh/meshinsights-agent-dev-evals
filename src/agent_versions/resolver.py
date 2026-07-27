@@ -36,6 +36,7 @@ from src.agent_versions.models import (
     ResolvedAgentVersion,
 )
 from src.evals.run_specs import repository_root
+from src.project_layout import USE_CASE_AGENT_VERSION_CONFIGS
 
 
 _DEFAULT_NON_EXECUTION_EXCLUSIONS = (
@@ -45,6 +46,7 @@ _DEFAULT_NON_EXECUTION_EXCLUSIONS = (
     "src/evals/**",
     "src/model_configuration.py",
     "src/pipelines/**",
+    "src/project_layout.py",
     "src/project_bootstrap/**",
 )
 _COMPONENT_LAYOUT = (
@@ -63,7 +65,11 @@ _COMPONENT_LAYOUT = (
 def default_policy_path(pipeline_path: Path, *, root: Path | None = None) -> Path:
     """Return the conventional project-owned policy path for a pipeline."""
     project_root = (root or repository_root(pipeline_path.parent)).resolve()
-    return project_root / "agent_version_configs" / f"{pipeline_path.stem}.agent.yaml"
+    return (
+        project_root
+        / USE_CASE_AGENT_VERSION_CONFIGS
+        / f"{pipeline_path.stem}.agent.yaml"
+    )
 
 
 def load_agent_version_policy(path: Path) -> AgentVersionPolicy:
@@ -323,7 +329,10 @@ def resolve_agent_version(
                     role="version_surface_guard",
                     logical_name=relative,
                 )
-            elif not exists and relative in resolved_runtime_paths:
+            elif not exists:
+                # A deleted file can no longer be reached from the current graph,
+                # but its removal must remain in the overlay so reconstruction
+                # cannot restore obsolete registry-visible runtime code.
                 deleted_surface_paths.append(relative)
             else:
                 raise ValueError(
@@ -577,6 +586,24 @@ def _resolved_local_python_dependencies(
         package_parts = _package_parts(source, import_roots)
         if package_parts is None:
             continue
+        for import_root in import_roots:
+            if not source.is_relative_to(import_root):
+                continue
+            for parent in source.parents:
+                if parent == import_root:
+                    break
+                initializer = parent / "__init__.py"
+                if initializer.is_file() or _known_project_path(
+                    initializer, project_root, known_paths
+                ):
+                    initializer = initializer.resolve()
+                    initializer_relative = initializer.relative_to(
+                        project_root
+                    ).as_posix()
+                    resolved_paths.add(initializer_relative)
+                    if initializer.is_file() and initializer not in visited:
+                        queued.append(initializer)
+            break
         try:
             syntax = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
         except (OSError, SyntaxError, UnicodeError) as error:
@@ -601,7 +628,7 @@ def _resolved_local_python_dependencies(
                 isinstance(node, ast.Constant)
                 and isinstance(node.value, str)
                 and re.fullmatch(
-                    r"(?:src|mi|evaluation)(?:\.[A-Za-z_]\w*)+",
+                    r"(?:src|use_case|mi|evaluation)(?:\.[A-Za-z_]\w*)+",
                     node.value,
                 )
             ):
@@ -734,6 +761,7 @@ def _dirty_runtime_paths(root: Path) -> tuple[tuple[str, bool], ...]:
     """Return changed runtime-surface paths and whether each currently exists."""
     pathspecs = (
         "src",
+        "use_case",
         "mi-core/core/src/mi",
     )
     tracked = subprocess.run(

@@ -15,6 +15,11 @@ from mi.core import bootstrap_environment
 import uvicorn
 
 from src.benchmarks.models import BenchmarkExample
+from src.apps.evidence import (
+    ProjectEvidenceAdapter,
+    ProjectEvidenceAdapterFactory,
+    create_unconfigured_project_evidence_adapter,
+)
 from src.evals.inspection import (
     all_inspection_rows,
     inspect_execution,
@@ -23,7 +28,6 @@ from src.evals.inspection import (
 from src.evals.result_integrity import load_verified_result
 from src.evals.run_specs import repository_root
 from src.evals.run_store import LocalRunStore
-from src.evidence import ProjectEvidenceAdapter, create_project_evidence_adapter
 from src.eval_lifecycle import EvalLifecycleService
 
 
@@ -47,11 +51,15 @@ class ProjectExplorerBackend:
         project_root: Path,
         *,
         evidence_adapter: ProjectEvidenceAdapter | None = None,
+        evidence_adapter_factory: ProjectEvidenceAdapterFactory | None = None,
     ) -> None:
         self.project_root = project_root.resolve()
         self.eval_root = self.project_root / "eval_results"
         self.lifecycle = EvalLifecycleService(self.project_root)
         self._evidence_adapter = evidence_adapter
+        self._evidence_adapter_factory = (
+            evidence_adapter_factory or create_unconfigured_project_evidence_adapter
+        )
         self._evidence_adapters: dict[
             tuple[str | None, str | None], ProjectEvidenceAdapter
         ] = {}
@@ -357,13 +365,13 @@ class ProjectExplorerBackend:
         key = (account_url, container)
         if key not in self._evidence_adapters:
             self._evidence_adapters[key] = (
-                _project_evidence_adapter(
+                self._evidence_adapter_factory(
                     self.project_root,
                     account_url=account_url,
                     container=container,
                 )
                 if account_url is not None and container is not None
-                else _project_evidence_adapter(self.project_root)
+                else self._evidence_adapter_factory(self.project_root)
             )
         return self._evidence_adapters[key]
 
@@ -468,18 +476,6 @@ class ProjectExplorerBackend:
             }
 
 
-def _project_evidence_adapter(
-    project_root: Path,
-    *,
-    account_url: str | None = None,
-    container: str | None = None,
-) -> ProjectEvidenceAdapter:
-    """Load the use-case adapter through the project-owned extension point."""
-    return create_project_evidence_adapter(
-        project_root, account_url=account_url, container=container
-    )
-
-
 def _retained_benchmark_example(payload: dict[str, Any]) -> BenchmarkExample:
     """Validate one complete frozen example retained by the run manifest."""
     return BenchmarkExample.model_validate(
@@ -503,18 +499,27 @@ def _retained_benchmark_example(payload: dict[str, Any]) -> BenchmarkExample:
     )
 
 
-def build_app(*, project_root: Path | None = None) -> Any:
+def build_app(
+    *,
+    project_root: Path | None = None,
+    evidence_adapter_factory: ProjectEvidenceAdapterFactory | None = None,
+) -> Any:
     bootstrap_environment()
     root = repository_root(project_root or Path.cwd())
     return create_app(
-        backend=ProjectExplorerBackend(root), static_dir=root / "www" / "dist"
+        backend=ProjectExplorerBackend(
+            root,
+            evidence_adapter_factory=evidence_adapter_factory,
+        ),
+        static_dir=root / "www" / "dist",
     )
 
 
 app = build_app()
 
 
-def main(argv: list[str] | None = None) -> None:
+def serve_app(application: Any, argv: list[str] | None = None) -> None:
+    """Serve one already-composed local explorer application."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
@@ -526,7 +531,12 @@ def main(argv: list[str] | None = None) -> None:
         threading.Timer(
             0.8, lambda: webbrowser.open(f"http://{args.host}:{args.port}")
         ).start()
-    uvicorn.run(app, host=args.host, port=args.port)
+    uvicorn.run(application, host=args.host, port=args.port)
+
+
+def main(argv: list[str] | None = None) -> None:
+    """Serve the neutral reusable explorer composition."""
+    serve_app(app, argv)
 
 
 if __name__ == "__main__":

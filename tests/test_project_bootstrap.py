@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -13,7 +14,11 @@ import pytest
 import yaml
 
 from src.project_bootstrap import cli
-from src.project_bootstrap.models import BootstrapSpec
+from src.project_bootstrap.models import (
+    BootstrapSpec,
+    TemplateOwnershipManifest,
+)
+from src.project_bootstrap.ownership import resolve_ownership, unowned_paths
 from src.project_bootstrap.service import initialize_project, validate_project
 
 
@@ -116,17 +121,16 @@ build-backend = "setuptools.build_meta"
                         "description": "Root skills",
                     },
                     {
-                        "path": "docs/use_case",
+                        "path": "use_case",
                         "owner": "reference_use_case",
-                        "description": "Replaceable reference context",
+                        "description": "Replaceable use-case implementation",
                     },
                 ],
                 "reference_reset": {
-                    "clear_directories": ["docs/use_case", "tests/use_case"],
+                    "clear_directories": ["use_case"],
                     "remove_directories": [],
                     "remove_files": [],
-                    "root_skills_with_project_defaults": [],
-                    "leak_scan_paths": ["README.md", "docs/use_case", "tests/use_case"],
+                    "leak_scan_paths": ["README.md", "use_case"],
                     "forbidden_terms": ["spirax", "steam trap"],
                 },
             }
@@ -147,15 +151,16 @@ build-backend = "setuptools.build_meta"
         "---\nname: project-guide\ndescription: Test guide.\n---\n",
         encoding="utf-8",
     )
-    (root / "docs/use_case").mkdir(parents=True)
-    (root / "docs/use_case/reference.md").write_text(
+    (root / "use_case/docs").mkdir(parents=True)
+    (root / "use_case/docs/reference.md").write_text(
         "Spirax steam trap reference\n", encoding="utf-8"
     )
-    (root / "tests/use_case").mkdir(parents=True)
-    (root / "tests/use_case/test_reference.py").write_text(
+    (root / "use_case/tests").mkdir(parents=True)
+    (root / "use_case/tests/test_reference.py").write_text(
         "def test_reference_only():\n    assert False\n",
         encoding="utf-8",
     )
+    (root / "tests").mkdir()
     (root / "tests/test_reusable.py").write_text(
         "def test_reusable_contract():\n    assert True\n",
         encoding="utf-8",
@@ -273,7 +278,7 @@ def test_non_git_bootstrap_renders_and_validates_safe_project(tmp_path: Path) ->
     assert (destination / "mi-core/keep.py").is_file()
     assert (destination / "src/agent_versions/__init__.py").is_file()
     assert (destination / ".agents/skills/project-guide/SKILL.md").is_file()
-    assert not (destination / "docs/use_case/reference.md").exists()
+    assert not (destination / "use_case/docs/reference.md").exists()
     assert (destination / "workbench.template.json").is_file()
     assert (destination / "EvalRunbook.md").is_file()
     generated_runbook = (destination / "EvalRunbook.md").read_text()
@@ -282,9 +287,12 @@ def test_non_git_bootstrap_renders_and_validates_safe_project(tmp_path: Path) ->
     )
     assert "Do not run an eval from this file" in generated_runbook
     assert "$agent-eval-builder" in generated_runbook
-    assert (destination / "www/src/use_case/.gitkeep").is_file()
-    assert (destination / "tests/use_case/.gitkeep").is_file()
-    assert not (destination / "tests/use_case/test_reference.py").exists()
+    assert (destination / "use_case/explorer/adapter.tsx").is_file()
+    assert "unconfiguredUseCaseAdapter" in (
+        destination / "use_case/explorer/adapter.tsx"
+    ).read_text()
+    assert (destination / "use_case/tests/__init__.py").is_file()
+    assert not (destination / "use_case/tests/test_reference.py").exists()
     assert (destination / "tests/test_reusable.py").is_file()
     assert (destination / "tests/test_repository_skills.py").is_file()
     reusable_test = subprocess.run(
@@ -355,17 +363,117 @@ def test_real_template_bootstrap_preserves_runnable_skill_contract(
         initialize_git=False,
     )
 
-    assert not (destination / "tests/use_case/test_repository_skills.py").exists()
+    assert not (destination / "use_case/tests/test_repository_skills.py").exists()
     preserved_test = destination / "tests/test_repository_skills.py"
     assert preserved_test.is_file()
     completed = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", str(preserved_test)],
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            str(preserved_test),
+            "agent-dev-eval-core/tests",
+            "tests/test_eval_inspection.py",
+            "tests/test_eval_lifecycle.py",
+            "tests/test_eval_run_store.py",
+            "tests/test_model_catalog.py",
+            "tests/test_model_configuration.py",
+        ],
         cwd=destination,
         check=False,
         capture_output=True,
         text=True,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
+
+    imports = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from evaluation import build_default_grader_registry; "
+                "from src.apps.eval_explorer import build_app; "
+                "from use_case.evidence import create_project_evidence_adapter; "
+                "assert build_default_grader_registry().resolve('core.exact', 1)"
+            ),
+        ],
+        cwd=destination,
+        check=False,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PYTHONPATH": str(destination)},
+    )
+    assert imports.returncode == 0, imports.stdout + imports.stderr
+
+    for module in (
+        "src.project_bootstrap.cli",
+        "src.eval_lifecycle.cli",
+        "src.evals.eval_orchestration",
+        "src.pipelines.pipeline_run_from_yaml",
+        "use_case.apps.eval_explorer",
+    ):
+        help_result = subprocess.run(
+            [sys.executable, "-m", module, "--help"],
+            cwd=destination,
+            check=False,
+            capture_output=True,
+            text=True,
+            env={**os.environ, "PYTHONPATH": str(destination)},
+        )
+        assert help_result.returncode == 0, help_result.stdout + help_result.stderr
+
+    unconfigured_commands = (
+        [sys.executable, "-m", "src.evals.eval_orchestration"],
+        [
+            sys.executable,
+            "-m",
+            "src.pipelines.pipeline_run_from_yaml",
+            "--benchmark-key",
+            "unconfigured",
+            "--example-id",
+            "unconfigured",
+        ],
+    )
+    for command in unconfigured_commands:
+        result = subprocess.run(
+            command,
+            cwd=destination,
+            check=False,
+            capture_output=True,
+            text=True,
+            env={**os.environ, "PYTHONPATH": str(destination)},
+        )
+        assert result.returncode == 2
+        assert "Use case not configured" in result.stderr
+        assert not (destination / "eval_results/working").exists()
+
+    os.symlink(
+        ROOT / "www/node_modules",
+        destination / "www/node_modules",
+        target_is_directory=True,
+    )
+    os.symlink(
+        ROOT / "www/node_modules",
+        destination / "node_modules",
+        target_is_directory=True,
+    )
+    frontend_bin = ROOT / "www/node_modules/.bin"
+    frontend_commands = (
+        [str(frontend_bin / "vitest"), "run"],
+        [str(frontend_bin / "tsc"), "--noEmit"],
+        [str(frontend_bin / "vite"), "build"],
+        ["node", "scripts/check-evidence-bundle.mjs"],
+    )
+    for command in frontend_commands:
+        frontend = subprocess.run(
+            command,
+            cwd=destination / "www",
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert frontend.returncode == 0, frontend.stdout + frontend.stderr
 
 
 def test_git_url_and_ref_record_exact_commit_and_create_new_repo(
@@ -467,7 +575,7 @@ def test_validation_rejects_reference_identity_leak(tmp_path: Path) -> None:
         template_revision="fixture-v1",
         initialize_git=False,
     )
-    (destination / "docs/use_case/leak.md").write_text(
+    (destination / "use_case/docs/leak.md").write_text(
         "Copied from Spirax.", encoding="utf-8"
     )
 
@@ -505,7 +613,47 @@ def test_template_manifest_covers_reusable_mvp_workbench_surfaces() -> None:
     assert ownership["src/eval_lifecycle"] == "reusable_workbench"
     assert ownership["src/eval_publication"] == "reusable_workbench"
     assert ownership["tests"] == "reusable_workbench"
-    assert ownership["tests/use_case"] == "reference_use_case"
+    assert ownership["use_case"] == "reference_use_case"
+
+
+def test_template_ownership_uses_the_longest_matching_prefix() -> None:
+    manifest = TemplateOwnershipManifest.model_validate_json(
+        (ROOT / "workbench.template.json").read_text(encoding="utf-8")
+    )
+
+    reusable = resolve_ownership("src/evals/run_store.py", manifest.ownership)
+    reference = resolve_ownership(
+        "use_case/evidence/spirax.py",
+        manifest.ownership,
+    )
+    reference_test = resolve_ownership(
+        "use_case/tests/test_v1_3_workflow.py",
+        manifest.ownership,
+    )
+
+    assert reusable is not None and reusable.path == "src/evals"
+    assert reference is not None and reference.path == "use_case"
+    assert reference_test is not None and reference_test.path == "use_case"
+
+
+def test_template_manifest_covers_every_repository_file() -> None:
+    manifest = TemplateOwnershipManifest.model_validate_json(
+        (ROOT / "workbench.template.json").read_text(encoding="utf-8")
+    )
+    completed = subprocess.run(
+        ["git", "ls-files", "-co", "--exclude-standard"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    files = tuple(
+        path
+        for path in completed.stdout.splitlines()
+        if path and (ROOT / path).is_file()
+    )
+
+    assert unowned_paths(files, manifest) == ()
 
 
 def test_cli_emits_machine_readable_success(

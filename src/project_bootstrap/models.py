@@ -179,7 +179,6 @@ class ReferenceResetSpec(StrictModel):
     clear_directories: tuple[str, ...] = ()
     remove_directories: tuple[str, ...] = ()
     remove_files: tuple[str, ...] = ()
-    root_skills_with_project_defaults: tuple[str, ...] = ()
     leak_scan_paths: tuple[str, ...] = ()
     forbidden_terms: tuple[str, ...] = ()
 
@@ -187,7 +186,6 @@ class ReferenceResetSpec(StrictModel):
         "clear_directories",
         "remove_directories",
         "remove_files",
-        "root_skills_with_project_defaults",
         "leak_scan_paths",
     )
     @classmethod

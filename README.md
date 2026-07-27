@@ -20,7 +20,25 @@ approved labels directly from Azure PostgreSQL with a short-lived Entra token,
 then downloads the exact immutable raw evidence from Azure Blob Storage using
 container-scoped RBAC.
 
-Use this README as the quick on-ramp. Keep durable use-case context in `docs/use_case/`. For development guidance, ask Codex: the repo skills under `.agents/skills/` provide the project-specific playbooks, and the current codebase remains the source of truth.
+Use this README as the quick on-ramp. Keep durable use-case context in `use_case/docs/`. For development guidance, ask Codex: the repo skills under `.agents/skills/` provide the project-specific playbooks, and the current codebase remains the source of truth.
+
+## What To Edit
+
+The repository has three practical editing zones:
+
+- Reusable product code lives in `mi-core/`, `agent-dev-eval-core/`,
+  `agent-dev-eval-ui/`, and reusable `src/` modules. It must remain
+  use-case-neutral.
+- Project configuration lives at the repository root, including
+  `workbench.project.json`, `models.yaml`, `.env.example`, and the frontend
+  composition harness in `www/`.
+- Use-case implementation lives entirely under `use_case/`: context,
+  configurations, pipeline components, evidence adapters, graders, explorer
+  UI, and reference behavior tests.
+
+`workbench.template.json` is the authoritative ownership inventory. Creating a
+new project preserves the reusable and root zones and replaces the single
+`use_case/` tree with a neutral, runnable skeleton.
 
 ## Prerequisites
 
@@ -124,7 +142,7 @@ uv run python -m src.project_bootstrap.cli --help
 
 # YAML pipeline runner CLI
 uv run python -m src.pipelines.pipeline_run_from_yaml --help
-uv run python -m src.pipelines.pipeline_run_from_yaml pipeline_configs/v1_3.ppln \
+uv run python -m src.pipelines.pipeline_run_from_yaml use_case/pipeline_configs/v1_3.ppln \
   --benchmark-key <published-benchmark-key> \
   --benchmark-version <version-number> \
   --example-id '<unit-id>|<decision-timestamp>'
@@ -141,7 +159,7 @@ uv run python -m src.evals.inspection_cli --help
 
 # Local human eval-results explorer (after building www/)
 APP_PROJECT_KEY=<benchmark-studio-project-key> \
-  uv run python -m src.apps.eval_explorer
+  uv run python -m use_case.apps.eval_explorer
 
 # Working/retained elevation, verification, and permanent deletion
 uv run python -m src.eval_lifecycle.cli --help
@@ -158,7 +176,7 @@ The explorer has two UI layers:
 - `agent-dev-eval-ui/web/` is the reusable React shell for run, attempt, review,
   and evidence navigation.
 - `www/` is the project frontend that composes that shell with the Spirax-owned
-  evidence schema and charts in `www/src/use_case/`.
+  evidence schema and charts in `use_case/explorer/`.
 
 Evidence inspection uses the exact selected-example source snapshot and raw
 artifact hashes retained in each current run manifest; it does not re-query the
@@ -175,20 +193,20 @@ pnpm test
 pnpm build
 cd ..
 APP_PROJECT_KEY=<benchmark-studio-project-key> \
-  uv run python -m src.apps.eval_explorer
+  uv run python -m use_case.apps.eval_explorer
 ```
 
-A new use case replaces the project-owned `www/src/use_case/` adapters without
+A new use case replaces the project-owned `use_case/explorer/` adapters without
 rebuilding the reusable shell.
 
 ## Current Spirax Reference Pipeline
 
-- `pipeline_configs/v1_3.ppln` is the one-shot structured AI workflow example.
+- `use_case/pipeline_configs/v1_3.ppln` is the one-shot structured AI workflow example.
 
 It uses the benchmark-aligned terminal output contract. It is an example, not
 a mandatory design for every use case: keep deterministic logic when it works
 and prefer one workflow call when prepared evidence is sufficient. See
-[`docs/use_case/PipelineVersions.md`](docs/use_case/PipelineVersions.md) for the
+[`use_case/docs/PipelineVersions.md`](use_case/docs/PipelineVersions.md) for the
 short hypothesis and lineage.
 
 ## Initialize A New Use-Case Project
@@ -230,7 +248,7 @@ template or library handoff before it is considered complete.
 After initialization, enter the new repository, run `uv sync`, then configure
 credentials with `uv run mi auth` or a local `.env`. The generated
 `.env.example` contains placeholders only. Populate
-`docs/use_case/PROJECT_CONTEXT.md` before using the separate Codex-guided
+`use_case/docs/PROJECT_CONTEXT.md` before using the separate Codex-guided
 pipeline-port workflow.
 
 ## Agent Candidate Provenance
@@ -239,13 +257,13 @@ Every new eval resolves a lightweight candidate before the first model call.
 The run-local manifest freezes Git revision, relevant dirty/untracked overlay,
 the resolved pipeline graph, prompts, skills, tools, schemas, evidence/action
 contracts, dependency lock, and the model override policy in
-`agent_version_configs/<pipeline>.agent.yaml`.
+`use_case/agent_version_configs/<pipeline>.agent.yaml`.
 
 Resolve explicitly when diagnosing provenance:
 
 ```bash
 uv run python -m src.agent_versions.cli --json resolve \
-  --pipeline pipeline_configs/v1_3.ppln \
+  --pipeline use_case/pipeline_configs/v1_3.ppln \
   --dirty-policy capture
 ```
 
@@ -333,7 +351,7 @@ Example questions:
 - “Use `$pipeline-builder` to add the next pipeline stage and verify the relevant tests.”
 - “Which layer should own this behavior: the use-case project or `mi-core`?”
 
-Before implementation, populate the relevant files in `docs/use_case/` with durable business context. Do not use those files as implementation logs, and do not update them unless the user explicitly asks.
+Before implementation, populate the relevant files in `use_case/docs/` with durable business context. Do not use those files as implementation logs, and do not update them unless the user explicitly asks.
 
 ## Repository Layout
 
@@ -359,31 +377,42 @@ eval_results/
     evidence-references.json
     agent.patch                # only for relevant dirty/untracked content
   retained/agent_versions/<agent-version-id>/
-agent_version_configs/
-  v1_3.agent.yaml
 docs/
   development-current/
   product-strategy/
-  use_case/
 mi-core/
   core/
   cli/
-pipeline_configs/
-  v1_3.ppln
-evaluation_configs/
-  spirax-failure-evaluation.eval.yaml
 src/
-  actions/
-  hydrators/
-  objects/
-  processors/
-    common/
-    v1_3/
-  retrievers/
+  agent_versions/
+  apps/
+  benchmarks/
   pipelines/
   evals/
   eval_lifecycle/
   eval_publication/
+  project_bootstrap/
+  storage/
+use_case/
+  docs/
+  pipeline_configs/
+    v1_3.ppln
+  evaluation_configs/
+    spirax-failure-evaluation.eval.yaml
+  agent_version_configs/
+    v1_3.agent.yaml
+  apps/
+  actions/
+  evidence/
+  hydrators/
+  objects/
+  processors/
+  retrievers/
+  graders/
+  explorer/
+  tests/
+www/
+  src/                         # project frontend composition
 ```
 
 Working evals retain rich debugging detail through the active improvement loop.
@@ -395,5 +424,5 @@ for formal preservation or deletion.
 ## Notes
 
 - Keep `README.md` focused on setup and navigation.
-- Put durable business and domain context in `docs/use_case/` and project-specific development guidance in `.agents/skills/`.
+- Put durable business and domain context in `use_case/docs/` and project-specific development guidance in `.agents/skills/`.
 - Keep skills concise and procedural. When guidance depends on current behavior, have Codex inspect the implementation and tests rather than duplicating them in prose.

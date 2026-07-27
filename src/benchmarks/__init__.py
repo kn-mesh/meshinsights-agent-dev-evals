@@ -14,10 +14,12 @@ from src.benchmarks.postgres_repository import (
     AzurePostgresBenchmarkRepository,
     BenchmarkRepository,
 )
+from src.benchmarks.pipeline_metadata import BenchmarkExamplePipelineMetadata
 
 __all__ = [
     "AzurePostgresBenchmarkRepository",
     "BenchmarkExample",
+    "BenchmarkExamplePipelineMetadata",
     "BenchmarkRepository",
     "BenchmarkVersion",
     "PublishedBenchmarkVersionSummary",

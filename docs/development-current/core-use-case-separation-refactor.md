@@ -1,6 +1,6 @@
 # Core And Reference Use-Case Separation Refactor
 
-**Status:** Proposed implementation plan
+**Status:** Implemented 2026-07-27
 
 **Scope:** Current Agent Workbench core-plus-Spirax reference repository and
 the future neutral template structure

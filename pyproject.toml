@@ -41,7 +41,7 @@ meshinsights-cli = { path = "mi-core/cli", editable = true }
 pythonpath = ["."]
 
 [tool.basedpyright]
-include = ["src", "agent-dev-eval-core/evaluation", "model_catalog.py"]
+include = ["src", "use_case", "agent-dev-eval-core/evaluation", "model_catalog.py"]
 extraPaths = ["agent-dev-eval-core", "agent-dev-eval-ui"]
 typeCheckingMode = "standard"
 pythonVersion = "3.13"
@@ -49,6 +49,6 @@ venvPath = "."
 venv = ".venv"
 
 [tool.meshinsights-pipeline]
-scan_paths = ["src/**/*.py"]
+scan_paths = ["src/**/*.py", "use_case/**/*.py"]
 exclude_paths = ["**/tests/**", ".venv/**"]
 auto_scan = true

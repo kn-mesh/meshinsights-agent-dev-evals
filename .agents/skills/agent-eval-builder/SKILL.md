@@ -20,7 +20,7 @@ that outcome.
   generic runtime infrastructure.
 
 For product choices, read `docs/product-strategy/` when it exists. In generated
-projects use `workbench.project.json`, `docs/use_case/`, and these boundaries.
+projects use `workbench.project.json`, `use_case/docs/`, and these boundaries.
 
 ## Select One Stage Gate
 
@@ -80,7 +80,7 @@ writes.
 
 ## Workflow
 
-1. Read `docs/use_case/`, the pipeline, profile, result, and focused tests.
+1. Read `use_case/docs/`, the pipeline, profile, result, and focused tests.
 2. State the FDE outcome, selected gate, blocker, and explicit non-goals.
 3. Trace the narrowest current execution and inspection path.
 4. Implement at the layer that owns the meaning.

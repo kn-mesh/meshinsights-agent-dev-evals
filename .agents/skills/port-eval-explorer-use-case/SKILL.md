@@ -31,9 +31,9 @@ Reuse these generic layers without adding use-case names or artifact fields:
 
 Put custom behavior only in:
 
-- `src/evidence/`: verified artifact decoding, normalization, and the project
+- `use_case/evidence/`: verified artifact decoding, normalization, and the project
   evidence envelope; and
-- `www/src/use_case/`: schema validation and evidence composition/charts.
+- `use_case/explorer/`: schema validation and evidence composition/charts.
 
 Keep business meaning, artifact names, thresholds, and domain-specific layout
 in manifest-declared reference paths.
@@ -49,10 +49,10 @@ in manifest-declared reference paths.
    `EvidenceStore`; preserve hash/size verification and the decision timestamp
    cutoff. Do not re-query the current publication catalog for historical runs.
 3. Recreate Benchmark Studio's normalization and derived fields in
-   `src/evidence/`. Never query a live source system or infer data from labels.
+   `use_case/evidence/`. Never query a live source system or infer data from labels.
 4. Return a versioned, JSON-serializable envelope containing provenance,
    example identity, normalized evidence, coverage, and known gaps.
-5. Define the matching Zod schema in `www/src/use_case/` and compose core UI
+5. Define the matching Zod schema in `use_case/explorer/` and compose core UI
    primitives into the domain views. A custom React component is the escape
    hatch; do not force every use case into one declarative chart grammar.
 6. Register the project adapter in the root UI. Do not add a switch statement

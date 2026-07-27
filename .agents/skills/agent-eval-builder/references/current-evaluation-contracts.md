@@ -23,7 +23,7 @@ it into another use case.
   frozen label schema, example, and source-artifact models.
 - `src/benchmarks/postgres_repository.py` loads published-contract schema
   version 2 directly from Azure PostgreSQL with Entra authentication.
-- `evaluation_configs/*.eval.yaml` contains project-owned evaluation profiles.
+- `use_case/evaluation_configs/*.eval.yaml` contains project-owned evaluation profiles.
 - `src/evals/evaluation_profile.py` validates profiles, predicates, preflight,
   and local slice membership.
 - `src/evals/scoring.py` validates configured outputs and invokes graders.

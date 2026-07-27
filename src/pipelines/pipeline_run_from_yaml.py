@@ -1,4 +1,4 @@
-"""Run one published benchmark example through the Pulse agent pipeline."""
+"""Run one published benchmark example through a configured agent pipeline."""
 
 from __future__ import annotations
 
@@ -233,7 +233,7 @@ def _argument_parser() -> argparse.ArgumentParser:
             "source evidence."
         )
     )
-    parser.add_argument("yaml_path", type=Path)
+    parser.add_argument("yaml_path", nargs="?", type=Path)
     parser.add_argument("--project-key")
     parser.add_argument("--azure-postgres-host")
     parser.add_argument("--azure-postgres-database")
@@ -255,6 +255,11 @@ def main() -> None:
     """Load and run one published benchmark example."""
     parser = _argument_parser()
     args = parser.parse_args()
+    if args.yaml_path is None:
+        parser.error(
+            "Use case not configured: add a pipeline under "
+            "use_case/pipeline_configs/ and pass its path."
+        )
     bootstrap_environment()
     try:
         identity = resolve_hosted_data_plane_identity(

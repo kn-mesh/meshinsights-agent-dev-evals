@@ -2,7 +2,7 @@
 
 ## Ground Work In Repository Evidence
 
-Read the request, applicable nested instructions, `docs/use_case/`, current
+Read the request, applicable nested instructions, `use_case/docs/`, current
 source and configuration, focused tests, and runnable entry points before
 changing behavior. Treat current coherent code as the local contract. Use
 `README.md` for on-ramp context, not as stronger evidence than source or tests.
@@ -29,8 +29,9 @@ expansion is ambiguous, identify the exact reusable paths and contracts and ask
 once before expanding scope. Record the canonical upstream target or pending
 action for an approved shared fix.
 
-Keep use-case meaning in manifest-declared reference paths. Make behavior
-reusable only when cross-use-case evidence supports the same semantics.
+Keep all use-case meaning beneath the fixed, manifest-declared `use_case/`
+root. Make behavior reusable only when cross-use-case evidence supports the
+same semantics.
 
 ## Verify Every Changed Layer
 

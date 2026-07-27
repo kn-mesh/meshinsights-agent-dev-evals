@@ -143,7 +143,7 @@ def test_blob_store_ignores_ambient_connection_string(
 def test_exact_example_cli_exposes_explicit_blob_identity_flags() -> None:
     parsed: Any = _argument_parser().parse_args(
         [
-            "pipeline_configs/example.ppln",
+            "use_case/pipeline_configs/example.ppln",
             "--benchmark-key",
             "pump-failures",
             "--example-id",

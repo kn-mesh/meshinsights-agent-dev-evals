@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: "@eval-ui", replacement: resolve(__dirname, "../agent-dev-eval-ui/web/src") },
-      { find: "@use-case", replacement: resolve(__dirname, "src/use_case") },
+      { find: "@use-case", replacement: resolve(__dirname, "../use_case/explorer") },
       { find: "react/jsx-dev-runtime", replacement: resolve(__dirname, "node_modules/react/jsx-dev-runtime") },
       { find: "react/jsx-runtime", replacement: resolve(__dirname, "node_modules/react/jsx-runtime") },
       { find: "react-dom", replacement: resolve(__dirname, "node_modules/react-dom") },
@@ -24,5 +24,13 @@ export default defineConfig({
   },
   server: {
     proxy: { "/api": "http://127.0.0.1:8765" },
+  },
+  test: {
+    include: [
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+      "../use_case/explorer/**/*.test.ts",
+      "../use_case/explorer/**/*.test.tsx",
+    ],
   },
 });
