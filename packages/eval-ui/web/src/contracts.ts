@@ -7,6 +7,7 @@ export interface AccuracyMetric {
 }
 
 export interface FieldAccuracyMetric extends AccuracyMetric {
+  by_expected_value?: Record<string, AccuracyMetric>;
   by_confidence: Record<string, AccuracyMetric>;
 }
 
@@ -170,5 +171,6 @@ export interface UseCaseAdapter {
   EvidenceDisplay: ComponentType<{ evidence: EvidenceView }>;
   contextLabel?: string;
   evaluationFieldLabels?: Record<string, string>;
+  evaluationFieldValueOrder?: Record<string, string[]>;
   sourceVerificationSchemas?: SourceVerificationSchema[];
 }

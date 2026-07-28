@@ -28,6 +28,10 @@ const run = {
         accuracy: 0.8,
         correct_runs: 8,
         evaluated_runs: 10,
+        by_expected_value: {
+          Healthy: { accuracy: 0.75, correct_runs: 3, evaluated_runs: 4 },
+          Failure: { accuracy: 5 / 6, correct_runs: 5, evaluated_runs: 6 },
+        },
         by_confidence: {
           High: { accuracy: 0.875, correct_runs: 7, evaluated_runs: 8 },
           Low: { accuracy: 0.5, correct_runs: 1, evaluated_runs: 2 },
@@ -37,6 +41,11 @@ const run = {
         accuracy: 0.6,
         correct_runs: 3,
         evaluated_runs: 5,
+        by_expected_value: {
+          Unknown: { accuracy: 0.5, correct_runs: 1, evaluated_runs: 2 },
+          "Closed Failure": { accuracy: 1, correct_runs: 1, evaluated_runs: 1 },
+          "Open Failure": { accuracy: 0.5, correct_runs: 1, evaluated_runs: 2 },
+        },
         by_confidence: {
           High: { accuracy: 0.75, correct_runs: 3, evaluated_runs: 4 },
           Low: { accuracy: 0, correct_runs: 0, evaluated_runs: 1 },
@@ -106,6 +115,10 @@ const adapter: UseCaseAdapter = {
   evaluationFieldLabels: {
     classification: "Failure classification",
     root_cause: "Root cause classification",
+  },
+  evaluationFieldValueOrder: {
+    classification: ["Healthy", "Failure"],
+    root_cause: ["Unknown", "Closed Failure", "Open Failure"],
   },
   sourceVerificationSchemas: [{
     schema_key: "spirax_customer_verification",
@@ -177,6 +190,108 @@ const attemptPerformance = {
   },
 };
 
+const campaign = {
+  campaign_id: "imp-test",
+  status: "complete",
+  created_at_utc: "2026-07-28T12:00:00Z",
+  termination_reason: "max_attempts",
+  starting_agent: {
+    git_commit: "abc123",
+    agent_version_id: "av-start",
+    selection_summary: "User selected an alternate lineage to explore.",
+  },
+  benchmark_key: "benchmark-a",
+  benchmark_version: 1,
+  research_scope: { section: "development" },
+  qualification_scope: { all_examples: true },
+  runtime_configurations: [
+    {
+      id: "primary",
+      role: "selection",
+      model: "provider:primary-model",
+      reasoning_effort: "medium",
+    },
+    {
+      id: "comparison",
+      role: "comparison",
+      model: "provider:comparison-model",
+      reasoning_effort: "low",
+    },
+  ],
+  selection_configuration_id: "primary",
+  primary_metric: "complete_evaluation_accuracy",
+  attempts_finished: 1,
+  max_attempts: 3,
+  stored_total_cost: 4.25,
+  baseline_metric: 0.7,
+  best_metric: 0.8,
+  outcomes: { keep: 1, discard: 0, inconclusive: 0, crash: 0 },
+};
+
+const campaignDetail = {
+  ...campaign,
+  direction: "maximize",
+  points: [
+    {
+      stage: "baseline",
+      trial: 0,
+      configuration_id: "primary",
+      eval_id: "run-a",
+      primary_metric: 0.7,
+      cost: 1,
+      decision: "baseline",
+      agent_version_id: "av-start",
+    },
+    {
+      stage: "trial",
+      trial: 1,
+      configuration_id: "primary",
+      eval_id: "run-a",
+      primary_metric: 0.8,
+      cost: 1.25,
+      decision: "keep",
+      agent_version_id: "av-one",
+    },
+    {
+      stage: "trial",
+      trial: 1,
+      configuration_id: "comparison",
+      eval_id: "run-a",
+      primary_metric: 0.76,
+      cost: 0.75,
+      decision: "keep",
+      agent_version_id: "av-one",
+    },
+  ],
+  trials: [
+    {
+      trial: 1,
+      parent_commit: "abc123",
+      candidate_commit: "def456",
+      agent_version_id: "av-one",
+      hypothesis: "Clarify the classification boundary.",
+      change_summary: "Added one focused classification rule.",
+      changed_paths: ["use_case/prompts/classification.md"],
+      evaluations: [
+        {
+          configuration_id: "primary",
+          eval_id: "run-a",
+          primary_metric: 0.8,
+          cost: 1.25,
+        },
+        {
+          configuration_id: "comparison",
+          eval_id: "run-a",
+          primary_metric: 0.76,
+          cost: 0.75,
+        },
+      ],
+      decision: "keep",
+      decision_summary: "Improved the selection metric without a comparison regression.",
+    },
+  ],
+};
+
 let container: HTMLDivElement;
 let root: Root;
 
@@ -192,6 +307,8 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  document.documentElement.classList.remove("dark");
+  window.localStorage.removeItem("agent-workbench-theme");
   vi.unstubAllGlobals();
 });
 
@@ -406,6 +523,18 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.querySelector('[aria-label="AI output comparison"] summary')).toBeNull();
     expect(container.textContent).toContain("Run summary");
     expect(container.textContent).toContain("Failure classification accuracy");
+    expect(container.textContent).toContain("By benchmark class");
+    expect(container.textContent).toContain("Healthy");
+    expect(container.textContent).toContain("3/4");
+    expect(container.textContent).toContain("Failure");
+    expect(container.textContent).toContain("5/6");
+    expect(container.textContent).toContain("Unknown");
+    expect(container.textContent).toContain("Closed Failure");
+    expect(container.textContent).toContain("Open Failure");
+    const summaryText = container.querySelector('[aria-label="Run accuracy summary"]')?.textContent ?? "";
+    expect(summaryText.indexOf("Healthy")).toBeLessThan(summaryText.indexOf("Failure", summaryText.indexOf("Healthy")));
+    expect(summaryText.indexOf("Unknown")).toBeLessThan(summaryText.indexOf("Closed Failure"));
+    expect(summaryText.indexOf("Closed Failure")).toBeLessThan(summaryText.indexOf("Open Failure"));
     expect(container.textContent).toContain("High confidence");
     expect(container.textContent).toContain("87.5%");
     expect(container.textContent).toContain("Total run cost");
@@ -588,6 +717,69 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).not.toContain("No evaluation runs match these controls.");
   });
 
+  it("keeps autoresearch campaigns on a separate sidebar route and links back to exact eval runs", async () => {
+    const requested: string[] = [];
+    installFetch((url) => {
+      requested.push(url);
+      return route(url);
+    });
+    await render();
+    await waitFor(() => container.textContent?.includes("Overall evaluation results") === true);
+
+    await click(byLabel("Show autoresearch campaigns"));
+    await waitFor(() => container.textContent?.includes("Agent improvement over time") === true);
+
+    expect(new URL(window.location.href).searchParams.get("view")).toBe("campaigns");
+    expect(container.textContent).toContain("imp-test");
+    expect(requested).toContain("/api/campaigns");
+
+    await click(byLabel("Open autoresearch campaign imp-test"));
+    await waitFor(() => container.textContent?.includes("Performance over time") === true);
+
+    expect(new URL(window.location.href).searchParams.get("campaign")).toBe("imp-test");
+    expect(container.querySelector('[aria-label="Campaign performance by runtime configuration"]')).not.toBeNull();
+    expect(container.textContent).toContain("What changed");
+    expect(container.textContent).toContain("Added one focused classification rule.");
+    expect(container.textContent).toContain("provider:primary-model");
+    expect(container.textContent).toContain("provider:comparison-model");
+
+    await click(byLabel("Open evaluation run run-a"));
+    await waitFor(() => container.textContent?.includes("Expected and actual output") === true);
+
+    expect(new URL(window.location.href).searchParams.get("view")).toBeNull();
+    expect(new URL(window.location.href).searchParams.get("campaign")).toBeNull();
+    expect(new URL(window.location.href).searchParams.get("run")).toBe("run-a");
+  });
+
+  it("expands the workbench sidebar and switches color themes", async () => {
+    installFetch(route);
+    await render();
+    await waitFor(() => container.textContent?.includes("Overall evaluation results") === true);
+
+    expect(container.textContent).not.toContain("MeshInsights");
+    await click(byLabel("Expand sidebar"));
+    expect(container.textContent).toContain("MeshInsights");
+    expect(container.textContent).toContain("Agent Workbench");
+    expect(byLabel("Collapse sidebar")).not.toBeNull();
+
+    await click(byLabel("Switch to dark mode"));
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(window.localStorage.getItem("agent-workbench-theme")).toBe("dark");
+    expect(byLabel("Switch to light mode")).not.toBeNull();
+  });
+
+  it("shows a campaign-specific empty state without changing the eval-run empty state", async () => {
+    installFetch((url) => {
+      if (url === "/api/campaigns") return { campaigns: [], findings: [] };
+      return route(url);
+    });
+    await render();
+    await click(byLabel("Show autoresearch campaigns"));
+    await waitFor(() => container.textContent?.includes("No autoresearch campaigns are available yet.") === true);
+
+    expect(container.textContent).not.toContain("No evaluation runs are available yet.");
+  });
+
 });
 
 async function render() {
@@ -609,6 +801,8 @@ function installFetch(handler: (url: string) => unknown) {
 }
 
 function route(url: string): unknown {
+  if (url === "/api/campaigns") return { campaigns: [campaign], findings: [] };
+  if (url === "/api/campaigns/imp-test") return campaignDetail;
   if (url === "/api/runs") return { runs: [run], findings: [] };
   if (url === "/api/runs/run-a/performance") return performance;
   if (url.startsWith("/api/runs/run-a/attempts?")) return attemptsPayload(row);

@@ -20,6 +20,7 @@ from workbench.apps.evidence import (
     ProjectEvidenceAdapterFactory,
     create_unconfigured_project_evidence_adapter,
 )
+from workbench.apps.improvement_campaigns import ImprovementCampaignReader
 from workbench.evals.inspection import (
     all_inspection_rows,
     inspection_summary,
@@ -55,6 +56,7 @@ class ProjectExplorerBackend:
         self.project_root = project_root.resolve()
         self.eval_root = self.project_root / ".workbench/evals"
         self.lifecycle = EvalLifecycleService(self.project_root)
+        self.campaign_reader = ImprovementCampaignReader(self.project_root)
         self._evidence_adapter = evidence_adapter
         self._evidence_adapter_factory = (
             evidence_adapter_factory or create_unconfigured_project_evidence_adapter
@@ -65,6 +67,12 @@ class ProjectExplorerBackend:
 
     def list_runs(self) -> dict[str, Any]:
         return {"runs": self.lifecycle.list_evals(), "findings": []}
+
+    def list_campaigns(self) -> dict[str, Any]:
+        return self.campaign_reader.list_campaigns()
+
+    def get_campaign(self, campaign_id: str) -> dict[str, Any]:
+        return self.campaign_reader.get_campaign(campaign_id)
 
     def get_run(self, run_id: str) -> dict[str, Any]:
         entry = self.lifecycle.inspect(run_id)

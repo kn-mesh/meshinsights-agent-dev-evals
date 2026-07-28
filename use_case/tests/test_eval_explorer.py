@@ -43,6 +43,12 @@ class _Backend:
     def list_runs(self) -> dict[str, Any]:
         return {"runs": [{"run_id": "run-1"}], "findings": []}
 
+    def list_campaigns(self) -> dict[str, Any]:
+        return {"campaigns": [{"campaign_id": "imp_1"}], "findings": []}
+
+    def get_campaign(self, campaign_id: str) -> dict[str, Any]:
+        return {"campaign_id": campaign_id}
+
     def get_run(self, run_id: str) -> dict[str, Any]:
         return {"run_id": run_id}
 
@@ -64,6 +70,10 @@ def test_generic_app_delegates_routes_and_maps_missing_results() -> None:
 
     assert client.get("/api/health").json() == {"status": "ok"}
     assert client.get("/api/runs").json()["runs"][0]["run_id"] == "run-1"
+    assert (
+        client.get("/api/campaigns").json()["campaigns"][0]["campaign_id"] == "imp_1"
+    )
+    assert client.get("/api/campaigns/imp_1").json()["campaign_id"] == "imp_1"
     assert (
         client.get("/api/runs/run-1/performance").json()["availability"] == "available"
     )

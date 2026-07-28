@@ -7,6 +7,13 @@ cases:
     excluded: [pipeline-builder]
     confirmation: none
 
+  - id: run_improvement_campaign
+    prompt: "Start a bounded autoresearch campaign to hill-climb this agent for eight attempts."
+    tags: [positive, neighbor, common_language]
+    expected_sequence: [agent-improvement-campaign]
+    excluded: [run-use-case-evals]
+    confirmation: authorized_by_prompt
+
   - id: bootstrap_project
     prompt: "Create a separate use-case repository from template commit abc123."
     tags: [positive, neighbor]
@@ -93,7 +100,7 @@ cases:
       - pipeline-builder
       - run-use-case-evals
       - eval-results-analysis
-    excluded: [agent-eval-builder]
+    excluded: [agent-eval-builder, agent-improvement-campaign]
     confirmation: concrete_paid_run
 
   - id: compare_then_variant
@@ -142,5 +149,5 @@ cases:
     prompt: "Run the agent against the full published benchmark."
     tags: [high_risk, neighbor]
     expected_sequence: [run-use-case-evals]
-    excluded: [agent-eval-builder]
+    excluded: [agent-eval-builder, agent-improvement-campaign]
     confirmation: concrete_paid_run

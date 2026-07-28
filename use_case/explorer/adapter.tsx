@@ -264,6 +264,10 @@ export const projectUseCaseAdapter: UseCaseAdapter = {
     classification: "Failure classification",
     root_cause: "Root cause classification",
   },
+  evaluationFieldValueOrder: {
+    classification: ["Healthy", "Failure"],
+    root_cause: ["Unknown", "Closed Failure", "Open Failure"],
+  },
   sourceVerificationSchemas: [{
     schema_key: "spirax_customer_verification",
     version: "1",

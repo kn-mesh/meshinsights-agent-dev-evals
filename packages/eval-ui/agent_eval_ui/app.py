@@ -12,6 +12,8 @@ from fastapi.staticfiles import StaticFiles
 
 class ExplorerBackend(Protocol):
     def list_runs(self) -> dict[str, Any]: ...
+    def list_campaigns(self) -> dict[str, Any]: ...
+    def get_campaign(self, campaign_id: str) -> dict[str, Any]: ...
     def get_run(self, run_id: str) -> dict[str, Any]: ...
     def get_performance(self, run_id: str) -> dict[str, Any]: ...
     def list_attempts(
@@ -40,6 +42,14 @@ def create_app(*, backend: ExplorerBackend, static_dir: Path | None = None) -> F
     @app.get("/api/runs")
     def list_runs() -> dict[str, Any]:
         return _call(backend.list_runs)
+
+    @app.get("/api/campaigns")
+    def list_campaigns() -> dict[str, Any]:
+        return _call(backend.list_campaigns)
+
+    @app.get("/api/campaigns/{campaign_id}")
+    def get_campaign(campaign_id: str) -> dict[str, Any]:
+        return _call(backend.get_campaign, campaign_id)
 
     @app.get("/api/runs/{run_id}")
     def get_run(run_id: str) -> dict[str, Any]:

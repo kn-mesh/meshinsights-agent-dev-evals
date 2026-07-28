@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SKILLS = ROOT / ".agents" / "skills"
 ROUTING_CASES = ROOT / "tests" / "skill_routing_cases.yaml"
 REUSABLE_CHANGE_SKILLS = (
+    "agent-improvement-campaign",
     "agent-eval-builder",
     "ai-processor-builder",
     "benchmark-pipeline-port",
@@ -125,7 +126,9 @@ def test_skill_descriptions_are_compact_and_disambiguated() -> None:
         descriptions[path.parent.name] = frontmatter["description"]
 
     assert all(len(description) <= 280 for description in descriptions.values())
-    assert sum(map(len, descriptions.values())) <= 3_100
+    # Keep the router prompt bounded while allowing the dedicated campaign
+    # route to describe how it differs from one eval and one candidate.
+    assert sum(map(len, descriptions.values())) <= 3_400
     ai_description = descriptions["ai-processor-builder"]
     assert "`mi.ai` runtime" in ai_description
     assert "not Codex `.agents/skills` authoring" in ai_description
@@ -464,6 +467,25 @@ def test_project_guide_defines_measured_agent_improvement_loop() -> None:
         "eval-lifecycle",
         "publish-retained-eval",
     } <= loop_references
+
+
+def test_single_eval_and_campaign_routes_cannot_substitute_for_each_other() -> None:
+    guide = (SKILLS / "project-guide" / "SKILL.md").read_text(encoding="utf-8")
+    campaign = (
+        SKILLS / "agent-improvement-campaign" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+    cases = {case["id"]: case for case in _routing_cases()}
+
+    assert cases["broad_paid_eval"]["expected_sequence"] == ["run-use-case-evals"]
+    assert "agent-improvement-campaign" in cases["broad_paid_eval"]["excluded"]
+    assert cases["run_improvement_campaign"]["expected_sequence"] == [
+        "agent-improvement-campaign"
+    ]
+    assert "run-use-case-evals" in cases["run_improvement_campaign"]["excluded"]
+    assert "Never turn a single-eval request" in guide
+    assert "Never reduce\nan authorized campaign to one ordinary eval" in guide
+    assert "Use this skill only for an explicit multi-attempt campaign" in campaign
+    assert "Do not use for one eval" in campaign
 
 
 def test_current_evaluation_contracts_state_schema_boundaries() -> None:

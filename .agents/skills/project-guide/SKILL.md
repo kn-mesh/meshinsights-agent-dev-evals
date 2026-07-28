@@ -50,6 +50,7 @@ only behavior supported by cross-use-case evidence; name adjacent work to defer.
 | Task | Skill |
 |---|---|
 | Repository orientation or multi-skill coordination | `$project-guide` |
+| Bounded autonomous agent hill-climbing campaign | `$agent-improvement-campaign` |
 | Bootstrap a separate project | `$create-use-case-project` |
 | Initial Studio evidence-pipeline port | `$benchmark-pipeline-port` |
 | Port explorer evidence/schema/charts | `$port-eval-explorer-use-case` |
@@ -64,10 +65,23 @@ only behavior supported by cross-use-case evidence; name adjacent work to defer.
 
 Use multiple skills only when the request truly spans them.
 
+## Choose The Improvement Route
+
+- A plain request to run or resume one eval routes to `$run-use-case-evals`.
+- A request to analyze completed results routes to `$eval-results-analysis`.
+- A request to propose and measure one candidate follows the workflow below.
+- An explicit request for autonomous, repeated, hill-climbing, or campaign
+  improvement routes to `$agent-improvement-campaign`.
+- If "improve" could mean one candidate or a campaign, ask which path the user
+  wants before editing source or allocating paid occurrences.
+
+Never turn a single-eval request into source changes or a campaign. Never reduce
+an authorized campaign to one ordinary eval and a handoff.
+
 ## Improve An Agent Variant
 
-For requests to improve agent accuracy, reliability, coverage, or cost, treat
-the work as one measured candidate loop:
+For requests to improve one candidate's accuracy, reliability, coverage, or
+cost, treat the work as one measured candidate loop:
 
 1. **Establish the baseline.** Select exact completed eval IDs or revisions and
    use `$eval-results-analysis` to identify repeated failure patterns. If no

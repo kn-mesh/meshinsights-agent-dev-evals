@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Improvement Campaign"
+  short_description: "Run bounded autoresearch-style improvement campaigns"
+  default_prompt: "Use $agent-improvement-campaign to run a bounded autoresearch-style agent improvement campaign with user-selected starting agent, benchmark scopes, runtime configurations, and attempt budget."

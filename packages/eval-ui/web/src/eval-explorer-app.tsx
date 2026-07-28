@@ -10,12 +10,20 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  ListChecks,
   Loader2,
+  Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Rocket,
   Search,
   StickyNote,
+  Sun,
   XCircle,
+  type LucideIcon,
 } from "lucide-react";
 import { api } from "./api";
+import { CampaignExplorer } from "./campaign-explorer";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -58,6 +66,10 @@ type AttemptPayload = {
 const pageSize = 100;
 const reviewTabs = ["evaluation", "evidence", "execution"] as const;
 const defaultRunSort = "newest";
+type ExplorerView = "runs" | "campaigns";
+type Theme = "light" | "dark";
+
+const themeStorageKey = "agent-workbench-theme";
 
 const states = [
   "all",
@@ -73,6 +85,14 @@ const states = [
 export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
   const EvidenceDisplay = adapter.EvidenceDisplay;
   const initial = new URL(window.location.href).searchParams;
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [theme, setTheme] = useState<Theme>(() =>
+    document.documentElement.classList.contains("dark") ? "dark" : "light",
+  );
+  const [view, setView] = useState<ExplorerView>(
+    initial.get("view") === "campaigns" ? "campaigns" : "runs",
+  );
+  const [campaignId, setCampaignId] = useState(initial.get("campaign") ?? "");
   const [runId, setRunId] = useState(initial.get("run") ?? "");
   const [executionId, setExecutionId] = useState(initial.get("execution") ?? "");
   const [state, setState] = useState(states.includes(initial.get("state") ?? "") ? initial.get("state")! : "all");
@@ -96,8 +116,13 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
   );
 
   useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    window.localStorage.setItem(themeStorageKey, theme);
+  }, [theme]);
+
+  useEffect(() => {
     const url = new URL(window.location.href);
-    const detailState = runId ? {
+    const detailState = view === "runs" && runId ? {
       run: runId,
       execution: executionId,
       state: state === "all" ? "" : state,
@@ -118,6 +143,8 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
     };
     for (const [key, value] of Object.entries({
       ...detailState,
+      view: view === "campaigns" ? "campaigns" : "",
+      campaign: view === "campaigns" ? campaignId : "",
       model: modelFilter,
       reasoning: reasoningFilter,
       lifecycle: lifecycleFilter,
@@ -128,9 +155,13 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
       else url.searchParams.delete(key);
     }
     window.history.replaceState(null, "", url);
-  }, [runId, executionId, state, search, field, sliceKey, offset, tab, modelFilter, reasoningFilter, lifecycleFilter, runSearch, runSort]);
+  }, [view, campaignId, runId, executionId, state, search, field, sliceKey, offset, tab, modelFilter, reasoningFilter, lifecycleFilter, runSearch, runSort]);
 
-  const runs = useQuery({ queryKey: ["runs"], queryFn: () => api<RunPayload>("/runs") });
+  const runs = useQuery({
+    queryKey: ["runs"],
+    queryFn: () => api<RunPayload>("/runs"),
+    enabled: view === "runs",
+  });
   const selectedRun = useMemo(
     () => runs.data?.runs.find((item) => item.run_id === runId),
     [runs.data, runId],
@@ -176,11 +207,22 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
     }
   }, [attempts.isPending, performance.isPending, runId, selectedRun]);
   const selectRun = (selectedRunId: string) => {
+    setView("runs");
+    setCampaignId("");
     setRunId(selectedRunId);
     setExecutionId("");
     setOffset(0);
   };
   const showOverview = () => {
+    setView("runs");
+    setCampaignId("");
+    setRunId("");
+    setExecutionId("");
+    setOffset(0);
+  };
+  const showCampaigns = (selectedCampaignId = "") => {
+    setView("campaigns");
+    setCampaignId(selectedCampaignId);
     setRunId("");
     setExecutionId("");
     setOffset(0);
@@ -205,35 +247,46 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center border-b bg-card/95 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-card/80">
-        <div className="flex h-full shrink-0 items-center gap-3 border-r px-5">
-          <div
-            aria-hidden="true"
-            className="grid size-8 place-items-center rounded-md bg-foreground font-heading text-[11px] font-bold tracking-tight text-background"
-          >
-            MI
-          </div>
-          <div className="leading-tight">
-            <div className="text-sm font-bold tracking-tight">MeshInsights</div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Agent Workbench
-            </div>
-          </div>
-        </div>
-        <div className="min-w-0 flex-1 px-5 leading-tight max-[900px]:hidden">
-          <div className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="flex min-h-screen bg-background text-foreground">
+      <WorkbenchSidebar
+        view={view}
+        onRuns={showOverview}
+        onCampaigns={() => showCampaigns()}
+        collapsed={sidebarCollapsed}
+        onCollapsedChange={setSidebarCollapsed}
+        theme={theme}
+        onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")}
+      />
+      <div className="flex w-0 min-w-0 flex-1 flex-col overflow-x-hidden">
+      <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b bg-background px-4">
+        <div className="min-w-0 leading-tight">
+          <div className="truncate text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             {adapter.contextLabel ?? "Evaluation review"}
           </div>
-          <h1 className="mt-0.5 truncate text-sm font-semibold tracking-tight">
-            {runId ? "Run analysis" : "Evaluation results"}
+          <h1 className="truncate text-sm font-semibold tracking-tight">
+            {view === "campaigns"
+              ? campaignId ? "Campaign detail" : "Autoresearch campaigns"
+              : runId ? "Run analysis" : "Evaluation results"}
           </h1>
+        </div>
+        <div className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
+          <span className="size-1.5 rounded-full bg-primary" />
+          Local workspace
         </div>
       </header>
 
-      {runs.error ? <QueryError error={runs.error} /> : null}
-      {runs.isPending ? <LoadingState label="Loading evaluation runs…" /> : null}
-      {!runId && runs.data ? (
+      <div className="min-h-[calc(100vh-3.5rem)]">
+      {view === "campaigns" ? (
+        <CampaignExplorer
+          campaignId={campaignId}
+          onSelectCampaign={showCampaigns}
+          onOpenRun={selectRun}
+        />
+      ) : null}
+
+      {view === "runs" && runs.error ? <QueryError error={runs.error} /> : null}
+      {view === "runs" && runs.isPending ? <LoadingState label="Loading evaluation runs…" /> : null}
+      {view === "runs" && !runId && runs.data ? (
         <ResultsOverview
           adapter={adapter}
           runs={runs.data.runs}
@@ -251,7 +304,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
         />
       ) : null}
 
-      {runUnavailable ? (
+      {view === "runs" && runUnavailable ? (
         <main className="mx-auto max-w-2xl px-4 py-8">
           <EmptyState title="Evaluation run unavailable">
             <span>This run does not exist locally or may have been permanently deleted.</span>
@@ -263,8 +316,8 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
         </main>
       ) : null}
 
-      {runAnalysisPending ? <LoadingState label="Loading run analysis…" /> : null}
-      {runId && runs.isSuccess && !runUnavailable && !runAnalysisPending ? (
+      {view === "runs" && runAnalysisPending ? <LoadingState label="Loading run analysis…" /> : null}
+      {view === "runs" && runId && runs.isSuccess && !runUnavailable && !runAnalysisPending ? (
         <>
           <section className="flex flex-wrap items-center justify-between gap-4 border-b bg-card px-5 py-3">
             <div className="flex min-w-0 items-center gap-4">
@@ -304,11 +357,12 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
               <h2 className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
                 Run summary
               </h2>
-              <div className="mt-3 grid grid-cols-4 gap-x-10 gap-y-5 max-[1100px]:grid-cols-2 max-[620px]:grid-cols-1">
+              <div className="mt-3 grid grid-cols-2 gap-3 max-[760px]:grid-cols-1">
                 {selectedRun.accuracy ? (
                   <RunAccuracySummary
                     run={selectedRun}
                     fieldLabels={adapter.evaluationFieldLabels}
+                    fieldValueOrder={adapter.evaluationFieldValueOrder}
                   />
                 ) : null}
                 <RunCostSummary cost={selectedRun.cost} />
@@ -537,7 +591,157 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
           </main>
         </>
       ) : null}
+      </div>
     </div>
+    </div>
+  );
+}
+
+function WorkbenchSidebar({
+  view,
+  onRuns,
+  onCampaigns,
+  collapsed,
+  onCollapsedChange,
+  theme,
+  onThemeChange,
+}: {
+  view: ExplorerView;
+  onRuns: () => void;
+  onCampaigns: () => void;
+  collapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
+  theme: Theme;
+  onThemeChange: () => void;
+}) {
+  const navItems: Array<{
+    view: ExplorerView;
+    icon: LucideIcon;
+    label: string;
+    ariaLabel: string;
+    onClick: () => void;
+  }> = [
+    {
+      view: "runs",
+      icon: ListChecks,
+      label: "Evaluation runs",
+      ariaLabel: "Show evaluation runs",
+      onClick: onRuns,
+    },
+    {
+      view: "campaigns",
+      icon: Rocket,
+      label: "Autoresearch campaigns",
+      ariaLabel: "Show autoresearch campaigns",
+      onClick: onCampaigns,
+    },
+  ];
+
+  return (
+    <aside
+      aria-label="Primary navigation"
+      className={cn(
+        "sticky top-0 z-[100] flex h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width]",
+        collapsed ? "w-[4.5rem]" : "w-[17.5rem]",
+      )}
+    >
+      <div
+        className={cn(
+          "flex h-14 shrink-0 items-center border-b border-sidebar-border px-3",
+          collapsed ? "justify-center" : "justify-between",
+        )}
+      >
+        {!collapsed ? (
+          <div className="min-w-0 leading-tight">
+            <div className="truncate text-sm font-semibold tracking-tight">
+              MeshInsights
+            </div>
+            <div className="truncate text-[10px] font-medium uppercase tracking-wider text-sidebar-muted-foreground">
+              Agent Workbench
+            </div>
+          </div>
+        ) : null}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          onClick={() => onCollapsedChange(!collapsed)}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+        </Button>
+      </div>
+
+      <nav aria-label="Agent Workbench sections" className="flex-1 space-y-1 p-2">
+        {navItems.map((item) => (
+          <WorkbenchNavButton
+            key={item.view}
+            active={view === item.view}
+            collapsed={collapsed}
+            icon={item.icon}
+            label={item.label}
+            ariaLabel={item.ariaLabel}
+            onClick={item.onClick}
+          />
+        ))}
+      </nav>
+
+      <div className="shrink-0 border-t border-sidebar-border p-2">
+        <WorkbenchNavButton
+          active={false}
+          collapsed={collapsed}
+          icon={theme === "dark" ? Moon : Sun}
+          label={theme === "dark" ? "Dark mode" : "Light mode"}
+          ariaLabel={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          onClick={onThemeChange}
+        />
+      </div>
+    </aside>
+  );
+}
+
+function WorkbenchNavButton({
+  active,
+  collapsed,
+  icon: Icon,
+  label,
+  ariaLabel,
+  onClick,
+}: {
+  active: boolean;
+  collapsed: boolean;
+  icon: LucideIcon;
+  label: string;
+  ariaLabel: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "group relative flex h-10 w-full items-center gap-3 rounded-md text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+        collapsed ? "justify-center px-0" : "px-3 text-left",
+        active
+          ? "bg-sidebar-primary text-sidebar-primary-foreground"
+          : "text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+      )}
+    >
+      <Icon className="size-4 shrink-0" />
+      {collapsed ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-full top-1/2 z-[110] ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-sidebar-border bg-popover px-2.5 py-1.5 text-xs font-medium text-popover-foreground opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+        >
+          {label}
+        </span>
+      ) : (
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+      )}
+    </button>
   );
 }
 
@@ -846,9 +1050,11 @@ function CostCell({ cost }: { cost?: CostSummary | null }) {
 function RunAccuracySummary({
   run,
   fieldLabels,
+  fieldValueOrder,
 }: {
   run: RunEntry;
   fieldLabels?: Record<string, string>;
+  fieldValueOrder?: Record<string, string[]>;
 }) {
   const fields = Object.entries(run.accuracy?.by_field ?? {});
   return (
@@ -858,10 +1064,12 @@ function RunAccuracySummary({
     >
       {fields.length
         ? fields.map(([key, metric]) => {
+          const expectedValues = Object.entries(metric.by_expected_value ?? {})
+            .sort(([left], [right]) => valueOrder(left, right, fieldValueOrder?.[key]));
           const confidences = Object.entries(metric.by_confidence ?? {})
             .sort(([left], [right]) => confidenceOrder(left, right));
           return (
-            <div className="min-w-0" key={key}>
+            <div className="min-w-0 rounded-lg border bg-muted/20 p-4" key={key}>
               <div className="text-[0.7rem] font-medium text-muted-foreground">
                 {fieldLabels?.[key] ?? humanize(key)} accuracy
               </div>
@@ -871,8 +1079,35 @@ function RunAccuracySummary({
                   {metric.correct_runs} of {metric.evaluated_runs} correct
                 </span>
               </div>
+              {expectedValues.length ? (
+                <div className="mt-3 border-t pt-3">
+                  <div className="text-[0.625rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                    By benchmark class
+                  </div>
+                  <div
+                    className="mt-2 grid gap-2"
+                    style={{ gridTemplateColumns: `repeat(${Math.min(expectedValues.length, 3)}, minmax(0, 1fr))` }}
+                  >
+                    {expectedValues.map(([expectedValue, expectedMetric]) => (
+                      <div className="min-w-0 rounded-md bg-background px-2.5 py-2 ring-1 ring-border" key={expectedValue}>
+                        <div className="truncate text-[0.6875rem] font-medium text-foreground/80" title={humanize(expectedValue)}>
+                          {humanize(expectedValue)}
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                          <strong className="font-heading text-base leading-none">
+                            {formatAccuracy(expectedMetric)}
+                          </strong>
+                          <span className="text-[0.625rem] text-muted-foreground">
+                            {expectedMetric.correct_runs}/{expectedMetric.evaluated_runs}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {confidences.length ? (
-                <p className="mt-2 text-[0.7rem] leading-relaxed text-muted-foreground">
+                <p className="mt-3 text-[0.7rem] leading-relaxed text-muted-foreground">
                   {confidences.map(([confidence, confidenceMetric], index) => (
                     <span key={confidence}>
                       {index > 0 ? <span aria-hidden="true"> · </span> : null}
@@ -893,7 +1128,7 @@ function RunAccuracySummary({
 function RunCostSummary({ cost }: { cost?: CostSummary | null }) {
   const rows = costRows(cost);
   return (
-    <section aria-label="Run cost summary" className="min-w-0">
+    <section aria-label="Run cost summary" className="min-w-0 rounded-lg border bg-muted/20 p-4">
       {rows.length ? (
         <div className="grid gap-2.5">
           {rows.map((row) => (
@@ -949,7 +1184,7 @@ function RunDurationSummary({
     : "Unavailable";
 
   return (
-    <section aria-label="Run duration summary" className="min-w-0">
+    <section aria-label="Run duration summary" className="min-w-0 rounded-lg border bg-muted/20 p-4">
       {isPending ? (
         <>
           <div className="text-[0.7rem] font-medium text-muted-foreground">Total run duration</div>
@@ -1735,6 +1970,15 @@ function metricFieldOrder(value: string) {
 
 function confidenceOrder(left: string, right: string) {
   const priority = (value: string) => value.toLowerCase() === "high" ? 0 : value.toLowerCase() === "low" ? 1 : 2;
+  return priority(left) - priority(right) || left.localeCompare(right);
+}
+
+function valueOrder(left: string, right: string, order?: string[]) {
+  if (!order?.length) return left.localeCompare(right);
+  const priority = (value: string) => {
+    const index = order.indexOf(value);
+    return index === -1 ? order.length : index;
+  };
   return priority(left) - priority(right) || left.localeCompare(right);
 }
 
