@@ -96,6 +96,13 @@ class AIProcessorConfig(BaseProcessorConfig):
         ge=0,
         description="Maximum successful tool calls; unlimited by default",
     )
+    finalize_on_tool_call_limit: bool = Field(
+        default=False,
+        description=(
+            "Hide function tools at the successful-call limit and require the "
+            "agent to produce its final structured output"
+        ),
+    )
     count_tokens_before_request: bool = Field(
         default=False,
         description="Count tokens before agent requests when the provider supports it",

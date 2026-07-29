@@ -49,10 +49,26 @@ Treat current repository outputs and inspection code as authoritative.
      --section model_interactions --resolve-text
    ```
 
-5. Separate repeated quality errors from execution, output-contract, grader,
+5. Determine the decision-relevant evidence for the selected use case from its
+   adapter, pipeline input, model interactions, and review payload. Directly
+   inspect the exact captured rich artifacts for the representative units when
+   the decision depends on charts, images, audio, documents, or other
+   non-text evidence; do not substitute filenames, image descriptions, row
+   summaries, or the model's explanation for the artifact itself. For
+   chart-led cases, inspect the time windows and related panels needed to
+   understand both historical baseline and decision-adjacent behavior.
+6. Inspect published reviewer coverage, reviewer notes, and verification for
+   the same units. Quantify populated versus missing context across the run.
+   Treat reviewer rationale as diagnostic benchmark context, not as agent
+   input or text to copy into behavior.
+7. If the labeling product is expected to contain notes but the frozen
+   published contract contains `null` or empty notes, report a publication
+   evidence-integrity mismatch and investigate that boundary before claiming
+   the rationale does not exist.
+8. Separate repeated quality errors from execution, output-contract, grader,
    review-capture, and evidence-integrity failures.
-6. Propose targeted changes with evidence and overfitting risk before editing.
-7. Preserve a working-eval diagnosis with
+9. Propose targeted changes with evidence and overfitting risk before editing.
+10. Preserve a working-eval diagnosis with
    `workbench.evals.inspection_cli diagnose` only when requested. That command resolves
    working evals only. For a retained eval, keep its bundle immutable: return
    the analysis or write an explicitly requested note outside the retained bundle,
@@ -74,7 +90,9 @@ Treat current repository outputs and inspection code as authoritative.
 - Resolve evidence through the working manifest or retained
   `evidence-references.json`; verify exact snapshot and artifact hashes. Never
   substitute current membership or an unverified local copy.
-- Use chart-specific analysis only when the selected use-case adapter supplies charts.
+- Use chart-specific analysis only when the selected use-case adapter supplies charts,
+  and visually inspect those supplied charts when they materially determine
+  the label or prediction.
 - Treat `performance/summary.json` and review artifacts as optional disposable
   diagnostics. Access review objects only through the inspection CLI.
 - Report unavailable review by its typed reason, such as `capture_failed`,

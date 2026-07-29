@@ -134,6 +134,7 @@ config = AIProcessorConfig(
     output_tokens_limit=None,              # Optional: unlimited by default
     total_tokens_limit=None,               # Optional: unlimited by default
     tool_calls_limit=None,                 # Optional: unlimited by default
+    finalize_on_tool_call_limit=False,     # Optional: finalize at the tool limit
     count_tokens_before_request=False,     # Optional: agent preflight on supported providers
     provider_options={},                   # Optional: provider-specific (e.g. Azure deployment)
     backend_options={},                    # Optional: backend-specific adapter options
@@ -142,6 +143,13 @@ config = AIProcessorConfig(
 
 Transport, tool, and output-validation retries use independent budgets. Token
 and tool-call limits are opt-in; `None` means no limit.
+
+Set `finalize_on_tool_call_limit=True` with a finite `tool_calls_limit` when an
+agent must return its best structured result instead of failing after it spends
+its tool budget. This mode disables parallel function calls and removes all
+function tools from the next model request once the limit is reached. Output
+tools remain available for final structured synthesis. Keep enough
+`max_turns` budget for that final request.
 
 ### Model Identifiers
 
@@ -396,6 +404,7 @@ Agents support multi-turn execution with tool use.
 | `output_tokens_limit` | None | Maximum output tokens per execution |
 | `total_tokens_limit` | None | Maximum combined tokens per execution |
 | `tool_calls_limit` | None | Maximum successful tool calls per agent run |
+| `finalize_on_tool_call_limit` | False | Remove function tools at the call limit and require final structured output |
 | `count_tokens_before_request` | False | Preflight token counting for supported agent providers |
 
 ### Methods to Implement

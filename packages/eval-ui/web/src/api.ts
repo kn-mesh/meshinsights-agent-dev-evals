@@ -1,5 +1,5 @@
-export async function api<T>(path: string): Promise<T> {
-  const response = await fetch(`/api${path}`);
+export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`/api${path}`, init);
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as {
       detail?: string;

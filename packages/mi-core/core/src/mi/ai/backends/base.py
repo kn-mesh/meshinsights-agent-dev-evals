@@ -131,6 +131,7 @@ class AgentRequest(Generic[OutputT]):
     tool_retries: int = 3
     output_retries: int | None = None
     usage_limits: AIUsageLimits = field(default_factory=AIUsageLimits)
+    finalize_on_tool_call_limit: bool = False
     tool_timeout: float | None = None
     timeout: float | None = None
     provider_options: dict[str, Any] = field(default_factory=dict)

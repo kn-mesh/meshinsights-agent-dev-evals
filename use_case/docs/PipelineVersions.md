@@ -4,6 +4,27 @@ The current runnable pipeline emits a structured `PulseFailureAnalysisResult` at
 `act.metadata.agent_output`. It uses the shared
 `use_case/evaluation_configs/spirax-failure-evaluation.eval.yaml` profile.
 
+## `v2_0.ppln` — Progressively Disclosed Investigation Agent
+
+- Pipeline: `use_case/pipeline_configs/v2_0.ppln`
+- Agent policy: `use_case/agent_version_configs/v2_0.agent.yaml`
+- Shape: the v1_3 365-, 30-, and 7-day charts plus a multi-turn agent. Its
+  standard prompt handles direct cases; ambiguous cases can load a deferred
+  `complex-steam-trap-investigation` skill with raw range plotting and
+  range-comparison tools.
+- Parent: `v1_3`.
+- Hypothesis: preserve v1_3's strong baseline and operating-phase reasoning while
+  reducing its false positives on process transitions and its directional
+  root-cause guesses by spending extra context and tool calls only on complex
+  examples.
+- Development evidence: an initial compact-prompt candidate
+  (`av_91c84c9ca7604d6ce3c7ea7c`) was rejected after Phase 1 v2 evaluation
+  `eval_0b5eaa038f85f204b8e087ac` scored 44/69 complete decisions and exposed one
+  reversed-range tool failure. The current source restores the complete v1_3
+  decision policy as the eager foundation and makes invalid tool ranges
+  recoverable; this post-eval correction has not received another full
+  occurrence.
+
 ## `v0_2.ppln` — Campaign-Winning Text-First Lineage
 
 - Pipeline: `use_case/pipeline_configs/v0_2.ppln`

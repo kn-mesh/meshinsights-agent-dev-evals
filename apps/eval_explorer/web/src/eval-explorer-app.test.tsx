@@ -12,7 +12,7 @@ const run = {
   lifecycle_state: "working" as const,
   result_status: "materialized",
   agent_version_id: "av-a",
-  pipeline_path: "pipeline.ppln",
+  pipeline_path: "use_case/pipeline_configs/v1_3.ppln",
   benchmark_key: "benchmark-a",
   benchmark_version: 1,
   model: "provider:model",
@@ -194,7 +194,9 @@ const campaign = {
   campaign_id: "imp-test",
   status: "complete",
   created_at_utc: "2026-07-28T12:00:00Z",
+  completed_at_utc: "2026-07-28T15:30:00Z",
   termination_reason: "max_attempts",
+  base_agent_name: "v0_1",
   starting_agent: {
     git_commit: "abc123",
     agent_version_id: "av-start",
@@ -318,8 +320,13 @@ describe("EvalExplorerApp workflow", () => {
       ...run,
       run_id: "run-b",
       lifecycle_state: "retained" as const,
+      origin: "autoresearch" as const,
+      campaign_ids: ["imp-test"],
       model: "provider:other-model",
       reasoning_effort: "high",
+      pipeline_path: "use_case/pipeline_configs/v2_0.ppln",
+      benchmark_key: "benchmark-b",
+      benchmark_version: 2,
       created_at_utc: "2026-07-22T10:00:00Z",
       accuracy: {
         ...run.accuracy,
@@ -346,6 +353,17 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).not.toContain("Root cause classification · Low");
     expect(container.textContent).not.toContain("Complete evaluation");
     expect(container.textContent).not.toContain("overall accuracy");
+    expect(container.textContent).toContain("Model Config");
+    expect(container.textContent).toContain("Time");
+    expect(container.textContent).toContain("Benchmark");
+    expect(container.textContent).toContain("Agent version");
+    expect(container.querySelector('[aria-label="Filter by reasoning effort"]')).toBeNull();
+    expect(container.querySelector('[aria-label="Sort by Model Config"]')).toBeNull();
+    const firstRunCells = container.querySelectorAll("tbody tr:first-child td");
+    expect(firstRunCells[1]?.textContent).toContain("provider:model, Low Reasoning");
+    expect(firstRunCells[2]?.textContent).toContain("2026");
+    expect(firstRunCells[3]?.textContent).toBe("benchmark-a-v1");
+    expect(firstRunCells[4]?.textContent).toBe("v1_3");
     expect(container.textContent).toContain("$12.35");
     expect(container.textContent).toContain("Mean $0.0103");
     expect(container.textContent).toContain("P5 $0.004321");
@@ -359,7 +377,32 @@ describe("EvalExplorerApp workflow", () => {
     expect(container.textContent).toContain("Elevated");
     expect(new URL(window.location.href).searchParams.get("lifecycle")).toBe("retained");
     await select(byLabel("Filter by lifecycle"), "");
+    await select(byLabel("Filter by lifecycle"), "autoresearch");
+    await waitFor(() => container.querySelectorAll("tbody tr").length === 1);
+    expect(container.textContent).toContain("Autoresearch");
+    expect(container.querySelector('[title="Campaigns: imp-test"]')).not.toBeNull();
+    expect(new URL(window.location.href).searchParams.get("lifecycle")).toBe("autoresearch");
+    await select(byLabel("Filter by lifecycle"), "");
     expect(container.querySelector('[aria-label="Open evaluation run run-a"]')?.parentElement?.textContent).not.toContain("Working");
+
+    await select(byLabel("Filter by agent version"), "v1_3");
+    await waitFor(() => container.querySelectorAll("tbody tr").length === 1);
+    expect(new URL(window.location.href).searchParams.get("agent_version")).toBe("v1_3");
+    await select(byLabel("Filter by agent version"), "");
+
+    await select(byLabel("Filter by benchmark"), "benchmark-a-v1");
+    await waitFor(() => container.querySelectorAll("tbody tr").length === 1);
+    expect(new URL(window.location.href).searchParams.get("benchmark")).toBe("benchmark-a-v1");
+    await select(byLabel("Filter by benchmark"), "");
+
+    await click(byLabel("Sort by Benchmark"));
+    await waitFor(() => container.querySelector("tbody tr button")?.getAttribute("aria-label")?.includes("run-b") === true);
+    expect(new URL(window.location.href).searchParams.get("sort")).toBe("benchmark:desc");
+
+    await click(byLabel("Sort by Agent version"));
+    await click(byLabel("Sort by Agent version"));
+    await waitFor(() => container.querySelector("tbody tr button")?.getAttribute("aria-label")?.includes("run-a") === true);
+    expect(new URL(window.location.href).searchParams.get("sort")).toBe("agent-version:asc");
 
     await click(byLabel("Sort by Failure classification"));
     await click(byLabel("Sort by Failure classification"));
@@ -385,6 +428,64 @@ describe("EvalExplorerApp workflow", () => {
     await waitFor(() => container.textContent?.includes("Overall evaluation results") === true);
     expect(new URL(window.location.href).searchParams.get("run")).toBeNull();
     expect(new URL(window.location.href).searchParams.get("q")).toBe("run-a");
+  });
+
+  it("selects and permanently deletes only not elevated runs", async () => {
+    const retainedRun = {
+      ...run,
+      run_id: "retained-run",
+      lifecycle_state: "retained" as const,
+    };
+    let availableRuns = [run, retainedRun];
+    const confirm = vi.fn(() => true);
+    vi.stubGlobal("confirm", confirm);
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    installFetch((url, init) => {
+      requests.push({ url, init });
+      if (url === "/api/runs" && init?.method === "DELETE") {
+        availableRuns = [retainedRun];
+        return { runs_deleted: 1, files_deleted: 8, bytes_deleted: 1024 };
+      }
+      if (url === "/api/runs") return { runs: availableRuns, findings: [] };
+      return route(url);
+    });
+
+    await render();
+    await waitFor(() => container.querySelectorAll("tbody tr").length === 2);
+
+    const workingCheckbox = byLabel("Select evaluation run run-a") as HTMLInputElement;
+    const retainedCheckbox = byLabel("Select evaluation run retained-run") as HTMLInputElement;
+    expect(workingCheckbox.disabled).toBe(false);
+    expect(retainedCheckbox.disabled).toBe(true);
+    expect(retainedCheckbox.title).toBe("Elevated runs cannot be deleted.");
+
+    await click(workingCheckbox);
+    await click(button("Delete selected (1)"));
+    await waitFor(() => container.querySelectorAll("tbody tr").length === 1);
+
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("cannot be undone"));
+    const deletion = requests.find((request) => request.init?.method === "DELETE");
+    expect(deletion?.url).toBe("/api/runs");
+    expect(JSON.parse(String(deletion?.init?.body))).toEqual({ run_ids: ["run-a"] });
+    expect(container.querySelector('[aria-label="Open evaluation run run-a"]')).toBeNull();
+    expect(container.querySelector('[aria-label="Open evaluation run retained-run"]')).not.toBeNull();
+  });
+
+  it("selects every visible not elevated run without selecting elevated runs", async () => {
+    const workingRun = { ...run, run_id: "run-b" };
+    const retainedRun = { ...run, run_id: "retained-run", lifecycle_state: "retained" as const };
+    installFetch((url) => url === "/api/runs"
+      ? { runs: [run, workingRun, retainedRun], findings: [] }
+      : route(url));
+
+    await render();
+    await waitFor(() => container.querySelectorAll("tbody tr").length === 3);
+    await click(byLabel("Select all visible not elevated runs"));
+
+    expect((byLabel("Select evaluation run run-a") as HTMLInputElement).checked).toBe(true);
+    expect((byLabel("Select evaluation run run-b") as HTMLInputElement).checked).toBe(true);
+    expect((byLabel("Select evaluation run retained-run") as HTMLInputElement).checked).toBe(false);
+    expect(button("Delete selected (2)")).not.toBeNull();
   });
 
   it("restores page state, reaches attempts beyond 1,000, and applies field and slice facets", async () => {
@@ -731,6 +832,10 @@ describe("EvalExplorerApp workflow", () => {
 
     expect(new URL(window.location.href).searchParams.get("view")).toBe("campaigns");
     expect(container.textContent).toContain("imp-test");
+    expect(container.textContent).toContain("Base agent");
+    expect(container.textContent).toContain("v0_1");
+    expect(container.textContent).toContain("Completed");
+    expect(container.querySelector('time[datetime="2026-07-28T15:30:00Z"]')).not.toBeNull();
     expect(requested).toContain("/api/campaigns");
 
     await click(byLabel("Open autoresearch campaign imp-test"));
@@ -789,10 +894,10 @@ async function render() {
   });
 }
 
-function installFetch(handler: (url: string) => unknown) {
-  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+function installFetch(handler: (url: string, init?: RequestInit) => unknown) {
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
-    const payload = handler(url);
+    const payload = handler(url, init);
     if (isFailure(payload)) {
       return { ok: false, status: 400, statusText: "Bad Request", json: async () => ({ detail: payload.message }) } as Response;
     }

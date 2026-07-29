@@ -125,6 +125,8 @@ def agent_request_review(request: Any) -> dict[str, Any]:
             "tool_retries": request.tool_retries,
             "output_retries": request.output_retries,
             "max_turns": request.max_turns,
+            "tool_calls_limit": request.usage_limits.tool_calls_limit,
+            "finalize_on_tool_call_limit": request.finalize_on_tool_call_limit,
             "tool_timeout": request.tool_timeout,
             "timeout": request.timeout,
         },

@@ -102,6 +102,8 @@ export interface SourceVerificationSchema {
 export interface RunEntry {
   run_id: string;
   lifecycle_state: "working" | "retained";
+  origin?: "standard" | "autoresearch";
+  campaign_ids?: string[];
   source_run_id?: string;
   result_status: string;
   agent_version_id: string;

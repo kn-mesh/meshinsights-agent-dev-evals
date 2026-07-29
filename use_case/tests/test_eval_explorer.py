@@ -43,6 +43,9 @@ class _Backend:
     def list_runs(self) -> dict[str, Any]:
         return {"runs": [{"run_id": "run-1"}], "findings": []}
 
+    def delete_runs(self, run_ids: list[str]) -> dict[str, Any]:
+        return {"run_ids": run_ids}
+
     def list_campaigns(self) -> dict[str, Any]:
         return {"campaigns": [{"campaign_id": "imp_1"}], "findings": []}
 
@@ -142,6 +145,50 @@ def test_project_run_catalog_includes_verified_accuracy_summaries(
         "correct_runs": 3,
         "evaluated_runs": 4,
     }
+    assert payload["runs"][0]["origin"] == "standard"
+    assert payload["runs"][0]["campaign_ids"] == []
+
+
+def test_project_run_catalog_marks_campaign_working_and_retained_evals(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    backend = ProjectExplorerBackend(tmp_path)
+    monkeypatch.setattr(
+        backend.lifecycle,
+        "list_evals",
+        lambda: [
+            {
+                "run_id": "eval_campaign",
+                "source_run_id": "eval_campaign",
+                "lifecycle_state": "working",
+            },
+            {
+                "run_id": "ret_campaign",
+                "source_run_id": "eval_campaign",
+                "lifecycle_state": "retained",
+            },
+            {
+                "run_id": "eval_standard",
+                "source_run_id": "eval_standard",
+                "lifecycle_state": "working",
+            },
+        ],
+    )
+    monkeypatch.setattr(
+        backend.campaign_reader,
+        "eval_campaign_ids",
+        lambda: {"eval_campaign": ["imp_test"]},
+    )
+
+    runs = backend.list_runs()["runs"]
+
+    assert [(run["run_id"], run["origin"]) for run in runs] == [
+        ("eval_campaign", "autoresearch"),
+        ("ret_campaign", "autoresearch"),
+        ("eval_standard", "standard"),
+    ]
+    assert runs[0]["campaign_ids"] == ["imp_test"]
+    assert runs[1]["campaign_ids"] == ["imp_test"]
 
 
 def test_spirax_projection_preserves_reviewer_evidence_semantics() -> None:

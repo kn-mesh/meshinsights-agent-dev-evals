@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 - Added backend-neutral AI capabilities, instruction-bearing reusable toolsets, and Agent Skills-compatible `SKILL.md` loading with progressive disclosure through pydantic-ai.
+- Added opt-in graceful agent finalization at a configured tool-call limit,
+  preserving the hard limit while reserving a structured-output turn.
 
 ### Changed
 - Upgraded the `mi.ai` backend to pydantic-ai 2.11.0, including the v2 retry and usage APIs while preserving the previous early agent-completion behavior.

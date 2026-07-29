@@ -20,7 +20,9 @@ def _write_campaign(root: Path, campaign_id: str = "imp_test") -> Path:
             "agent_version_id": "av_start",
             "selection_summary": "User selected an alternate lineage.",
         },
-        "source": {},
+        "source": {
+            "pipeline": "use_case/pipeline_configs/v0_1.ppln",
+        },
         "world": {
             "benchmark_key": "benchmark",
             "benchmark_version": 7,
@@ -52,6 +54,7 @@ def _write_campaign(root: Path, campaign_id: str = "imp_test") -> Path:
         "schema_version": 1,
         "status": "complete",
         "termination_reason": "max_attempts",
+        "finished_at_utc": "2026-07-28T15:30:00Z",
         "baseline_evaluations": [
             {
                 "configuration_id": "primary",
@@ -143,6 +146,8 @@ def test_campaign_reader_projects_summary_points_and_change_history(
 
     assert listed["findings"] == []
     assert listed["campaigns"][0]["starting_agent"]["agent_version_id"] == "av_start"
+    assert listed["campaigns"][0]["base_agent_name"] == "v0_1"
+    assert listed["campaigns"][0]["completed_at_utc"] == "2026-07-28T15:30:00Z"
     assert listed["campaigns"][0]["baseline_metric"] == 0.7
     assert listed["campaigns"][0]["best_metric"] == 0.75
     assert listed["campaigns"][0]["outcomes"] == {
@@ -157,6 +162,53 @@ def test_campaign_reader_projects_summary_points_and_change_history(
     }
     assert any(point["stage"] == "qualification" for point in detail["points"])
     assert detail["trials"][0]["change_summary"] == "Added one focused rule."
+    assert reader.eval_campaign_ids() == {
+        "eval_base_comparison": ["imp_test"],
+        "eval_base_primary": ["imp_test"],
+        "eval_one": ["imp_test"],
+        "eval_one_comparison": ["imp_test"],
+        "eval_qualification": ["imp_test"],
+        "eval_two": ["imp_test"],
+    }
+
+
+def test_campaign_reader_accepts_canonical_configuration_maps(
+    tmp_path: Path,
+) -> None:
+    campaign_dir = _write_campaign(tmp_path)
+    state_path = campaign_dir / "state.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["status"] = "research_complete"
+    state["baseline_evaluations"] = {
+        evaluation["configuration_id"]: evaluation
+        for evaluation in state.pop("baseline_evaluations")
+    }
+    state["incumbent"] = {
+        "git_commit": "winner123",
+        "agent_version_id": state.pop("incumbent_agent_version_id"),
+        "eval_ids": {"primary": "eval_two"},
+    }
+    state["finished_attempts"] = state.pop("attempts_finished")
+    state["qualification_evaluations"] = {
+        evaluation["configuration_id"]: evaluation
+        for evaluation in state.pop("qualification_evaluations")
+    }
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+
+    reader = ImprovementCampaignReader(tmp_path)
+    listed = reader.list_campaigns()
+    detail = reader.get_campaign("imp_test")
+
+    assert listed["findings"] == []
+    assert listed["campaigns"][0]["status"] == "research_complete"
+    assert listed["campaigns"][0]["attempts_finished"] == 2
+    assert listed["campaigns"][0]["baseline_metric"] == 0.7
+    qualification = next(
+        point for point in detail["points"] if point["stage"] == "qualification"
+    )
+    assert qualification["configuration_id"] == "primary"
+    assert qualification["eval_id"] == "eval_qualification"
+    assert qualification["agent_version_id"] == "av_winner"
 
 
 def test_campaign_list_isolates_malformed_ledgers(tmp_path: Path) -> None:

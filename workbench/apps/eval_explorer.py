@@ -66,7 +66,52 @@ class ProjectExplorerBackend:
         ] = {}
 
     def list_runs(self) -> dict[str, Any]:
-        return {"runs": self.lifecycle.list_evals(), "findings": []}
+        campaign_ids_by_eval = self.campaign_reader.eval_campaign_ids()
+        runs = []
+        for run in self.lifecycle.list_evals():
+            source_run_id = str(run.get("source_run_id") or run["run_id"])
+            campaign_ids = campaign_ids_by_eval.get(source_run_id, [])
+            runs.append(
+                {
+                    **run,
+                    "origin": "autoresearch" if campaign_ids else "standard",
+                    "campaign_ids": campaign_ids,
+                }
+            )
+        return {"runs": runs, "findings": []}
+
+    def delete_runs(self, run_ids: list[str]) -> dict[str, Any]:
+        """Permanently delete an exact set of working evals."""
+        unique_run_ids = list(dict.fromkeys(run_ids))
+        if not unique_run_ids:
+            raise ValueError("Select at least one not elevated eval to delete.")
+
+        entries = [self.lifecycle.inspect(run_id) for run_id in unique_run_ids]
+        retained_ids = [
+            entry["run_id"]
+            for entry in entries
+            if entry["lifecycle_state"] != "working"
+        ]
+        if retained_ids:
+            raise ValueError(
+                "Only not elevated evals can be deleted. Refusing retained evals: "
+                + ", ".join(retained_ids)
+            )
+
+        deleted = [
+            self.lifecycle.delete_working(run_id, confirmed=True)
+            for run_id in unique_run_ids
+        ]
+        return {
+            "operation": "delete",
+            "lifecycle_state": "working",
+            "permanent": True,
+            "recoverable": False,
+            "deleted": deleted,
+            "runs_deleted": len(deleted),
+            "files_deleted": sum(item["files_deleted"] for item in deleted),
+            "bytes_deleted": sum(item["bytes_deleted"] for item in deleted),
+        }
 
     def list_campaigns(self) -> dict[str, Any]:
         return self.campaign_reader.list_campaigns()

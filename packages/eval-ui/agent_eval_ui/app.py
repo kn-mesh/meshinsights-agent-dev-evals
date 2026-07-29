@@ -8,10 +8,18 @@ from typing import Any, Protocol
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+
+
+class DeleteRunsRequest(BaseModel):
+    """Exact working eval IDs approved for permanent deletion."""
+
+    run_ids: list[str] = Field(min_length=1)
 
 
 class ExplorerBackend(Protocol):
     def list_runs(self) -> dict[str, Any]: ...
+    def delete_runs(self, run_ids: list[str]) -> dict[str, Any]: ...
     def list_campaigns(self) -> dict[str, Any]: ...
     def get_campaign(self, campaign_id: str) -> dict[str, Any]: ...
     def get_run(self, run_id: str) -> dict[str, Any]: ...
@@ -42,6 +50,10 @@ def create_app(*, backend: ExplorerBackend, static_dir: Path | None = None) -> F
     @app.get("/api/runs")
     def list_runs() -> dict[str, Any]:
         return _call(backend.list_runs)
+
+    @app.delete("/api/runs")
+    def delete_runs(request: DeleteRunsRequest) -> dict[str, Any]:
+        return _call(backend.delete_runs, request.run_ids)
 
     @app.get("/api/campaigns")
     def list_campaigns() -> dict[str, Any]:

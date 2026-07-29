@@ -26,16 +26,19 @@ Before paid work:
    evals with `$eval-results-analysis`.
 2. Recommend a starting point based on the stated goal, including a different
    lineage when useful. The user makes the final choice.
-3. Ask the user to confirm the published benchmark/version plus fixed research
-   and qualification scopes, even when one choice appears obvious.
+3. Ask the user to confirm the published benchmark/version and fixed research
+   scope. Resolve an optional proposed qualification scope for planning, but do
+   not treat it as authorization to run qualification.
 4. Ask the user to choose one or more runtime configurations. Freeze model,
    reasoning, supported overrides, and pricing identity. Choose exactly one
    selection configuration; other configurations are comparison guardrails.
 5. Require `max_attempts`. Resolve repetitions, acceptance rule, mutable paths,
-   optional cost/time/plateau limits, and qualification reserve.
-6. Report the maximum planned occurrence count and estimated baseline,
-   research, qualification, and total cost. Start only when this exact envelope
-   is authorized.
+   optional cost/time/plateau limits, and an optional qualification reserve.
+   Qualification reserve is planning capacity, not authorization.
+6. Report the maximum planned research occurrence count, the optional
+   qualification occurrence count, and estimated baseline, research,
+   qualification, and total cost. Start only when the research envelope is
+   authorized. Always reconfirm qualification after research completes.
 
 Require a clean, committed starting agent. Do not reconstruct dirty baselines
 for MVP.
@@ -67,20 +70,37 @@ and request reusable-scope approval if a hypothesis needs shared behavior.
 
 1. Establish one exact research-scope baseline occurrence per runtime
    configuration. Reuse only an occurrence whose complete dimensions match.
-2. Analyze incumbent failures and state one focused hypothesis.
-3. Change the allowlisted source and commit one candidate.
-4. Run focused tests and one exact-example pipeline validation before paid
+2. Analyze incumbent failures with `$eval-results-analysis`. Identify the
+   decision-relevant evidence for the use case, then directly inspect that
+   evidence and published reviewer context for a bounded, representative set
+   covering each material error cluster. When the agent consumes charts,
+   images, audio, documents, or other rich artifacts, inspect the exact
+   captured artifacts rather than relying only on row summaries or the
+   model's explanation. For chart-led use cases, include the long- and
+   short-window charts needed to interpret the alarm-adjacent pattern.
+3. Quantify reviewer-note and verification coverage before forming the
+   hypothesis. If notes are expected but missing from the frozen published
+   contract, report the evidence-integrity limitation and investigate the
+   publication boundary; do not silently treat `null` notes as proof that no
+   rationale exists in the source labeling product.
+4. State one focused, evidence-grounded hypothesis. Keep reviewer rationale as
+   diagnostic benchmark context; never copy example-specific label rationale
+   into agent behavior.
+5. Change the allowlisted source and commit one candidate.
+6. Run focused tests and one exact-example pipeline validation before paid
    evaluation. Repair within the hypothesis or log a local crash.
-5. Allocate and run one research occurrence per configuration with
+7. Allocate and run one research occurrence per configuration with
    `$run-use-case-evals`. Record each stateful dry-run ID before execution.
-6. Resume interrupted occurrences by exact ID. Never replace them silently.
-7. Compare the complete bundle with `$eval-results-analysis`.
-8. Keep only when the selection configuration improves under the frozen rule
+8. Resume interrupted occurrences by exact ID. Never replace them silently.
+9. Compare the complete bundle with `$eval-results-analysis`. Directly review
+   the relevant evidence for representative regressions, improvements, and
+   unchanged errors, including every material outcome-change cluster.
+10. Keep only when the selection configuration improves under the frozen rule
    and every comparison guardrail passes. Otherwise mark discard,
    inconclusive, or crash.
-9. Append the finalized trial, update state, and continue from the kept
+11. Append the finalized trial, update state, and continue from the kept
    incumbent or restore only the isolated worktree to the prior incumbent.
-10. Check the attempt, cost, time, plateau, target, interruption, and ownership
+12. Check the attempt, cost, time, plateau, target, interruption, and ownership
     stops between trials.
 
 Run configuration occurrences serially for MVP. Do not create independent
@@ -88,9 +108,21 @@ incumbents per model.
 
 ## Qualify And Stop
 
-When a campaign winner beats the starting baseline, run at most one
-qualification occurrence per selected configuration on the user-confirmed
-scope. Qualification does not restart the hill climb.
+After the research attempts finish, report the winner, research metrics, cost,
+and proposed qualification scope and estimate. Ask the user to choose whether
+to:
+
+- stop with the research winner and skip qualification;
+- run at most one qualification occurrence per selected configuration on the
+  proposed frozen scope; or
+- confirm a different qualification scope and revised cost envelope.
+
+Do not allocate or run qualification until the user explicitly confirms after
+research, even when the initial campaign request included a qualification
+reserve or scope. Qualification is optional and does not restart the hill
+climb. When the user skips it, complete the campaign with a
+`qualification_skipped` termination detail rather than treating the campaign
+as incomplete.
 
 Return the campaign ID, termination reason, starting and winning identities,
 per-configuration baseline/research/qualification eval IDs and metrics, trial
@@ -106,6 +138,10 @@ Load the frozen contract, state, and finalized ledger; verify the branch,
 worktree, incumbent commit, and agent identity; then finish or resume every
 recorded current eval occurrence before proposing another candidate. Never
 infer replacement permission from an orphaned or failed run.
+
+When research is complete and no qualification decision is recorded, report
+the research winner and ask for the qualification choice. Never infer
+qualification authorization from the original campaign envelope.
 
 For implementation changes to this workflow, use the
 [repository verification matrix](../project-guide/references/verification-matrix.md).

@@ -1,0 +1,58 @@
+schema_version: 1
+source_pipeline: ../pipeline_configs/v2_0.ppln
+
+model_policy:
+  default_model: azure:gpt-5.6-luna
+  default_reasoning_effort: medium
+  permitted_overrides:
+    models:
+      - anthropic:claude-haiku-4-5
+      - anthropic:claude-sonnet-4-5
+      - anthropic:claude-sonnet-4-6
+      - anthropic:claude-opus-4-5
+      - anthropic:claude-opus-4-6
+      - google:gemini-3.5-flash-lite
+      - google:gemini-3.5-flash
+      - google:gemini-3.6-flash
+      - openrouter:google/gemini-3.5-flash
+      - azure:claude-haiku-4-5
+      - azure:claude-sonnet-4-5
+      - azure:claude-sonnet-4-6
+      - azure:claude-opus-4-5
+      - azure:claude-opus-4-6
+      - azure:gpt-5.6-luna
+      - azure:gpt-5.6-terra
+      - azure:gpt-5.6-sol
+    reasoning_efforts: [low, medium, high]
+
+contracts:
+  structured_input:
+    metadata_type: BenchmarkExamplePipelineMetadata
+    unit_identity: unit
+    decision_timestamp: decision_timestamp
+  structured_output:
+    schema: PulseFailureAnalysisResult
+    receipt_path: act.metadata.agent_output
+  action_policy:
+    external_side_effect: false
+    terminal_action: NoOpAction
+  evidence_recipe:
+    source: immutable_azure_benchmark_snapshot
+    required_artifact_kinds: [telemetry, alarms]
+    lookback_days: 365
+
+non_execution_exclusions:
+  - docs/**
+  - use_case/docs/**
+  - use_case/evaluation_configs/**
+  - use_case/tests/**
+  - packages/mi-core/core/src/mi/docs/**
+  - tests/**
+  - .workbench/evals/**
+  - workbench/evals/**
+  - workbench/benchmarks/**
+  - workbench/agent_versions/**
+  - workbench/apps/**
+  - use_case/evidence/**
+  - use_case/explorer/**
+  - use_case/graders/**

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ArrowDown,
@@ -19,6 +19,7 @@ import {
   Search,
   StickyNote,
   Sun,
+  Trash2,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -44,6 +45,11 @@ import type {
 } from "./contracts";
 
 type RunPayload = { runs: RunEntry[]; findings: unknown[] };
+type DeleteRunsPayload = {
+  runs_deleted: number;
+  files_deleted: number;
+  bytes_deleted: number;
+};
 type AttemptsPayload = {
   rows: AttemptRow[];
   matched: number;
@@ -101,9 +107,10 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
   const [sliceKey, setSliceKey] = useState(initial.get("slice") ?? "");
   const [offset, setOffset] = useState(parseOffset(initial.get("offset")));
   const [modelFilter, setModelFilter] = useState(initial.get("model") ?? "");
-  const [reasoningFilter, setReasoningFilter] = useState(initial.get("reasoning") ?? "");
+  const [agentVersionFilter, setAgentVersionFilter] = useState(initial.get("agent_version") ?? "");
+  const [benchmarkFilter, setBenchmarkFilter] = useState(initial.get("benchmark") ?? "");
   const [lifecycleFilter, setLifecycleFilter] = useState(
-    ["working", "retained"].includes(initial.get("lifecycle") ?? "")
+    ["working", "retained", "autoresearch"].includes(initial.get("lifecycle") ?? "")
       ? initial.get("lifecycle")!
       : "",
   );
@@ -146,7 +153,8 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
       view: view === "campaigns" ? "campaigns" : "",
       campaign: view === "campaigns" ? campaignId : "",
       model: modelFilter,
-      reasoning: reasoningFilter,
+      agent_version: agentVersionFilter,
+      benchmark: benchmarkFilter,
       lifecycle: lifecycleFilter,
       q: runSearch,
       sort: runSort === defaultRunSort ? "" : runSort,
@@ -155,7 +163,7 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
       else url.searchParams.delete(key);
     }
     window.history.replaceState(null, "", url);
-  }, [view, campaignId, runId, executionId, state, search, field, sliceKey, offset, tab, modelFilter, reasoningFilter, lifecycleFilter, runSearch, runSort]);
+  }, [view, campaignId, runId, executionId, state, search, field, sliceKey, offset, tab, modelFilter, agentVersionFilter, benchmarkFilter, lifecycleFilter, runSearch, runSort]);
 
   const runs = useQuery({
     queryKey: ["runs"],
@@ -291,12 +299,14 @@ export function EvalExplorerApp({ adapter }: { adapter: UseCaseAdapter }) {
           adapter={adapter}
           runs={runs.data.runs}
           modelFilter={modelFilter}
-          reasoningFilter={reasoningFilter}
+          agentVersionFilter={agentVersionFilter}
+          benchmarkFilter={benchmarkFilter}
           lifecycleFilter={lifecycleFilter}
           search={runSearch}
           sort={runSort}
           onModelFilter={setModelFilter}
-          onReasoningFilter={setReasoningFilter}
+          onAgentVersionFilter={setAgentVersionFilter}
+          onBenchmarkFilter={setBenchmarkFilter}
           onLifecycleFilter={setLifecycleFilter}
           onSearch={setRunSearch}
           onSort={setRunSort}
@@ -755,12 +765,14 @@ function ResultsOverview({
   adapter,
   runs,
   modelFilter,
-  reasoningFilter,
+  agentVersionFilter,
+  benchmarkFilter,
   lifecycleFilter,
   search,
   sort,
   onModelFilter,
-  onReasoningFilter,
+  onAgentVersionFilter,
+  onBenchmarkFilter,
   onLifecycleFilter,
   onSearch,
   onSort,
@@ -769,28 +781,82 @@ function ResultsOverview({
   adapter: UseCaseAdapter;
   runs: RunEntry[];
   modelFilter: string;
-  reasoningFilter: string;
+  agentVersionFilter: string;
+  benchmarkFilter: string;
   lifecycleFilter: string;
   search: string;
   sort: string;
   onModelFilter: (value: string) => void;
-  onReasoningFilter: (value: string) => void;
+  onAgentVersionFilter: (value: string) => void;
+  onBenchmarkFilter: (value: string) => void;
   onLifecycleFilter: (value: string) => void;
   onSearch: (value: string) => void;
   onSort: (value: string) => void;
   onSelectRun: (runId: string) => void;
 }) {
+  const queryClient = useQueryClient();
+  const [selectedRunIds, setSelectedRunIds] = useState<Set<string>>(new Set());
   const models = uniqueValues(runs.map((run) => run.model));
-  const reasoningEfforts = uniqueValues(runs.map((run) => run.reasoning_effort));
+  const agentVersions = uniqueValues(runs.map(agentVersionLabel));
+  const benchmarks = uniqueValues(runs.map(benchmarkLabel));
   const metricColumns = buildMetricColumns(runs, adapter.evaluationFieldLabels);
   const activeSort = isRunSort(sort, metricColumns) ? sort : defaultRunSort;
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const filteredRuns = sortRuns(runs
     .filter((run) => !modelFilter || run.model === modelFilter)
-    .filter((run) => !reasoningFilter || run.reasoning_effort === reasoningFilter)
-    .filter((run) => !lifecycleFilter || run.lifecycle_state === lifecycleFilter)
+    .filter((run) => !agentVersionFilter || agentVersionLabel(run) === agentVersionFilter)
+    .filter((run) => !benchmarkFilter || benchmarkLabel(run) === benchmarkFilter)
+    .filter((run) => !lifecycleFilter
+      || (lifecycleFilter === "autoresearch"
+        ? run.origin === "autoresearch"
+        : run.lifecycle_state === lifecycleFilter))
     .filter((run) => !normalizedSearch || runSearchText(run).includes(normalizedSearch)), activeSort, metricColumns);
-  const controlsChanged = Boolean(modelFilter || reasoningFilter || lifecycleFilter || search || activeSort !== defaultRunSort);
+  const selectableRuns = filteredRuns.filter((run) => run.lifecycle_state === "working");
+  const allSelectableRunsSelected = selectableRuns.length > 0
+    && selectableRuns.every((run) => selectedRunIds.has(run.run_id));
+  const controlsChanged = Boolean(modelFilter || agentVersionFilter || benchmarkFilter || lifecycleFilter || search || activeSort !== defaultRunSort);
+  const deletion = useMutation({
+    mutationFn: (runIds: string[]) => api<DeleteRunsPayload>("/runs", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ run_ids: runIds }),
+    }),
+    onSuccess: async () => {
+      setSelectedRunIds(new Set());
+      await queryClient.invalidateQueries({ queryKey: ["runs"] });
+    },
+  });
+
+  useEffect(() => {
+    const workingIds = new Set(
+      runs
+        .filter((run) => run.lifecycle_state === "working")
+        .map((run) => run.run_id),
+    );
+    setSelectedRunIds((current) => {
+      const next = new Set([...current].filter((runId) => workingIds.has(runId)));
+      return next.size === current.size ? current : next;
+    });
+  }, [runs]);
+
+  const toggleRun = (runId: string, checked: boolean) => {
+    setSelectedRunIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(runId);
+      else next.delete(runId);
+      return next;
+    });
+  };
+  const deleteSelectedRuns = () => {
+    const runIds = [...selectedRunIds];
+    if (!runIds.length) return;
+    const noun = runIds.length === 1 ? "evaluation run" : "evaluation runs";
+    if (window.confirm(
+      `Permanently delete ${runIds.length} not elevated ${noun}? All files and records for the selected ${noun} will be removed. This cannot be undone.`,
+    )) {
+      deletion.mutate(runIds);
+    }
+  };
 
   return (
     <main className="mx-auto grid max-w-[1600px] gap-4 px-9 py-8 max-[900px]:px-4 max-[900px]:py-4">
@@ -816,14 +882,33 @@ function ResultsOverview({
 
       <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
         <div className="border-b px-4 py-3.5">
-          <h3 className="text-[0.95rem] font-semibold">Results by run</h3>
-          <p className="mt-0.5 max-w-3xl text-[0.8125rem] leading-relaxed text-muted-foreground">
-            Select any row to inspect its attempts and retained evidence.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-[0.95rem] font-semibold">Results by run</h3>
+              <p className="mt-0.5 max-w-3xl text-[0.8125rem] leading-relaxed text-muted-foreground">
+                Select rows to permanently delete not elevated runs, or open a run to inspect it.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!selectedRunIds.size || deletion.isPending}
+              onClick={deleteSelectedRuns}
+              className="text-destructive"
+            >
+              {deletion.isPending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+              Delete selected ({selectedRunIds.size})
+            </Button>
+          </div>
+          {deletion.error ? (
+            <p role="alert" className="mt-2 text-xs text-destructive">
+              {deletion.error instanceof Error ? deletion.error.message : "Unable to delete the selected evals."}
+            </p>
+          ) : null}
         </div>
         <section
           aria-label="Evaluation result table controls"
-          className="grid items-end gap-3 px-4 pb-3 pt-4 lg:grid-cols-[160px_minmax(190px,0.8fr)_160px_minmax(280px,1.5fr)_auto] max-[1024px]:grid-cols-2 max-[560px]:grid-cols-1"
+          className="grid items-end gap-3 px-4 pb-3 pt-4 lg:grid-cols-[150px_minmax(180px,0.8fr)_minmax(150px,0.7fr)_minmax(180px,0.8fr)_minmax(260px,1.3fr)_auto] max-[1024px]:grid-cols-2 max-[560px]:grid-cols-1"
         >
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Lifecycle</span>
@@ -831,6 +916,7 @@ function ResultsOverview({
               <option value="">All evals</option>
               <option value="working">Not elevated</option>
               <option value="retained">Elevated</option>
+              <option value="autoresearch">Autoresearch</option>
             </Select>
           </label>
           <label className="grid min-w-0 gap-1.5">
@@ -841,10 +927,17 @@ function ResultsOverview({
             </Select>
           </label>
           <label className="grid min-w-0 gap-1.5">
-            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reasoning</span>
-            <Select aria-label="Filter by reasoning effort" value={reasoningFilter} onValueChange={onReasoningFilter}>
-              <option value="">All efforts</option>
-              {reasoningEfforts.map((effort) => <option key={effort} value={effort}>{humanize(effort)}</option>)}
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Agent Version</span>
+            <Select aria-label="Filter by agent version" value={agentVersionFilter} onValueChange={onAgentVersionFilter}>
+              <option value="">All versions</option>
+              {agentVersions.map((version) => <option key={version} value={version}>{version}</option>)}
+            </Select>
+          </label>
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Benchmark</span>
+            <Select aria-label="Filter by benchmark" value={benchmarkFilter} onValueChange={onBenchmarkFilter}>
+              <option value="">All benchmarks</option>
+              {benchmarks.map((benchmark) => <option key={benchmark} value={benchmark}>{benchmark}</option>)}
             </Select>
           </label>
           <label className="grid min-w-0 gap-1.5">
@@ -869,7 +962,8 @@ function ResultsOverview({
               onClick={() => {
                 onSearch("");
                 onModelFilter("");
-                onReasoningFilter("");
+                onAgentVersionFilter("");
+                onBenchmarkFilter("");
                 onLifecycleFilter("");
                 onSort(defaultRunSort);
               }}
@@ -880,16 +974,54 @@ function ResultsOverview({
         </section>
         {filteredRuns.length ? (
           <div className="mx-4 mb-4 overflow-x-auto overscroll-x-contain rounded-md border">
-            <table aria-label="Evaluation runs and metrics" className="w-full min-w-[1040px] border-collapse text-[0.75rem]">
+            <table aria-label="Evaluation runs and metrics" className="w-full min-w-[1360px] border-collapse text-[0.75rem]">
               <thead className="bg-muted text-left text-xs text-muted-foreground">
                 <tr>
+                  <th className="w-11 bg-muted px-3 py-2 text-center">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all visible not elevated runs"
+                      checked={allSelectableRunsSelected}
+                      disabled={!selectableRuns.length || deletion.isPending}
+                      onChange={(event) => {
+                        const checked = event.target.checked;
+                        setSelectedRunIds((current) => {
+                          const next = new Set(current);
+                          for (const run of selectableRuns) {
+                            if (checked) next.add(run.run_id);
+                            else next.delete(run.run_id);
+                          }
+                          return next;
+                        });
+                      }}
+                      className="size-4 accent-primary"
+                    />
+                  </th>
+                  <th className="min-w-[250px] bg-muted px-3 py-2 text-left text-xs font-medium text-muted-foreground">
+                    Model Config
+                  </th>
                   <SortableHeader
-                    label="Run inputs"
+                    label="Time"
                     sort={activeSort}
                     ascendingSort="oldest"
                     descendingSort="newest"
                     onSort={onSort}
-                    className="min-w-[250px]"
+                    className="min-w-[180px]"
+                  />
+                  <SortableHeader
+                    label="Benchmark"
+                    sort={activeSort}
+                    ascendingSort="benchmark:asc"
+                    descendingSort="benchmark:desc"
+                    onSort={onSort}
+                    className="min-w-[180px]"
+                  />
+                  <SortableHeader
+                    label="Agent version"
+                    sort={activeSort}
+                    ascendingSort="agent-version:asc"
+                    descendingSort="agent-version:desc"
+                    onSort={onSort}
                   />
                   {metricColumns.map((column) => (
                     <SortableHeader
@@ -921,6 +1053,20 @@ function ResultsOverview({
                     className="group cursor-pointer border-t transition-colors hover:bg-accent/40"
                     onClick={() => onSelectRun(run.run_id)}
                   >
+                    <td
+                      className="px-3 py-2.5 text-center align-middle"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        aria-label={`Select evaluation run ${run.run_id}`}
+                        checked={selectedRunIds.has(run.run_id)}
+                        disabled={run.lifecycle_state !== "working" || deletion.isPending}
+                        title={run.lifecycle_state === "retained" ? "Elevated runs cannot be deleted." : undefined}
+                        onChange={(event) => toggleRun(run.run_id, event.target.checked)}
+                        className="size-4 accent-primary"
+                      />
+                    </td>
                     <td className="px-3 py-2.5 align-middle">
                       <div className="grid gap-0.5">
                         <button
@@ -932,16 +1078,32 @@ function ResultsOverview({
                           }}
                           className="w-fit max-w-full overflow-hidden text-ellipsis whitespace-nowrap border-0 bg-transparent p-0 text-left text-[0.75rem] font-bold text-foreground outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                          {run.model ?? "Unknown model"}
+                          {modelConfigurationLabel(run)}
                         </button>
                         {run.lifecycle_state === "retained" ? (
                           <Badge variant="primary" className="w-fit">Elevated</Badge>
                         ) : null}
-                        <span className="text-muted-foreground">{humanize(run.reasoning_effort ?? "unspecified")} reasoning</span>
-                        <small className="text-muted-foreground">
-                          {formatRunDate(run.created_at_utc)} · {run.recorded_attempts}/{run.planned_attempts} attempts
-                        </small>
+                        {run.origin === "autoresearch" ? (
+                          <Badge
+                            variant="warning"
+                            className="w-fit"
+                            title={run.campaign_ids?.length
+                              ? `Campaigns: ${run.campaign_ids.join(", ")}`
+                              : undefined}
+                          >
+                            Autoresearch
+                          </Badge>
+                        ) : null}
                       </div>
+                    </td>
+                    <td className="px-3 py-2.5 align-middle">
+                      <span className="font-medium">{formatRunDate(run.created_at_utc)}</span>
+                    </td>
+                    <td className="px-3 py-2.5 align-middle font-medium">
+                      {benchmarkLabel(run)}
+                    </td>
+                    <td className="px-3 py-2.5 align-middle font-medium">
+                      {agentVersionLabel(run)}
                     </td>
                     {metricColumns.map((column) => <MetricCell key={column.key} metric={column.get(run)} />)}
                     <CostCell cost={run.cost} />
@@ -1293,12 +1455,10 @@ function isRunSort(sort: string, columns: MetricColumn[]) {
   if ([
     "newest",
     "oldest",
-    "model",
-    "model:asc",
-    "model:desc",
-    "reasoning",
-    "reasoning:asc",
-    "reasoning:desc",
+    "benchmark:asc",
+    "benchmark:desc",
+    "agent-version:asc",
+    "agent-version:desc",
     "lifecycle:asc",
     "lifecycle:desc",
     "cost:asc",
@@ -1321,13 +1481,13 @@ function sortRuns(runs: RunEntry[], sort: string, columns: MetricColumn[]) {
       }
     }
     if (sort === "oldest") return compareRunDates(left, right);
-    if (sort === "model" || sort.startsWith("model:")) {
-      const compared = (left.model ?? "").localeCompare(right.model ?? "");
-      if (compared) return sort === "model:desc" ? -compared : compared;
+    if (sort.startsWith("benchmark:")) {
+      const compared = benchmarkLabel(left).localeCompare(benchmarkLabel(right));
+      if (compared) return sort === "benchmark:desc" ? -compared : compared;
     }
-    if (sort === "reasoning" || sort.startsWith("reasoning:")) {
-      const compared = (left.reasoning_effort ?? "").localeCompare(right.reasoning_effort ?? "");
-      if (compared) return sort === "reasoning:desc" ? -compared : compared;
+    if (sort.startsWith("agent-version:")) {
+      const compared = agentVersionLabel(left).localeCompare(agentVersionLabel(right));
+      if (compared) return sort === "agent-version:desc" ? -compared : compared;
     }
     if (sort.startsWith("lifecycle:")) {
       const leftLifecycle = left.lifecycle_state === "retained" ? 1 : 0;
@@ -1368,6 +1528,26 @@ function runSearchText(run: RunEntry) {
     run.agent_version_id,
     JSON.stringify(run.configuration ?? {}),
   ].filter(Boolean).join(" ").toLocaleLowerCase();
+}
+
+function agentVersionLabel(run: RunEntry) {
+  const pipelineFile = run.pipeline_path?.split("/").at(-1);
+  return pipelineFile?.replace(/\.ppln$/, "") || run.agent_version_id || "—";
+}
+
+function modelConfigurationLabel(run: RunEntry) {
+  const model = run.model ?? "Unknown model";
+  const reasoning = run.reasoning_effort
+    ? `${humanize(run.reasoning_effort)} Reasoning`
+    : "Reasoning Unspecified";
+  return `${model}, ${reasoning}`;
+}
+
+function benchmarkLabel(run: RunEntry) {
+  if (!run.benchmark_key) return "Unknown benchmark";
+  return run.benchmark_version == null
+    ? run.benchmark_key
+    : `${run.benchmark_key}-v${run.benchmark_version}`;
 }
 
 function Evaluation({

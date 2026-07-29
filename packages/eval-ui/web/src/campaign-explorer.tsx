@@ -144,11 +144,13 @@ function CampaignOverview({
         </div>
         {filtered.length ? (
           <div className="overflow-x-auto">
-            <table aria-label="Autoresearch campaigns" className="w-full min-w-[980px] border-collapse text-sm">
+            <table aria-label="Autoresearch campaigns" className="w-full min-w-[1260px] border-collapse text-sm">
               <thead className="bg-muted/60 text-left text-xs text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Campaign</th>
+                  <th className="px-4 py-3">Base agent</th>
                   <th className="px-4 py-3">Starting agent</th>
+                  <th className="px-4 py-3">Completed</th>
                   <th className="px-4 py-3">Progress</th>
                   <th className="px-4 py-3">Primary metric</th>
                   <th className="px-4 py-3">Cost</th>
@@ -179,9 +181,21 @@ function CampaignOverview({
                         <span className="text-xs text-muted-foreground">{formatDate(campaign.created_at_utc)}</span>
                       </div>
                     </td>
+                    <td className="px-4 py-3 font-semibold">
+                      {campaign.base_agent_name ?? "Unknown"}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="font-mono text-xs">{campaign.starting_agent.agent_version_id ?? "Unknown"}</div>
                       <div className="mt-1 text-xs text-muted-foreground">{campaign.benchmark_key ?? "Benchmark"} v{campaign.benchmark_version ?? "—"}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {campaign.completed_at_utc ? (
+                        <time dateTime={campaign.completed_at_utc}>
+                          {formatTimestamp(campaign.completed_at_utc)}
+                        </time>
+                      ) : (
+                        <span className="text-muted-foreground">In progress</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">{campaign.attempts_finished}/{campaign.max_attempts} trials</td>
                     <td className="px-4 py-3">
@@ -234,6 +248,7 @@ function CampaignDetailView({
       </section>
 
       <section aria-label="Campaign summary" className="grid gap-4 rounded-xl border bg-card p-5 shadow-sm md:grid-cols-2 xl:grid-cols-4">
+        <CampaignFact label="Base agent" value={campaign.base_agent_name ?? "Unknown"} />
         <CampaignFact label="Starting agent" value={campaign.starting_agent.agent_version_id ?? "Unknown"} />
         <CampaignFact label="Benchmark" value={`${campaign.benchmark_key ?? "Unknown"} v${campaign.benchmark_version ?? "—"}`} />
         <CampaignFact label="Trials" value={`${campaign.attempts_finished}/${campaign.max_attempts}`} />
@@ -355,6 +370,7 @@ function campaignSearchText(campaign: CampaignEntry) {
   return [
     campaign.campaign_id,
     campaign.status,
+    campaign.base_agent_name,
     campaign.starting_agent.agent_version_id,
     campaign.starting_agent.selection_summary,
     campaign.benchmark_key,
@@ -385,6 +401,11 @@ function formatDate(value?: string | null) {
   if (!value) return "Date unavailable";
   const date = new Date(value);
   return Number.isNaN(date.valueOf()) ? "Date unavailable" : date.toLocaleDateString();
+}
+
+function formatTimestamp(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.valueOf()) ? "Timestamp unavailable" : date.toLocaleString();
 }
 
 function errorMessage(error: unknown) {

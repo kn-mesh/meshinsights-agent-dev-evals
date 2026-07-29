@@ -218,6 +218,13 @@ def test_agent_execution_uses_v2_result_and_retry_apis(
     assert result.usage.input_tokens > 0
     assert result.usage.output_tokens > 0
     assert result.review["request"]["kind"] == "agent"
+    assert result.review["request"]["execution_policy"]["tool_calls_limit"] is None
+    assert (
+        result.review["request"]["execution_policy"][
+            "finalize_on_tool_call_limit"
+        ]
+        is False
+    )
     assert result.review["messages"]
     assert result.review["parsed_output"] == {"value": 42}
 
@@ -340,6 +347,111 @@ def test_agent_tool_call_limit_prevents_tool_execution(
         )
 
     assert tool_call_count == 0
+
+
+def test_agent_can_finalize_after_reaching_tool_call_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    backend = PydanticAIBackend()
+    tool_call_count = 0
+    observed_function_tools: list[list[str]] = []
+    observed_parallel_tool_calls: list[bool | None] = []
+
+    def do_work() -> str:
+        nonlocal tool_call_count
+        tool_call_count += 1
+        return "done"
+
+    def model_function(
+        messages: list[ModelMessage],
+        info: AgentInfo,
+    ) -> ModelResponse:
+        _ = messages
+        observed_function_tools.append(
+            [tool.name for tool in info.function_tools]
+        )
+        observed_parallel_tool_calls.append(
+            (info.model_settings or {}).get("parallel_tool_calls")
+        )
+        if info.function_tools:
+            return ModelResponse(
+                parts=[
+                    ToolCallPart(
+                        "do_work",
+                        {},
+                        tool_call_id="work",
+                    )
+                ]
+            )
+        return ModelResponse(
+            parts=[
+                ToolCallPart(
+                    info.output_tools[0].name,
+                    {"value": 42},
+                    tool_call_id="result",
+                )
+            ]
+        )
+
+    model = FunctionModel(model_function)
+    monkeypatch.setattr(
+        backend,
+        "_resolve_model",
+        lambda *_args, **_kwargs: (model, "test:test"),
+    )
+
+    result = backend.run_agent(
+        AgentRequest(
+            model=ModelRef(provider="test", model="test"),
+            system_prompt="Use the tool, then return the requested value.",
+            user_message=UserMessage().add_text("Do the work."),
+            output_schema=ExampleOutput,
+            tools=[Tool(function=do_work)],
+            reasoning_spec=ReasoningSpec(),
+            reasoning_effort=ReasoningEffort.MEDIUM,
+            max_turns=3,
+            transport_retries=1,
+            usage_limits=AIUsageLimits(tool_calls_limit=1),
+            finalize_on_tool_call_limit=True,
+        )
+    )
+
+    assert result.output == ExampleOutput(value=42)
+    assert result.usage.tool_calls == 1
+    assert tool_call_count == 1
+    assert observed_function_tools == [["do_work"], []]
+    assert observed_parallel_tool_calls == [False, False]
+
+
+def test_finalize_on_tool_call_limit_requires_a_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    backend = PydanticAIBackend()
+    model = TestModel(custom_output_args={"value": 42})
+    monkeypatch.setattr(
+        backend,
+        "_resolve_model",
+        lambda *_args, **_kwargs: (model, "test:test"),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="finalize_on_tool_call_limit requires tool_calls_limit",
+    ):
+        backend.run_agent(
+            AgentRequest(
+                model=ModelRef(provider="test", model="test"),
+                system_prompt="Return the requested value.",
+                user_message=UserMessage().add_text("Return a value."),
+                output_schema=ExampleOutput,
+                tools=[],
+                reasoning_spec=ReasoningSpec(),
+                reasoning_effort=ReasoningEffort.MEDIUM,
+                max_turns=3,
+                transport_retries=1,
+                finalize_on_tool_call_limit=True,
+            )
+        )
 
 
 def test_retry_transport_retries_only_transient_responses(
@@ -763,3 +875,85 @@ def test_agent_skill_uses_progressive_disclosure_before_running_its_tool(
     assert result.output == ExampleOutput(value=42)
     assert tool_called is True
     assert observed_defer_states == [True, False, False]
+
+
+def test_agent_finalizes_when_capability_loading_spends_tool_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Count deferred loading and hide newly revealed tools at the limit."""
+    backend = PydanticAIBackend()
+    specialist_called = False
+    observed_function_tools: list[list[str]] = []
+    request_number = 0
+
+    def specialist_tool() -> str:
+        nonlocal specialist_called
+        specialist_called = True
+        return "specialist evidence"
+
+    skill = AISkill(
+        name="specialist-review",
+        description="Use when specialist evidence is required.",
+        instructions="Follow the specialist review procedure.",
+        tools=[Tool(function=specialist_tool)],
+    )
+
+    def model_function(
+        messages: list[ModelMessage],
+        info: AgentInfo,
+    ) -> ModelResponse:
+        nonlocal request_number
+        _ = messages
+        request_number += 1
+        observed_function_tools.append(
+            [tool.name for tool in info.function_tools]
+        )
+        if request_number == 1:
+            return ModelResponse(
+                parts=[
+                    ToolCallPart(
+                        "load_capability",
+                        {"id": "specialist-review"},
+                        tool_call_id="load-skill",
+                    )
+                ]
+            )
+        return ModelResponse(
+            parts=[
+                ToolCallPart(
+                    info.output_tools[0].name,
+                    {"value": 42},
+                    tool_call_id="result",
+                )
+            ]
+        )
+
+    model = FunctionModel(model_function)
+    monkeypatch.setattr(
+        backend,
+        "_resolve_model",
+        lambda *_args, **_kwargs: (model, "test:test"),
+    )
+
+    result = backend.run_agent(
+        AgentRequest(
+            model=ModelRef(provider="test", model="test"),
+            system_prompt="Use specialist evidence when needed.",
+            user_message=UserMessage().add_text("Perform the review."),
+            output_schema=ExampleOutput,
+            tools=[],
+            capabilities=[skill.as_capability()],
+            reasoning_spec=ReasoningSpec(),
+            reasoning_effort=ReasoningEffort.MEDIUM,
+            max_turns=3,
+            transport_retries=1,
+            usage_limits=AIUsageLimits(tool_calls_limit=1),
+            finalize_on_tool_call_limit=True,
+        )
+    )
+
+    assert result.output == ExampleOutput(value=42)
+    assert result.usage.tool_calls == 1
+    assert specialist_called is False
+    assert "load_capability" in observed_function_tools[0]
+    assert observed_function_tools[1] == []

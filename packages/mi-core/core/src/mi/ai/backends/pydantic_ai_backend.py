@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 from contextvars import ContextVar
+from dataclasses import replace
 from datetime import datetime, timezone
 import functools
 import inspect
@@ -14,7 +15,10 @@ from typing import Any, TypeVar, cast, get_type_hints
 import httpx
 from pydantic import BaseModel
 from pydantic_ai import Agent, AgentRetries, FunctionToolset, RunContext
-from pydantic_ai.capabilities import Capability as PydanticCapability
+from pydantic_ai.capabilities import (
+    Capability as PydanticCapability,
+    Hooks,
+)
 from pydantic_ai.direct import model_request_sync
 from pydantic_ai.messages import (
     BinaryImage,
@@ -24,7 +28,7 @@ from pydantic_ai.messages import (
     TextPart,
     UserPromptPart,
 )
-from pydantic_ai.models import ModelRequestParameters
+from pydantic_ai.models import ModelRequestContext, ModelRequestParameters
 from pydantic_ai.output import OutputObjectDefinition
 from pydantic_ai.retries import (
     AsyncTenacityTransport,
@@ -392,9 +396,36 @@ class PydanticAIBackend(AIBackend):
         pydantic_toolsets = [
             self._build_toolset(toolset) for toolset in request.toolsets
         ]
-        pydantic_capabilities = [
+        pydantic_capabilities: list[Any] = [
             self._build_capability(capability) for capability in request.capabilities
         ]
+        if request.finalize_on_tool_call_limit:
+            tool_calls_limit = request.usage_limits.tool_calls_limit
+            if tool_calls_limit is None:
+                raise ValueError(
+                    "finalize_on_tool_call_limit requires tool_calls_limit"
+                )
+
+            async def hide_tools_at_limit(
+                ctx: RunContext[Any],
+                request_context: ModelRequestContext,
+            ) -> ModelRequestContext:
+                if ctx.usage.tool_calls >= tool_calls_limit:
+                    request_context.model_request_parameters = replace(
+                        request_context.model_request_parameters,
+                        function_tools=[],
+                    )
+                return request_context
+
+            pydantic_capabilities.append(
+                Hooks(before_model_request=hide_tools_at_limit)
+            )
+            if model_settings is None:
+                model_settings = {}
+            else:
+                model_settings = dict(model_settings)
+            model_settings["parallel_tool_calls"] = False
+            model_settings = cast(Any, model_settings)
         agent_retries: int | AgentRetries = request.tool_retries
         if request.output_retries is not None:
             agent_retries = AgentRetries(

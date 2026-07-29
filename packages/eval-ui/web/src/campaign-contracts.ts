@@ -22,8 +22,10 @@ export interface CampaignEntry {
   campaign_id: string;
   status: string;
   created_at_utc?: string | null;
+  completed_at_utc?: string | null;
   termination_reason?: string | null;
   starting_agent: CampaignStartingAgent;
+  base_agent_name?: string | null;
   benchmark_key?: string | null;
   benchmark_version?: number | null;
   research_scope?: unknown;

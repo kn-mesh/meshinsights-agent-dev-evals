@@ -46,6 +46,27 @@ class ImprovementCampaignReader:
         )
         return {"campaigns": campaigns, "findings": findings}
 
+    def eval_campaign_ids(self) -> dict[str, list[str]]:
+        """Index exact eval occurrences by the campaigns that recorded them."""
+        index: dict[str, set[str]] = {}
+        if not self.root.is_dir():
+            return {}
+        for candidate in sorted(self.root.iterdir()):
+            if not candidate.is_dir() or not _CAMPAIGN_ID.fullmatch(candidate.name):
+                continue
+            try:
+                detail = self.get_campaign(candidate.name)
+            except (OSError, ValueError, json.JSONDecodeError):
+                continue
+            for point in detail["points"]:
+                eval_id = point.get("eval_id")
+                if isinstance(eval_id, str) and eval_id:
+                    index.setdefault(eval_id, set()).add(candidate.name)
+        return {
+            eval_id: sorted(campaign_ids)
+            for eval_id, campaign_ids in sorted(index.items())
+        }
+
     def get_campaign(self, campaign_id: str) -> dict[str, Any]:
         campaign_dir = self._campaign_dir(campaign_id)
         if not campaign_dir.is_dir():
@@ -60,6 +81,7 @@ class ImprovementCampaignReader:
             raise ValueError("Campaign ID does not match its directory.")
 
         starting_agent = _object(campaign.get("starting_agent"), "starting_agent")
+        source = _object(campaign.get("source"), "source")
         world = _object(campaign.get("world"), "world")
         limits = _object(campaign.get("limits"), "limits")
         acceptance = _object(campaign.get("acceptance"), "acceptance")
@@ -108,12 +130,17 @@ class ImprovementCampaignReader:
             "campaign_id": campaign_id,
             "status": str(state.get("status") or "unknown"),
             "created_at_utc": campaign.get("created_at_utc"),
+            "completed_at_utc": (
+                state.get("finished_at_utc")
+                or state.get("research_completed_at_utc")
+            ),
             "termination_reason": state.get("termination_reason"),
             "starting_agent": {
                 "git_commit": starting_agent.get("git_commit"),
                 "agent_version_id": starting_agent.get("agent_version_id"),
                 "selection_summary": starting_agent.get("selection_summary"),
             },
+            "base_agent_name": _base_agent_name(source.get("pipeline")),
             "benchmark_key": world.get("benchmark_key"),
             "benchmark_version": world.get("benchmark_version"),
             "research_scope": world.get("research_scope"),
@@ -122,7 +149,10 @@ class ImprovementCampaignReader:
             "selection_configuration_id": selection_id,
             "primary_metric": acceptance.get("primary_metric"),
             "direction": direction,
-            "attempts_finished": _integer(state.get("attempts_finished"), default=0),
+            "attempts_finished": _integer(
+                state.get("attempts_finished"),
+                default=_integer(state.get("finished_attempts"), default=0),
+            ),
             "max_attempts": _integer(limits.get("max_attempts"), default=0),
             "stored_total_cost": _number(state.get("stored_total_cost"), default=0.0),
             "baseline_metric": baseline_metric,
@@ -148,8 +178,10 @@ def _summary(detail: dict[str, Any]) -> dict[str, Any]:
             "campaign_id",
             "status",
             "created_at_utc",
+            "completed_at_utc",
             "termination_reason",
             "starting_agent",
+            "base_agent_name",
             "benchmark_key",
             "benchmark_version",
             "research_scope",
@@ -175,7 +207,7 @@ def _campaign_points(
     starting_agent_id: Any,
 ) -> list[dict[str, Any]]:
     points: list[dict[str, Any]] = []
-    for evaluation in _objects(state.get("baseline_evaluations")):
+    for evaluation in _evaluation_objects(state.get("baseline_evaluations")):
         points.append(
             _point(
                 evaluation,
@@ -201,21 +233,20 @@ def _campaign_points(
                 )
             )
 
-    qualification = state.get("qualification_evaluations")
-    if isinstance(qualification, dict):
-        qualification = [
-            {"configuration_id": key, "eval_id": value}
-            for key, value in qualification.items()
-            if value
-        ]
-    for evaluation in _objects(qualification):
+    incumbent = state.get("incumbent")
+    incumbent_agent_version_id = (
+        incumbent.get("agent_version_id")
+        if isinstance(incumbent, dict)
+        else state.get("incumbent_agent_version_id")
+    )
+    for evaluation in _evaluation_objects(state.get("qualification_evaluations")):
         points.append(
             _point(
                 evaluation,
                 stage="qualification",
                 trial=last_trial + 1,
                 decision="qualification",
-                agent_version_id=state.get("incumbent_agent_version_id"),
+                agent_version_id=incumbent_agent_version_id,
             )
         )
 
@@ -296,10 +327,44 @@ def _objects(value: Any) -> list[dict[str, Any]]:
     return value
 
 
+def _evaluation_objects(value: Any) -> list[dict[str, Any]]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return _objects(value)
+    if not isinstance(value, dict):
+        raise ValueError(
+            "Campaign evaluation collections must be arrays or configuration maps."
+        )
+
+    evaluations = []
+    for configuration_id, raw in value.items():
+        if isinstance(raw, dict):
+            evaluation = dict(raw)
+            evaluation.setdefault("configuration_id", configuration_id)
+        elif isinstance(raw, str) and raw:
+            evaluation = {
+                "configuration_id": configuration_id,
+                "eval_id": raw,
+            }
+        else:
+            raise ValueError(
+                "Campaign evaluation map values must be objects or eval IDs."
+            )
+        evaluations.append(evaluation)
+    return evaluations
+
+
 def _string(value: Any, label: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{label} must be a non-empty string.")
     return value
+
+
+def _base_agent_name(pipeline: Any) -> str | None:
+    if not isinstance(pipeline, str) or not pipeline:
+        return None
+    return Path(pipeline).stem or None
 
 
 def _integer(value: Any, *, default: int) -> int:

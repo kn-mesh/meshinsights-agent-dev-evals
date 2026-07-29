@@ -63,6 +63,7 @@ class AIAgentMixin(AIProcessorMixin[PDO, OutputT]):
                 usage_limits=self._get_usage_limits(
                     request_limit=self._get_max_turns()
                 ),
+                finalize_on_tool_call_limit=self._get_finalize_on_tool_call_limit(),
                 tool_timeout=self._get_tool_timeout(),
                 timeout=self._get_timeout(),
                 provider_options=self._get_provider_options(),
@@ -110,6 +111,12 @@ class AIAgentMixin(AIProcessorMixin[PDO, OutputT]):
         if max_turns is None:
             raise ValueError(f"{self.__class__.__name__} config missing max_turns")
         return max_turns
+
+    def _get_finalize_on_tool_call_limit(self) -> bool:
+        config = getattr(self, "config", None)
+        if config is None:
+            return False
+        return getattr(config, "finalize_on_tool_call_limit", False)
 
     def _build_tools(self, data_object: PDO) -> ToolCollectionLike:
         """Build standalone tools available to the agent."""

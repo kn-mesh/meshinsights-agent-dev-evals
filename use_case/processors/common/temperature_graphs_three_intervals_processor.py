@@ -26,6 +26,7 @@ class TemperatureGraphsThreeIntervalsProcessorConfig(BaseProcessorConfig):
 
     name: str | None = "temperature_graphs_three_intervals_processor"
     window_days_list: list[int] = [7, 30, 365]
+    include_post_alarm_point: bool = True
     image_format: str = "png"
     dpi: int = 160
 
@@ -98,7 +99,7 @@ class TemperatureGraphsThreeIntervalsProcessor(
         alarm_detected_at: datetime,
         window_days: int,
     ) -> pd.DataFrame:
-        """Return one default pre-alarm window plus the first post-alarm point."""
+        """Return one configured analysis window ending at the alarm cutoff."""
         window_start = alarm_detected_at - timedelta(days=window_days)
         requested_frame = temperature_frame.loc[
             (temperature_frame["timestamp"] >= window_start)
@@ -109,7 +110,7 @@ class TemperatureGraphsThreeIntervalsProcessor(
             requested_frame,
             temperature_frame=temperature_frame,
             alarm_detected_at=alarm_detected_at,
-            include_post_alarm_point=True,
+            include_post_alarm_point=self.config.include_post_alarm_point,
         )
         self._validate_temperature_window(
             window_frame,

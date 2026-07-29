@@ -488,6 +488,43 @@ def test_single_eval_and_campaign_routes_cannot_substitute_for_each_other() -> N
     assert "Do not use for one eval" in campaign
 
 
+def test_campaign_requires_post_research_qualification_confirmation() -> None:
+    campaign = (
+        SKILLS / "agent-improvement-campaign" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+    ledger = (
+        SKILLS
+        / "agent-improvement-campaign"
+        / "references"
+        / "campaign-ledger.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Qualification reserve is planning capacity, not authorization" in campaign
+    assert "Do not allocate or run qualification until the user explicitly confirms" in (
+        campaign
+    )
+    assert "stop with the research winner and skip qualification" in campaign
+    assert "qualification_skipped" in campaign
+    assert "`qualification_decision`" in ledger
+    assert "`pending`,\n  `authorized`, or `declined`" in ledger
+
+
+def test_campaign_and_analysis_require_use_case_evidence_review() -> None:
+    campaign = (
+        SKILLS / "agent-improvement-campaign" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+    analysis = (
+        SKILLS / "eval-results-analysis" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    assert "inspect the exact\n   captured artifacts" in campaign
+    assert "Quantify reviewer-note and verification coverage" in campaign
+    assert "publication boundary" in campaign
+    assert "Directly\n   inspect the exact captured rich artifacts" in analysis
+    assert "Quantify populated versus missing context" in analysis
+    assert "publication\n   evidence-integrity mismatch" in analysis
+
+
 def test_current_evaluation_contracts_state_schema_boundaries() -> None:
     contracts = (
         SKILLS / "agent-eval-builder" / "references" / "current-evaluation-contracts.md"

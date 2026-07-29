@@ -52,6 +52,7 @@ def test_ai_processor_config_retry_and_usage_limit_defaults() -> None:
     assert config.output_tokens_limit is None
     assert config.total_tokens_limit is None
     assert config.tool_calls_limit is None
+    assert config.finalize_on_tool_call_limit is False
     assert config.count_tokens_before_request is False
 
 
