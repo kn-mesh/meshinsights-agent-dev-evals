@@ -4,6 +4,19 @@ The current runnable pipeline emits a structured `PulseFailureAnalysisResult` at
 `act.metadata.agent_output`. It uses the shared
 `use_case/evaluation_configs/spirax-failure-evaluation.eval.yaml` profile.
 
+## `v0_2.ppln` — Campaign-Winning Text-First Lineage
+
+- Pipeline: `use_case/pipeline_configs/v0_2.ppln`
+- Agent policy: `use_case/agent_version_configs/v0_2.agent.yaml`
+- Shape: one structured AI workflow call over non-overlapping historical period
+  statistics, 30-day six-hour median telemetry, and 48-hour raw telemetry.
+- Parent: the `v0_1` alternate lineage developed in campaign
+  `imp_condensed_confident_v2_luna_low_20260729`.
+- Hypothesis: preserve sustained one-sided deterioration and failure-onset
+  evidence while narrowly exempting unfinished post-shutdown restarts.
+- Selection evidence: 17/17 classification decisions on Condensed Confident v2
+  with `azure:gpt-5.6-luna` at low reasoning.
+
 ## `v1_3.ppln` — One-Shot AI Workflow
 
 - Pipeline: `use_case/pipeline_configs/v1_3.ppln`
