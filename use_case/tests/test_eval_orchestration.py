@@ -136,10 +136,10 @@ def _benchmark(*examples: BenchmarkExample) -> BenchmarkVersion:
         benchmark_key="phase-1-benchmark-3fb7f544",
         benchmark_name="Phase 1 Benchmark",
         benchmark_version_id="version-id",
-        version_number=1,
+        version_number=2,
         published_at=datetime(2026, 7, 1, tzinfo=timezone.utc),
         source_state_sha256="d" * 64,
-        published_contract_schema_version=2,
+        published_contract_schema_version=3,
         eval_label_field_hints=("classification", "root_cause"),
         label_schemas=(
             PublishedLabelSchema(
@@ -192,7 +192,7 @@ def _receipt(
                 "example_id": example.example_id,
                 "benchmark_key": "phase-1-benchmark-3fb7f544",
                 "benchmark_version_id": "version-id",
-                "benchmark_version_number": 1,
+                "benchmark_version_number": 2,
                 "source_snapshot_id": example.source_snapshot_id,
                 "agent_output": agent_output,
             },

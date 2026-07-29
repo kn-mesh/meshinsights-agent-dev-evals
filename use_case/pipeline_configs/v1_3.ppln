@@ -4,7 +4,7 @@ version: 1.3.0
 metadata_class: BenchmarkExamplePipelineMetadata
 
 benchmark_contract:
-  published_contract_schema_version: 2
+  published_contract_schema_version: 3
   evidence_recipe_id: spirax-steam-trap-evidence@v2
   source_snapshot_contract: azure-blob-sha256-v1
   required_artifact_kinds: [telemetry, alarms]

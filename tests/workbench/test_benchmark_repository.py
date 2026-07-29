@@ -77,6 +77,7 @@ def _row() -> dict[str, Any]:
         "version_number": 2,
         "published_at": datetime(2026, 7, 1, tzinfo=timezone.utc),
         "source_state_sha256": "d" * 64,
+        "published_contract_schema_version": 2,
         "eval_label_fields": ["classification", "root_cause"],
         "example_id": "7|2026-03-17T12:00:00",
         "unit_id": "7",
@@ -276,7 +277,7 @@ def test_repository_requests_latest_published_version_when_version_is_omitted() 
         ("label_schema_content_sha256", "label-schema hash"),
     ],
 )
-def test_strict_v2_adapter_rejects_missing_publication_identity(
+def test_strict_published_adapter_rejects_missing_publication_identity(
     missing_key: str, message: str
 ) -> None:
     rows = _normalize_trusted_postgres_rows([_row()])
@@ -286,12 +287,43 @@ def test_strict_v2_adapter_rejects_missing_publication_identity(
         _build_benchmark_version(rows)
 
 
-def test_strict_v2_adapter_rejects_inconsistent_version_fields() -> None:
+def test_strict_published_adapter_rejects_inconsistent_version_fields() -> None:
     rows = _normalize_trusted_postgres_rows([_row(), _row()])
     rows[1]["published_contract_schema_version"] = 3
 
     with pytest.raises(ValueError, match="inconsistent across examples"):
         _build_benchmark_version(rows)
+
+
+def test_contract_v3_requires_and_preserves_reviewer_notes() -> None:
+    row = _row()
+    row["published_contract_schema_version"] = 3
+    row["reviewer_coverage"] = [
+        {**coverage, "note": f"Frozen explanation {index}."}
+        for index, coverage in enumerate(row["reviewer_coverage"], start=1)
+    ]
+
+    benchmark = _build_benchmark_version(
+        _normalize_trusted_postgres_rows([row])
+    )
+
+    assert benchmark.published_contract_schema_version == 3
+    assert [
+        reviewer.note
+        for reviewer in benchmark.examples[0].published_review_context.reviewer_coverage
+    ] == ["Frozen explanation 1.", "Frozen explanation 2."]
+
+    row["reviewer_coverage"][0]["note"] = None
+    with pytest.raises(ValueError, match="requires every reviewer coverage note"):
+        _build_benchmark_version(_normalize_trusted_postgres_rows([row]))
+
+
+def test_published_adapter_rejects_unknown_contract_version() -> None:
+    row = _row()
+    row["published_contract_schema_version"] = 4
+
+    with pytest.raises(ValueError, match="expected 2 or 3"):
+        _build_benchmark_version(_normalize_trusted_postgres_rows([row]))
 
 
 def test_repository_loads_non_reference_units_and_artifact_kinds() -> None:

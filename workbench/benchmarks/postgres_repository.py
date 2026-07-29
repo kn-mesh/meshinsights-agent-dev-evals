@@ -61,6 +61,7 @@ with selected_version as (
     bv.version_number,
     bv.published_at,
     bv.source_state_sha256,
+    bv.published_contract_schema_version,
     b.benchmark_key,
     b.name as benchmark_name,
     p.project_key,
@@ -87,6 +88,7 @@ select
   sv.version_number,
   sv.published_at,
   sv.source_state_sha256,
+  sv.published_contract_schema_version,
   sv.eval_label_fields,
   bve.example_id,
   bve.unit_id,
@@ -263,7 +265,7 @@ class AzurePostgresBenchmarkRepository:
 def _build_benchmark_version(
     rows: list[dict[str, Any]],
 ) -> BenchmarkVersion:
-    """Strictly normalize published-contract-v2 rows from any read adapter."""
+    """Strictly normalize supported published-contract rows from any read adapter."""
     if not rows:
         raise ValueError("Cannot build a benchmark version without rows.")
     first = rows[0]
@@ -273,10 +275,10 @@ def _build_benchmark_version(
             "Published benchmark response is missing its contract schema version."
         )
     contract_schema_version = int(raw_contract_version)
-    if contract_schema_version != 2:
+    if contract_schema_version not in {2, 3}:
         raise ValueError(
             f"Unsupported published benchmark contract version "
-            f"{contract_schema_version}; expected 2."
+            f"{contract_schema_version}; expected 2 or 3."
         )
     version_fields = (
         "project_key",
@@ -395,6 +397,13 @@ def _published_review_context(row: dict[str, Any]) -> dict[str, Any]:
         coverage = []
     if not isinstance(coverage, list):
         raise ValueError("Published reviewer coverage must be an array.")
+    if int(row.get("published_contract_schema_version") or 0) >= 3 and any(
+        not isinstance(item, dict) or not str(item.get("note") or "").strip()
+        for item in coverage
+    ):
+        raise ValueError(
+            "Published contract v3 requires every reviewer coverage note."
+        )
     selected_review_event_id = str(row.get("selected_review_event_id") or "")
     reviewer_coverage = [
         {
@@ -428,14 +437,17 @@ def _published_review_context(row: dict[str, Any]) -> dict[str, Any]:
 def _normalize_trusted_postgres_rows(
     rows: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Adapt trusted database rows to the same strict v2 response contract."""
+    """Adapt trusted database rows to the strict published response contract."""
     normalized: list[dict[str, Any]] = []
     for raw in rows:
         row = dict(raw)
         schema = row.get("label_schema")
         if not isinstance(schema, dict):
             raise ValueError("Published label schema must be an object.")
-        row["published_contract_schema_version"] = 2
+        if row.get("published_contract_schema_version") is None:
+            raise ValueError(
+                "Published benchmark row is missing its contract schema version."
+            )
         row["label_schema_content_sha256"] = hashlib.sha256(
             json.dumps(
                 schema,
