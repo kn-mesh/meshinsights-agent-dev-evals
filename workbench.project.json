@@ -23,13 +23,21 @@
   "benchmarks": {
     "default": {
       "key": "phase-1-benchmark-3fb7f544",
-      "version": "1"
+      "version": "2"
     },
     "published": [
       {
         "key": "phase-1-benchmark-3fb7f544",
         "version": "1",
         "published_contract_schema_version": 2,
+        "label_fields": ["classification", "root_cause"],
+        "evidence_recipe_id": "spirax-steam-trap-evidence@v2",
+        "source_snapshot_contract": "azure-blob-sha256-v1"
+      },
+      {
+        "key": "phase-1-benchmark-3fb7f544",
+        "version": "2",
+        "published_contract_schema_version": 3,
         "label_fields": ["classification", "root_cause"],
         "evidence_recipe_id": "spirax-steam-trap-evidence@v2",
         "source_snapshot_contract": "azure-blob-sha256-v1"
